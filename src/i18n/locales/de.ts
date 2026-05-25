@@ -123,6 +123,10 @@ export const de: Record<string, string> = {
   'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
   'app_settings.reset_confirm': 'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',
   'app_settings.lang': 'Sprache',
+  'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
+  'app_settings.dynamic_colors.desc': 'Akzent- und Systemfarben direkt vom Gerät extrahieren (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.enabled': 'Aktiviert',
+  'app_settings.dynamic_colors.disabled': 'Deaktiviert',
 
   // Mode names
   'mode.classic.name': 'Klassisch',

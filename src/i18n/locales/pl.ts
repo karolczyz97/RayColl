@@ -123,6 +123,10 @@ export const pl: Record<string, string> = {
   'app_settings.reset_btn': 'Resetuj aplikację',
   'app_settings.reset_confirm': 'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
   'app_settings.lang': 'Język',
+  'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
+  'app_settings.dynamic_colors.desc': 'Pobieraj kolory akcentów bezpośrednio z systemu (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.enabled': 'Włączone',
+  'app_settings.dynamic_colors.disabled': 'Wyłączone',
 
   // Mode names
   'mode.classic.name': 'Klasyczny',

@@ -123,6 +123,10 @@ export const it: Record<string, string> = {
   'app_settings.reset_btn': 'Ripristina app',
   'app_settings.reset_confirm': 'Sei sicuro di voler ripristinare l\'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.',
   'app_settings.lang': 'Idioma',
+  'app_settings.dynamic_colors.title': 'Colori dinamici del sistema',
+  'app_settings.dynamic_colors.desc': 'Estrai i colori di accento e di sistema direttamente dal dispositivo (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.enabled': 'Attivato',
+  'app_settings.dynamic_colors.disabled': 'Disattivato',
 
   // Mode names
   'mode.classic.name': 'Classico',

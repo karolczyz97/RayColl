@@ -123,6 +123,10 @@ export const es: Record<string, string> = {
   'app_settings.reset_btn': 'Restablecer aplicación',
   'app_settings.reset_confirm': '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',
   'app_settings.lang': 'Idioma',
+  'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
+  'app_settings.dynamic_colors.desc': 'Extraer colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.enabled': 'Activado',
+  'app_settings.dynamic_colors.disabled': 'Desactivado',
 
   // Mode names
   'mode.classic.name': 'Clásico',

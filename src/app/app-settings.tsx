@@ -170,19 +170,17 @@ export default function AppSettings() {
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>
-              {language === 'pl' ? 'Dynamiczne kolory systemu' : 'Dynamic system colors'}
+              {t('app_settings.dynamic_colors.title')}
             </Text>
             <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
-              {language === 'pl'
-                ? 'Pobieraj kolory akcentów bezpośrednio z systemu operacyjnego (Android 12+ / Material You / system appearance).'
-                : 'Extract accent and system colors directly from the device (Android 12+ / Material You / system appearance).'}
+              {t('app_settings.dynamic_colors.desc')}
             </Text>
             <SegmentedButtons
               value={useSystemColors ? 'true' : 'false'}
               onValueChange={(val) => setUseSystemColors(val === 'true')}
               buttons={[
-                { value: 'true', label: language === 'pl' ? 'Włączone' : 'Enabled', icon: 'palette' },
-                { value: 'false', label: language === 'pl' ? 'Wyłączone' : 'Disabled', icon: 'palette-swatch-outline' },
+                { value: 'true', label: t('app_settings.dynamic_colors.enabled'), icon: 'palette' },
+                { value: 'false', label: t('app_settings.dynamic_colors.disabled'), icon: 'palette-swatch-outline' },
               ]}
               style={styles.segmentedButtons}
             />
