@@ -310,7 +310,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dropdownAnchor: {
-    borderRadius: 8,
     alignSelf: 'stretch',
   },
   segmentedButtons: {
@@ -325,7 +324,6 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    borderRadius: 8,
   },
   importTextArea: {
     minHeight: 120,

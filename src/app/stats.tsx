@@ -45,17 +45,17 @@ function HeatmapGrid({ heatmap, t }: { heatmap: Record<string, number>; t: (key:
 
   const colorFor = (count: number): string => {
     if (count === 0) return isDark ? '#2d2d3a' : '#eaeaf0';
-    if (isDark) {
-      if (count <= 2) return '#0e4429';
-      if (count <= 5) return '#006d32';
-      if (count <= 10) return '#26a641';
-      return '#39d353';
-    } else {
-      if (count <= 2) return '#c6e48b';
-      if (count <= 5) return '#7bc96f';
-      if (count <= 10) return '#239a3b';
-      return '#196127';
+    const primary = theme.colors.primary;
+    if (primary.startsWith('#')) {
+      const base = primary.length === 4
+        ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
+        : primary;
+      if (count <= 2) return `${base}40`; // 25% opacity
+      if (count <= 5) return `${base}80`; // 50% opacity
+      if (count <= 10) return `${base}c0`; // 75% opacity
+      return base; // 100% opacity
     }
+    return primary;
   };
 
   const dayLabels = [

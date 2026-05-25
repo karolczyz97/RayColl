@@ -695,7 +695,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dropdownAnchor: {
-    borderRadius: 8,
     alignSelf: 'stretch',
     marginBottom: 12,
   },

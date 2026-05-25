@@ -303,7 +303,7 @@ export default function BrowsePage() {
       </ScrollView>
 
       {/* FAB to add card */}
-      <FAB icon="plus" style={[styles.fab, { backgroundColor: theme.colors.primary }]} color={theme.colors.onPrimary} onPress={addCard} />
+      <FAB icon="plus" style={styles.fab} onPress={addCard} />
 
       {/* Dialog confirmations */}
       <Portal>

@@ -274,7 +274,7 @@ export default function Dashboard() {
       </ScrollView>
 
       {/* Import FAB */}
-      <FAB icon="plus" style={[styles.fab, { backgroundColor: theme.colors.primary }]} color={theme.colors.onPrimary} onPress={() => router.push('/import')} />
+      <FAB icon="plus" style={styles.fab} onPress={() => router.push('/import')} />
     </View>
   );
 }

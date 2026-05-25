@@ -224,7 +224,7 @@ export default function ImportPage() {
             <Text variant="titleMedium" style={styles.previewTitle}>
               {`${t('import.preview')} (${rows.length})`}
             </Text>
-            <ScrollView horizontal style={styles.horizontalScroll}>
+            <ScrollView horizontal style={[styles.horizontalScroll, { borderColor: theme.colors.outlineVariant }]}>
               <View style={styles.table}>
                 {/* Header row */}
                 <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: theme.colors.surfaceVariant }]}>
@@ -283,9 +283,7 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
   },
-  menuAnchor: {
-    borderRadius: 8,
-  },
+  menuAnchor: {},
   counterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -329,7 +327,6 @@ const styles = StyleSheet.create({
   horizontalScroll: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   table: {
     flexDirection: 'column',
