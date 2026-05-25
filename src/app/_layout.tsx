@@ -88,7 +88,7 @@ function InnerLayout({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontErr
   return (
     <PaperProvider theme={theme}>
       {Platform.OS === 'web' ? (
-        <View style={[styles.webOuter, { backgroundColor: isDark ? '#0f0f0f' : '#eaecef' }]}>
+        <View style={[styles.webOuter, { backgroundColor: theme.colors.surfaceVariant }]}>
           <View style={[styles.webInner, { backgroundColor: theme.colors.background }]}>
             {content}
           </View>

@@ -253,16 +253,24 @@ export default function BrowsePage() {
               ) : (
                 <View>
                   <Card.Content style={styles.cardContent}>
-                    {card.pages.map((page, i) => (
-                      <View key={i} style={styles.pageContentRow}>
-                        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                          {activeGroup.pageNames[i] || t('import.page_label', { index: i + 1 })}:
-                        </Text>
-                        <Text variant="bodyLarge" style={{ fontWeight: i === 0 ? 'bold' : 'normal' }}>
-                          {page}
-                        </Text>
-                      </View>
-                    ))}
+                    {/* Primary page (front phrase) styled as a header */}
+                    <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary, marginBottom: 4 }}>
+                      {card.pages[0]}
+                    </Text>
+                    {/* Other pages listed with a cleaner layout */}
+                    {card.pages.slice(1).map((page, i) => {
+                      const pageIdx = i + 1;
+                      return (
+                        <View key={pageIdx} style={styles.pageContentRow}>
+                          <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>
+                            {activeGroup.pageNames[pageIdx] || t('import.page_label', { index: pageIdx + 1 })}:{' '}
+                          </Text>
+                          <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1, flexWrap: 'wrap' }}>
+                            {page || '—'}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </Card.Content>
                   <Card.Actions style={styles.cardActions}>
                     <View style={styles.cardActionsLeft}>
@@ -360,7 +368,6 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     marginBottom: 12,
-    height: 48,
   },
   filterChipsRow: {
     flexDirection: 'row',
@@ -385,7 +392,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pageContentRow: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginTop: 2,
   },
   cardActions: {
     paddingHorizontal: 12,
