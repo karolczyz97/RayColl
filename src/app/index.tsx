@@ -6,6 +6,7 @@ import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { useI18n } from '../i18n';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import type { FlashcardGroup } from '../types/models';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 function PressableCard({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -66,45 +67,59 @@ function GroupStudyMenuButton({
 
   const modeName = activeMode ? getModeName(activeMode.id, activeMode.name) : t('mode.classic.name');
 
+  const btnBgColor = dueCount === 0 ? theme.colors.surfaceVariant : theme.colors.primary;
+  const btnTextColor = dueCount === 0 ? theme.colors.onSurfaceDisabled : theme.colors.onPrimary;
+
   return (
     <View style={styles.studyButtonGroup}>
-      <Button
-        mode="contained"
-        disabled={dueCount === 0}
-        onPress={onStudy}
-        style={styles.studyMainBtn}
-        icon="play"
-        labelStyle={styles.btnLabel}
-      >
-        {modeName}
-      </Button>
-      <Menu
-        visible={visible}
-        onDismiss={() => setVisible(false)}
-        anchor={
-          <IconButton
-            icon="chevron-down"
-            mode="contained"
-            containerColor={theme.colors.primary}
-            iconColor={theme.colors.onPrimary}
-            size={20}
-            onPress={() => setVisible(true)}
-            style={styles.studyDropdownBtn}
-          />
-        }
-      >
-        {store.studyModes.map((m) => (
-          <Menu.Item
-            key={m.id}
-            title={getModeName(m.id, m.name)}
-            leadingIcon={m.id === group.activeModeId ? 'check' : undefined}
-            onPress={() => {
-              onModeChange(m.id);
-              setVisible(false);
-            }}
-          />
-        ))}
-      </Menu>
+      <View style={[styles.pillContainer, { backgroundColor: btnBgColor }]}>
+        {/* Left Action Button */}
+        <Pressable
+          disabled={dueCount === 0}
+          onPress={onStudy}
+          style={({ pressed }) => [
+            styles.pillLeft,
+            pressed && styles.pressed,
+          ]}
+        >
+          <MaterialCommunityIcons name="play" size={16} color={btnTextColor} style={{ marginRight: 6 }} />
+          <Text style={[styles.pillText, { color: btnTextColor }]} numberOfLines={1}>
+            {modeName}
+          </Text>
+        </Pressable>
+
+        {/* Divider Line */}
+        <View style={[styles.pillDivider, { backgroundColor: btnTextColor }]} />
+
+        {/* Right Dropdown Anchor */}
+        <Menu
+          visible={visible}
+          onDismiss={() => setVisible(false)}
+          anchor={
+            <Pressable
+              onPress={() => setVisible(true)}
+              style={({ pressed }) => [
+                styles.pillRight,
+                pressed && styles.pressed,
+              ]}
+            >
+              <MaterialCommunityIcons name="chevron-down" size={16} color={btnTextColor} />
+            </Pressable>
+          }
+        >
+          {store.studyModes.map((m) => (
+            <Menu.Item
+              key={m.id}
+              title={getModeName(m.id, m.name)}
+              leadingIcon={m.id === group.activeModeId ? 'check' : undefined}
+              onPress={() => {
+                onModeChange(m.id);
+                setVisible(false);
+              }}
+            />
+          ))}
+        </Menu>
+      </View>
     </View>
   );
 }
@@ -344,22 +359,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  studyMainBtn: {
+  pillContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 100,
+    height: 40,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  pillLeft: {
     flex: 1,
-    borderTopLeftRadius: 100,
-    borderBottomLeftRadius: 100,
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    paddingLeft: 16,
+    paddingRight: 8,
   },
-  studyDropdownBtn: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderTopRightRadius: 100,
-    borderBottomRightRadius: 100,
-    margin: 0,
+  pillText: {
+    fontSize: 13,
+    fontWeight: 'bold',
   },
-  btnLabel: {
-    fontSize: 12,
+  pillDivider: {
+    width: 1,
+    height: '60%',
+    opacity: 0.25,
+  },
+  pillRight: {
+    width: 44,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.75,
   },
   fab: {
     position: 'absolute',
