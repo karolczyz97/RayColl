@@ -259,6 +259,7 @@ export default function AppSettings() {
               value={importJson}
               onChangeText={setImportJson}
               style={styles.importTextArea}
+              outlineStyle={{ borderRadius: 12 }}
             />
           </Dialog.Content>
           <Dialog.Actions>

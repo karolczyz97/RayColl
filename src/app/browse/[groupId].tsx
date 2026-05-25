@@ -166,6 +166,7 @@ export default function BrowsePage() {
         onChangeText={setSearch}
         style={styles.searchBar}
         left={<TextInput.Icon icon="magnify" />}
+        outlineStyle={{ borderRadius: 12 }}
       />
 
       {/* Filter Chips */}
@@ -239,6 +240,7 @@ export default function BrowsePage() {
                         setEditPages(next);
                       }}
                       style={styles.editInput}
+                      outlineStyle={{ borderRadius: 12 }}
                     />
                   ))}
                   <View style={styles.editingActions}>

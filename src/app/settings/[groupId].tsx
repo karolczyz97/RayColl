@@ -254,6 +254,7 @@ export default function SettingsPage() {
           value={activeGroup.name}
           onChangeText={handleRename}
           style={styles.input}
+          outlineStyle={{ borderRadius: 12 }}
         />
 
         <Divider style={styles.divider} />
@@ -305,6 +306,7 @@ export default function SettingsPage() {
               value={pn}
               onChangeText={(v) => updatePageNameValue(i, v)}
               style={styles.pageNameInput}
+              outlineStyle={{ borderRadius: 12 }}
             />
             <Menu
               visible={langMenuIndex === i}
@@ -474,6 +476,7 @@ export default function SettingsPage() {
               value={newModeName}
               onChangeText={setNewModeName}
               style={{ marginBottom: 12, height: 44 }}
+              outlineStyle={{ borderRadius: 12 }}
             />
             {customSteps.map((step, i) => (
               <View key={i} style={styles.customStepRow}>
@@ -564,6 +567,7 @@ export default function SettingsPage() {
                 value={String(newPageIdx)}
                 onChangeText={(v) => setNewPageIdx(Number(v) || 0)}
                 style={{ height: 44 }}
+                outlineStyle={{ borderRadius: 12 }}
               />
             )}
 
@@ -575,6 +579,7 @@ export default function SettingsPage() {
                 value={String(newMs)}
                 onChangeText={(v) => setNewMs(Number(v) || 0)}
                 style={{ height: 44 }}
+                outlineStyle={{ borderRadius: 12 }}
               />
             )}
 
@@ -586,6 +591,7 @@ export default function SettingsPage() {
                 value={String(newThreshold)}
                 onChangeText={(v) => setNewThreshold(Number(v) || 0)}
                 style={{ height: 44 }}
+                outlineStyle={{ borderRadius: 12 }}
               />
             )}
           </Dialog.Content>
@@ -610,6 +616,7 @@ export default function SettingsPage() {
               onChangeText={setDeleteConfirmText}
               placeholder="DELETE"
               style={{ height: 44 }}
+              outlineStyle={{ borderRadius: 12 }}
             />
           </Dialog.Content>
           <Dialog.Actions>

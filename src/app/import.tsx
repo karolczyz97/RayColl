@@ -129,6 +129,7 @@ export default function ImportPage() {
           value={name}
           onChangeText={setName}
           style={styles.input}
+          outlineStyle={{ borderRadius: 12 }}
         />
 
         <TextInput
@@ -140,6 +141,7 @@ export default function ImportPage() {
           onChangeText={handleTextChange}
           placeholder={t('import.name_placeholder')}
           style={styles.textArea}
+          outlineStyle={{ borderRadius: 12 }}
         />
 
         {/* Separator Select */}
@@ -188,6 +190,7 @@ export default function ImportPage() {
                 value={pageNames[i]}
                 onChangeText={v => updatePageName(i, v)}
                 style={styles.columnNameInput}
+                outlineStyle={{ borderRadius: 12 }}
               />
               <Menu
                 visible={langMenuIndex === i}
