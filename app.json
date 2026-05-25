@@ -42,7 +42,15 @@
           }
         }
       ],
-      "@react-native-voice/voice"
+      "@react-native-voice/voice",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableOnBackInvokedCallback": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
