@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Animated, useWindowDimensions } from 'react-native';
 import { Text, Card, Button, FAB, Avatar, IconButton, Menu, useTheme, ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
@@ -113,6 +113,7 @@ export default function Dashboard() {
   const store = useFlashcardStore();
   const { t } = useI18n();
   const theme = useTheme();
+  const { width } = useWindowDimensions();
   const [userMenuVisible, setUserMenuVisible] = useState(false);
 
   const { groups, getDueCards, user, signIn, signOut, isLoading } = store;
@@ -201,8 +202,14 @@ export default function Dashboard() {
             {groups.map((group) => {
               const dueCount = getDueCards(group.id).length;
               const cardStats = computeCardStats(group.cards);
+              const numColumns = width < 600 ? 1 : width < 960 ? 2 : 3;
+              const padding = 16;
+              const gap = 16;
+              const maxW = 960;
+              const currentWidth = width > maxW ? maxW : width;
+              const cardWidth = (currentWidth - padding * 2 - gap * (numColumns - 1)) / numColumns;
               return (
-                <View key={group.id} style={styles.gridItem}>
+                <View key={group.id} style={[styles.gridItem, { width: cardWidth }]}>
                   <PressableCard onPress={() => router.push(`/study/${group.id}`)}>
                     <Card style={styles.card} mode="elevated">
                       <Card.Content>
@@ -303,10 +310,13 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
   },
   grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
+    width: '100%',
   },
   gridItem: {
-    width: '100%',
+    // Width computed dynamically in render loop
   },
   card: {
     borderRadius: 16,

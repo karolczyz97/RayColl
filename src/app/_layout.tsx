@@ -2,6 +2,9 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { Platform, View, StyleSheet } from 'react-native';
+import { useFonts } from 'expo-font';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { I18nProvider, useI18n } from '../i18n';
 import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
 
@@ -39,8 +42,8 @@ function InnerLayout() {
     return null; // Let the splash screen stay visible or show a loading indicator
   }
 
-  return (
-    <PaperProvider theme={theme}>
+  const content = (
+    <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="study/[groupId]" />
@@ -50,11 +53,33 @@ function InnerLayout() {
         <Stack.Screen name="stats" />
         <Stack.Screen name="app-settings" />
       </Stack>
+    </View>
+  );
+
+  return (
+    <PaperProvider theme={theme}>
+      {Platform.OS === 'web' ? (
+        <View style={[styles.webOuter, { backgroundColor: isDark ? '#0f0f0f' : '#eaecef' }]}>
+          <View style={[styles.webInner, { backgroundColor: theme.colors.background }]}>
+            {content}
+          </View>
+        </View>
+      ) : (
+        content
+      )}
     </PaperProvider>
   );
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    ...MaterialCommunityIcons.font,
+  });
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <I18nProvider>
@@ -65,3 +90,32 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    width: '100%',
+  },
+  webOuter: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 960,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+});
