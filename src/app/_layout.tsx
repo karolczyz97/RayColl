@@ -6,8 +6,12 @@ import { Platform, View, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
+import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider, useI18n } from '../i18n';
 import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Custom theme colors for a premium glassmorphic and high contrast look
 const lightTheme = {
@@ -34,9 +38,9 @@ const darkTheme = {
   },
 };
 
-function InnerLayout() {
+function InnerLayout({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: any }) {
   const { isI18nLoading } = useI18n();
-  const { isDark, useSystemColors } = useAppTheme();
+  const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
 
   const theme = React.useMemo(() => {
@@ -55,8 +59,16 @@ function InnerLayout() {
     }
   }, [isDark, useSystemColors, materialColors]);
 
-  if (isI18nLoading) {
-    return null; // Let the splash screen stay visible or show a loading indicator
+  // Hide the splash screen only after all fonts, settings, and translations are loaded.
+  React.useEffect(() => {
+    const isReady = (fontsLoaded || fontError) && !isI18nLoading && !isThemeLoading;
+    if (isReady) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError, isI18nLoading, isThemeLoading]);
+
+  if (!(fontsLoaded || fontError) || isI18nLoading || isThemeLoading) {
+    return null; // Let the splash screen stay visible
   }
 
   const content = (
@@ -93,15 +105,11 @@ export default function RootLayout() {
     ...MaterialCommunityIcons.font,
   });
 
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
   return (
     <SafeAreaProvider>
       <I18nProvider>
         <AppThemeProvider>
-          <InnerLayout />
+          <InnerLayout fontsLoaded={fontsLoaded} fontError={fontError} />
         </AppThemeProvider>
       </I18nProvider>
     </SafeAreaProvider>

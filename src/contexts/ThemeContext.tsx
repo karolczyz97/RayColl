@@ -10,6 +10,7 @@ interface ThemeContextType {
   isDark: boolean;
   useSystemColors: boolean;
   setUseSystemColors: (val: boolean) => void;
+  isThemeLoading: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType>(null!);
@@ -20,6 +21,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
   const [themePref, setThemePrefState] = useState<ThemePref>('system');
   const [useSystemColors, setUseSystemColorsState] = useState<boolean>(true); // enabled by default
+  const [isThemeLoading, setIsThemeLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadSettings() {
@@ -35,6 +37,8 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.warn('Failed to load theme settings:', err);
+      } finally {
+        setIsThemeLoading(false);
       }
     }
     loadSettings();
@@ -61,7 +65,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const isDark = themePref === 'system' ? systemScheme === 'dark' : themePref === 'dark';
 
   return (
-    <ThemeContext.Provider value={{ themePref, setThemePref, isDark, useSystemColors, setUseSystemColors }}>
+    <ThemeContext.Provider value={{ themePref, setThemePref, isDark, useSystemColors, setUseSystemColors, isThemeLoading }}>
       {children}
     </ThemeContext.Provider>
   );
