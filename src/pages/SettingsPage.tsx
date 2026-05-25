@@ -53,6 +53,13 @@ export function SettingsPage() {
   const groupId = nav.params.groupId || '';
   const group = store.groups.find(g => g.id === groupId);
 
+  // Cache the last valid group to prevent blank/fallback screen during exit animation
+  const lastValidGroupRef = useRef<typeof group>(undefined);
+  if (group) {
+    lastValidGroupRef.current = group;
+  }
+  const activeGroup = group || lastValidGroupRef.current;
+
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -72,30 +79,31 @@ export function SettingsPage() {
   // Editing existing custom mode
   const [editingModeId, setEditingModeId] = useState<string | null>(null);
 
-  if (!group) return (
+  // Page config — preserve removed pages for restore
+  const removedNamesRef = useRef<string[]>([]);
+  const removedLangsRef = useRef<string[]>([]);
+
+  if (!activeGroup) return (
     <Box sx={{ p: 4 }}><Typography>Grupa nie znaleziona.</Typography><Button onClick={goBack}>Powrót</Button></Box>
   );
 
-  const activeMode = store.studyModes.find(m => m.id === group.activeModeId);
+  const activeMode = store.studyModes.find(m => m.id === activeGroup.activeModeId);
   const isDefaultMode = DEFAULT_MODE_IDS.includes(activeMode?.id || '');
 
   // Group name
   const handleRename = (newName: string) => {
-    store.updateGroup({ ...group, name: newName });
+    store.updateGroup({ ...activeGroup, name: newName });
   };
 
-  // Page config — preserve removed pages for restore
-  const removedNamesRef = useRef<string[]>([]);
-  const removedLangsRef = useRef<string[]>([]);
-  const pageCount = group.pageNames.length;
+  const pageCount = activeGroup.pageNames.length;
   const setPageCount = (count: number) => {
     if (count < pageCount) {
       // Store removed pages
-      removedNamesRef.current = group.pageNames.slice(count);
-      removedLangsRef.current = group.pageLanguages.slice(count);
+      removedNamesRef.current = activeGroup.pageNames.slice(count);
+      removedLangsRef.current = activeGroup.pageLanguages.slice(count);
     }
-    const names = [...group.pageNames];
-    const langs = [...group.pageLanguages];
+    const names = [...activeGroup.pageNames];
+    const langs = [...activeGroup.pageLanguages];
     while (names.length < count) {
       // Restore from removed first, else default
       const restoreIdx = names.length - pageCount;
@@ -107,27 +115,27 @@ export function SettingsPage() {
         langs.push('en-US');
       }
     }
-    store.updateGroup({ ...group, pageNames: names.slice(0, count), pageLanguages: langs.slice(0, count) });
+    store.updateGroup({ ...activeGroup, pageNames: names.slice(0, count), pageLanguages: langs.slice(0, count) });
   };
   const updatePN = (i: number, v: string) => {
-    const names = [...group.pageNames]; names[i] = v;
-    store.updateGroup({ ...group, pageNames: names });
+    const names = [...activeGroup.pageNames]; names[i] = v;
+    store.updateGroup({ ...activeGroup, pageNames: names });
   };
   const updatePL = (i: number, v: string) => {
-    const langs = [...group.pageLanguages]; langs[i] = v;
-    store.updateGroup({ ...group, pageLanguages: langs });
+    const langs = [...activeGroup.pageLanguages]; langs[i] = v;
+    store.updateGroup({ ...activeGroup, pageLanguages: langs });
   };
   const movePageSetting = (i: number, dir: -1 | 1) => {
     const j = i + dir; if (j < 0 || j >= pageCount) return;
-    const nn = [...group.pageNames]; [nn[i], nn[j]] = [nn[j], nn[i]];
-    const nl = [...group.pageLanguages]; [nl[i], nl[j]] = [nl[j], nl[i]];
+    const nn = [...activeGroup.pageNames]; [nn[i], nn[j]] = [nn[j], nn[i]];
+    const nl = [...activeGroup.pageLanguages]; [nl[i], nl[j]] = [nl[j], nl[i]];
     // Also swap pages in all cards
-    const updatedCards = group.cards.map(card => {
+    const updatedCards = activeGroup.cards.map(card => {
       const pages = [...card.pages];
       [pages[i], pages[j]] = [pages[j], pages[i]];
       return { ...card, pages };
     });
-    store.updateGroup({ ...group, pageNames: nn, pageLanguages: nl, cards: updatedCards });
+    store.updateGroup({ ...activeGroup, pageNames: nn, pageLanguages: nl, cards: updatedCards });
   };
 
   // Mode steps reordering (custom modes only)
@@ -173,7 +181,7 @@ export function SettingsPage() {
     if (!newModeName.trim() || customSteps.length === 0) return;
     const mode: StudyMode = { id: crypto.randomUUID(), name: newModeName.trim(), steps: customSteps };
     store.addStudyMode(mode);
-    store.updateGroup({ ...group, activeModeId: mode.id });
+    store.updateGroup({ ...activeGroup, activeModeId: mode.id });
     setCreatingMode(false); setCustomSteps([]); setNewModeName('');
   };
 
@@ -193,7 +201,7 @@ export function SettingsPage() {
       </Box>
 
       {/* Group name */}
-      <TextField fullWidth label="Nazwa zestawu" value={group.name}
+      <TextField fullWidth label="Nazwa zestawu" value={activeGroup.name}
         onChange={e => handleRename(e.target.value)} sx={{ mb: 3 }} />
 
       <Divider sx={{ mb: 3 }} />
@@ -206,14 +214,14 @@ export function SettingsPage() {
         <Typography variant="h6" sx={{ fontWeight: 700, minWidth: 32, textAlign: 'center' }}>{pageCount}</Typography>
         <IconButton size="small" onClick={() => setPageCount(pageCount + 1)} disabled={pageCount >= 5}><AddIcon /></IconButton>
       </Box>
-      {group.pageNames.map((pn, i) => (
+      {activeGroup.pageNames.map((pn, i) => (
         <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             <IconButton size="small" onClick={() => movePageSetting(i, -1)} disabled={i === 0}><ArrowUpwardIcon fontSize="small" /></IconButton>
             <IconButton size="small" onClick={() => movePageSetting(i, 1)} disabled={i === pageCount - 1}><ArrowDownwardIcon fontSize="small" /></IconButton>
           </Box>
           <TextField label={`Strona ${i + 1}`} value={pn} onChange={e => updatePN(i, e.target.value)} fullWidth size="small" />
-          <TextField select label="Język" value={group.pageLanguages[i] || 'en-US'}
+          <TextField select label="Język" value={activeGroup.pageLanguages[i] || 'en-US'}
             onChange={e => updatePL(i, e.target.value)} sx={{ minWidth: 140 }} size="small">
             {POPULAR_LANGS.map(l => <MenuItem key={l.code} value={l.code}>{l.label}</MenuItem>)}
           </TextField>
@@ -226,8 +234,8 @@ export function SettingsPage() {
       <Typography variant="h6" sx={{ mb: 2 }}>Aktywny tryb nauki</Typography>
       <FormControl fullWidth sx={{ mb: 3 }}>
         <InputLabel>Tryb</InputLabel>
-        <Select value={group.activeModeId} label="Tryb"
-          onChange={e => store.updateGroup({ ...group, activeModeId: e.target.value as string })}>
+        <Select value={activeGroup.activeModeId} label="Tryb"
+          onChange={e => store.updateGroup({ ...activeGroup, activeModeId: e.target.value as string })}>
           {store.studyModes.map(m => <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>)}
         </Select>
       </FormControl>
@@ -236,8 +244,8 @@ export function SettingsPage() {
       <Typography variant="h6" sx={{ mb: 2 }}>Zakres nauki</Typography>
       <FormControl fullWidth sx={{ mb: 3 }}>
         <InputLabel>Które fiszki uczyć</InputLabel>
-        <Select value={group.studyFilter || 'new+review'} label="Które fiszki uczyć"
-          onChange={e => store.updateGroup({ ...group, studyFilter: e.target.value as any })}>
+        <Select value={activeGroup.studyFilter || 'new+review'} label="Które fiszki uczyć"
+          onChange={e => store.updateGroup({ ...activeGroup, studyFilter: e.target.value as any })}>
           <MenuItem value="new+review">Nowe + do powtórki</MenuItem>
           <MenuItem value="new">Tylko nowe</MenuItem>
           <MenuItem value="review">Tylko do powtórki</MenuItem>
@@ -334,7 +342,7 @@ export function SettingsPage() {
         <DialogTitle>Usuń zestaw</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
-            Aby potwierdzić usunięcie zestawu „{group.name}", wpisz <strong>DELETE</strong> poniżej:
+            Aby potwierdzić usunięcie zestawu „{activeGroup.name}", wpisz <strong>DELETE</strong> poniżej:
           </Typography>
           <TextField fullWidth value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)}
             placeholder="DELETE" autoFocus />

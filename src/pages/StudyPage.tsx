@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -21,7 +21,15 @@ export function StudyPage() {
   const { nav, goBack, store } = useNav();
   const groupId = nav.params.groupId || '';
   const group = store.groups.find(g => g.id === groupId) || null;
-  const mode = store.studyModes.find(m => m.id === group?.activeModeId) || store.studyModes[0];
+
+  // Cache the last valid group to prevent blank/fallback screen during exit animation
+  const lastValidGroupRef = useRef<typeof group>(null);
+  if (group) {
+    lastValidGroupRef.current = group;
+  }
+  const activeGroup = group || lastValidGroupRef.current;
+
+  const mode = store.studyModes.find(m => m.id === activeGroup?.activeModeId) || store.studyModes[0];
   const steps = mode?.steps || [];
 
   const onCardReviewed = useCallback((gId: string, card: Flashcard) => {
@@ -32,7 +40,7 @@ export function StudyPage() {
   const {
     dueCards, sessionState, handleRating, handleCardTap,
     startSession, stopSession, setHolding, restartSession, restartFailed, failedCount,
-  } = useStudySession(group, steps, onCardReviewed);
+  } = useStudySession(activeGroup, steps, onCardReviewed);
   const s = sessionState;
   const currentCard = dueCards[s.currentCardIndex] || null;
 
@@ -55,7 +63,7 @@ export function StudyPage() {
   const onPointerUp = useCallback(() => setHolding(false), [setHolding]);
   const onPointerLeave = useCallback(() => setHolding(false), [setHolding]);
 
-  if (!group) return (
+  if (!activeGroup) return (
     <Box sx={{ p: 4, textAlign: 'center' }}>
       <Typography>Nie znaleziono grupy.</Typography>
       <Button onClick={goBack} sx={{ mt: 2 }}>Powrót</Button>
@@ -93,7 +101,7 @@ export function StudyPage() {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <IconButton onClick={handleBack}><ArrowBackIcon /></IconButton>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{group.name}</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{activeGroup.name}</Typography>
           <LinearProgress variant="determinate" value={progressPct} sx={{ height: 6, borderRadius: 3, mt: 0.5 }} />
         </Box>
         <Typography variant="body2" color="text.secondary">
@@ -126,7 +134,7 @@ export function StudyPage() {
               {currentCard && s.revealedPages.map(pi => (
                 <Box key={pi} sx={{ mb: 2 }}>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    {group.pageNames[pi] || `Strona ${pi + 1}`}
+                    {activeGroup.pageNames[pi] || `Strona ${pi + 1}`}
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 500 }}>
                     {currentCard.pages[pi] || '—'}

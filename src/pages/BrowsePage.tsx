@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -57,51 +57,59 @@ export function BrowsePage() {
   const { nav, goBack, store } = useNav();
   const groupId = nav.params.groupId || '';
   const group = store.groups.find(g => g.id === groupId);
+
+  // Cache the last valid group to prevent blank/fallback screen during exit animation
+  const lastValidGroupRef = useRef<typeof group>(undefined);
+  if (group) {
+    lastValidGroupRef.current = group;
+  }
+  const activeGroup = group || lastValidGroupRef.current;
+
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPages, setEditPages] = useState<string[]>([]);
   const [deleteCardId, setDeleteCardId] = useState<string | null>(null);
   const [browseFilter, setBrowseFilter] = useState<BrowseFilter>('all');
 
-  const stats = useMemo(() => group ? computeCardStats(group.cards) : { total: 0, newCount: 0, learning: 0, review: 0, mastered: 0 }, [group]);
+  const stats = useMemo(() => activeGroup ? computeCardStats(activeGroup.cards) : { total: 0, newCount: 0, learning: 0, review: 0, mastered: 0 }, [activeGroup]);
 
   const filtered = useMemo(() => {
-    if (!group) return [];
+    if (!activeGroup) return [];
     let cards: Flashcard[];
     // Filter by SRS STATE, not due date — so user sees all cards in that category
     switch (browseFilter) {
-      case 'new': cards = group.cards.filter(c => c.srsState.state === 0); break;
-      case 'review': cards = group.cards.filter(c => c.srsState.state > 0 && (c.srsState.repetitions < 3 || c.srsState.state !== 2)); break;
-      case 'mastered': cards = group.cards.filter(c => c.srsState.repetitions >= 3 && c.srsState.state === 2); break;
-      case 'all': default: cards = [...group.cards]; break;
+      case 'new': cards = activeGroup.cards.filter(c => c.srsState.state === 0); break;
+      case 'review': cards = activeGroup.cards.filter(c => c.srsState.state > 0 && (c.srsState.repetitions < 3 || c.srsState.state !== 2)); break;
+      case 'mastered': cards = activeGroup.cards.filter(c => c.srsState.repetitions >= 3 && c.srsState.state === 2); break;
+      case 'all': default: cards = [...activeGroup.cards]; break;
     }
     const q = search.toLowerCase();
     if (q) cards = cards.filter(c => c.pages.some(p => p.toLowerCase().includes(q)));
     return cards;
-  }, [group, search, browseFilter]);
+  }, [activeGroup, search, browseFilter]);
 
   const startEdit = (card: Flashcard) => { setEditingId(card.id); setEditPages([...card.pages]); };
   const cancelEdit = () => { setEditingId(null); setEditPages([]); };
   const saveEdit = () => {
-    if (!editingId || !group) return;
+    if (!editingId || !activeGroup) return;
     const filledCount = editPages.filter(p => p.trim()).length;
     // Need at least 2 filled pages, otherwise delete
     if (filledCount < 2) {
-      store.deleteFlashcard(groupId, editingId);
+      store.deleteFlashcard(activeGroup.id, editingId);
       cancelEdit(); return;
     }
-    const card = group.cards.find(c => c.id === editingId);
-    if (card) store.updateFlashcard(groupId, { ...card, pages: editPages });
+    const card = activeGroup.cards.find(c => c.id === editingId);
+    if (card) store.updateFlashcard(activeGroup.id, { ...card, pages: editPages });
     cancelEdit();
   };
   const addCard = () => {
-    if (!group) return;
-    const pages = group.pageNames.map(() => '');
-    const id = store.addFlashcard(groupId, pages);
+    if (!activeGroup) return;
+    const pages = activeGroup.pageNames.map(() => '');
+    const id = store.addFlashcard(activeGroup.id, pages);
     setEditingId(id); setEditPages(pages);
   };
 
-  if (!group) return (
+  if (!activeGroup) return (
     <Box sx={{ p: 4 }}><Typography>Grupa nie znaleziona.</Typography><Button onClick={goBack}>Powrót</Button></Box>
   );
 
@@ -109,7 +117,7 @@ export function BrowsePage() {
     <Box sx={{ p: 3, pb: 12, maxWidth: 800, mx: 'auto' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
         <IconButton onClick={goBack}><ArrowBackIcon /></IconButton>
-        <Typography variant="h5" sx={{ fontWeight: 700, flexGrow: 1 }}>{group.name}</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700, flexGrow: 1 }}>{activeGroup.name}</Typography>
         <Typography variant="body2" color="text.secondary">{stats.total} fiszek</Typography>
       </Box>
 
@@ -145,7 +153,7 @@ export function BrowsePage() {
                   <CardContent>
                     <Stack spacing={2}>
                       {editPages.map((page, i) => (
-                        <TextField key={i} fullWidth label={group.pageNames[i] || `Strona ${i + 1}`}
+                        <TextField key={i} fullWidth label={activeGroup.pageNames[i] || `Strona ${i + 1}`}
                           value={page} onChange={e => {
                             const next = [...editPages]; next[i] = e.target.value; setEditPages(next);
                           }} />
@@ -164,7 +172,7 @@ export function BrowsePage() {
                       {card.pages.map((page, i) => (
                         <Box key={i}>
                           <Typography variant="caption" color="text.secondary">
-                            {group.pageNames[i] || `Strona ${i + 1}`}:
+                            {activeGroup.pageNames[i] || `Strona ${i + 1}`}:
                           </Typography>
                           <Typography variant="body1" sx={{ fontWeight: i === 0 ? 600 : 400 }}>{page}</Typography>
                         </Box>
