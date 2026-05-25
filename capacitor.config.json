@@ -1,0 +1,9 @@
+{
+  "appId": "com.tensordeck.app",
+  "appName": "TensorDeck",
+  "webDir": "dist",
+  "server": {
+    "url": "https://tensordeck.web.app",
+    "cleartext": true
+  }
+}
