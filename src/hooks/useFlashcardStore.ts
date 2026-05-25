@@ -1,13 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import type { FlashcardGroup, Flashcard, StudyMode } from '../types/models';
 import { createNewSrsState } from '../srs/srsEngine';
 import { onAuthChange, signInWithGoogle, signOutUser, saveUserData, loadUserData } from '../services/firebase';
-import { useLocalStorage } from './useLocalStorage';
 
 function uid(): string { return crypto.randomUUID(); }
+const SEED_VERSION = 3;
 
-const SEED_VERSION = 3; // Bump to force re-seed default modes
+// Use localStorage helpers instead of useLocalStorage hook to support dynamic sync keys
+function getLocalGroups(): FlashcardGroup[] {
+  try {
+    const item = localStorage.getItem('fiszki-local-groups') || localStorage.getItem('fiszki-groups');
+    return item ? JSON.parse(item) : [];
+  } catch {
+    return [];
+  }
+}
+
+function getLocalModes(): StudyMode[] {
+  try {
+    const item = localStorage.getItem('fiszki-local-modes') || localStorage.getItem('fiszki-modes');
+    return item ? JSON.parse(item) : [];
+  } catch {
+    return [];
+  }
+}
+
+function getLocalHeatmap(): Record<string, number> {
+  try {
+    const item = localStorage.getItem('fiszki-local-heatmap') || localStorage.getItem('fiszki-heatmap');
+    return item ? JSON.parse(item) : {};
+  } catch {
+    return {};
+  }
+}
 
 export type CardFilter = 'all' | 'new' | 'review' | 'new+review';
 
@@ -48,6 +74,9 @@ function createSeedModes(): StudyMode[] {
   return [
     { id: 'classic', name: 'Klasyczny', steps: [
       { type: 'show_page', pageIndex: 0 },
+      { type: 'speak_page', pageIndex: 0, extraPauseMs: 500 },
+      { type: 'dynamic_pause', nextPageIndex: 1, extraPauseMs: 1000 },
+      { type: 'show_page', pageIndex: 1 },
     ]},
     { id: 'listen-speak', name: 'Audio', steps: [
       { type: 'show_page', pageIndex: 0 },
@@ -82,108 +111,186 @@ export interface FlashcardStore {
 }
 
 export function useFlashcardStore(): FlashcardStore {
-  const [groups, setGroups] = useLocalStorage<FlashcardGroup[]>('fiszki-groups', []);
-  const [studyModes, setStudyModes] = useLocalStorage<StudyMode[]>('fiszki-modes', []);
-  const [heatmap, setHeatmap] = useLocalStorage<Record<string, number>>('fiszki-heatmap', {});
+  const [groups, setGroups] = useState<FlashcardGroup[]>(() => {
+    const local = getLocalGroups();
+    return local.length > 0 ? local : createSeedGroups();
+  });
+  const [studyModes, setStudyModes] = useState<StudyMode[]>(() => {
+    const local = getLocalModes();
+    return local.length > 0 ? local : createSeedModes();
+  });
+  const [heatmap, setHeatmap] = useState<Record<string, number>>(() => getLocalHeatmap());
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [seedVer, setSeedVer] = useLocalStorage<number>('fiszki-seed-ver', 0);
+  const [seedVer, setSeedVer] = useState<number>(() => {
+    try {
+      const item = localStorage.getItem('fiszki-seed-ver');
+      return item ? Number(item) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Refs to access the latest state inside callbacks
+  const groupsRef = useRef(groups);
+  const studyModesRef = useRef(studyModes);
+  const heatmapRef = useRef(heatmap);
+  useEffect(() => { groupsRef.current = groups; }, [groups]);
+  useEffect(() => { studyModesRef.current = studyModes; }, [studyModes]);
+  useEffect(() => { heatmapRef.current = heatmap; }, [heatmap]);
+
+  const prevUserRef = useRef<User | null>(null);
+
+  const persist = useCallback((g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>) => {
+    if (user) {
+      saveUserData(user.uid, { groups: g, studyModes: m, activityHeatmap: h });
+      localStorage.setItem(`fiszki-user-groups-${user.uid}`, JSON.stringify(g));
+      localStorage.setItem(`fiszki-user-modes-${user.uid}`, JSON.stringify(m));
+      localStorage.setItem(`fiszki-user-heatmap-${user.uid}`, JSON.stringify(h));
+    } else {
+      localStorage.setItem('fiszki-local-groups', JSON.stringify(g));
+      localStorage.setItem('fiszki-local-modes', JSON.stringify(m));
+      localStorage.setItem('fiszki-local-heatmap', JSON.stringify(h));
+    }
+  }, [user]);
 
   // Seed on first launch or migrate on version bump
   useEffect(() => {
     if (seedVer < SEED_VERSION) {
       if (seedVer === 0) {
-        // First launch
-        setGroups(createSeedGroups());
+        const seedG = createSeedGroups();
+        setGroups(seedG);
+        localStorage.setItem('fiszki-local-groups', JSON.stringify(seedG));
       }
-      // Always update default modes on version bump
       setStudyModes(prev => {
         const defaultModes = createSeedModes();
         const customModes = prev.filter(m => m.id !== 'classic' && m.id !== 'listen-speak');
-        return [...defaultModes, ...customModes];
+        const next = [...defaultModes, ...customModes];
+        localStorage.setItem('fiszki-local-modes', JSON.stringify(next));
+        return next;
       });
+      localStorage.setItem('fiszki-seed-ver', String(SEED_VERSION));
       setSeedVer(SEED_VERSION);
     }
     setIsLoading(false);
-  }, [seedVer, setGroups, setStudyModes, setSeedVer]);
+  }, [seedVer]);
 
   // Auth listener
   useEffect(() => onAuthChange(u => setUser(u)), []);
 
-  // Sync from Firestore when user logs in
+  // Sync from Firestore when user logs in, and restore local data on logout
   useEffect(() => {
-    if (!user) return;
-    loadUserData(user.uid).then(data => {
-      if (data) {
-        setGroups(data.groups);
-        setStudyModes(data.studyModes);
-        setHeatmap(data.activityHeatmap);
-      }
-    });
-  }, [user, setGroups, setStudyModes, setHeatmap]);
+    const wasLoggedOut = prevUserRef.current === null;
+    const isNowLoggedIn = user !== null;
+    const isNowLoggedOut = user === null;
 
-  const persist = useCallback((g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>) => {
-    if (user) saveUserData(user.uid, { groups: g, studyModes: m, activityHeatmap: h });
+    if (wasLoggedOut && isNowLoggedIn) {
+      // 1. Instant loading of user-specific localStorage cache
+      const cachedGroups = localStorage.getItem(`fiszki-user-groups-${user.uid}`);
+      const cachedModes = localStorage.getItem(`fiszki-user-modes-${user.uid}`);
+      const cachedHeatmap = localStorage.getItem(`fiszki-user-heatmap-${user.uid}`);
+      if (cachedGroups && cachedModes && cachedHeatmap) {
+        setGroups(JSON.parse(cachedGroups));
+        setStudyModes(JSON.parse(cachedModes));
+        setHeatmap(JSON.parse(cachedHeatmap));
+      }
+
+      // 2. Fetch the latest from Firestore
+      loadUserData(user.uid).then(data => {
+        if (data) {
+          setGroups(data.groups);
+          setStudyModes(data.studyModes);
+          setHeatmap(data.activityHeatmap);
+          localStorage.setItem(`fiszki-user-groups-${user.uid}`, JSON.stringify(data.groups));
+          localStorage.setItem(`fiszki-user-modes-${user.uid}`, JSON.stringify(data.studyModes));
+          localStorage.setItem(`fiszki-user-heatmap-${user.uid}`, JSON.stringify(data.activityHeatmap));
+        }
+      });
+    } else if (!wasLoggedOut && isNowLoggedOut) {
+      // Logged out: Restore local anonymous data
+      const g = getLocalGroups();
+      const m = getLocalModes();
+      const h = getLocalHeatmap();
+
+      if (g.length === 0) {
+        const seedG = createSeedGroups();
+        const seedM = createSeedModes();
+        setGroups(seedG);
+        setStudyModes(seedM);
+        setHeatmap({});
+        localStorage.setItem('fiszki-local-groups', JSON.stringify(seedG));
+        localStorage.setItem('fiszki-local-modes', JSON.stringify(seedM));
+        localStorage.setItem('fiszki-local-heatmap', JSON.stringify({}));
+      } else {
+        setGroups(g);
+        setStudyModes(m);
+        setHeatmap(h);
+      }
+    }
+    prevUserRef.current = user;
   }, [user]);
 
   const addGroup = useCallback((name: string, languages: string[], pageNames: string[]) => {
     const id = uid();
     const g: FlashcardGroup = { id, name, cards: [], activeModeId: 'classic', pageLanguages: languages, pageNames };
-    setGroups(prev => { const next = [...prev, g]; persist(next, studyModes, heatmap); return next; });
+    setGroups(prev => { const next = [...prev, g]; persist(next, studyModesRef.current, heatmapRef.current); return next; });
     return id;
-  }, [setGroups, persist, studyModes, heatmap]);
+  }, [persist]);
 
   const updateGroup = useCallback((group: FlashcardGroup) => {
-    setGroups(prev => { const next = prev.map(g => g.id === group.id ? group : g); persist(next, studyModes, heatmap); return next; });
-  }, [setGroups, persist, studyModes, heatmap]);
+    setGroups(prev => { const next = prev.map(g => g.id === group.id ? group : g); persist(next, studyModesRef.current, heatmapRef.current); return next; });
+  }, [persist]);
 
   const deleteGroup = useCallback((id: string) => {
-    setGroups(prev => { const next = prev.filter(g => g.id !== id); persist(next, studyModes, heatmap); return next; });
-  }, [setGroups, persist, studyModes, heatmap]);
+    setGroups(prev => { const next = prev.filter(g => g.id !== id); persist(next, studyModesRef.current, heatmapRef.current); return next; });
+  }, [persist]);
 
   const addFlashcard = useCallback((groupId: string, pages: string[]) => {
     const card: Flashcard = { id: uid(), pages, srsState: createNewSrsState() };
     setGroups(prev => {
       const next = prev.map(g => g.id === groupId ? { ...g, cards: [...g.cards, card] } : g);
-      persist(next, studyModes, heatmap); return next;
+      persist(next, studyModesRef.current, heatmapRef.current); return next;
     });
     return card.id;
-  }, [setGroups, persist, studyModes, heatmap]);
+  }, [persist]);
 
   const updateFlashcard = useCallback((groupId: string, card: Flashcard) => {
     setGroups(prev => {
       const next = prev.map(g => g.id === groupId ? { ...g, cards: g.cards.map(c => c.id === card.id ? card : c) } : g);
-      persist(next, studyModes, heatmap); return next;
+      persist(next, studyModesRef.current, heatmapRef.current); return next;
     });
-  }, [setGroups, persist, studyModes, heatmap]);
+  }, [persist]);
 
   const deleteFlashcard = useCallback((groupId: string, cardId: string) => {
     setGroups(prev => {
       const next = prev.map(g => g.id === groupId ? { ...g, cards: g.cards.filter(c => c.id !== cardId) } : g);
-      persist(next, studyModes, heatmap); return next;
+      persist(next, studyModesRef.current, heatmapRef.current); return next;
     });
-  }, [setGroups, persist, studyModes, heatmap]);
+  }, [persist]);
 
   const addStudyMode = useCallback((mode: StudyMode) => {
-    setStudyModes(prev => { const next = [...prev, mode]; persist(groups, next, heatmap); return next; });
-  }, [setStudyModes, persist, groups, heatmap]);
+    setStudyModes(prev => { const next = [...prev, mode]; persist(groupsRef.current, next, heatmapRef.current); return next; });
+  }, [persist]);
 
   const deleteStudyMode = useCallback((id: string) => {
-    setStudyModes(prev => { const next = prev.filter(m => m.id !== id); persist(groups, next, heatmap); return next; });
-  }, [setStudyModes, persist, groups, heatmap]);
+    setStudyModes(prev => { const next = prev.filter(m => m.id !== id); persist(groupsRef.current, next, heatmapRef.current); return next; });
+  }, [persist]);
 
   const resetToDefault = useCallback(() => {
     const g = createSeedGroups(), m = createSeedModes(), h: Record<string, number> = {};
-    setGroups(g); setStudyModes(m); setHeatmap(h); setSeedVer(SEED_VERSION); persist(g, m, h);
-  }, [setGroups, setStudyModes, setHeatmap, setSeedVer, persist]);
+    setGroups(g); setStudyModes(m); setHeatmap(h); 
+    setSeedVer(SEED_VERSION);
+    localStorage.setItem('fiszki-seed-ver', String(SEED_VERSION));
+    persist(g, m, h);
+  }, [persist]);
 
   const recordActivity = useCallback(() => {
     const today = new Date().toISOString().slice(0, 10);
     setHeatmap(prev => {
       const next = { ...prev, [today]: (prev[today] || 0) + 1 };
-      persist(groups, studyModes, next); return next;
+      persist(groupsRef.current, studyModesRef.current, next); return next;
     });
-  }, [setHeatmap, persist, groups, studyModes]);
+  }, [persist]);
 
   const getDueCards = useCallback((groupId: string): Flashcard[] => {
     const group = groups.find(g => g.id === groupId);
@@ -208,11 +315,15 @@ export function useFlashcardStore(): FlashcardStore {
   const importState = useCallback((json: string) => {
     try {
       const data = JSON.parse(json);
-      if (data.groups) setGroups(data.groups);
-      if (data.studyModes) setStudyModes(data.studyModes);
-      if (data.activityHeatmap) setHeatmap(data.activityHeatmap);
+      const g = data.groups || [];
+      const m = data.studyModes || [];
+      const h = data.activityHeatmap || {};
+      setGroups(g);
+      setStudyModes(m);
+      setHeatmap(h);
+      persist(g, m, h);
     } catch { console.error('Invalid JSON import'); }
-  }, [setGroups, setStudyModes, setHeatmap]);
+  }, [persist]);
 
   return {
     groups, studyModes, activityHeatmap: heatmap, isLoading, user,

@@ -15,6 +15,11 @@ html, body, #root {
 body {
   background-color: #FEF7FF; /* Domyślny tło M3 light, MUI nadpisze to przez ThemeProvider */
 }
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #141218;
+  }
+}
 
 /* Wygładzanie przewijania natywnego */
 * {

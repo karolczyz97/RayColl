@@ -49,7 +49,8 @@ function nextForgetStability(d: number, s: number, r: number): number {
   return W[11] * d ** (-W[12]) * ((s + 1) ** W[13] - 1) * Math.exp((1 - r) * W[14]);
 }
 
-export function calculateFsrs(current: SrsState, rating: number): SrsState {
+export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
+  const rating = Math.max(1, Math.min(4, Math.round(rawRating)));
   const now = Date.now();
   const elapsedMs = now - (current.lastReviewTimestamp || now);
   const elapsedDays = Math.max(elapsedMs / (1000 * 60 * 60 * 24), 0);
@@ -141,10 +142,10 @@ export function matchSpeech(recognized: string, original: string): number {
 }
 
 export function mapMatchToRating(matchPercent: number): number {
-  if (matchPercent >= 90) return 5;
-  if (matchPercent >= 70) return 4;
-  if (matchPercent >= 50) return 3;
-  return 1;
+  if (matchPercent >= 85) return 4; // Easy
+  if (matchPercent >= 60) return 3; // Good
+  if (matchPercent >= 40) return 2; // Hard
+  return 1; // Again
 }
 
 // --- Shared SRS State Categorization Logic ---
@@ -161,8 +162,8 @@ export interface CategoryInfo {
 export const CATEGORIES: Record<SrsCardCategory, CategoryInfo> = {
   new: { label: 'Nowe', color: '#42a5f5', chipColor: 'info', badgeText: 'Nowa' },
   learning: { label: 'Uczone', color: '#ffa726', chipColor: 'warning', badgeText: 'Uczona' },
-  review: { label: 'Powtórki', color: '#66bb6a', chipColor: 'success', badgeText: 'Powtórka' },
-  mastered: { label: 'Opanowane', color: '#ab47bc', chipColor: 'secondary', badgeText: 'Opanowana' },
+  review: { label: 'Powtórki', color: '#7c4dff', chipColor: 'secondary', badgeText: 'Powtórka' },
+  mastered: { label: 'Opanowane', color: '#4caf50', chipColor: 'success', badgeText: 'Opanowana' },
 };
 
 export function getCardCategory(state: SrsState): SrsCardCategory {

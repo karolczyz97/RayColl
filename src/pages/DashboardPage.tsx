@@ -8,7 +8,6 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardActions from '@mui/material/CardActions';
 import Fab from '@mui/material/Fab';
-
 import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import Popper from '@mui/material/Popper';
@@ -26,9 +25,11 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TuneIcon from '@mui/icons-material/Tune';
 import PersonIcon from '@mui/icons-material/Person';
+import Tooltip from '@mui/material/Tooltip';
 import { useNav } from '../App';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import type { FlashcardGroup } from '../types/models';
+import { useI18n } from '../i18n';
 
 function GroupStudyButton({ group, onStudy, onModeChange }: {
   group: FlashcardGroup;
@@ -36,11 +37,19 @@ function GroupStudyButton({ group, onStudy, onModeChange }: {
   onModeChange: (modeId: string) => void;
 }) {
   const { store } = useNav();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const dueCount = store.getDueCards(group.id).length;
   const activeMode = store.studyModes.find(m => m.id === group.activeModeId);
-  const modeName = activeMode?.name || 'Klasyczny';
+
+  const getModeName = (mId: string, defaultName: string) => {
+    const key = `mode.${mId}.name`;
+    const translated = t(key);
+    return translated === key ? defaultName : translated;
+  };
+
+  const modeName = activeMode ? getModeName(activeMode.id, activeMode.name) : t('mode.classic.name');
 
   return (
     <>
@@ -67,7 +76,7 @@ function GroupStudyButton({ group, onStudy, onModeChange }: {
                   {store.studyModes.map(m => (
                     <MenuItem key={m.id} selected={m.id === group.activeModeId}
                       onClick={() => { onModeChange(m.id); setOpen(false); }}>
-                      {m.name}
+                      {getModeName(m.id, m.name)}
                     </MenuItem>
                   ))}
                 </MenuList>
@@ -82,6 +91,7 @@ function GroupStudyButton({ group, onStudy, onModeChange }: {
 
 export function DashboardPage() {
   const { navigate, store } = useNav();
+  const { t } = useI18n();
   const { groups, getDueCards, user, signIn, signOut } = store;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuAnchorRef = useRef<HTMLButtonElement>(null);
@@ -99,8 +109,12 @@ export function DashboardPage() {
           <Typography variant="h4" sx={{ fontWeight: 700 }}>TensorDeck</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton onClick={() => navigate('stats')}><BarChartIcon /></IconButton>
-          <IconButton onClick={() => navigate('app-settings')}><SettingsIcon /></IconButton>
+          <Tooltip title={t('stats.title')}>
+            <IconButton onClick={() => navigate('stats')}><BarChartIcon /></IconButton>
+          </Tooltip>
+          <Tooltip title={t('app_settings.title')}>
+            <IconButton onClick={() => navigate('app-settings')}><SettingsIcon /></IconButton>
+          </Tooltip>
           {user ? (
             <>
               <IconButton
@@ -117,7 +131,7 @@ export function DashboardPage() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                           <Avatar src={user.photoURL || ''} sx={{ width: 48, height: 48, mb: 1 }}>{user.displayName?.[0]}</Avatar>
                           <Typography variant="subtitle1" sx={{ fontWeight: 600, textAlign: 'center' }}>
-                            {user.displayName || 'Użytkownik'}
+                            {user.displayName || t('auth.local')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textAlign: 'center', wordBreak: 'break-all' }}>
                             {user.email}
@@ -132,7 +146,7 @@ export function DashboardPage() {
                               setUserMenuOpen(false);
                             }}
                           >
-                            Wyloguj się
+                            {t('btn.logout')}
                           </Button>
                         </Box>
                       </ClickAwayListener>
@@ -142,53 +156,67 @@ export function DashboardPage() {
               </Popper>
             </>
           ) : (
-            <IconButton onClick={handleLogin}><PersonIcon /></IconButton>
+            <Tooltip title={t('btn.login')}>
+              <IconButton onClick={handleLogin}><PersonIcon /></IconButton>
+            </Tooltip>
           )}
         </Box>
       </Box>
 
       {/* Groups grid */}
-      <Grid container spacing={3}>
-        {groups.map(group => {
-          const dueCount = getDueCards(group.id).length;
-          const cardStats = computeCardStats(group.cards);
-          return (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>{group.name}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {group.cards.length} fiszek
-                  </Typography>
-                  <SegmentedProgressBar stats={cardStats} height={10} />
-                  {dueCount > 0 && (
-                    <Typography variant="body2" color="error.main" sx={{ fontWeight: 500 }}>
-                      {dueCount} do powtórki
+      {groups.length === 0 ? (
+        <Box sx={{ py: 8, textAlign: 'center' }}>
+          <Typography color="text.secondary">{t('dashboard.no_groups')}</Typography>
+        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {groups.map(group => {
+            const dueCount = getDueCards(group.id).length;
+            const cardStats = computeCardStats(group.cards);
+            return (
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>{group.name}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      {t('dashboard.cards_count', { count: group.cards.length })}
                     </Typography>
-                  )}
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2, gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => navigate('browse', { groupId: group.id })}
-                    color="primary"><VisibilityIcon /></IconButton>
-                  <IconButton size="small" onClick={() => navigate('settings', { groupId: group.id })}
-                    color="primary"><TuneIcon /></IconButton>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <GroupStudyButton group={group}
-                      onStudy={() => navigate('study', { groupId: group.id })}
-                      onModeChange={(modeId) => store.updateGroup({ ...group, activeModeId: modeId })} />
-                  </Box>
-                </CardActions>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
+                    <SegmentedProgressBar stats={cardStats} height={10} />
+                    {dueCount > 0 && (
+                      <Typography variant="body2" color="error.main" sx={{ fontWeight: 500, mt: 1 }}>
+                        {t('dashboard.due_count', { count: dueCount })}
+                      </Typography>
+                    )}
+                  </CardContent>
+                  <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2, gap: 0.5 }}>
+                    <Tooltip title={t('dashboard.tooltip.browse')}>
+                      <IconButton size="small" onClick={() => navigate('browse', { groupId: group.id })}
+                        color="primary"><VisibilityIcon /></IconButton>
+                    </Tooltip>
+                    <Tooltip title={t('dashboard.tooltip.settings')}>
+                      <IconButton size="small" onClick={() => navigate('settings', { groupId: group.id })}
+                        color="primary"><TuneIcon /></IconButton>
+                    </Tooltip>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <GroupStudyButton group={group}
+                        onStudy={() => navigate('study', { groupId: group.id })}
+                        onModeChange={(modeId) => store.updateGroup({ ...group, activeModeId: modeId })} />
+                    </Box>
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
 
       {/* Single FAB — plus icon, navigates to import */}
-      <Fab color="primary" onClick={() => navigate('import')} aria-label="add"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}>
-        <AddIcon />
-      </Fab>
+      <Tooltip title={t('import.title')} placement="left">
+        <Fab color="primary" onClick={() => navigate('import')} aria-label="add"
+          sx={{ position: 'fixed', bottom: 24, right: 24 }}>
+          <AddIcon />
+        </Fab>
+      </Tooltip>
     </Box>
   );
 }

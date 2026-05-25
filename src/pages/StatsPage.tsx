@@ -1,18 +1,19 @@
 import { useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Tooltip from '@mui/material/Tooltip';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import SchoolIcon from '@mui/icons-material/School';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import { useTheme } from '@mui/material/styles';
 import { useNav } from '../App';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
+import { PageHeader } from '../components/PageHeader';
+import { useI18n } from '../i18n';
 
 function computeStreak(heatmap: Record<string, number>): number {
   const today = new Date();
@@ -25,7 +26,10 @@ function computeStreak(heatmap: Record<string, number>): number {
   return streak;
 }
 
-function HeatmapSvg({ heatmap }: { heatmap: Record<string, number> }) {
+function HeatmapSvg({ heatmap, t }: { heatmap: Record<string, number>; t: (key: string) => string }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  
   const cols = 20, rows = 7;
   const cellSize = 14, gap = 3;
   const today = new Date();
@@ -41,23 +45,30 @@ function HeatmapSvg({ heatmap }: { heatmap: Record<string, number> }) {
   }
 
   const colorFor = (count: number): string => {
-    if (count === 0) return '#2d2d3a';
-    if (count <= 2) return '#0e4429';
-    if (count <= 5) return '#006d32';
-    if (count <= 10) return '#26a641';
-    return '#39d353';
+    if (count === 0) return isDark ? '#2d2d3a' : '#eaeaf0';
+    if (isDark) {
+      if (count <= 2) return '#0e4429';
+      if (count <= 5) return '#006d32';
+      if (count <= 10) return '#26a641';
+      return '#39d353';
+    } else {
+      if (count <= 2) return '#c6e48b';
+      if (count <= 5) return '#7bc96f';
+      if (count <= 10) return '#239a3b';
+      return '#196127';
+    }
   };
 
   const w = cols * (cellSize + gap) + 30, h = rows * (cellSize + gap);
-  const dayLabels = ['Pon', '', 'Śr', '', 'Pią', '', 'Nie'];
+  const dayLabels = [t('stats.day.mon'), '', t('stats.day.wed'), '', t('stats.day.fri'), '', t('stats.day.sun')];
 
   return (
     <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ maxWidth: 500 }}>
       {dayLabels.map((label, i) => label && (
-        <text key={i} x={0} y={i * (cellSize + gap) + cellSize - 2} fontSize={9} fill="#888">{label}</text>
+        <text key={i} x={0} y={i * (cellSize + gap) + cellSize - 2} fontSize={9} fill={isDark ? '#888' : '#666'}>{label}</text>
       ))}
       {cells.map((c, i) => (
-        <Tooltip key={i} title={`${c.date}: ${c.count} powtórek`} arrow>
+        <Tooltip key={i} title={`${c.date}: ${c.count}`} arrow>
           <rect x={c.x} y={c.y} width={cellSize} height={cellSize} rx={3} fill={colorFor(c.count)} style={{ cursor: 'pointer' }} />
         </Tooltip>
       ))}
@@ -67,6 +78,7 @@ function HeatmapSvg({ heatmap }: { heatmap: Record<string, number> }) {
 
 export function StatsPage() {
   const { goBack, store } = useNav();
+  const { t } = useI18n();
   const { groups, activityHeatmap, getDueCards } = store;
 
   const totalCards = groups.reduce((a, g) => a + g.cards.length, 0);
@@ -79,18 +91,15 @@ export function StatsPage() {
   const globalStats = useMemo(() => computeCardStats(allCards), [allCards]);
 
   return (
-    <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={goBack}><ArrowBackIcon /></IconButton>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>Statystyki</Typography>
-      </Box>
+    <Box sx={{ p: 3, pb: 12, maxWidth: 800, mx: 'auto' }}>
+      <PageHeader title={t('stats.title')} onBack={goBack} />
 
       <Grid container spacing={2} sx={{ mb: 4 }}>
         {[
-          { icon: <LocalFireDepartmentIcon />, label: 'Seria dni', value: `${streak} 🔥`, color: 'warning.main' },
-          { icon: <SchoolIcon />, label: 'Opanowane', value: `${globalStats.mastered}/${totalCards}`, color: 'success.main' },
-          { icon: <ReplayIcon />, label: 'Do powtórki', value: String(totalDue), color: 'error.main' },
-          { icon: <CalendarMonthIcon />, label: 'Dni aktywności', value: String(activeDays), color: 'primary.main' },
+          { icon: <LocalFireDepartmentIcon />, label: t('stats.streak'), value: `${streak} 🔥`, color: 'warning.main' },
+          { icon: <SchoolIcon />, label: t('filter.mastered'), value: `${globalStats.mastered}/${totalCards}`, color: 'success.main' },
+          { icon: <ReplayIcon />, label: t('stats.due_cards'), value: String(totalDue), color: 'error.main' },
+          { icon: <CalendarMonthIcon />, label: t('stats.active_days'), value: String(activeDays), color: 'primary.main' },
         ].map((m, i) => (
           <Grid size={{ xs: 6, sm: 3 }} key={i}>
             <Card>
@@ -107,30 +116,30 @@ export function StatsPage() {
       {/* Global progress bar */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Ogólny postęp</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('stats.progress_title')}</Typography>
           <SegmentedProgressBar stats={globalStats} height={18} showLegend />
         </CardContent>
       </Card>
 
       <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Heatmapa aktywności</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('stats.heatmap_title')}</Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <HeatmapSvg heatmap={activityHeatmap} />
+            <HeatmapSvg heatmap={activityHeatmap} t={t} />
           </Box>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Postępy zestawów</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('stats.deck_progress')}</Typography>
           {groups.map(g => {
             const groupStats = computeCardStats(g.cards);
             return (
               <Box key={g.id} sx={{ mb: 2.5 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                   <Typography variant="body2">{g.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">{g.cards.length} fiszek</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('stats.cards_count', { count: g.cards.length })}</Typography>
                 </Box>
                 <SegmentedProgressBar stats={groupStats} height={10} />
               </Box>

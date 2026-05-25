@@ -1,8 +1,10 @@
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 import type { Flashcard } from '../types/models';
-import { getCardCategory, CATEGORIES } from '../srs/srsEngine';
+import { getCardCategory } from '../srs/srsEngine';
+import { useI18n } from '../i18n';
 
 export interface CardStats {
   total: number;
@@ -32,15 +34,18 @@ interface Props {
 
 export function SegmentedProgressBar({ stats, height = 12, showLegend = false }: Props) {
   const { total, newCount, learning, review, mastered } = stats;
+  const { t } = useI18n();
+  const theme = useTheme();
+
   if (total === 0) return (
     <Box sx={{ height, borderRadius: height / 2, bgcolor: 'action.disabledBackground' }} />
   );
 
   const segments = [
-    { count: mastered, color: CATEGORIES.mastered.color, label: CATEGORIES.mastered.label },
-    { count: review, color: CATEGORIES.review.color, label: CATEGORIES.review.label },
-    { count: learning, color: CATEGORIES.learning.color, label: CATEGORIES.learning.label },
-    { count: newCount, color: CATEGORIES.new.color, label: CATEGORIES.new.label },
+    { count: mastered, color: theme.palette.success.main, label: t('srs.badge.mastered') },
+    { count: review, color: theme.palette.secondary.main, label: t('srs.badge.review') },
+    { count: learning, color: theme.palette.warning.main, label: t('srs.badge.learning') },
+    { count: newCount, color: theme.palette.info.main, label: t('srs.badge.new') },
   ].filter(s => s.count > 0);
 
   return (
@@ -61,10 +66,10 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
       {showLegend && (
         <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
           {[
-            { color: CATEGORIES.mastered.color, label: CATEGORIES.mastered.label, count: mastered },
-            { color: CATEGORIES.review.color, label: CATEGORIES.review.label, count: review },
-            { color: CATEGORIES.learning.color, label: CATEGORIES.learning.label, count: learning },
-            { color: CATEGORIES.new.color, label: CATEGORIES.new.label, count: newCount },
+            { color: theme.palette.success.main, label: t('srs.badge.mastered'), count: mastered },
+            { color: theme.palette.secondary.main, label: t('srs.badge.review'), count: review },
+            { color: theme.palette.warning.main, label: t('srs.badge.learning'), count: learning },
+            { color: theme.palette.info.main, label: t('srs.badge.new'), count: newCount },
           ].map((item, i) => (
             <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />

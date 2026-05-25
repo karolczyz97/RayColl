@@ -14,6 +14,7 @@ import { ImportPage } from './pages/ImportPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StatsPage } from './pages/StatsPage';
 import { AppSettingsPage } from './pages/AppSettingsPage';
+import { I18nProvider } from './i18n';
 
 export type PageId = 'dashboard' | 'study' | 'browse' | 'import' | 'settings' | 'stats' | 'app-settings';
 export interface NavState { page: PageId; params: Record<string, string>; }
@@ -33,11 +34,40 @@ interface NavContextType {
 export const NavContext = createContext<NavContextType>(null!);
 export const useNav = () => useContext(NavContext);
 
+function getSystemAccentColor(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const el = document.createElement('div');
+    el.style.color = 'AccentColor';
+    document.body.appendChild(el);
+    const resolved = window.getComputedStyle(el).color;
+    document.body.removeChild(el);
+    if (resolved && resolved !== 'rgba(0, 0, 0, 0)' && resolved !== 'rgb(0, 0, 0)' && resolved !== 'rgb(255, 255, 255)') {
+      return resolved;
+    }
+  } catch (e) {
+    console.warn("Failed to extract system accent color:", e);
+  }
+  return undefined;
+}
+
 function AppContent() {
   const navigateRouter = useNavigate();
   const location = useLocation();
 
-  const [themePref, setThemePref] = useState<'light' | 'dark' | 'system'>('system');
+  const [themePref, setThemePrefState] = useState<'light' | 'dark' | 'system'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('td-theme-pref');
+      return (saved as 'light' | 'dark' | 'system') || 'system';
+    }
+    return 'system';
+  });
+
+  const setThemePref = useCallback((pref: 'light' | 'dark' | 'system') => {
+    setThemePrefState(pref);
+    localStorage.setItem('td-theme-pref', pref);
+  }, []);
+
   const [ttsRate, setTtsRate] = useState(1.0);
   const store = useFlashcardStore();
 
@@ -51,8 +81,14 @@ function AppContent() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  const [systemAccent, setSystemAccent] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const accent = getSystemAccentColor();
+    if (accent) setSystemAccent(accent);
+  }, []);
+
   const themeMode: 'light' | 'dark' = themePref === 'system' ? (systemDark ? 'dark' : 'light') : themePref;
-  const theme = useMemo(() => createM3Theme(themeMode), [themeMode]);
+  const theme = useMemo(() => createM3Theme(themeMode, systemAccent ? { primary: systemAccent } : undefined), [themeMode, systemAccent]);
 
   const pageId = useMemo((): PageId => {
     const path = location.pathname;
@@ -220,7 +256,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <AppContent />
+        <I18nProvider>
+          <AppContent />
+        </I18nProvider>
       </Router>
     </ErrorBoundary>
   );

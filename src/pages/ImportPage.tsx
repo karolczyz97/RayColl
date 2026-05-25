@@ -12,10 +12,11 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useNav } from '../App';
+import { PageHeader } from '../components/PageHeader';
+import { useI18n } from '../i18n';
 
 const SEPARATORS: Record<string, string> = { tab: '\t', semicolon: ';', comma: ',', pipe: '|' };
 
@@ -50,6 +51,7 @@ function detectPageCount(text: string, sep: string): number {
 
 export function ImportPage() {
   const { goBack, store } = useNav();
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [sepKey, setSepKey] = useState('semicolon');
   const [pageCount, setPageCount] = useState(2);
@@ -119,37 +121,34 @@ export function ImportPage() {
   const updatePageLang = (i: number, v: string) => { const n = [...pageLangs]; n[i] = v; setPageLangs(n); };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={goBack}><ArrowBackIcon /></IconButton>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>Importuj grupę fiszek</Typography>
-      </Box>
+    <Box sx={{ p: 3, pb: 12, maxWidth: 800, mx: 'auto' }}>
+      <PageHeader title={t('import.title')} onBack={goBack} />
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 4 }}>
-        <TextField fullWidth label="Nazwa nowej grupy" value={name} onChange={e => setName(e.target.value)} />
+        <TextField fullWidth label={t('dashboard.name_label')} value={name} onChange={e => setName(e.target.value)} size="small" />
 
         {/* Paste area + file upload */}
-        <TextField fullWidth multiline rows={5} label="Wklej zawartość" value={rawText}
+        <TextField fullWidth multiline rows={5} label={t('import.csv_label')} value={rawText}
           onChange={e => handleTextChange(e.target.value)}
-          placeholder="Wklej dane — separator i liczba stron zostaną wykryte automatycznie" />
+          placeholder={t('import.name_placeholder')} />
 
         <Button variant="outlined" component="label">
-          Wgraj plik (.csv, .txt, .json)
+          {t('import.upload_btn')}
           <input type="file" hidden accept=".json,.txt,.csv" onChange={handleFile} />
         </Button>
 
         {/* Detected separator */}
-        <TextField fullWidth select label="Separator (wykryty automatycznie)" value={sepKey}
-          onChange={e => setSepKey(e.target.value)}>
-          <MenuItem value="tab">Tabulator</MenuItem>
-          <MenuItem value="semicolon">Średnik (;)</MenuItem>
-          <MenuItem value="comma">Przecinek (,)</MenuItem>
-          <MenuItem value="pipe">Kreska (|)</MenuItem>
+        <TextField fullWidth select label={t('import.separator')} value={sepKey}
+          onChange={e => setSepKey(e.target.value)} size="small">
+          <MenuItem value="tab">{t('import.sep.tab')}</MenuItem>
+          <MenuItem value="semicolon">{t('import.sep.semicolon')}</MenuItem>
+          <MenuItem value="comma">{t('import.sep.comma')}</MenuItem>
+          <MenuItem value="pipe">{t('import.sep.pipe')}</MenuItem>
         </TextField>
 
         {/* Page count with arrows */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography>Liczba stron:</Typography>
+          <Typography variant="body2">{t('import.pages_count')}</Typography>
           <IconButton size="small" onClick={() => setPageCount(p => Math.max(2, p - 1))}
             disabled={pageCount <= 2}><RemoveIcon /></IconButton>
           <Typography variant="h6" sx={{ fontWeight: 700, minWidth: 32, textAlign: 'center' }}>{pageCount}</Typography>
@@ -159,11 +158,11 @@ export function ImportPage() {
 
         {Array.from({ length: pageCount }).map((_, i) => (
           <Box key={i} sx={{ display: 'flex', gap: 2 }}>
-            <TextField label={`Nazwa strony ${i + 1}`} value={pageNames[i]}
-              onChange={e => updatePageName(i, e.target.value)} fullWidth />
-            <TextField select label="Język" value={pageLangs[i] || 'en-US'}
-              onChange={e => updatePageLang(i, e.target.value)} sx={{ minWidth: 160 }}>
-              {POPULAR_LANGS.map(l => <MenuItem key={l.code} value={l.code}>{l.label}</MenuItem>)}
+            <TextField label={t('import.page_name_label', { index: i + 1 })} value={pageNames[i]}
+              onChange={e => updatePageName(i, e.target.value)} fullWidth size="small" />
+            <TextField select label={t('import.lang_label')} value={pageLangs[i] || 'en-US'}
+              onChange={e => updatePageLang(i, e.target.value)} sx={{ minWidth: 160 }} size="small">
+              {POPULAR_LANGS.map(l => <MenuItem key={l.code} value={l.code}>{t('lang.' + l.code)}</MenuItem>)}
             </TextField>
           </Box>
         ))}
@@ -171,12 +170,12 @@ export function ImportPage() {
 
       {rows.length > 0 && (
         <>
-          <Typography variant="h6" sx={{ mb: 2 }}>Podgląd ({rows.length} wierszy)</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('import.preview')} ({rows.length})</Typography>
           <TableContainer component={Paper} sx={{ mb: 3, maxHeight: 300 }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  {pageNames.slice(0, pageCount).map((n, i) => <TableCell key={i}>{n || `Strona ${i + 1}`}</TableCell>)}
+                  {pageNames.slice(0, pageCount).map((n, i) => <TableCell key={i}>{n || t('import.page_label', { index: i + 1 })}</TableCell>)}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -191,7 +190,7 @@ export function ImportPage() {
 
       <Button variant="contained" size="large" fullWidth onClick={handleImport}
         disabled={!name.trim() || rows.length === 0}>
-        Importuj i utwórz grupę
+        {t('import.btn', { count: rows.length })}
       </Button>
     </Box>
   );

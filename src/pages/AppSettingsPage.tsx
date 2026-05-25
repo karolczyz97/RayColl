@@ -1,20 +1,25 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
 import Slider from '@mui/material/Slider';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
 import { useNav } from '../App';
+import { PageHeader } from '../components/PageHeader';
+import { useI18n } from '../i18n';
+import type { LanguageCode } from '../i18n';
 
 export function AppSettingsPage() {
   const { goBack, store, themePref, setThemeMode, ttsRate, setTtsRate } = useNav();
+  const { language, setLanguage, t } = useI18n();
 
   const handleExport = () => {
     const data = store.exportState();
@@ -35,25 +40,51 @@ export function AppSettingsPage() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <IconButton onClick={goBack}><ArrowBackIcon /></IconButton>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>Ustawienia ogólne</Typography>
-      </Box>
+    <Box sx={{ p: 3, pb: 12, maxWidth: 600, mx: 'auto' }}>
+      <PageHeader title={t('app_settings.title')} onBack={goBack} />
 
       <Stack spacing={3}>
-        {/* Theme — uses themePref (light/dark/system) not resolved themeMode */}
+        {/* Language Selection */}
         <Box>
-          <Typography variant="h6" sx={{ mb: 2 }}>Motyw</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('app_settings.lang')}</Typography>
+          <FormControl fullWidth size="small">
+            <Select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+            >
+              <MenuItem value="pl">🇵🇱 Polski</MenuItem>
+              <MenuItem value="en">🇬🇧 English</MenuItem>
+              <MenuItem value="de">🇩🇪 Deutsch</MenuItem>
+              <MenuItem value="es">🇪🇸 Español</MenuItem>
+              <MenuItem value="it">🇮🇹 Italiano</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Divider />
+
+        {/* Theme Preference */}
+        <Box>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('app_settings.theme')}</Typography>
           <ToggleButtonGroup
             value={themePref}
             exclusive
             onChange={(_, val) => { if (val) setThemeMode(val); }}
             fullWidth
+            size="small"
           >
-            <ToggleButton value="light"><LightModeIcon sx={{ mr: 1 }} />Jasny</ToggleButton>
-            <ToggleButton value="system"><SettingsBrightnessIcon sx={{ mr: 1 }} />System</ToggleButton>
-            <ToggleButton value="dark"><DarkModeIcon sx={{ mr: 1 }} />Ciemny</ToggleButton>
+            <ToggleButton value="light">
+              <LightModeIcon sx={{ mr: 1, fontSize: 20 }} />
+              {t('app_settings.theme.light')}
+            </ToggleButton>
+            <ToggleButton value="system">
+              <SettingsBrightnessIcon sx={{ mr: 1, fontSize: 20 }} />
+              {t('app_settings.theme.system')}
+            </ToggleButton>
+            <ToggleButton value="dark">
+              <DarkModeIcon sx={{ mr: 1, fontSize: 20 }} />
+              {t('app_settings.theme.dark')}
+            </ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
@@ -61,9 +92,9 @@ export function AppSettingsPage() {
 
         {/* TTS speed */}
         <Box>
-          <Typography variant="h6" sx={{ mb: 1 }}>Prędkość czytania TTS</Typography>
+          <Typography variant="h6" sx={{ mb: 1 }}>{t('app_settings.tts_rate')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Aktualna: {ttsRate.toFixed(1)}x
+            {ttsRate.toFixed(1)}x
           </Typography>
           <Slider value={ttsRate} onChange={(_, v) => setTtsRate(v as number)}
             min={0.5} max={2.0} step={0.1} valueLabelDisplay="auto"
@@ -74,11 +105,13 @@ export function AppSettingsPage() {
 
         {/* Export / Import */}
         <Box>
-          <Typography variant="h6" sx={{ mb: 2 }}>Kopie zapasowe</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('app_settings.export_import')}</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="outlined" fullWidth onClick={handleExport}>Eksportuj do JSON</Button>
+            <Button variant="outlined" fullWidth onClick={handleExport}>
+              {t('app_settings.export_btn')}
+            </Button>
             <Button variant="outlined" fullWidth component="label">
-              Importuj z JSON
+              {t('app_settings.import_btn')}
               <input type="file" hidden accept=".json" onChange={handleImport} />
             </Button>
           </Box>
@@ -88,14 +121,14 @@ export function AppSettingsPage() {
 
         {/* Reset */}
         <Box>
-          <Typography variant="h6" color="error" sx={{ mb: 1 }}>Strefa zagrożenia</Typography>
+          <Typography variant="h6" color="error" sx={{ mb: 1 }}>{t('app_settings.danger_zone')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Resetuj bazę danych do stanu początkowego (dane startowe).
+            {t('app_settings.reset_confirm')}
           </Typography>
           <Button variant="contained" color="error" fullWidth onClick={() => {
-            if (window.confirm('Czy na pewno chcesz zresetować wszystkie dane?')) store.resetToDefault();
+            if (window.confirm(t('app_settings.reset_confirm'))) store.resetToDefault();
           }}>
-            Resetuj bazę danych
+            {t('app_settings.reset_btn')}
           </Button>
         </Box>
       </Stack>

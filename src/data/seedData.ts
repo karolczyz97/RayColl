@@ -1,4 +1,5 @@
 import type { FlashcardGroup, StudyMode } from '../types/models';
+import { getCardCategory } from '../srs/srsEngine';
 
 /** Placeholder seed data for the UI demo */
 export const SEED_GROUPS: FlashcardGroup[] = [
@@ -102,13 +103,13 @@ export function generateSeedHeatmap(): Record<string, number> {
 export function getDueCount(group: FlashcardGroup): number {
   const now = Date.now();
   return group.cards.filter(
-    c => c.srsState.state === 0 || c.srsState.nextReviewTimestamp <= now,
+    c => getCardCategory(c.srsState) === 'new' || c.srsState.nextReviewTimestamp <= now,
   ).length;
 }
 
-/** Compute mastery % (cards in state 2 with stability >= 5) */
+/** Compute mastery % (cards in mastered state) */
 export function getMastery(group: FlashcardGroup): number {
   if (group.cards.length === 0) return 0;
-  const mastered = group.cards.filter(c => c.srsState.state === 2 && c.srsState.stability >= 5).length;
+  const mastered = group.cards.filter(c => getCardCategory(c.srsState) === 'mastered').length;
   return Math.round((mastered / group.cards.length) * 100);
 }
