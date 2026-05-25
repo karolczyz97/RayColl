@@ -12,7 +12,7 @@ export default function AppSettings() {
   const { t, language, setLanguage } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
-  const { themePref, setThemePref } = useAppTheme();
+  const { themePref, setThemePref, useSystemColors, setUseSystemColors } = useAppTheme();
 
   // TTS Rate state
   const [ttsRate, setTtsRate] = useState(1.0);
@@ -160,6 +160,29 @@ export default function AppSettings() {
                 { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
                 { value: 'system', label: t('app_settings.theme.system'), icon: 'theme-light-dark' },
                 { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
+              ]}
+              style={styles.segmentedButtons}
+            />
+          </Card.Content>
+        </Card>
+
+        {/* Dynamic System Colors Section */}
+        <Card style={styles.card} mode="outlined">
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.cardTitle}>
+              {language === 'pl' ? 'Dynamiczne kolory systemu' : 'Dynamic system colors'}
+            </Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
+              {language === 'pl'
+                ? 'Pobieraj kolory akcentów bezpośrednio z systemu operacyjnego (Android 12+ / Material You / system appearance).'
+                : 'Extract accent and system colors directly from the device (Android 12+ / Material You / system appearance).'}
+            </Text>
+            <SegmentedButtons
+              value={useSystemColors ? 'true' : 'false'}
+              onValueChange={(val) => setUseSystemColors(val === 'true')}
+              buttons={[
+                { value: 'true', label: language === 'pl' ? 'Włączone' : 'Enabled', icon: 'palette' },
+                { value: 'false', label: language === 'pl' ? 'Wyłączone' : 'Disabled', icon: 'palette-swatch-outline' },
               ]}
               style={styles.segmentedButtons}
             />

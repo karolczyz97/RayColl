@@ -8,6 +8,8 @@ interface ThemeContextType {
   themePref: ThemePref;
   setThemePref: (pref: ThemePref) => void;
   isDark: boolean;
+  useSystemColors: boolean;
+  setUseSystemColors: (val: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>(null!);
@@ -17,19 +19,25 @@ export const useAppTheme = () => useContext(ThemeContext);
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
   const [themePref, setThemePrefState] = useState<ThemePref>('system');
+  const [useSystemColors, setUseSystemColorsState] = useState<boolean>(true); // enabled by default
 
   useEffect(() => {
-    async function loadTheme() {
+    async function loadSettings() {
       try {
-        const saved = await AsyncStorage.getItem('td-theme');
-        if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) {
-          setThemePrefState(saved as ThemePref);
+        const savedTheme = await AsyncStorage.getItem('td-theme');
+        if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')) {
+          setThemePrefState(savedTheme as ThemePref);
+        }
+        
+        const savedSysColors = await AsyncStorage.getItem('td-use-system-colors');
+        if (savedSysColors !== null) {
+          setUseSystemColorsState(savedSysColors === 'true');
         }
       } catch (err) {
-        console.warn('Failed to load theme preference:', err);
+        console.warn('Failed to load theme settings:', err);
       }
     }
-    loadTheme();
+    loadSettings();
   }, []);
 
   const setThemePref = async (pref: ThemePref) => {
@@ -41,10 +49,19 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setUseSystemColors = async (val: boolean) => {
+    setUseSystemColorsState(val);
+    try {
+      await AsyncStorage.setItem('td-use-system-colors', val ? 'true' : 'false');
+    } catch (err) {
+      console.warn('Failed to save system colors preference:', err);
+    }
+  };
+
   const isDark = themePref === 'system' ? systemScheme === 'dark' : themePref === 'dark';
 
   return (
-    <ThemeContext.Provider value={{ themePref, setThemePref, isDark }}>
+    <ThemeContext.Provider value={{ themePref, setThemePref, isDark, useSystemColors, setUseSystemColors }}>
       {children}
     </ThemeContext.Provider>
   );

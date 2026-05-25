@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Text, Card, useTheme, ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
@@ -109,6 +109,7 @@ export default function StatsPage() {
   const { t } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
+  const { width } = useWindowDimensions();
 
   const { groups, activityHeatmap, getDueCards, isLoading } = store;
 
@@ -147,7 +148,7 @@ export default function StatsPage() {
         {/* Quick stats grid */}
         <View style={styles.statsGrid}>
           {statCards.map((m, i) => (
-            <Card key={i} style={styles.statCard} mode="outlined">
+            <Card key={i} style={[styles.statCard, { minWidth: width < 600 ? '47%' : '22%' }]} mode="outlined">
               <Card.Content style={styles.statCardContent}>
                 <MaterialCommunityIcons name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
                 <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>

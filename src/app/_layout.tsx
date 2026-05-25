@@ -5,6 +5,7 @@ import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { I18nProvider, useI18n } from '../i18n';
 import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
 
@@ -35,8 +36,24 @@ const darkTheme = {
 
 function InnerLayout() {
   const { isI18nLoading } = useI18n();
-  const { isDark } = useAppTheme();
-  const theme = isDark ? darkTheme : lightTheme;
+  const { isDark, useSystemColors } = useAppTheme();
+  const { theme: materialColors } = useMaterial3Theme();
+
+  const theme = React.useMemo(() => {
+    if (useSystemColors) {
+      const baseTheme = isDark ? MD3DarkTheme : MD3LightTheme;
+      const colors = isDark ? materialColors.dark : materialColors.light;
+      return {
+        ...baseTheme,
+        colors: {
+          ...baseTheme.colors,
+          ...colors,
+        },
+      };
+    } else {
+      return isDark ? darkTheme : lightTheme;
+    }
+  }, [isDark, useSystemColors, materialColors]);
 
   if (isI18nLoading) {
     return null; // Let the splash screen stay visible or show a loading indicator

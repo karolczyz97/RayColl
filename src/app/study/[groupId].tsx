@@ -429,6 +429,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     padding: 24,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   cardSide: {
     flex: 1,
