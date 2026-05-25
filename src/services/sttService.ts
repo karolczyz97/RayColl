@@ -1,3 +1,6 @@
+import { Platform } from 'react-native';
+import Voice from '@react-native-voice/voice';
+
 export interface SttOptions {
   language: string;
   timeoutMs?: number;
@@ -23,20 +26,22 @@ class WebSttService implements SttService {
   startListening(options: SttOptions): Promise<string> {
     return new Promise((resolve, reject) => {
       const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRec) { reject(new Error('STT not supported')); return; }
+      if (!SpeechRec) {
+        reject(new Error('STT not supported'));
+        return;
+      }
 
       this.recognition = new SpeechRec();
       this.recognition.lang = options.language;
       this.recognition.interimResults = true;
       this.recognition.maxAlternatives = 1;
-      this.recognition.continuous = true; // Keep listening until we stop it
+      this.recognition.continuous = true;
 
       let finalResult = '';
       let resolved = false;
       let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
-      const INACTIVITY_MS = 1000; // 1s of silence after last speech
+      const INACTIVITY_MS = 1500; // 1.5s inactivity timeout
 
-      // Hard timeout as safety net
       const hardTimeout = setTimeout(() => {
         if (!resolved) this.recognition?.stop();
       }, options.timeoutMs || 15000);
@@ -53,7 +58,6 @@ class WebSttService implements SttService {
       const resetInactivityTimer = () => {
         if (inactivityTimer) clearTimeout(inactivityTimer);
         inactivityTimer = setTimeout(() => {
-          // User has been silent for 2s after speaking — stop
           this.recognition?.stop();
         }, INACTIVITY_MS);
       };
@@ -73,7 +77,6 @@ class WebSttService implements SttService {
         }
         options.onPartialResult?.(finalResult || interim);
 
-        // After receiving a final result, start inactivity timer
         if (hasFinal) {
           resetInactivityTimer();
         }
@@ -89,8 +92,11 @@ class WebSttService implements SttService {
         if (inactivityTimer) clearTimeout(inactivityTimer);
         resolved = true;
         options.onListeningStateChange?.(false);
-        if (event.error === 'no-speech' || event.error === 'aborted') resolve(finalResult || '');
-        else reject(new Error(event.error));
+        if (event.error === 'no-speech' || event.error === 'aborted') {
+          resolve(finalResult || '');
+        } else {
+          reject(new Error(event.error));
+        }
       };
 
       this.recognition.start();
@@ -102,34 +108,99 @@ class WebSttService implements SttService {
   }
 }
 
-// Capacitor native STT — placeholder
-class CapacitorSttService implements SttService {
+// Native STT using @react-native-voice/voice
+class ReactNativeVoiceSttService implements SttService {
   isSupported(): boolean {
-    return !!(window as any).Capacitor;
+    return Platform.OS !== 'web';
   }
-  async startListening(_options: SttOptions): Promise<string> {
-    console.warn('Capacitor STT not yet implemented, falling back');
-    return '';
-  }
-  async stopListening(): Promise<void> { /* noop */ }
-}
 
-// Tauri native STT — placeholder
-class TauriSttService implements SttService {
-  isSupported(): boolean {
-    return !!(window as any).__TAURI_INTERNALS__;
+  startListening(options: SttOptions): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let finalResult = '';
+      let resolved = false;
+      let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+      const INACTIVITY_MS = 1500; // 1.5s inactivity timeout
+
+      const cleanup = async () => {
+        if (inactivityTimer) clearTimeout(inactivityTimer);
+        Voice.onSpeechStart = () => {};
+        Voice.onSpeechEnd = () => {};
+        Voice.onSpeechResults = () => {};
+        Voice.onSpeechPartialResults = () => {};
+        Voice.onSpeechError = () => {};
+      };
+
+      const finishWithResult = async (result: string) => {
+        if (resolved) return;
+        resolved = true;
+        await cleanup();
+        options.onListeningStateChange?.(false);
+        resolve(result);
+      };
+
+      const resetInactivityTimer = () => {
+        if (inactivityTimer) clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(async () => {
+          try {
+            await Voice.stop();
+          } catch (e) {
+            // ignore
+          }
+        }, INACTIVITY_MS);
+      };
+
+      Voice.onSpeechStart = () => {
+        options.onListeningStateChange?.(true);
+        resetInactivityTimer();
+      };
+
+      Voice.onSpeechEnd = () => {
+        finishWithResult(finalResult);
+      };
+
+      Voice.onSpeechResults = (e) => {
+        if (e.value && e.value.length > 0) {
+          finalResult = e.value[0];
+          options.onPartialResult?.(finalResult);
+        }
+        resetInactivityTimer();
+      };
+
+      Voice.onSpeechPartialResults = (e) => {
+        if (e.value && e.value.length > 0) {
+          finalResult = e.value[0];
+          options.onPartialResult?.(finalResult);
+        }
+        resetInactivityTimer();
+      };
+
+      Voice.onSpeechError = (e) => {
+        if (resolved) return;
+        cleanup();
+        resolved = true;
+        options.onListeningStateChange?.(false);
+        resolve(finalResult || '');
+      };
+
+      Voice.start(options.language).catch(err => {
+        cleanup();
+        reject(err);
+      });
+    });
   }
-  async startListening(_options: SttOptions): Promise<string> {
-    console.warn('Tauri STT not yet implemented, falling back');
-    return '';
+
+  async stopListening(): Promise<void> {
+    try {
+      await Voice.stop();
+    } catch {
+      // ignore
+    }
   }
-  async stopListening(): Promise<void> { /* noop */ }
 }
 
 export function getSttService(): SttService {
-  if (typeof window !== 'undefined') {
-    if ((window as any).__TAURI_INTERNALS__) return new TauriSttService();
-    if ((window as any).Capacitor) return new CapacitorSttService();
+  if (Platform.OS === 'web') {
+    return new WebSttService();
   }
-  return new WebSttService();
+  return new ReactNativeVoiceSttService();
 }

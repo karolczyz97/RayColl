@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pl } from './locales/pl';
 import { en } from './locales/en';
 import { de } from './locales/de';
@@ -13,6 +15,7 @@ interface I18nContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
+  isI18nLoading: boolean;
 }
 
 const I18nContext = createContext<I18nContextType>(null!);
@@ -20,24 +23,39 @@ const I18nContext = createContext<I18nContextType>(null!);
 export const useI18n = () => useContext(I18nContext);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('td-lang');
-      if (saved && (saved === 'pl' || saved === 'en' || saved === 'de' || saved === 'es' || saved === 'it')) {
-        return saved as LanguageCode;
-      }
-      // Auto-detect browser language
-      const browserLang = navigator.language.slice(0, 2);
-      if (browserLang === 'pl' || browserLang === 'de' || browserLang === 'es' || browserLang === 'it') {
-        return browserLang as LanguageCode;
+  const [language, setLanguageState] = useState<LanguageCode>('en');
+  const [isI18nLoading, setIsI18nLoading] = useState(true);
+
+  // Load language settings on mount
+  useEffect(() => {
+    async function loadSavedLanguage() {
+      try {
+        const saved = await AsyncStorage.getItem('td-lang');
+        if (saved && (saved === 'pl' || saved === 'en' || saved === 'de' || saved === 'es' || saved === 'it')) {
+          setLanguageState(saved as LanguageCode);
+        } else if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+          // Auto-detect browser language on web
+          const browserLang = navigator.language.slice(0, 2);
+          if (browserLang === 'pl' || browserLang === 'de' || browserLang === 'es' || browserLang === 'it') {
+            setLanguageState(browserLang as LanguageCode);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load saved language:', err);
+      } finally {
+        setIsI18nLoading(false);
       }
     }
-    return 'en';
-  });
+    loadSavedLanguage();
+  }, []);
 
-  const setLanguage = useCallback((lang: LanguageCode) => {
+  const setLanguage = useCallback(async (lang: LanguageCode) => {
     setLanguageState(lang);
-    localStorage.setItem('td-lang', lang);
+    try {
+      await AsyncStorage.setItem('td-lang', lang);
+    } catch (err) {
+      console.warn('Failed to save language:', err);
+    }
   }, []);
 
   const t = useCallback((key: string, replacements?: Record<string, string | number>): string => {
@@ -51,12 +69,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return val;
   }, [language]);
 
-  // Sync html lang attribute
+  // Sync html lang attribute on web
   useEffect(() => {
-    if (typeof document !== 'undefined') {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.lang = language;
     }
   }, [language]);
 
-  return React.createElement(I18nContext.Provider, { value: { language, setLanguage, t } }, children);
+  return React.createElement(
+    I18nContext.Provider,
+    { value: { language, setLanguage, t, isI18nLoading } },
+    children
+  );
 }

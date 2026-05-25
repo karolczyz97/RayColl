@@ -1,6 +1,6 @@
 export const de: Record<string, string> = {
   // Common
-  'app.title': 'TensorDeck',
+  'app.title': 'RayColl',
   'btn.cancel': 'Abbrechen',
   'btn.save': 'Speichern',
   'btn.add': 'Hinzufügen',

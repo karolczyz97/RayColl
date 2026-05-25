@@ -1,6 +1,6 @@
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Text, Button } from 'react-native-paper';
 import { useI18n } from '../i18n';
 
 interface GroupNotFoundProps {
@@ -10,13 +10,27 @@ interface GroupNotFoundProps {
 export function GroupNotFound({ onBack }: GroupNotFoundProps) {
   const { t } = useI18n();
   return (
-    <Box sx={{ p: 3, textAlign: 'center', maxWidth: 600, mx: 'auto', mt: 4 }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
+    <View style={styles.container}>
+      <Text variant="headlineSmall" style={styles.text}>
         {t('study.group_not_found')}
-      </Typography>
-      <Button variant="contained" onClick={onBack}>
+      </Text>
+      <Button mode="contained" onPress={onBack}>
         {t('btn.back')}
       </Button>
-    </Box>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  text: {
+    marginBottom: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});

@@ -1,7 +1,6 @@
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
+import React from 'react';
+import { View, StyleSheet, Text } from 'react-native';
+import { useTheme } from 'react-native-paper';
 import type { Flashcard } from '../types/models';
 import { getCardCategory } from '../srs/srsEngine';
 import { useI18n } from '../i18n';
@@ -32,54 +31,98 @@ interface Props {
   showLegend?: boolean;
 }
 
-export function SegmentedProgressBar({ stats, height = 12, showLegend = false }: Props) {
+export function SegmentedProgressBar({ stats, height = 10, showLegend = false }: Props) {
   const { total, newCount, learning, review, mastered } = stats;
   const { t } = useI18n();
   const theme = useTheme();
 
-  if (total === 0) return (
-    <Box sx={{ height, borderRadius: height / 2, bgcolor: 'action.disabledBackground' }} />
-  );
+  // Color tokens
+  const colors = {
+    mastered: '#4caf50',
+    review: '#7c4dff',
+    learning: '#ffa726',
+    new: '#42a5f5',
+    empty: theme.colors.outlineVariant || '#e0e0e0',
+  };
+
+  if (total === 0) {
+    return (
+      <View style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: colors.empty }]} />
+    );
+  }
 
   const segments = [
-    { count: mastered, color: theme.palette.success.main, label: t('srs.badge.mastered') },
-    { count: review, color: theme.palette.secondary.main, label: t('srs.badge.review') },
-    { count: learning, color: theme.palette.warning.main, label: t('srs.badge.learning') },
-    { count: newCount, color: theme.palette.info.main, label: t('srs.badge.new') },
+    { count: mastered, color: colors.mastered, label: t('srs.badge.mastered') },
+    { count: review, color: colors.review, label: t('srs.badge.review') },
+    { count: learning, color: colors.learning, label: t('srs.badge.learning') },
+    { count: newCount, color: colors.new, label: t('srs.badge.new') },
   ].filter(s => s.count > 0);
 
   return (
-    <Box>
-      <Box sx={{
-        display: 'flex', borderRadius: height / 2, overflow: 'hidden',
-        height, bgcolor: 'action.disabledBackground',
-      }}>
-        {segments.map((seg, i) => (
-          <Tooltip key={i} title={`${seg.label}: ${seg.count} (${Math.round(seg.count / total * 100)}%)`}>
-            <Box sx={{
-              width: `${(seg.count / total) * 100}%`, bgcolor: seg.color,
-              transition: 'width 0.5s ease',
-            }} />
-          </Tooltip>
-        ))}
-      </Box>
+    <View style={styles.container}>
+      <View style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: colors.empty }]}>
+        {segments.map((seg, i) => {
+          const widthPercent = (seg.count / total) * 100;
+          return (
+            <View
+              key={i}
+              style={{
+                width: `${widthPercent}%`,
+                height: '100%',
+                backgroundColor: seg.color,
+              }}
+            />
+          );
+        })}
+      </View>
       {showLegend && (
-        <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <View style={styles.legendContainer}>
           {[
-            { color: theme.palette.success.main, label: t('srs.badge.mastered'), count: mastered },
-            { color: theme.palette.secondary.main, label: t('srs.badge.review'), count: review },
-            { color: theme.palette.warning.main, label: t('srs.badge.learning'), count: learning },
-            { color: theme.palette.info.main, label: t('srs.badge.new'), count: newCount },
+            { color: colors.mastered, label: t('srs.badge.mastered'), count: mastered },
+            { color: colors.review, label: t('srs.badge.review'), count: review },
+            { color: colors.learning, label: t('srs.badge.learning'), count: learning },
+            { color: colors.new, label: t('srs.badge.new'), count: newCount },
           ].map((item, i) => (
-            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
-              <Typography variant="caption" color="text.secondary">
+            <View key={i} style={styles.legendItem}>
+              <View style={[styles.dot, { backgroundColor: item.color }]} />
+              <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
                 {item.label} ({item.count})
-              </Typography>
-            </Box>
+              </Text>
+            </View>
           ))}
-        </Box>
+        </View>
       )}
-    </Box>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+  bar: {
+    flexDirection: 'row',
+    overflow: 'hidden',
+    width: '100%',
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 10,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 12,
+  },
+});

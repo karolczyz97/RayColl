@@ -1,3 +1,6 @@
+import { Platform } from 'react-native';
+import * as Speech from 'expo-speech';
+
 export interface TtsOptions {
   text: string;
   lang: string;
@@ -18,7 +21,7 @@ class TtsService {
   private synth: SpeechSynthesis | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
     }
   }
@@ -38,30 +41,52 @@ class TtsService {
 
   speak(options: TtsOptions): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.synth) { resolve(); return; }
-      this.synth.cancel();
-      const utterance = new SpeechSynthesisUtterance(options.text);
-      utterance.lang = options.lang;
-      utterance.rate = options.rate ?? 1.0;
-      const voice = this.getBestVoice(options.lang);
-      if (voice) utterance.voice = voice;
-      utterance.onend = () => resolve();
-      utterance.onerror = (e) => {
-        if (e.error === 'canceled' || e.error === 'interrupted') resolve();
-        else reject(e);
-      };
-      this.synth.speak(utterance);
+      if (Platform.OS === 'web') {
+        if (!this.synth) {
+          resolve();
+          return;
+        }
+        this.synth.cancel();
+        const utterance = new SpeechSynthesisUtterance(options.text);
+        utterance.lang = options.lang;
+        utterance.rate = options.rate ?? 1.0;
+        const voice = this.getBestVoice(options.lang);
+        if (voice) utterance.voice = voice;
+        utterance.onend = () => resolve();
+        utterance.onerror = (e) => {
+          if (e.error === 'canceled' || e.error === 'interrupted') resolve();
+          else reject(e);
+        };
+        this.synth.speak(utterance);
+      } else {
+        // Native (expo-speech)
+        Speech.speak(options.text, {
+          language: options.lang,
+          rate: options.rate ?? 1.0,
+          onDone: () => resolve(),
+          onError: (e) => reject(e),
+        });
+      }
     });
   }
 
   cancel(): void {
-    this.synth?.cancel();
+    if (Platform.OS === 'web') {
+      this.synth?.cancel();
+    } else {
+      Speech.stop();
+    }
   }
 
-  getVoicesForLang(lang: string): SpeechSynthesisVoice[] {
-    if (!this.synth) return [];
-    const prefix = lang.split('-')[0].toLowerCase();
-    return this.synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(prefix));
+  getVoicesForLang(lang: string): any[] {
+    if (Platform.OS === 'web') {
+      if (!this.synth) return [];
+      const prefix = lang.split('-')[0].toLowerCase();
+      return this.synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(prefix));
+    } else {
+      // expo-speech doesn't provide synchronous listing on all platforms, return empty or mock
+      return [];
+    }
   }
 }
 

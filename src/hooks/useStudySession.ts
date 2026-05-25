@@ -150,15 +150,12 @@ export function useStudySession(
           }
         } else {
           playErrorSound();
-          // Track failed card
           if (!failedCardsRef.current.find(c => c.id === card.id)) {
             failedCardsRef.current.push(card);
           }
         }
 
-        // Below threshold → read correction TTS, wait, auto-advance
         if (percent < step.successThreshold) {
-          // Reveal all pages so user sees the correct answer
           if (group) {
             const allPages = group.pageNames.map((_: string, idx: number) => idx);
             setState(s => ({ ...s, revealedPages: allPages }));
@@ -171,18 +168,15 @@ export function useStudySession(
             try { await ttsService.speak({ text: card.pages[step.incorrectTtsPageIndex] || '', lang: corrLang }); } catch { /* */ }
             const corrDuration = Date.now() - corrStart;
             setState(s => ({ ...s, isTtsPlaying: false }));
-            // Wait 2x the correction TTS duration
             await sleep(corrDuration * 2);
           } else {
             await sleep(2000);
           }
 
-          // Wait for user to release card first, then rate and advance
           if (!abortRef.current) {
             await waitUntilReleased();
             const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, 1) };
             onCardReviewed(group.id, updated);
-            // Advance directly without waitUntilReleased again
             setState(prev => {
               const nextIdx = prev.currentCardIndex + 1;
               if (nextIdx >= dueCards.length) {
@@ -193,7 +187,6 @@ export function useStudySession(
             return;
           }
         }
-        // Above threshold already returned, below threshold returned above
         break;
       }
     }
@@ -215,7 +208,6 @@ export function useStudySession(
     const card = dueCards[state.currentCardIndex];
     if (!card) return;
     executeStep(card, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentCardIndex, dueCards.length]);
 
   const handleRating = useCallback(async (rating: number) => {

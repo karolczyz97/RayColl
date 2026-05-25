@@ -1,7 +1,6 @@
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { IconButton, Text } from 'react-native-paper';
 
 interface PageHeaderProps {
   title: string;
@@ -11,14 +10,28 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, onBack, action }: PageHeaderProps) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-      <IconButton onClick={onBack} aria-label="back">
-        <ArrowBackIcon />
-      </IconButton>
-      <Typography variant="h5" sx={{ fontWeight: 700, flexGrow: 1 }}>
+    <View style={styles.container}>
+      <IconButton icon="arrow-left" size={24} onPress={onBack} style={styles.backBtn} />
+      <Text variant="titleLarge" style={styles.title} numberOfLines={1}>
         {title}
-      </Typography>
+      </Text>
       {action}
-    </Box>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  backBtn: {
+    margin: 0,
+  },
+  title: {
+    fontWeight: 'bold',
+    flex: 1,
+  },
+});
