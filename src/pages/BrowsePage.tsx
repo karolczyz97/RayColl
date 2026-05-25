@@ -25,19 +25,17 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { useNav } from '../App';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import type { Flashcard, SrsState } from '../types/models';
+import { getCardCategory, CATEGORIES } from '../srs/srsEngine';
 
-type BrowseFilter = 'all' | 'review' | 'new' | 'mastered';
+type BrowseFilter = 'all' | 'learning' | 'review' | 'new' | 'mastered';
 
-function srsChip(state: SrsState): { text: string; color: 'default' | 'info' | 'warning' | 'success' | 'error' } {
-  switch (state.state) {
-    case 0: return { text: 'Nowa', color: 'info' };
-    case 1: return { text: 'Uczona', color: 'warning' };
-    case 2: return state.repetitions >= 3
-      ? { text: 'Opanowana', color: 'success' }
-      : { text: 'Powtórka', color: 'success' };
-    case 3: return { text: 'Relearning', color: 'error' };
-    default: return { text: '?', color: 'default' };
-  }
+function srsChip(state: SrsState): { text: string; color: 'default' | 'info' | 'warning' | 'success' | 'secondary' } {
+  const category = getCardCategory(state);
+  const info = CATEGORIES[category];
+  return {
+    text: info.badgeText,
+    color: info.chipColor,
+  };
 }
 
 function daysUntilReview(state: SrsState): string {
@@ -78,9 +76,10 @@ export function BrowsePage() {
     let cards: Flashcard[];
     // Filter by SRS STATE, not due date — so user sees all cards in that category
     switch (browseFilter) {
-      case 'new': cards = activeGroup.cards.filter(c => c.srsState.state === 0); break;
-      case 'review': cards = activeGroup.cards.filter(c => c.srsState.state > 0 && (c.srsState.repetitions < 3 || c.srsState.state !== 2)); break;
-      case 'mastered': cards = activeGroup.cards.filter(c => c.srsState.repetitions >= 3 && c.srsState.state === 2); break;
+      case 'new': cards = activeGroup.cards.filter(c => getCardCategory(c.srsState) === 'new'); break;
+      case 'learning': cards = activeGroup.cards.filter(c => getCardCategory(c.srsState) === 'learning'); break;
+      case 'review': cards = activeGroup.cards.filter(c => getCardCategory(c.srsState) === 'review'); break;
+      case 'mastered': cards = activeGroup.cards.filter(c => getCardCategory(c.srsState) === 'mastered'); break;
       case 'all': default: cards = [...activeGroup.cards]; break;
     }
     const q = search.toLowerCase();
@@ -133,7 +132,9 @@ export function BrowsePage() {
       <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
         <Chip label={`Wszystkie (${stats.total})`} variant={browseFilter === 'all' ? 'filled' : 'outlined'}
           color={browseFilter === 'all' ? 'primary' : 'default'} clickable onClick={() => setBrowseFilter('all')} />
-        <Chip label={`W powtórkach (${stats.learning + stats.review})`} variant={browseFilter === 'review' ? 'filled' : 'outlined'}
+        <Chip label={`Uczone (${stats.learning})`} variant={browseFilter === 'learning' ? 'filled' : 'outlined'}
+          color={browseFilter === 'learning' ? 'warning' : 'default'} clickable onClick={() => setBrowseFilter('learning')} />
+        <Chip label={`Powtórki (${stats.review})`} variant={browseFilter === 'review' ? 'filled' : 'outlined'}
           color={browseFilter === 'review' ? 'success' : 'default'} clickable onClick={() => setBrowseFilter('review')} />
         <Chip label={`Nowe (${stats.newCount})`} variant={browseFilter === 'new' ? 'filled' : 'outlined'}
           color={browseFilter === 'new' ? 'info' : 'default'} clickable onClick={() => setBrowseFilter('new')} />

@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
-import { HashRouter, useNavigate, useLocation } from 'react-router-dom';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, Component, type ReactNode, type ErrorInfo } from 'react';
+import { HashRouter, BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
@@ -138,10 +138,90 @@ function AppContent() {
   );
 }
 
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '24px',
+          maxWidth: '600px',
+          margin: '40px auto',
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          borderRadius: '8px',
+          fontFamily: 'sans-serif',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{ margin: '0 0 12px 0', fontSize: '24px' }}>Coś poszło nie tak... 😢</h2>
+          <p style={{ margin: '0 0 16px 0', fontSize: '16px' }}>
+            Aplikacja napotkała błąd podczas wyświetlania strony.
+          </p>
+          <pre style={{
+            padding: '12px',
+            backgroundColor: '#ffcdd2',
+            borderRadius: '4px',
+            overflowX: 'auto',
+            fontSize: '14px',
+            fontFamily: 'monospace',
+            margin: '0 0 20px 0'
+          }}>
+            {this.state.error?.stack || this.state.error?.toString()}
+          </pre>
+          <button
+            onClick={() => window.location.href = '/'}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#c62828',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px'
+            }}
+          >
+            Powrót do strony głównej
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+// Detect if running in a static/hybrid client (Capacitor or Tauri)
+const useHashRouter = typeof window !== 'undefined' && (
+  window.location.protocol === 'file:' ||
+  window.location.pathname.includes('index.html') ||
+  (window as any).__TAURI__ ||
+  (window as any).Capacitor
+);
+
 export default function App() {
+  const Router = useHashRouter ? HashRouter : BrowserRouter;
   return (
-    <HashRouter>
-      <AppContent />
-    </HashRouter>
+    <ErrorBoundary>
+      <Router>
+        <AppContent />
+      </Router>
+    </ErrorBoundary>
   );
 }

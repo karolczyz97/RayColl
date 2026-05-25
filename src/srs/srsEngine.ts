@@ -146,3 +146,30 @@ export function mapMatchToRating(matchPercent: number): number {
   if (matchPercent >= 50) return 3;
   return 1;
 }
+
+// --- Shared SRS State Categorization Logic ---
+
+export type SrsCardCategory = 'new' | 'learning' | 'review' | 'mastered';
+
+export interface CategoryInfo {
+  label: string;
+  color: string; // HEX color for progress bar
+  chipColor: 'default' | 'info' | 'warning' | 'success' | 'secondary'; // MUI Chip color
+  badgeText: string;
+}
+
+export const CATEGORIES: Record<SrsCardCategory, CategoryInfo> = {
+  new: { label: 'Nowe', color: '#42a5f5', chipColor: 'info', badgeText: 'Nowa' },
+  learning: { label: 'Uczone', color: '#ffa726', chipColor: 'warning', badgeText: 'Uczona' },
+  review: { label: 'Powtórki', color: '#66bb6a', chipColor: 'success', badgeText: 'Powtórka' },
+  mastered: { label: 'Opanowane', color: '#ab47bc', chipColor: 'secondary', badgeText: 'Opanowana' },
+};
+
+export function getCardCategory(state: SrsState): SrsCardCategory {
+  if (state.state === 0) return 'new';
+  if (state.state === 1 || state.state === 3) return 'learning';
+  if (state.state === 2) {
+    return state.repetitions >= 3 ? 'mastered' : 'review';
+  }
+  return 'new'; // default fallback
+}
