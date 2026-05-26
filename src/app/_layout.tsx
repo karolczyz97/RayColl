@@ -72,10 +72,14 @@ function InnerLayout() {
   const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
 
-  const [fontsLoaded] = useFonts({
-    'Material Design Icons': require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
-    MaterialDesignIcons: require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
-  });
+  const [fontsLoaded] = useFonts(
+    Platform.OS === 'web'
+      ? {
+          'Material Design Icons': require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
+          MaterialDesignIcons: require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
+        }
+      : {}
+  );
 
   const theme = React.useMemo(() => {
     if (useSystemColors) {
