@@ -10,8 +10,15 @@ import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
 import { FlashcardStoreProvider } from '../hooks/useFlashcardStore';
 import { createAppTheme } from '../theme/createAppTheme';
 
+function logSplashScreenError(action: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(`Splash screen ${action} failed:`, message);
+}
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync().catch((err: unknown) => {
+  logSplashScreenError('prevent auto hide', err);
+});
 
 function InnerLayout() {
   const { isI18nLoading } = useI18n();
@@ -30,7 +37,9 @@ function InnerLayout() {
   React.useEffect(() => {
     const isReady = !isI18nLoading && !isThemeLoading;
     if (isReady) {
-      SplashScreen.hideAsync().catch(() => {});
+      SplashScreen.hideAsync().catch((err: unknown) => {
+        logSplashScreenError('hide', err);
+      });
     }
   }, [isI18nLoading, isThemeLoading]);
 
@@ -56,7 +65,12 @@ function InnerLayout() {
     <PaperProvider theme={theme}>
       {Platform.OS === 'web' ? (
         <View style={[styles.webOuter, { backgroundColor: theme.colors.surfaceVariant }]}>
-          <View style={[styles.webInner, { backgroundColor: theme.colors.background }]}>
+          <View
+            style={[
+              styles.webInner,
+              { backgroundColor: theme.colors.background, shadowColor: theme.colors.shadow },
+            ]}
+          >
             {content}
           </View>
         </View>
@@ -102,7 +116,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: 960,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,

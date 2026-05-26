@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, TextInput, Menu, Button } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   pageCount: number;
@@ -11,7 +12,7 @@ interface Props {
   setColNames: React.Dispatch<React.SetStateAction<string[]>>;
   handleColBlur: (i: number) => void;
   updatePageLangValue: (i: number, v: string) => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
   popularLangs: { code: string; label: string }[];
 }
 

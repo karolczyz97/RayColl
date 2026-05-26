@@ -312,6 +312,7 @@ export default function StudyPage() {
               {
                 backgroundColor: theme.colors.surface,
                 borderColor: theme.colors.outlineVariant,
+                shadowColor: theme.colors.shadow,
               },
             ]}
           >
@@ -519,7 +520,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1,
     elevation: 2,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 10,

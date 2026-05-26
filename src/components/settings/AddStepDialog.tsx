@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Dialog, Button, TextInput, Menu } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   visible: boolean;
@@ -16,7 +17,7 @@ interface Props {
   newThreshold: number;
   setNewThreshold: (threshold: number) => void;
   confirmAddStep: () => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
   stepLabels: Record<string, string>;
 }
 

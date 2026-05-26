@@ -1,28 +1,47 @@
 import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
+import type { AVPlaybackSource, AVPlaybackStatus } from 'expo-av';
+
+type BrowserWindowWithAudioContext = Window &
+  typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+  };
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 const getAudioCtx = (() => {
   let ctx: AudioContext | null = null;
   return () => {
     if (Platform.OS === 'web' && !ctx && typeof window !== 'undefined') {
-      ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioWindow = window as BrowserWindowWithAudioContext;
+      const AudioContextCtor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
+      if (!AudioContextCtor) return null;
+      ctx = new AudioContextCtor();
     }
-    if (ctx?.state === 'suspended') ctx.resume();
+    if (ctx?.state === 'suspended') {
+      void ctx.resume().catch((err: unknown) => {
+        console.warn('Failed to resume audio context:', getErrorMessage(err));
+      });
+    }
     return ctx;
   };
 })();
 
-async function playNativeSound(asset: any) {
+async function playNativeSound(asset: AVPlaybackSource) {
   try {
     const { sound } = await Audio.Sound.createAsync(asset);
     await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate((status: any) => {
-      if (status.didJustFinish) {
-        sound.unloadAsync().catch(() => {});
+    sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+      if (status.isLoaded && status.didJustFinish) {
+        void sound.unloadAsync().catch((err: unknown) => {
+          console.warn('Failed to unload feedback sound:', getErrorMessage(err));
+        });
       }
     });
-  } catch (err: any) {
-    console.log('Native feedback sound not playable (likely mock asset):', err?.message || err);
+  } catch (err: unknown) {
+    console.log('Native feedback sound not playable (likely mock asset):', getErrorMessage(err));
   }
 }
 

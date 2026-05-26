@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Text, IconButton, Button, useTheme } from 'react-native-paper';
 import type { ModeStep } from '../../types/models';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   newModeName: string;
@@ -11,8 +12,8 @@ interface Props {
   saveCustomMode: () => void;
   setStepDialogOpen: (v: boolean) => void;
   setEditingModeId: (id: string | null) => void;
-  t: (key: string, replacements?: any) => string;
-  stepSummary: (step: ModeStep, t: any) => string;
+  t: TranslationFn;
+  stepSummary: (step: ModeStep, t: TranslationFn) => string;
 }
 
 export function CreateStudyModeSection({

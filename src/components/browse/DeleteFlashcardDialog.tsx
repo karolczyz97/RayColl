@@ -1,11 +1,12 @@
 import React from 'react';
 import { Dialog, Button, Text, useTheme } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   visible: boolean;
   onDismiss: () => void;
   onConfirm: () => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function DeleteFlashcardDialog({ visible, onDismiss, onConfirm, t }: Props) {

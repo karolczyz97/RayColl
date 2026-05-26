@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, Button, Menu } from 'react-native-paper';
 import type { StudyMode } from '../../types/models';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   activeModeId: string;
   onModeChange: (modeId: string) => void;
   studyModes: StudyMode[];
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function StudyModeSelector({ activeModeId, onModeChange, studyModes, t }: Props) {

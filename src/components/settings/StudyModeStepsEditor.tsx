@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Card, Divider, List, IconButton, Button, useTheme } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '../../types/models';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   activeMode: StudyMode;
@@ -9,8 +10,8 @@ interface Props {
   moveStep: (mode: StudyMode, i: number, dir: -1 | 1) => void;
   deleteStep: (mode: StudyMode, i: number) => void;
   addStepToMode: (mode: StudyMode) => void;
-  t: (key: string, replacements?: any) => string;
-  stepSummary: (step: ModeStep, t: any) => string;
+  t: TranslationFn;
+  stepSummary: (step: ModeStep, t: TranslationFn) => string;
 }
 
 export function StudyModeStepsEditor({

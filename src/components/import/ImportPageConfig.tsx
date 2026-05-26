@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, TextInput, Menu, Button } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   pageCount: number;
@@ -9,7 +10,7 @@ interface Props {
   setPageNames: React.Dispatch<React.SetStateAction<string[]>>;
   pageLangs: string[];
   setPageLangs: React.Dispatch<React.SetStateAction<string[]>>;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
   popularLangs: { code: string; label: string }[];
 }
 

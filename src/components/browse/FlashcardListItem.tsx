@@ -12,6 +12,7 @@ import {
 import { EditFlashcardForm } from './EditFlashcardForm';
 import { getVisiblePages, getVisiblePageNames } from '../../store/selectors/pages';
 import { getReviewStatusColor } from '../../theme/semanticColors';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   card: Flashcard;
@@ -23,7 +24,7 @@ interface Props {
   onCancel: () => void;
   onStartEdit: () => void;
   onDelete: () => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 function srsChip(

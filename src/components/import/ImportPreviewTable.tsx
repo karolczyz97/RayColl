@@ -2,12 +2,13 @@ import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   rows: string[][];
   pageCount: number;
   pageNames: string[];
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function ImportPreviewTable({ rows, pageCount, pageNames, t }: Props) {

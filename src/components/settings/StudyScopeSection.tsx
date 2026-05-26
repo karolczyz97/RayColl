@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, Button, Menu } from 'react-native-paper';
 import { CardFilter } from '../../constants/cardFilters';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   studyFilter: CardFilter;
   onFilterChange: (filter: CardFilter) => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function StudyScopeSection({ studyFilter, onFilterChange, t }: Props) {

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Button, Menu } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   sepKey: string;
   setSepKey: (key: string) => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function ImportSeparatorSelector({ sepKey, setSepKey, t }: Props) {

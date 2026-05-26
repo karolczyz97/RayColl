@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Dialog, Button, Text, TextInput, useTheme } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   visible: boolean;
@@ -9,7 +10,7 @@ interface Props {
   deleteConfirmText: string;
   setDeleteConfirmText: (text: string) => void;
   onDelete: () => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function DeleteDeckDialog({

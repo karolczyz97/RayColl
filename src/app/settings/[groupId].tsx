@@ -5,6 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
+import type { TranslationFn } from '../../i18n';
 import type { ModeStep, StudyMode, FlashcardGroup } from '../../types/models';
 import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
@@ -24,7 +25,7 @@ import { AddStepDialog } from '../../components/settings/AddStepDialog';
 
 const DEFAULT_MODE_IDS = ['classic', 'listen-speak'];
 
-function stepSummary(step: ModeStep, t: (key: string, replacements?: any) => string): string {
+function stepSummary(step: ModeStep, t: TranslationFn): string {
   switch (step.type) {
     case 'show_page':
       return t('step.show_page', { index: step.pageIndex + 1 });

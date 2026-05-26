@@ -70,7 +70,7 @@ export default function AppSettings() {
       } else {
         Alert.alert('Success', t('app_settings.import_success') || 'Import completed!');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Invalid backup JSON!';
       if (Platform.OS === 'web') {
         alert(msg);

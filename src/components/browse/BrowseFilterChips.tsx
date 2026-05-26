@@ -2,12 +2,13 @@ import React from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import { useTheme, Chip } from 'react-native-paper';
 import { getReviewStatusColor } from '../../theme/semanticColors';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   browseFilter: 'all' | 'learning' | 'review' | 'new' | 'mastered';
   setBrowseFilter: (filter: 'all' | 'learning' | 'review' | 'new' | 'mastered') => void;
   stats: { total: number; learning: number; review: number; newCount: number; mastered: number };
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: Props) {

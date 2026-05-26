@@ -15,13 +15,15 @@ import { es } from './locales/es';
 import { it } from './locales/it';
 
 export type LanguageCode = 'pl' | 'en' | 'de' | 'es' | 'it';
+export type TranslationReplacements = Record<string, string | number>;
+export type TranslationFn = (key: string, replacements?: TranslationReplacements) => string;
 
 const translations: Record<LanguageCode, Record<string, string>> = { pl, en, de, es, it };
 
 interface I18nContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
-  t: (key: string, replacements?: Record<string, string | number>) => string;
+  t: TranslationFn;
   isI18nLoading: boolean;
 }
 

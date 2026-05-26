@@ -44,21 +44,35 @@ interface ISpeechRecognition {
   stop(): void;
 }
 
+type SpeechRecognitionConstructor = new () => ISpeechRecognition;
+
+type BrowserWindowWithSpeechRecognition = Window &
+  typeof globalThis & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+
+function getWebSpeechRecognition(): SpeechRecognitionConstructor | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const speechWindow = window as BrowserWindowWithSpeechRecognition;
+  return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 // Web browser STT using SpeechRecognition API
 class WebSttService implements SttService {
   private recognition: ISpeechRecognition | null = null;
 
   isSupported(): boolean {
-    return (
-      typeof window !== 'undefined' &&
-      ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
-    );
+    return getWebSpeechRecognition() !== undefined;
   }
 
   startListening(options: SttOptions): Promise<string> {
     return new Promise((resolve, reject) => {
-      const SpeechRec =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRec = getWebSpeechRecognition();
       if (!SpeechRec) {
         reject(new Error('STT not supported'));
         return;
@@ -158,8 +172,8 @@ class ReactNativeVoiceSttService implements SttService {
         if (!resolved) {
           try {
             await Voice.stop();
-          } catch {
-            // ignore
+          } catch (err) {
+            console.warn('Failed to stop voice recognition after timeout:', getErrorMessage(err));
           }
         }
       }, options.timeoutMs || 15000);
@@ -187,8 +201,8 @@ class ReactNativeVoiceSttService implements SttService {
         inactivityTimer = setTimeout(async () => {
           try {
             await Voice.stop();
-          } catch {
-            // ignore
+          } catch (err) {
+            console.warn('Failed to stop voice recognition after inactivity:', getErrorMessage(err));
           }
         }, INACTIVITY_MS);
       };
@@ -220,6 +234,9 @@ class ReactNativeVoiceSttService implements SttService {
 
       Voice.onSpeechError = (e) => {
         if (resolved) return;
+        if (e.error) {
+          console.warn('Speech recognition error:', e.error.message || e.error.code || 'unknown');
+        }
         cleanup();
         resolved = true;
         options.onListeningStateChange?.(false);
@@ -237,8 +254,8 @@ class ReactNativeVoiceSttService implements SttService {
   async stopListening(): Promise<void> {
     try {
       await Voice.stop();
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn('Failed to stop voice recognition:', getErrorMessage(err));
     }
   }
 }

@@ -21,6 +21,7 @@ import {
 } from '../../store/selectors/pages';
 import { filterCards } from '../../store/selectors/dueCards';
 import { validateBackupData } from '../../utils/backupValidation';
+import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 
 console.log('Running RayColl Spaced Repetition Engine and Parser tests...');
@@ -41,7 +42,7 @@ function assertDeepEqual<T>(actual: T, expected: T, msg?: string) {
   }
 }
 
-function assertOk(value: any, msg?: string) {
+function assertOk(value: unknown, msg?: string) {
   if (!value) {
     throw new Error(
       `Assertion failed: expected truthy value, got ${value}${msg ? ` - ${msg}` : ''}`,
@@ -52,10 +53,11 @@ function assertOk(value: any, msg?: string) {
 function assertThrows(fn: () => void, expectedMessagePart?: string) {
   try {
     fn();
-  } catch (err: any) {
-    if (expectedMessagePart && !err.message.includes(expectedMessagePart)) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (expectedMessagePart && !message.includes(expectedMessagePart)) {
       throw new Error(
-        `Expected error containing "${expectedMessagePart}", but got: "${err.message}"`,
+        `Expected error containing "${expectedMessagePart}", but got: "${message}"`,
       );
     }
     return;
@@ -369,6 +371,63 @@ assertThrows(
   'Each group must have a string id.',
 );
 console.log('✓ Backup validation tests passed');
+
+// ==========================================
+// 7. Atomic Deck Import Validation Tests
+// ==========================================
+console.log('\n--- Running Import Deck Validation Tests ---');
+
+const normalizedImport = validateImportDeckPayload({
+  name: '  Travel Deck  ',
+  languages: ['en-US', 'pl-PL'],
+  pageNames: ['Front', 'Back'],
+  cards: [{ pages: ['hello', 'czesc'] }],
+});
+
+assertEqual(normalizedImport.name, 'Travel Deck');
+assertEqual(normalizedImport.cards.length, 1);
+assertDeepEqual(normalizedImport.cards[0].pages, ['hello', 'czesc']);
+assertThrows(
+  () =>
+    validateImportDeckPayload({
+      name: '',
+      languages: ['en-US', 'pl-PL'],
+      pageNames: ['Front', 'Back'],
+      cards: [{ pages: ['hello', 'czesc'] }],
+    }),
+  'Deck name is required.',
+);
+assertThrows(
+  () =>
+    validateImportDeckPayload({
+      name: 'Broken',
+      languages: ['en-US'],
+      pageNames: ['Front', 'Back'],
+      cards: [{ pages: ['hello', 'czesc'] }],
+    }),
+  'Every page must have a language entry.',
+);
+assertThrows(
+  () =>
+    validateImportDeckPayload({
+      name: 'Broken',
+      languages: ['not a lang', 'pl-PL'],
+      pageNames: ['Front', 'Back'],
+      cards: [{ pages: ['hello', 'czesc'] }],
+    }),
+  'Invalid language code',
+);
+assertThrows(
+  () =>
+    validateImportDeckPayload({
+      name: 'Broken',
+      languages: ['en-US', 'pl-PL'],
+      pageNames: ['Front', 'Back'],
+      cards: [{ pages: ['hello'] }],
+    }),
+  'missing one or more pages',
+);
+console.log('Import deck validation tests passed');
 
 console.log('\n==========================================');
 console.log('All tests completed successfully! 🎉');

@@ -192,7 +192,9 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
 
   const persist = useCallback(
     (g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>, uid: string | null) => {
-      void persistAsync(g, m, h, uid).catch(() => undefined);
+      void persistAsync(g, m, h, uid).catch((err: unknown) => {
+        console.error('Background persistence failed:', err);
+      });
     },
     [persistAsync],
   );
@@ -402,8 +404,8 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
             previousSnapshot.activityHeatmap,
             currentUid,
           );
-        } catch {
-          // The original persistence error is kept below for the UI.
+        } catch (rollbackErr) {
+          console.error('Import rollback persistence failed:', rollbackErr);
         }
         const message = getErrorMessage(err);
         setLastPersistenceError(message);

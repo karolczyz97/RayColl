@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Button, TextInput, Switch, Text } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { getVisiblePageNames } from '../../store/selectors/pages';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   card: Flashcard;
@@ -11,7 +12,7 @@ interface Props {
   setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
   onSave: () => void;
   onCancel: () => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function EditFlashcardForm({

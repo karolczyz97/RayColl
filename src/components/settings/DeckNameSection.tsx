@@ -1,11 +1,12 @@
 import React from 'react';
 import { TextInput } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   deckName: string;
   onChangeText: (v: string) => void;
   onBlur: () => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function DeckNameSection({ deckName, onChangeText, onBlur, t }: Props) {

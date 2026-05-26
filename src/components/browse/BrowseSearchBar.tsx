@@ -1,11 +1,12 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput } from 'react-native-paper';
+import type { TranslationFn } from '../../i18n';
 
 interface Props {
   search: string;
   setSearch: (v: string) => void;
-  t: (key: string, replacements?: any) => string;
+  t: TranslationFn;
 }
 
 export function BrowseSearchBar({ search, setSearch, t }: Props) {

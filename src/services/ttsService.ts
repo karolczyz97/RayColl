@@ -78,7 +78,7 @@ class TtsService {
     }
   }
 
-  getVoicesForLang(lang: string): any[] {
+  getVoicesForLang(lang: string): SpeechSynthesisVoice[] {
     if (Platform.OS === 'web') {
       if (!this.synth) return [];
       const prefix = lang.split('-')[0].toLowerCase();
