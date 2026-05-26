@@ -11,6 +11,7 @@ import {
   detectPageCount,
   detectLangFromHeader,
   parseCSV,
+  serializeCSV,
 } from '../../import/importParser';
 import {
   getVisiblePages,
@@ -163,6 +164,18 @@ assertDeepEqual(
   ], // pad with empty slot
 );
 console.log('✓ parseCSV tests passed');
+
+// serializeCSV
+assertEqual(serializeCSV([['hello', 'world'], ['foo', 'bar']], 'semicolon'), 'hello;world\nfoo;bar');
+assertEqual(serializeCSV([['hello;world', 'foo']], 'semicolon'), '"hello;world";foo');
+assertEqual(serializeCSV([['hello "quote" world', 'bar']], 'semicolon'), '"hello ""quote"" world";bar');
+// Roundtrip test
+const roundtripRows = [['a', 'b'], ['c', 'd;e'], ['f', 'g "h" i']];
+const serialized = serializeCSV(roundtripRows, 'semicolon');
+const parsed = parseCSV(serialized, 'semicolon', 2);
+assertDeepEqual(parsed, roundtripRows, 'Roundtrip serialization and parsing should return identical rows');
+console.log('✓ serializeCSV tests passed');
+
 
 // ==========================================
 // 3. Page Config & Selectors Tests

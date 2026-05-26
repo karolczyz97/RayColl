@@ -92,3 +92,21 @@ export function parseCSV(text: string, sepKey: string, pageCount: number): strin
       return parts.slice(0, pageCount);
     });
 }
+
+export function serializeCSV(rows: string[][], sepKey: string): string {
+  const sep = SEPARATORS[sepKey] || ';';
+  return rows
+    .map((row) =>
+      row
+        .map((field) => {
+          let escaped = field.replace(/"/g, '""');
+          if (escaped.includes(sep) || escaped.includes('"') || escaped.includes('\n')) {
+            escaped = `"${escaped}"`;
+          }
+          return escaped;
+        })
+        .join(sep)
+    )
+    .join('\n');
+}
+

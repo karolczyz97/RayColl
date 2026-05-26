@@ -1,9 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, TextInput, Button, useTheme, ActivityIndicator, Snackbar } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import {
+  Text,
+  TextInput,
+  Button,
+  useTheme,
+  ActivityIndicator,
+  Snackbar,
+  Portal,
+} from 'react-native-paper';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as DocumentPicker from 'expo-document-picker';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { PageHeader } from '../components/PageHeader';
 import { useI18n } from '../i18n';
@@ -13,11 +22,15 @@ import {
   detectPageCount,
   parseCSV,
   detectLangFromHeader,
+  serializeCSV,
 } from '../import/importParser';
+import { createNewSrsState } from '../srs/srsEngine';
+import type { Flashcard, FlashcardGroup } from '../types/models';
 
 import { ImportSeparatorSelector } from '../components/import/ImportSeparatorSelector';
 import { ImportPageConfig } from '../components/import/ImportPageConfig';
-import { ImportPreviewTable } from '../components/import/ImportPreviewTable';
+import { FlashcardListItem } from '../components/browse/FlashcardListItem';
+import { DeleteFlashcardDialog } from '../components/browse/DeleteFlashcardDialog';
 
 import { POPULAR_LANGS } from '../constants/languages';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
@@ -38,11 +51,45 @@ export default function ImportPage() {
   const [rawText, setRawText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState('');
+  const [cards, setCards] = useState<Flashcard[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPages, setEditPages] = useState<string[]>([]);
+  const [deleteCardId, setDeleteCardId] = useState<string | null>(null);
+
+  const updateCardsFromText = (text: string, currentSepKey: string, currentPageCount: number) => {
+    const parsedRows = parseCSV(text, currentSepKey, currentPageCount);
+    setCards((prevCards) => {
+      const isSame =
+        prevCards.length === parsedRows.length &&
+        prevCards.every((card, idx) => {
+          const row = parsedRows[idx];
+          return (
+            card.pages.length === row.length &&
+            card.pages.every((page, pIdx) => page === row[pIdx])
+          );
+        });
+
+      if (isSame) {
+        return prevCards;
+      }
+
+      return parsedRows.map((row, idx) => {
+        const existingId =
+          prevCards[idx]?.id || `import-${Math.random().toString(36).substring(2, 9)}`;
+        return {
+          id: existingId,
+          pages: row,
+          srsState: createNewSrsState(),
+        };
+      });
+    });
+  };
 
   const handleTextChange = (text: string) => {
     setImportError('');
     setRawText(text);
     if (!text.trim()) {
+      setCards([]);
       return;
     }
     const detectedSep = detectSeparator(text);
@@ -75,11 +122,110 @@ export default function ImportPage() {
         return nextLangs;
       });
     }
+
+    updateCardsFromText(text, detectedSep, detectedCount);
   };
 
-  const rows = useMemo(() => {
-    return parseCSV(rawText, sepKey, pageCount);
-  }, [rawText, sepKey, pageCount]);
+  const handleSepKeyChange = (newSep: string) => {
+    setSepKey(newSep);
+    updateCardsFromText(rawText, newSep, pageCount);
+  };
+
+  const handlePageCountChange: React.Dispatch<React.SetStateAction<number>> = (value) => {
+    setPageCount((prev) => {
+      const nextCount = typeof value === 'function' ? value(prev) : value;
+      updateCardsFromText(rawText, sepKey, nextCount);
+      return nextCount;
+    });
+  };
+
+  const mockGroup = useMemo<FlashcardGroup>(() => {
+    return {
+      id: 'import-preview',
+      name: name || 'Import Preview',
+      cards: [],
+      activeModeId: '',
+      pageLanguages: pageLangs.slice(0, pageCount),
+      pageNames: pageNames.slice(0, pageCount),
+      activePageCount: pageCount,
+    };
+  }, [name, pageLangs, pageNames, pageCount]);
+
+  const startEdit = (card: Flashcard) => {
+    setEditingId(card.id);
+    const pages = [...card.pages];
+    while (pages.length < pageCount) {
+      pages.push('');
+    }
+    setEditPages(pages);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditPages([]);
+  };
+
+  const saveEdit = () => {
+    if (!editingId) return;
+    const updatedCards = cards.map((c) => {
+      if (c.id === editingId) {
+        return { ...c, pages: [...editPages] };
+      }
+      return c;
+    });
+
+    setCards(updatedCards);
+
+    const newText = serializeCSV(
+      updatedCards.map((c) => c.pages),
+      sepKey
+    );
+    setRawText(newText);
+
+    cancelEdit();
+  };
+
+  const confirmDeleteCard = () => {
+    if (!deleteCardId) return;
+    const updatedCards = cards.filter((c) => c.id !== deleteCardId);
+
+    setCards(updatedCards);
+
+    const newText = serializeCSV(
+      updatedCards.map((c) => c.pages),
+      sepKey
+    );
+    setRawText(newText);
+
+    setDeleteCardId(null);
+  };
+
+  const handlePickFile = async () => {
+    setImportError('');
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/csv', 'text/plain', 'text/comma-separated-values', 'text/tab-separated-values'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        let fileContent = '';
+        if (Platform.OS === 'web' && asset.file) {
+          fileContent = await asset.file.text();
+        } else {
+          const response = await fetch(asset.uri);
+          fileContent = await response.text();
+        }
+        if (fileContent) {
+          handleTextChange(fileContent);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to pick or read file';
+      setImportError(msg);
+    }
+  };
 
   const handleImport = async () => {
     if (!name.trim()) return;
@@ -87,8 +233,8 @@ export default function ImportPage() {
     setImportError('');
     const langs = pageLangs.slice(0, pageCount);
     const names = pageNames.slice(0, pageCount);
-    const cardsData = rows.map((row) => ({
-      pages: row,
+    const cardsData = cards.map((c) => ({
+      pages: c.pages,
     }));
     try {
       const result = await store.importDeck({
@@ -120,7 +266,6 @@ export default function ImportPage() {
       </View>
     );
   }
-
   const card1 = (
     <Animated.View entering={FadeInDown.springify().delay(0)} style={isExpanded ? { flex: 1 } : undefined}>
       <AppCard mode="outlined" style={styles.card}>
@@ -147,6 +292,17 @@ export default function ImportPage() {
             outlineStyle={{ borderRadius: TOKENS.radius.md }}
             accessibilityLabel="CSV TSV raw text input"
           />
+          <Button
+            mode="outlined"
+            icon="upload"
+            onPress={handlePickFile}
+            style={styles.uploadBtn}
+            accessibilityLabel="Upload CSV, TXT, or MD file"
+          >
+            {t('import.upload_file') === 'import.upload_file'
+              ? 'Upload file (.csv, .txt, .md)'
+              : t('import.upload_file')}
+          </Button>
         </AppCard.Content>
       </AppCard>
     </Animated.View>
@@ -160,11 +316,11 @@ export default function ImportPage() {
             <Text variant="titleMedium" style={styles.cardTitle}>
               {t('settings.pages_config')}
             </Text>
-            <ImportSeparatorSelector sepKey={sepKey} setSepKey={setSepKey} t={t} />
+            <ImportSeparatorSelector sepKey={sepKey} setSepKey={handleSepKeyChange} t={t} />
           </View>
           <ImportPageConfig
             pageCount={pageCount}
-            setPageCount={setPageCount}
+            setPageCount={handlePageCountChange}
             pageNames={pageNames}
             setPageNames={setPageNames}
             pageLangs={pageLangs}
@@ -192,17 +348,43 @@ export default function ImportPage() {
               {card2}
             </View>
           ) : (
-            <View style={styles.singleColumn}>
+            <View style={[styles.singleColumn]}>
               {card1}
               {card2}
             </View>
           )}
 
           {/* Preview Section */}
-          {rows.length > 0 && (
-            <View style={[styles.previewContainer, !isCompact && { maxWidth: formMaxWidth, alignSelf: 'center' }]}>
-              <ImportPreviewTable rows={rows} pageCount={pageCount} pageNames={pageNames} t={t} />
-            </View>
+          {cards.length > 0 && (
+            <Animated.View
+              entering={FadeInDown.springify().delay(160)}
+              style={styles.previewContainer}
+            >
+              <AppCard mode="outlined" style={styles.card}>
+                <AppCard.Content style={styles.cardContent}>
+                  <Text variant="titleMedium" style={styles.cardTitle}>
+                    {`${t('import.preview') || 'Preview'} (${cards.length})`}
+                  </Text>
+                  <View style={styles.previewList}>
+                    {cards.map((card) => (
+                      <FlashcardListItem
+                        key={card.id}
+                        card={card}
+                        group={mockGroup}
+                        isEditing={editingId === card.id}
+                        editPages={editPages}
+                        setEditPages={setEditPages}
+                        onSave={saveEdit}
+                        onCancel={cancelEdit}
+                        onStartEdit={() => startEdit(card)}
+                        onDelete={() => setDeleteCardId(card.id)}
+                        t={t}
+                      />
+                    ))}
+                  </View>
+                </AppCard.Content>
+              </AppCard>
+            </Animated.View>
           )}
 
           <Animated.View
@@ -212,16 +394,25 @@ export default function ImportPage() {
             <Button
               mode="contained"
               onPress={handleImport}
-              disabled={!name.trim() || rows.length === 0 || isImporting}
+              disabled={!name.trim() || cards.length === 0 || isImporting}
               loading={isImporting}
               style={styles.importBtn}
               accessibilityLabel="Perform flashcard import button"
             >
-              {t('import.btn', { count: rows.length })}
+              {t('import.btn', { count: cards.length })}
             </Button>
           </Animated.View>
         </View>
       </ScrollView>
+
+      <Portal>
+        <DeleteFlashcardDialog
+          visible={!!deleteCardId}
+          onDismiss={() => setDeleteCardId(null)}
+          onConfirm={confirmDeleteCard}
+          t={t}
+        />
+      </Portal>
 
       <Snackbar
         visible={!!importError}
@@ -293,6 +484,14 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 120,
+  },
+  uploadBtn: {
+    marginTop: TOKENS.spacing.xs,
+    borderRadius: TOKENS.radius.pill,
+  },
+  previewList: {
+    gap: TOKENS.spacing.md,
+    marginTop: TOKENS.spacing.xs,
   },
   importBtn: {
     borderRadius: TOKENS.radius.pill,
