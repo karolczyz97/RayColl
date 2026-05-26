@@ -14,9 +14,39 @@ export interface SttService {
   isSupported(): boolean;
 }
 
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface ISpeechRecognition {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  continuous: boolean;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  start(): void;
+  stop(): void;
+}
+
 // Web browser STT using SpeechRecognition API
 class WebSttService implements SttService {
-  private recognition: any = null;
+  private recognition: ISpeechRecognition | null = null;
 
   isSupported(): boolean {
     return typeof window !== 'undefined' &&
@@ -31,7 +61,7 @@ class WebSttService implements SttService {
         return;
       }
 
-      this.recognition = new SpeechRec();
+      this.recognition = new SpeechRec() as ISpeechRecognition;
       this.recognition.lang = options.language;
       this.recognition.interimResults = true;
       this.recognition.maxAlternatives = 1;
@@ -64,7 +94,7 @@ class WebSttService implements SttService {
 
       this.recognition.onstart = () => options.onListeningStateChange?.(true);
 
-      this.recognition.onresult = (event: any) => {
+      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
         let interim = '';
         let hasFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -86,7 +116,7 @@ class WebSttService implements SttService {
         finishWithResult();
       };
 
-      this.recognition.onerror = (event: any) => {
+      this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (resolved) return;
         clearTimeout(hardTimeout);
         if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -143,7 +173,7 @@ class ReactNativeVoiceSttService implements SttService {
         inactivityTimer = setTimeout(async () => {
           try {
             await Voice.stop();
-          } catch (e) {
+          } catch {
             // ignore
           }
         }, INACTIVITY_MS);
@@ -184,6 +214,7 @@ class ReactNativeVoiceSttService implements SttService {
 
       Voice.start(options.language).catch(err => {
         cleanup();
+        options.onListeningStateChange?.(false);
         reject(err);
       });
     });

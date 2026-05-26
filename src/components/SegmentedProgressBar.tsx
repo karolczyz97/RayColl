@@ -4,6 +4,7 @@ import { useTheme } from 'react-native-paper';
 import type { Flashcard } from '../types/models';
 import { getCardCategory } from '../srs/srsEngine';
 import { useI18n } from '../i18n';
+import { SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
 
 export interface CardStats {
   total: number;
@@ -38,10 +39,10 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
 
   // MD3 Expressive tonal color tokens
   const colors = {
-    mastered: '#006c4c',
-    review: '#6750a4',
-    learning: '#b86800',
-    new: '#1565c0',
+    mastered: SRS_CATEGORIES_TOKENS.mastered.color,
+    review: SRS_CATEGORIES_TOKENS.review.color,
+    learning: SRS_CATEGORIES_TOKENS.learning.color,
+    new: SRS_CATEGORIES_TOKENS.new.color,
     empty: theme.colors.outlineVariant || '#e0e0e0',
   };
 
@@ -78,10 +79,10 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
       {showLegend && (
         <View style={styles.legendContainer}>
           {[
-            { color: colors.mastered, bg: '#c8ffc0', label: t('srs.badge.mastered'), count: mastered },
-            { color: colors.review, bg: '#e8def8', label: t('srs.badge.review'), count: review },
-            { color: colors.learning, bg: '#ffddb3', label: t('srs.badge.learning'), count: learning },
-            { color: colors.new, bg: '#d1e4ff', label: t('srs.badge.new'), count: newCount },
+            { color: colors.mastered, bg: SRS_CATEGORIES_TOKENS.mastered.bg, label: t('srs.badge.mastered'), count: mastered },
+            { color: colors.review, bg: SRS_CATEGORIES_TOKENS.review.bg, label: t('srs.badge.review'), count: review },
+            { color: colors.learning, bg: SRS_CATEGORIES_TOKENS.learning.bg, label: t('srs.badge.learning'), count: learning },
+            { color: colors.new, bg: SRS_CATEGORIES_TOKENS.new.bg, label: t('srs.badge.new'), count: newCount },
           ].map((item, i) => (
             <View key={i} style={[styles.legendItem, { backgroundColor: item.bg }]}>
               <View style={[styles.dot, { backgroundColor: item.color }]} />

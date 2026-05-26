@@ -1,50 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform, Share, Alert } from 'react-native';
-import { Text, Button, Divider, useTheme, Card, SegmentedButtons, TextInput, Portal, Dialog, ActivityIndicator, Menu } from 'react-native-paper';
+import { Text, Button, useTheme, Card, SegmentedButtons, TextInput, Portal, Dialog, ActivityIndicator, Menu } from 'react-native-paper';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { useAppTheme, type ThemePref } from '../contexts/ThemeContext';
-import { useI18n, type LanguageCode } from '../i18n';
+import { useI18n } from '../i18n';
 import { PageHeader } from '../components/PageHeader';
 
 export default function AppSettings() {
   const { t, language, setLanguage } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
-  const { themePref, setThemePref, useSystemColors, setUseSystemColors } = useAppTheme();
+  const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate } = useAppTheme();
 
-  // TTS Rate state
-  const [ttsRate, setTtsRate] = useState(1.0);
   const [langMenuVisible, setLangMenuVisible] = useState(false);
   const [importVisible, setImportVisible] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [resetVisible, setResetVisible] = useState(false);
 
-  // Load TTS rate on mount
-  useEffect(() => {
-    async function loadTtsRate() {
-      try {
-        const saved = await AsyncStorage.getItem('td-tts-rate');
-        if (saved) {
-          setTtsRate(parseFloat(saved));
-        }
-      } catch (err) {
-        console.warn('Failed to load TTS rate:', err);
-      }
-    }
-    loadTtsRate();
-  }, []);
-
   const handleTtsRateChange = async (rate: number) => {
     const clampedRate = Math.max(0.5, Math.min(2.0, rate));
-    setTtsRate(clampedRate);
-    try {
-      await AsyncStorage.setItem('td-tts-rate', String(clampedRate));
-    } catch (err) {
-      console.warn('Failed to save TTS rate:', err);
-    }
+    await setTtsRate(clampedRate);
   };
 
   const handleExport = async () => {
@@ -80,7 +58,7 @@ export default function AppSettings() {
       } else {
         Alert.alert('Success', t('app_settings.import_success') || 'Import completed!');
       }
-    } catch (err) {
+    } catch {
       if (Platform.OS === 'web') {
         alert('Invalid backup JSON!');
       } else {

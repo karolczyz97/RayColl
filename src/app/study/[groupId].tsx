@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Text, Button, ProgressBar, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -9,11 +9,10 @@ import Animated, {
   withRepeat,
   withSequence,
   FadeIn,
-  FadeInDown,
   FadeInUp,
   ZoomIn,
 } from 'react-native-reanimated';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppIcon } from '../../components/AppIcon';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useStudySession } from '../../hooks/useStudySession';
 import type { Flashcard } from '../../types/models';
@@ -21,6 +20,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { useI18n } from '../../i18n';
 import { SegmentedProgressBar, computeCardStats } from '../../components/SegmentedProgressBar';
+import { getVisiblePages } from '../../store/selectors/pages';
 
 // Individual page section that fades in when revealed
 function CardPageSection({
@@ -52,7 +52,7 @@ function CardPageSection({
       stiffness: 120,
       mass: 0.8,
     });
-  }, [isRevealed]);
+  }, [isRevealed, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -100,15 +100,10 @@ export default function StudyPage() {
 
   const group = store.groups.find((g) => g.id === groupId) || null;
 
-  // Cache last valid group during exit
-  const lastValidGroupRef = useRef<typeof group>(null);
-  if (group) {
-    lastValidGroupRef.current = group;
-  }
-  const activeGroup = group || lastValidGroupRef.current;
+  const activeGroup = group;
 
   const mode = store.studyModes.find((m) => m.id === activeGroup?.activeModeId) || store.studyModes[0];
-  const steps = mode?.steps || [];
+  const steps = useMemo(() => mode?.steps || [], [mode]);
 
   const onCardReviewed = useCallback(
     (gId: string, card: Flashcard) => {
@@ -142,7 +137,7 @@ export default function StudyPage() {
         startSession(due);
       }
     }
-  }, [groupId, store.isLoading]);
+  }, [groupId, store.isLoading, activeGroup, startSession, store]);
 
   const handleBack = () => {
     stopSession();
@@ -181,7 +176,7 @@ export default function StudyPage() {
     } else {
       ttsScale.value = withSpring(1);
     }
-  }, [s.isTtsPlaying]);
+  }, [s.isTtsPlaying, ttsScale]);
 
   const ttsIconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ttsScale.value }],
@@ -198,7 +193,7 @@ export default function StudyPage() {
     } else {
       sttScale.value = withSpring(1);
     }
-  }, [s.isSttListening]);
+  }, [s.isSttListening, sttScale]);
 
   const sttIconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: sttScale.value }],
@@ -231,7 +226,7 @@ export default function StudyPage() {
     return (
       <View style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}>
         <Animated.View entering={ZoomIn.springify().damping(12)}>
-          <MaterialCommunityIcons name="check-circle" size={96} color={theme.colors.tertiary || '#4caf50'} />
+          <AppIcon name="check-circle" size={96} color={theme.colors.tertiary || '#4caf50'} />
         </Animated.View>
         <Animated.View entering={FadeInUp.springify().delay(150)}>
           <Text variant="headlineLarge" style={styles.bravoTitle}>
@@ -299,16 +294,18 @@ export default function StudyPage() {
               },
             ]}
           >
-            {currentCard &&
-              activeGroup.pageNames.map((pageName, pi) => {
-                // Page 0 (front) is always revealed; others fade in when revealed
+            {(() => {
+              if (!currentCard) return null;
+              const activePageCount = activeGroup.activePageCount ?? activeGroup.pageNames.length;
+              const visiblePages = getVisiblePages(currentCard, activeGroup);
+              
+              return activeGroup.pageNames.slice(0, activePageCount).map((pageName, pi) => {
                 const isRevealed = pi === 0 || s.revealedPages.includes(pi) || s.showRatingButtons;
-
                 return (
                   <CardPageSection
                     key={`${s.currentCardIndex}-${pi}`}
                     pageName={pageName}
-                    pageContent={currentCard.pages[pi]}
+                    pageContent={visiblePages[pi] || ''}
                     isRevealed={isRevealed}
                     isPrimary={pi === 0}
                     hasBorderTop={pi > 0}
@@ -318,11 +315,12 @@ export default function StudyPage() {
                     labelColor={theme.colors.onSurfaceVariant}
                   />
                 );
-              })}
+              });
+            })()}
 
             {s.waitingForTap && (
               <View style={styles.tapIndicator}>
-                <MaterialCommunityIcons name="gesture-tap" size={20} color={theme.colors.outline} />
+                <AppIcon name="gesture-tap" size={20} color={theme.colors.outline} />
                 <Text variant="labelMedium" style={{ color: theme.colors.outline, fontWeight: 'bold' }}>
                   {t('study.tap_to_reveal')}
                 </Text>
@@ -343,7 +341,7 @@ export default function StudyPage() {
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <MaterialCommunityIcons name="replay" size={size} color={color} />}
+              icon={({ size, color }) => <AppIcon name="replay" size={size} color={color} />}
               onPress={() => handleRating(1)}
             >
               {getButtonText('study.rating.1')}
@@ -355,7 +353,7 @@ export default function StudyPage() {
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <MaterialCommunityIcons name="emoticon-sad-outline" size={size} color={color} />}
+              icon={({ size, color }) => <AppIcon name="emoticon-sad-outline" size={size} color={color} />}
               onPress={() => handleRating(2)}
             >
               {getButtonText('study.rating.2')}
@@ -365,7 +363,7 @@ export default function StudyPage() {
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <MaterialCommunityIcons name="emoticon-happy-outline" size={size} color={color} />}
+              icon={({ size, color }) => <AppIcon name="emoticon-happy-outline" size={size} color={color} />}
               onPress={() => handleRating(3)}
             >
               {getButtonText('study.rating.3')}
@@ -377,7 +375,7 @@ export default function StudyPage() {
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <MaterialCommunityIcons name="emoticon-excited-outline" size={size} color={color} />}
+              icon={({ size, color }) => <AppIcon name="emoticon-excited-outline" size={size} color={color} />}
               onPress={() => handleRating(4)}
             >
               {getButtonText('study.rating.4')}
@@ -408,7 +406,7 @@ export default function StudyPage() {
             <View style={styles.audioIconsRow}>
               {hasTts && (
                 <Animated.View style={[styles.iconWrapper, ttsIconStyle]}>
-                  <MaterialCommunityIcons
+                  <AppIcon
                     name="volume-high"
                     size={36}
                     color={s.isTtsPlaying ? theme.colors.primary : theme.colors.outline}
@@ -417,7 +415,7 @@ export default function StudyPage() {
               )}
               {hasStt && (
                 <Animated.View style={[styles.iconWrapper, sttIconStyle]}>
-                  <MaterialCommunityIcons
+                  <AppIcon
                     name="microphone"
                     size={36}
                     color={s.isSttListening ? '#f44336' : theme.colors.outline}

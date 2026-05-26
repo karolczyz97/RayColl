@@ -7,27 +7,15 @@ import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import { PageHeader } from '../components/PageHeader';
 import { useI18n } from '../i18n';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-function getLocalDateString(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function computeStreak(heatmap: Record<string, number>): number {
-  const today = new Date();
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = getLocalDateString(d);
-    if (heatmap[key]) streak++;
-    else break;
-  }
-  return streak;
-}
+import { AppIcon } from '../components/AppIcon';
+import {
+  computeStreak,
+  getTotalCardsCount,
+  getTotalDueCardsCount,
+  getActiveDaysCount,
+  getGlobalStats,
+  getLocalDateString
+} from '../store/selectors/stats';
 
 function HeatmapGrid({ heatmap, t }: { heatmap: Record<string, number>; t: (key: string) => string }) {
   const theme = useTheme();
@@ -121,13 +109,11 @@ export default function StatsPage() {
 
   const { groups, activityHeatmap, getDueCards, isLoading } = store;
 
-  const totalCards = useMemo(() => groups.reduce((a, g) => a + g.cards.length, 0), [groups]);
-  const totalDue = useMemo(() => groups.reduce((a, g) => a + getDueCards(g.id).length, 0), [groups, getDueCards]);
+  const totalCards = useMemo(() => getTotalCardsCount(groups), [groups]);
+  const totalDue = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [groups, getDueCards]);
   const streak = useMemo(() => computeStreak(activityHeatmap), [activityHeatmap]);
-  const activeDays = useMemo(() => Object.keys(activityHeatmap).length, [activityHeatmap]);
-
-  const allCards = useMemo(() => groups.flatMap((g) => g.cards), [groups]);
-  const globalStats = useMemo(() => computeCardStats(allCards), [allCards]);
+  const activeDays = useMemo(() => getActiveDaysCount(activityHeatmap), [activityHeatmap]);
+  const globalStats = useMemo(() => getGlobalStats(groups), [groups]);
 
   const handleBack = () => {
     router.back();
@@ -159,7 +145,7 @@ export default function StatsPage() {
             <Animated.View key={i} entering={FadeInDown.springify().delay(i * 80)} style={{ minWidth: width < 600 ? '47%' : '22%' }}>
             <Card style={styles.statCard} mode="outlined">
               <Card.Content style={styles.statCardContent}>
-                <MaterialCommunityIcons name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
+                <AppIcon name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
                 <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
                   {m.label}
                 </Text>

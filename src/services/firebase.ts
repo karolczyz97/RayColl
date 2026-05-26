@@ -8,7 +8,6 @@ import {
   signInWithCredential,
   signOut as fbSignOut,
   onAuthStateChanged,
-  // @ts-ignore
   getReactNativePersistence,
 } from 'firebase/auth';
 import type { User, Unsubscribe } from 'firebase/auth';

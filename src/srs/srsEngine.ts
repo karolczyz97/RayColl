@@ -152,20 +152,6 @@ export function mapMatchToRating(matchPercent: number): number {
 
 export type SrsCardCategory = 'new' | 'learning' | 'review' | 'mastered';
 
-export interface CategoryInfo {
-  label: string;
-  color: string; // HEX color for progress bar
-  chipColor: 'default' | 'info' | 'warning' | 'success' | 'secondary'; // MUI Chip color
-  badgeText: string;
-}
-
-export const CATEGORIES: Record<SrsCardCategory, CategoryInfo> = {
-  new: { label: 'Nowe', color: '#42a5f5', chipColor: 'info', badgeText: 'Nowa' },
-  learning: { label: 'Uczone', color: '#ffa726', chipColor: 'warning', badgeText: 'Uczona' },
-  review: { label: 'Powtórki', color: '#7c4dff', chipColor: 'secondary', badgeText: 'Powtórka' },
-  mastered: { label: 'Opanowane', color: '#4caf50', chipColor: 'success', badgeText: 'Opanowana' },
-};
-
 export function getCardCategory(state: SrsState): SrsCardCategory {
   if (state.state === 0) return 'new';
   if (state.state === 1 || state.state === 3) return 'learning';

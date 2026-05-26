@@ -21,6 +21,7 @@ export interface FlashcardGroup {
   studyFilter?: 'all' | 'new' | 'review' | 'new+review';
   pageLanguages: string[]; // tagi BCP-47 dla stron
   pageNames: string[];     // np. ['Słowo', 'Tłumaczenie', 'Przykład']
+  activePageCount?: number; // liczba widocznych/aktywnych stron
 }
 
 export type ModeStep =
