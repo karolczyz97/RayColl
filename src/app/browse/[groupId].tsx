@@ -16,8 +16,7 @@ import { BrowseSearchBar } from '../../components/browse/BrowseSearchBar';
 import { BrowseFilterChips } from '../../components/browse/BrowseFilterChips';
 import { FlashcardListItem } from '../../components/browse/FlashcardListItem';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
-
-type BrowseFilter = 'all' | 'learning' | 'review' | 'new' | 'mastered';
+import type { BrowseFilter } from '../../constants/browseFilters';
 
 export default function BrowsePage() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();

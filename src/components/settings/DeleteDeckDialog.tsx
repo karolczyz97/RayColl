@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Dialog, Button, Text, TextInput, useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
+import { dialogStyles } from '../../theme/dialogStyles';
 
 interface Props {
   visible: boolean;
@@ -25,7 +27,7 @@ export function DeleteDeckDialog({
   const theme = useTheme();
 
   return (
-    <Dialog visible={visible} onDismiss={onDismiss}>
+    <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
       <Dialog.Title>{t('settings.delete_btn')}</Dialog.Title>
       <Dialog.Content>
         <Text style={styles.confirmText}>
@@ -37,7 +39,7 @@ export function DeleteDeckDialog({
           onChangeText={setDeleteConfirmText}
           placeholder="DELETE"
           style={styles.input}
-          outlineStyle={{ borderRadius: 12 }}
+          outlineStyle={styles.inputOutline}
           accessibilityLabel="Confirm deletion input"
         />
       </Dialog.Content>
@@ -46,6 +48,7 @@ export function DeleteDeckDialog({
         <Button
           mode="contained"
           buttonColor={theme.colors.error}
+          textColor={theme.colors.onError}
           onPress={onDelete}
           disabled={deleteConfirmText !== 'DELETE'}
           accessibilityLabel="Delete deck button"
@@ -59,9 +62,12 @@ export function DeleteDeckDialog({
 
 const styles = StyleSheet.create({
   confirmText: {
-    marginBottom: 12,
+    marginBottom: TOKENS.spacing.md,
   },
   input: {
-    height: 44,
+    height: TOKENS.control.height,
+  },
+  inputOutline: {
+    borderRadius: TOKENS.control.borderRadius,
   },
 });

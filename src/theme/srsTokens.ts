@@ -3,27 +3,36 @@ import { SrsCardCategory } from '../srs/srsEngine';
 
 export interface SrsCategoryToken {
   labelKey: string;
-  badgeTextKey: string;
 }
 
 export const SRS_CATEGORIES_TOKENS: Record<SrsCardCategory, SrsCategoryToken> = {
   new: {
-    labelKey: 'filter.new',
-    badgeTextKey: 'srs.badge.new',
+    labelKey: 'srs.badge.new',
   },
   learning: {
-    labelKey: 'filter.learning',
-    badgeTextKey: 'srs.badge.learning',
+    labelKey: 'srs.badge.learning',
   },
   review: {
-    labelKey: 'filter.review',
-    badgeTextKey: 'srs.badge.review',
+    labelKey: 'srs.badge.review',
   },
   mastered: {
-    labelKey: 'filter.mastered',
-    badgeTextKey: 'srs.badge.mastered',
+    labelKey: 'srs.badge.mastered',
   },
 };
+
+/**
+ * Canonical display order for SRS card categories.
+ * Change this ONE array to reorder:
+ *   - SegmentedProgressBar segments and legend
+ *   - Browse filters
+ *   - Any other UI that iterates over categories
+ */
+export const SRS_CATEGORY_ORDER: SrsCardCategory[] = [
+  'new',
+  'learning',
+  'review',
+  'mastered',
+];
 
 export function getMasteryPercent(state: SrsState): number {
   if (state.state === 0) return 0;

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Text, Button, Menu } from 'react-native-paper';
-import { CardFilter } from '../../constants/cardFilters';
+import { Text } from 'react-native-paper';
+import { AppSelect } from '../AppSelect';
+import { CARD_FILTER_OPTIONS, CardFilter } from '../../constants/cardFilters';
+import { TOKENS } from '../../theme/tokens';
 import type { TranslationFn } from '../../i18n';
 
 interface Props {
@@ -11,73 +13,33 @@ interface Props {
 }
 
 export function StudyScopeSection({ studyFilter, onFilterChange, t }: Props) {
-  const [scopeMenuVisible, setScopeMenuVisible] = useState(false);
-
-  // Normalize mapping for translations
-  const filterKey = studyFilter === 'new+review' ? 'new_review' : studyFilter;
+  const options = CARD_FILTER_OPTIONS.map((filter) => ({
+    label: t(filter.labelKey),
+    value: filter.value,
+  }));
 
   return (
     <View style={styles.container}>
       <Text variant="titleMedium" style={styles.sectionTitle}>
         {t('settings.study_scope')}
       </Text>
-      <Menu
-        visible={scopeMenuVisible}
-        onDismiss={() => setScopeMenuVisible(false)}
-        anchor={
-          <Button
-            mode="outlined"
-            onPress={() => setScopeMenuVisible(true)}
-            style={styles.dropdownAnchor}
-            accessibilityLabel="Study scope filter selection"
-          >
-            {t(`filter.${filterKey || 'new_review'}`)}
-          </Button>
-        }
-      >
-        <Menu.Item
-          onPress={() => {
-            onFilterChange('new+review');
-            setScopeMenuVisible(false);
-          }}
-          title={t('filter.new_review')}
-        />
-        <Menu.Item
-          onPress={() => {
-            onFilterChange('new');
-            setScopeMenuVisible(false);
-          }}
-          title={t('filter.new')}
-        />
-        <Menu.Item
-          onPress={() => {
-            onFilterChange('review');
-            setScopeMenuVisible(false);
-          }}
-          title={t('filter.review')}
-        />
-        <Menu.Item
-          onPress={() => {
-            onFilterChange('all');
-            setScopeMenuVisible(false);
-          }}
-          title={t('filter.all')}
-        />
-      </Menu>
+      <AppSelect
+        value={studyFilter}
+        options={options}
+        onChange={(value) => onFilterChange(value as CardFilter)}
+        accessibilityLabel="Study scope filter selection"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
+    gap: TOKENS.spacing.sm,
+    width: '100%',
   },
   sectionTitle: {
     fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  dropdownAnchor: {
-    alignSelf: 'stretch',
-    marginBottom: 12,
+    marginBottom: TOKENS.spacing.xs,
   },
 });

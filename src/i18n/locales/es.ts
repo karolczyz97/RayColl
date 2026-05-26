@@ -101,7 +101,6 @@ export const es: Record<string, string> = {
   'settings.study_scope': 'Alcance del estudio',
   'settings.which_cards': 'Qué tarjetas estudiar',
   'settings.mode_steps': 'Pasos del Modo "{name}"',
-  'settings.default_mode_notice': '(por defecto — no editable)',
   'settings.add_step_btn': 'Añadir paso',
   'settings.create_mode_btn': 'Crear nuevo modo',
   'settings.new_mode_name': 'Nombre del modo',
@@ -158,8 +157,8 @@ export const es: Record<string, string> = {
 
   // Study Filters
   'filter.new_review': 'Nuevas + pendientes de repaso',
-  'filter.new': 'Solo nuevas',
-  'filter.review': 'Solo pendientes de repaso',
+  'filter.new': 'Nueva',
+  'filter.review': 'Repaso',
   'filter.all': 'Todas',
 
   // SRS Badge translation

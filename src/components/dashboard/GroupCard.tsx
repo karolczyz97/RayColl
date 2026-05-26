@@ -1,21 +1,22 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, IconButton, useTheme } from 'react-native-paper';
+import { Text, IconButton, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
+import { AppCard } from '../AppCard';
 import { SegmentedProgressBar } from '../SegmentedProgressBar';
 import { computeCardStats } from '../../store/selectors/stats';
 import { StudyModeMenuButton } from './StudyModeMenuButton';
 import type { FlashcardGroup } from '../../types/models';
+import { TOKENS } from '../../theme/tokens';
 
 interface Props {
   group: FlashcardGroup;
-  cardWidth: number;
   onModeChange: (modeId: string) => void;
 }
 
-export function GroupCard({ group, cardWidth, onModeChange }: Props) {
+export function GroupCard({ group, onModeChange }: Props) {
   const store = useFlashcardStore();
   const { t } = useI18n();
   const theme = useTheme();
@@ -24,19 +25,18 @@ export function GroupCard({ group, cardWidth, onModeChange }: Props) {
   const cardStats = computeCardStats(group.cards);
 
   return (
-    <Card
-      style={[styles.card, { width: cardWidth }]}
+    <AppCard
+      style={styles.card}
       mode="elevated"
-      onPress={() => router.push(`/study/${group.id}`)}
       accessibilityLabel={`Deck ${group.name}, contains ${group.cards.length} cards`}
     >
-      <Card.Content>
+      <AppCard.Content>
         <Text variant="titleMedium" style={styles.cardTitle}>
           {group.name}
         </Text>
         <Text
           variant="bodyMedium"
-          style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+          style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}
         >
           {t('dashboard.cards_count', { count: group.cards.length })}
         </Text>
@@ -46,8 +46,8 @@ export function GroupCard({ group, cardWidth, onModeChange }: Props) {
             {t('dashboard.due_count', { count: dueCount })}
           </Text>
         )}
-      </Card.Content>
-      <Card.Actions style={styles.cardActions}>
+      </AppCard.Content>
+      <AppCard.Actions style={styles.cardActions}>
         <View style={styles.cardActionsRow}>
           <IconButton
             icon="eye-outline"
@@ -63,7 +63,7 @@ export function GroupCard({ group, cardWidth, onModeChange }: Props) {
             onPress={() => router.push(`/settings/${group.id}`)}
             accessibilityLabel={`Configure settings for deck ${group.name}`}
           />
-          <View style={{ flex: 1 }}>
+          <View style={styles.studyModeAction}>
             <StudyModeMenuButton
               group={group}
               onStudy={() => router.push(`/study/${group.id}`)}
@@ -71,32 +71,38 @@ export function GroupCard({ group, cardWidth, onModeChange }: Props) {
             />
           </View>
         </View>
-      </Card.Actions>
-    </Card>
+      </AppCard.Actions>
+    </AppCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
-    marginBottom: 8,
+    borderRadius: TOKENS.radius.xl,
+    marginBottom: TOKENS.spacing.sm,
   },
   cardTitle: {
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: TOKENS.spacing.xs,
+  },
+  cardSubtitle: {
+    marginBottom: TOKENS.spacing.md,
   },
   dueText: {
     fontWeight: '500',
-    marginTop: 8,
+    marginTop: TOKENS.spacing.sm,
   },
   cardActions: {
-    paddingHorizontal: 8,
-    paddingBottom: 8,
+    paddingHorizontal: TOKENS.spacing.sm,
+    paddingBottom: TOKENS.spacing.sm,
   },
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    gap: 4,
+    gap: TOKENS.spacing.xs,
+  },
+  studyModeAction: {
+    flex: 1,
   },
 });

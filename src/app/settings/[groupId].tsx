@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { IconButton, useTheme, Divider, Portal, ActivityIndicator } from 'react-native-paper';
+import { IconButton, useTheme, Portal, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
@@ -22,6 +22,8 @@ import { StudyModeStepsEditor } from '../../components/settings/StudyModeStepsEd
 import { CreateStudyModeSection } from '../../components/settings/CreateStudyModeSection';
 import { DeleteDeckDialog } from '../../components/settings/DeleteDeckDialog';
 import { AddStepDialog } from '../../components/settings/AddStepDialog';
+import { AppCard } from '../../components/AppCard';
+import { TOKENS } from '../../theme/tokens';
 
 const DEFAULT_MODE_IDS = ['classic', 'listen-speak'];
 
@@ -57,7 +59,6 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [stepDialogOpen, setStepDialogOpen] = useState(false);
-  const [newStepTypeVisible, setNewStepTypeVisible] = useState(false);
 
   // New step creation state
   const [newStepType, setNewStepType] = useState<string>('show_page');
@@ -70,6 +71,18 @@ export default function SettingsPage() {
   const [newModeName, setNewModeName] = useState('');
   const [customSteps, setCustomSteps] = useState<ModeStep[]>([]);
   const [editingModeId, setEditingModeId] = useState<string | null>(null);
+
+  const openCreateModeDialog = () => {
+    setEditingModeId(null);
+    setCreatingMode(true);
+  };
+
+  const closeCreateModeDialog = () => {
+    setCreatingMode(false);
+    setEditingModeId(null);
+    setCustomSteps([]);
+    setNewModeName('');
+  };
 
   const [prevGroupName, setPrevGroupName] = useState(activeGroup?.name || '');
   const [deckName, setDeckName] = useState(activeGroup?.name || '');
@@ -250,46 +263,55 @@ export default function SettingsPage() {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Rename Field */}
-        <DeckNameSection
-          deckName={deckName}
-          onChangeText={setDeckName}
-          onBlur={handleNameBlur}
-          t={t}
-        />
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <DeckNameSection
+              deckName={deckName}
+              onChangeText={setDeckName}
+              onBlur={handleNameBlur}
+              t={t}
+            />
+          </AppCard.Content>
+        </AppCard>
 
-        <Divider style={styles.divider} />
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <PagesConfigSection
+              pageCount={pageCount}
+              visiblePageNames={getVisiblePageNames({ ...activeGroup, pageNames: colNames })}
+              visiblePageLanguages={getVisiblePageLanguages(activeGroup)}
+              adjustPageCount={adjustPageCount}
+              movePageSetting={movePageSetting}
+              setColNames={setColNames}
+              handleColBlur={handleColBlur}
+              updatePageLangValue={updatePageLangValue}
+              t={t}
+              popularLangs={POPULAR_LANGS}
+            />
+          </AppCard.Content>
+        </AppCard>
 
-        {/* Pages configuration */}
-        <PagesConfigSection
-          pageCount={pageCount}
-          visiblePageNames={getVisiblePageNames({ ...activeGroup, pageNames: colNames })}
-          visiblePageLanguages={getVisiblePageLanguages(activeGroup)}
-          adjustPageCount={adjustPageCount}
-          movePageSetting={movePageSetting}
-          setColNames={setColNames}
-          handleColBlur={handleColBlur}
-          updatePageLangValue={updatePageLangValue}
-          t={t}
-          popularLangs={POPULAR_LANGS}
-        />
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <StudyModeSelector
+              activeModeId={activeGroup.activeModeId}
+              onModeChange={onModeChange}
+              studyModes={store.studyModes}
+              t={t}
+              onCreateMode={openCreateModeDialog}
+            />
+          </AppCard.Content>
+        </AppCard>
 
-        <Divider style={styles.divider} />
-
-        {/* Study Mode Selection */}
-        <StudyModeSelector
-          activeModeId={activeGroup.activeModeId}
-          onModeChange={onModeChange}
-          studyModes={store.studyModes}
-          t={t}
-        />
-
-        {/* Study Scope Selection */}
-        <StudyScopeSection
-          studyFilter={activeGroup.studyFilter || 'new+review'}
-          onFilterChange={onFilterChange}
-          t={t}
-        />
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <StudyScopeSection
+              studyFilter={activeGroup.studyFilter || 'new+review'}
+              onFilterChange={onFilterChange}
+              t={t}
+            />
+          </AppCard.Content>
+        </AppCard>
 
         {/* Active Mode Steps */}
         {activeMode && (
@@ -304,38 +326,29 @@ export default function SettingsPage() {
           />
         )}
 
-        <IconButton
-          icon="plus"
-          mode="contained"
-          onPress={() => setCreatingMode(true)}
-          style={styles.createModeBtn}
-          accessibilityLabel="Create study mode button"
-        />
-
-        {creatingMode && (
-          <CreateStudyModeSection
-            newModeName={newModeName}
-            setNewModeName={setNewModeName}
-            customSteps={customSteps}
-            setCustomSteps={setCustomSteps}
-            saveCustomMode={saveCustomMode}
-            setStepDialogOpen={setStepDialogOpen}
-            setEditingModeId={setEditingModeId}
-            t={t}
-            stepSummary={stepSummary}
-          />
-        )}
       </ScrollView>
 
       {/* Portal Dialogs */}
       <Portal>
+        <CreateStudyModeSection
+          visible={creatingMode}
+          onDismiss={closeCreateModeDialog}
+          newModeName={newModeName}
+          setNewModeName={setNewModeName}
+          customSteps={customSteps}
+          setCustomSteps={setCustomSteps}
+          saveCustomMode={saveCustomMode}
+          setStepDialogOpen={setStepDialogOpen}
+          setEditingModeId={setEditingModeId}
+          t={t}
+          stepSummary={stepSummary}
+        />
+
         <AddStepDialog
           visible={stepDialogOpen}
           onDismiss={() => setStepDialogOpen(false)}
           newStepType={newStepType}
           setNewStepType={setNewStepType}
-          newStepTypeVisible={newStepTypeVisible}
-          setNewStepTypeVisible={setNewStepTypeVisible}
           newPageIdx={newPageIdx}
           setNewPageIdx={setNewPageIdx}
           newMs={newMs}
@@ -371,18 +384,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 64,
-    gap: 12,
+    paddingHorizontal: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.xxl * 2,
+    gap: TOKENS.spacing.lg,
   },
-  divider: {
-    marginVertical: 12,
-  },
-  createModeBtn: {
-    marginTop: 8,
-    alignSelf: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  card: {
+    borderRadius: TOKENS.radius.xl,
   },
 });

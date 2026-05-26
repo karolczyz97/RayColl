@@ -4,13 +4,11 @@ import {
   Text,
   Button,
   useTheme,
-  Card,
   SegmentedButtons,
   TextInput,
   Portal,
   Dialog,
   ActivityIndicator,
-  Menu,
 } from 'react-native-paper';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -19,6 +17,10 @@ import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { useAppTheme, type ThemePref } from '../contexts/ThemeContext';
 import { useI18n } from '../i18n';
 import { PageHeader } from '../components/PageHeader';
+import { AppCard } from '../components/AppCard';
+import { AppSelect } from '../components/AppSelect';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { TOKENS } from '../theme/tokens';
 
 export default function AppSettings() {
   const { t, language, setLanguage } = useI18n();
@@ -26,8 +28,8 @@ export default function AppSettings() {
   const store = useFlashcardStore();
   const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate } =
     useAppTheme();
+  const { formMaxWidth } = useResponsiveLayout();
 
-  const [langMenuVisible, setLangMenuVisible] = useState(false);
   const [importVisible, setImportVisible] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [resetVisible, setResetVisible] = useState(false);
@@ -107,212 +109,168 @@ export default function AppSettings() {
       <PageHeader title={t('app_settings.title')} onBack={handleBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Language Section */}
-        <Animated.View entering={FadeInDown.springify().delay(0)}>
-          <Card style={styles.card} mode="outlined">
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                {t('app_settings.lang')}
-              </Text>
-              <Menu
-                visible={langMenuVisible}
-                onDismiss={() => setLangMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    style={styles.dropdownAnchor}
-                    onPress={() => setLangMenuVisible(true)}
-                  >
-                    {language === 'pl'
-                      ? '🇵🇱 Polski'
-                      : language === 'de'
-                        ? '🇩🇪 Deutsch'
-                        : language === 'es'
-                          ? '🇪🇸 Español'
-                          : language === 'it'
-                            ? '🇮🇹 Italiano'
-                            : '🇬🇧 English'}
-                  </Button>
-                }
-              >
-                <Menu.Item
-                  onPress={() => {
-                    setLanguage('pl');
-                    setLangMenuVisible(false);
-                  }}
-                  title="🇵🇱 Polski"
-                />
-                <Menu.Item
-                  onPress={() => {
-                    setLanguage('en');
-                    setLangMenuVisible(false);
-                  }}
-                  title="🇬🇧 English"
-                />
-                <Menu.Item
-                  onPress={() => {
-                    setLanguage('de');
-                    setLangMenuVisible(false);
-                  }}
-                  title="🇩🇪 Deutsch"
-                />
-                <Menu.Item
-                  onPress={() => {
-                    setLanguage('es');
-                    setLangMenuVisible(false);
-                  }}
-                  title="🇪🇸 Español"
-                />
-                <Menu.Item
-                  onPress={() => {
-                    setLanguage('it');
-                    setLangMenuVisible(false);
-                  }}
-                  title="🇮🇹 Italiano"
-                />
-              </Menu>
-            </Card.Content>
-          </Card>
-        </Animated.View>
-
-        {/* Theme Section */}
-        <Animated.View entering={FadeInDown.springify().delay(80)}>
-          <Card style={styles.card} mode="outlined">
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                {t('app_settings.theme')}
-              </Text>
-              <SegmentedButtons
-                value={themePref}
-                onValueChange={(val) => setThemePref(val as ThemePref)}
-                buttons={[
-                  { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
-                  {
-                    value: 'system',
-                    label: t('app_settings.theme.system'),
-                    icon: 'theme-light-dark',
-                  },
-                  { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
-                ]}
-                style={styles.segmentedButtons}
-              />
-            </Card.Content>
-          </Card>
-        </Animated.View>
-
-        {/* Dynamic System Colors Section */}
-        <Animated.View entering={FadeInDown.springify().delay(160)}>
-          <Card style={styles.card} mode="outlined">
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                {t('app_settings.dynamic_colors.title')}
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
-              >
-                {t('app_settings.dynamic_colors.desc')}
-              </Text>
-              <SegmentedButtons
-                value={useSystemColors ? 'true' : 'false'}
-                onValueChange={(val) => setUseSystemColors(val === 'true')}
-                buttons={[
-                  {
-                    value: 'true',
-                    label: t('app_settings.dynamic_colors.enabled'),
-                    icon: 'palette',
-                  },
-                  {
-                    value: 'false',
-                    label: t('app_settings.dynamic_colors.disabled'),
-                    icon: 'palette-swatch-outline',
-                  },
-                ]}
-                style={styles.segmentedButtons}
-              />
-            </Card.Content>
-          </Card>
-        </Animated.View>
-
-        {/* TTS Speed Rate Section */}
-        <Animated.View entering={FadeInDown.springify().delay(240)}>
-          <Card style={styles.card} mode="outlined">
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                {t('app_settings.tts_rate')}
-              </Text>
-              <Text variant="bodyLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>
-                {ttsRate.toFixed(1)}x
-              </Text>
-              <View style={styles.sliderMockContainer}>
-                {/* React Native Slider is deprecated in core, Segmented controls or simple buttons are cleaner */}
-                <SegmentedButtons
-                  value={String(ttsRate)}
-                  onValueChange={(val) => handleTtsRateChange(parseFloat(val))}
-                  buttons={[
-                    { value: '0.7', label: '0.7x' },
-                    { value: '1', label: '1.0x' },
-                    { value: '1.3', label: '1.3x' },
-                    { value: '1.6', label: '1.6x' },
+        <View style={[styles.mainContainer, { maxWidth: formMaxWidth }]}>
+          {/* Language Section */}
+          <Animated.View entering={FadeInDown.springify().delay(0)}>
+            <AppCard style={styles.card} mode="outlined">
+              <AppCard.Content>
+                <Text variant="titleMedium" style={styles.cardTitle}>
+                  {t('app_settings.lang')}
+                </Text>
+                <AppSelect
+                  value={language}
+                  options={[
+                    { label: '🇵🇱 Polski', value: 'pl' },
+                    { label: '🇬🇧 English', value: 'en' },
+                    { label: '🇩🇪 Deutsch', value: 'de' },
+                    { label: '🇪🇸 Español', value: 'es' },
+                    { label: '🇮🇹 Italiano', value: 'it' },
                   ]}
+                  onChange={(v) => setLanguage(v as import('../i18n').LanguageCode)}
+                  accessibilityLabel="Select app language"
                 />
-              </View>
-            </Card.Content>
-          </Card>
-        </Animated.View>
+              </AppCard.Content>
+            </AppCard>
+          </Animated.View>
 
-        {/* Export / Import Backup Section */}
-        <Animated.View entering={FadeInDown.springify().delay(320)}>
-          <Card style={styles.card} mode="outlined">
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                {t('app_settings.export_import')}
-              </Text>
-              <View style={styles.actionButtonsRow}>
-                <Button
-                  mode="contained-tonal"
-                  icon="share-variant"
-                  onPress={handleExport}
-                  style={styles.actionBtn}
-                >
-                  {t('app_settings.export_btn')}
-                </Button>
-                <Button
-                  mode="contained-tonal"
-                  icon="import"
-                  onPress={() => setImportVisible(true)}
-                  style={styles.actionBtn}
-                >
-                  {t('app_settings.import_btn')}
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
-        </Animated.View>
+          {/* Theme Section */}
+          <Animated.View entering={FadeInDown.springify().delay(80)}>
+            <AppCard style={styles.card} mode="outlined">
+              <AppCard.Content>
+                <Text variant="titleMedium" style={styles.cardTitle}>
+                  {t('app_settings.theme')}
+                </Text>
+                <SegmentedButtons
+                  value={themePref}
+                  onValueChange={(val) => setThemePref(val as ThemePref)}
+                  buttons={[
+                    { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
+                    {
+                      value: 'system',
+                      label: t('app_settings.theme.system'),
+                      icon: 'theme-light-dark',
+                    },
+                    { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
+                  ]}
+                  style={styles.segmentedButtons}
+                />
+              </AppCard.Content>
+            </AppCard>
+          </Animated.View>
 
-        {/* Reset / Danger Zone */}
-        <Animated.View entering={FadeInDown.springify().delay(400)}>
-          <Card style={[styles.card, { borderColor: theme.colors.error }]} mode="outlined">
-            <Card.Content>
-              <Text variant="titleMedium" style={[styles.cardTitle, { color: theme.colors.error }]}>
-                {t('app_settings.danger_zone')}
-              </Text>
-              <Text
-                variant="bodySmall"
-                style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}
-              >
-                {t('app_settings.reset_confirm')}
-              </Text>
-              <Button
-                mode="contained"
-                buttonColor={theme.colors.error}
-                onPress={() => setResetVisible(true)}
-              >
-                {t('app_settings.reset_btn')}
-              </Button>
-            </Card.Content>
-          </Card>
-        </Animated.View>
+          {/* Dynamic System Colors Section */}
+          <Animated.View entering={FadeInDown.springify().delay(160)}>
+            <AppCard style={styles.card} mode="outlined">
+              <AppCard.Content>
+                <Text variant="titleMedium" style={styles.cardTitle}>
+                  {t('app_settings.dynamic_colors.title')}
+                </Text>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+                >
+                  {t('app_settings.dynamic_colors.desc')}
+                </Text>
+                <SegmentedButtons
+                  value={useSystemColors ? 'true' : 'false'}
+                  onValueChange={(val) => setUseSystemColors(val === 'true')}
+                  buttons={[
+                    {
+                      value: 'true',
+                      label: t('app_settings.dynamic_colors.enabled'),
+                      icon: 'palette',
+                    },
+                    {
+                      value: 'false',
+                      label: t('app_settings.dynamic_colors.disabled'),
+                      icon: 'palette-swatch-outline',
+                    },
+                  ]}
+                  style={styles.segmentedButtons}
+                />
+              </AppCard.Content>
+            </AppCard>
+          </Animated.View>
+
+          {/* TTS Speed Rate Section */}
+          <Animated.View entering={FadeInDown.springify().delay(240)}>
+            <AppCard style={styles.card} mode="outlined">
+              <AppCard.Content>
+                <Text variant="titleMedium" style={styles.cardTitle}>
+                  {t('app_settings.tts_rate')}
+                </Text>
+                <Text variant="bodyLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>
+                  {ttsRate.toFixed(1)}x
+                </Text>
+                <View style={styles.sliderMockContainer}>
+                  <SegmentedButtons
+                    value={String(ttsRate)}
+                    onValueChange={(val) => handleTtsRateChange(parseFloat(val))}
+                    buttons={[
+                      { value: '0.7', label: '0.7x' },
+                      { value: '1', label: '1.0x' },
+                      { value: '1.3', label: '1.3x' },
+                      { value: '1.6', label: '1.6x' },
+                    ]}
+                  />
+                </View>
+              </AppCard.Content>
+            </AppCard>
+          </Animated.View>
+
+          {/* Export / Import Backup Section */}
+          <Animated.View entering={FadeInDown.springify().delay(320)}>
+            <AppCard style={styles.card} mode="outlined">
+              <AppCard.Content>
+                <Text variant="titleMedium" style={styles.cardTitle}>
+                  {t('app_settings.export_import')}
+                </Text>
+                <View style={styles.actionButtonsRow}>
+                  <Button
+                    mode="contained-tonal"
+                    icon="share-variant"
+                    onPress={handleExport}
+                    style={styles.actionBtn}
+                  >
+                    {t('app_settings.export_btn')}
+                  </Button>
+                  <Button
+                    mode="contained-tonal"
+                    icon="import"
+                    onPress={() => setImportVisible(true)}
+                    style={styles.actionBtn}
+                  >
+                    {t('app_settings.import_btn')}
+                  </Button>
+                </View>
+              </AppCard.Content>
+            </AppCard>
+          </Animated.View>
+
+          {/* Reset / Danger Zone */}
+          <Animated.View entering={FadeInDown.springify().delay(400)}>
+            <AppCard style={[styles.card, { borderColor: theme.colors.error }]} mode="outlined">
+              <AppCard.Content>
+                <Text variant="titleMedium" style={[styles.cardTitle, { color: theme.colors.error }]}>
+                  {t('app_settings.danger_zone')}
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}
+                >
+                  {t('app_settings.reset_confirm')}
+                </Text>
+                <Button
+                  mode="contained"
+                  buttonColor={theme.colors.error}
+                  onPress={() => setResetVisible(true)}
+                >
+                  {t('app_settings.reset_btn')}
+                </Button>
+              </AppCard.Content>
+            </AppCard>
+          </Animated.View>
+        </View>
       </ScrollView>
 
       {/* Portal Dialogs */}
@@ -329,7 +287,7 @@ export default function AppSettings() {
               value={importJson}
               onChangeText={setImportJson}
               style={styles.importTextArea}
-              outlineStyle={{ borderRadius: 12 }}
+              outlineStyle={{ borderRadius: TOKENS.radius.md }}
             />
           </Dialog.Content>
           <Dialog.Actions>
@@ -361,8 +319,8 @@ export default function AppSettings() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingHorizontal: TOKENS.spacing.xxs,
+    paddingTop: TOKENS.touchTarget.min,
   },
   centerContainer: {
     flex: 1,
@@ -370,28 +328,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 64,
-    gap: 16,
+    paddingBottom: TOKENS.spacing.xxl * 2,
+    gap: TOKENS.spacing.lg,
+  },
+  mainContainer: {
+    width: '100%',
+    alignSelf: 'center',
+    gap: TOKENS.spacing.lg,
+    padding: TOKENS.spacing.xxs,
   },
   card: {
-    borderRadius: 20,
+    borderRadius: TOKENS.radius.xl,
   },
   cardTitle: {
     fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  dropdownAnchor: {
-    alignSelf: 'stretch',
+    marginBottom: TOKENS.spacing.md,
   },
   segmentedButtons: {
     width: '100%',
   },
   sliderMockContainer: {
-    marginTop: 4,
+    marginTop: TOKENS.spacing.xs,
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: TOKENS.spacing.md,
   },
   actionBtn: {
     flex: 1,

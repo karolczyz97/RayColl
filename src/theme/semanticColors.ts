@@ -81,14 +81,16 @@ export function getReviewStatusColor(
         bg: getInfoBgColor(theme),
       };
     case 'learning':
-      return {
-        color: getWarningColor(theme),
-        bg: getWarningBgColor(theme),
-      };
-    case 'review':
+      // W toku -> purple (secondary)
       return {
         color: getSecondaryColor(theme),
         bg: getSecondaryBgColor(theme),
+      };
+    case 'review':
+      // Powtórki -> orange (warning)
+      return {
+        color: getWarningColor(theme),
+        bg: getWarningBgColor(theme),
       };
     case 'mastered':
       return {

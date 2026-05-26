@@ -1,15 +1,16 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Dialog, Button, TextInput, Menu } from 'react-native-paper';
+import { Dialog, Button, TextInput } from 'react-native-paper';
+import { AppSelect } from '../AppSelect';
 import type { TranslationFn } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
+import { dialogStyles } from '../../theme/dialogStyles';
 
 interface Props {
   visible: boolean;
   onDismiss: () => void;
   newStepType: string;
   setNewStepType: (type: string) => void;
-  newStepTypeVisible: boolean;
-  setNewStepTypeVisible: (visible: boolean) => void;
   newPageIdx: number;
   setNewPageIdx: (idx: number) => void;
   newMs: number;
@@ -26,8 +27,6 @@ export function AddStepDialog({
   onDismiss,
   newStepType,
   setNewStepType,
-  newStepTypeVisible,
-  setNewStepTypeVisible,
   newPageIdx,
   setNewPageIdx,
   newMs,
@@ -38,34 +37,19 @@ export function AddStepDialog({
   t,
   stepLabels,
 }: Props) {
+  const stepOptions = Object.entries(stepLabels).map(([key, label]) => ({ label, value: key }));
+
   return (
-    <Dialog visible={visible} onDismiss={onDismiss}>
+    <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
       <Dialog.Title>{t('settings.dialog.add_step.title')}</Dialog.Title>
       <Dialog.Content style={styles.dialogContent}>
-        <Menu
-          visible={newStepTypeVisible}
-          onDismiss={() => setNewStepTypeVisible(false)}
-          anchor={
-            <Button
-              mode="outlined"
-              onPress={() => setNewStepTypeVisible(true)}
-              accessibilityLabel="Select step type"
-            >
-              {`${t('settings.dialog.add_step.type')}: ${stepLabels[newStepType] || newStepType}`}
-            </Button>
-          }
-        >
-          {Object.entries(stepLabels).map(([k, v]) => (
-            <Menu.Item
-              key={k}
-              onPress={() => {
-                setNewStepType(k);
-                setNewStepTypeVisible(false);
-              }}
-              title={v}
-            />
-          ))}
-        </Menu>
+        <AppSelect
+          label={t('settings.dialog.add_step.type')}
+          value={newStepType}
+          options={stepOptions}
+          onChange={setNewStepType}
+          accessibilityLabel="Select step type"
+        />
 
         {newStepType !== 'wait' && (
           <TextInput
@@ -73,9 +57,9 @@ export function AddStepDialog({
             label={t('settings.dialog.add_step.page_idx')}
             keyboardType="numeric"
             value={String(newPageIdx)}
-            onChangeText={(v) => setNewPageIdx(Number(v) || 0)}
+            onChangeText={(value) => setNewPageIdx(Number(value) || 0)}
             style={styles.input}
-            outlineStyle={{ borderRadius: 12 }}
+            outlineStyle={styles.inputOutline}
             accessibilityLabel="Page index input"
           />
         )}
@@ -88,9 +72,9 @@ export function AddStepDialog({
             label={t('settings.dialog.add_step.time')}
             keyboardType="numeric"
             value={String(newMs)}
-            onChangeText={(v) => setNewMs(Number(v) || 0)}
+            onChangeText={(value) => setNewMs(Number(value) || 0)}
             style={styles.input}
-            outlineStyle={{ borderRadius: 12 }}
+            outlineStyle={styles.inputOutline}
             accessibilityLabel="Duration in milliseconds input"
           />
         )}
@@ -101,9 +85,9 @@ export function AddStepDialog({
             label={t('settings.dialog.add_step.threshold')}
             keyboardType="numeric"
             value={String(newThreshold)}
-            onChangeText={(v) => setNewThreshold(Number(v) || 0)}
+            onChangeText={(value) => setNewThreshold(Number(value) || 0)}
             style={styles.input}
-            outlineStyle={{ borderRadius: 12 }}
+            outlineStyle={styles.inputOutline}
             accessibilityLabel="Success threshold input"
           />
         )}
@@ -120,9 +104,12 @@ export function AddStepDialog({
 
 const styles = StyleSheet.create({
   dialogContent: {
-    gap: 12,
+    gap: TOKENS.spacing.md,
   },
   input: {
-    height: 44,
+    height: TOKENS.control.height,
+  },
+  inputOutline: {
+    borderRadius: TOKENS.control.borderRadius,
   },
 });

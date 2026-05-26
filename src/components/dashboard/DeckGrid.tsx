@@ -29,11 +29,10 @@ export function DeckGrid({ groups, onModeChange }: Props) {
           key={group.id}
           entering={FadeInDown.springify().delay(Math.min(index * 80, 600))}
           layout={Layout.springify()}
-          style={{ width: cardWidth }}
+          style={[styles.gridItem, { width: cardWidth }]}
         >
           <GroupCard
             group={group}
-            cardWidth={cardWidth}
             onModeChange={(modeId) => onModeChange(group.id, modeId)}
           />
         </Animated.View>
@@ -47,6 +46,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
+    overflow: 'visible',
     width: '100%',
+  },
+  gridItem: {
+    overflow: 'visible',
   },
 });

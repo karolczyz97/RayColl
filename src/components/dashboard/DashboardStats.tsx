@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { Card, Text, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
+import { AppCard } from '../AppCard';
 import { AppIcon } from '../AppIcon';
 import { useI18n } from '../../i18n';
 import { getWarningColor } from '../../theme/semanticColors';
@@ -48,7 +49,7 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
   return (
     <View style={styles.statsContainer}>
       {stats.map((s, idx) => (
-        <Card
+        <AppCard
           key={idx}
           style={[
             styles.statCard,
@@ -59,7 +60,7 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
           ]}
           mode="outlined"
         >
-          <Card.Content style={styles.statContent}>
+          <AppCard.Content style={styles.statContent}>
             <AppIcon name={s.icon} size={20} color={s.color} style={styles.icon} />
             <Text
               variant="labelSmall"
@@ -70,8 +71,8 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
             <Text variant="titleMedium" style={[styles.value, { color: s.color }]}>
               {s.value}
             </Text>
-          </Card.Content>
-        </Card>
+          </AppCard.Content>
+        </AppCard>
       ))}
     </View>
   );

@@ -100,7 +100,6 @@ export const pl: Record<string, string> = {
   'settings.study_scope': 'Zakres nauki',
   'settings.which_cards': 'Które fiszki uczyć',
   'settings.mode_steps': 'Kroki trybu „{name}"',
-  'settings.default_mode_notice': '(domyślny — nieedytowalny)',
   'settings.add_step_btn': 'Dodaj krok',
   'settings.create_mode_btn': 'Stwórz nowy tryb',
   'settings.new_mode_name': 'Nazwa trybu',
@@ -156,9 +155,9 @@ export const pl: Record<string, string> = {
   'step.type.listen_and_branch': 'Weryfikuj wymowę (STT)',
 
   // Study Filters
-  'filter.new_review': 'Nowe + do powtórki',
-  'filter.new': 'Tylko nowe',
-  'filter.review': 'Tylko do powtórki',
+  'filter.new_review': 'Nowe + Powtórki',
+  'filter.new': 'Nowe',
+  'filter.review': 'Powtórki',
   'filter.all': 'Wszystkie',
 
   // SRS Badge translation

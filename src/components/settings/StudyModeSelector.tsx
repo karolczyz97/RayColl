@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Text, Button, Menu } from 'react-native-paper';
+import { Text, IconButton } from 'react-native-paper';
+import { AppSelect } from '../AppSelect';
+import { TOKENS } from '../../theme/tokens';
 import type { StudyMode } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
 
@@ -9,63 +11,73 @@ interface Props {
   onModeChange: (modeId: string) => void;
   studyModes: StudyMode[];
   t: TranslationFn;
+  onCreateMode?: () => void;
 }
 
-export function StudyModeSelector({ activeModeId, onModeChange, studyModes, t }: Props) {
-  const [modeMenuVisible, setModeMenuVisible] = useState(false);
-
-  const activeMode = studyModes.find((m) => m.id === activeModeId);
-
-  const getModeName = (m: StudyMode) => {
-    const key = `mode.${m.id}.name`;
+export function StudyModeSelector({ activeModeId, onModeChange, studyModes, t, onCreateMode }: Props) {
+  const getModeName = (mode: StudyMode) => {
+    const key = `mode.${mode.id}.name`;
     const translated = t(key);
-    return translated === key ? m.name : translated;
+    return translated === key ? mode.name : translated;
   };
+
+  const options = studyModes.map((mode) => ({
+    label: getModeName(mode),
+    value: mode.id,
+  }));
 
   return (
     <View style={styles.container}>
       <Text variant="titleMedium" style={styles.sectionTitle}>
         {t('settings.active_mode')}
       </Text>
-      <Menu
-        visible={modeMenuVisible}
-        onDismiss={() => setModeMenuVisible(false)}
-        anchor={
-          <Button
-            mode="outlined"
-            onPress={() => setModeMenuVisible(true)}
-            style={styles.dropdownAnchor}
+      <View style={styles.selectorRow}>
+        <View style={styles.selectWrapper}>
+          <AppSelect
+            value={activeModeId}
+            options={options}
+            onChange={onModeChange}
             accessibilityLabel="Active study mode selection"
-          >
-            {activeMode ? getModeName(activeMode) : t('settings.modes_title')}
-          </Button>
-        }
-      >
-        {studyModes.map((m) => (
-          <Menu.Item
-            key={m.id}
-            onPress={() => {
-              onModeChange(m.id);
-              setModeMenuVisible(false);
-            }}
-            title={getModeName(m)}
           />
-        ))}
-      </Menu>
+        </View>
+        {onCreateMode && (
+          <IconButton
+            icon="plus"
+            mode="contained"
+            onPress={onCreateMode}
+            style={styles.plusButton}
+            size={24}
+            accessibilityLabel="Create study mode button"
+          />
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
+    gap: TOKENS.spacing.xs,
+    width: '100%',
   },
   sectionTitle: {
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: TOKENS.spacing.xs,
   },
-  dropdownAnchor: {
-    alignSelf: 'stretch',
-    marginBottom: 12,
+  selectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: TOKENS.spacing.md,
+  },
+  selectWrapper: {
+    flex: 1,
+  },
+  plusButton: {
+    marginLeft: TOKENS.spacing.sm,
+    margin: 0,
+    height: TOKENS.touchTarget.min,
+    width: TOKENS.touchTarget.min,
+    borderRadius: TOKENS.control.roundedBorderRadius,
   },
 });

@@ -10,10 +10,13 @@ import { DashboardStats } from '../components/dashboard/DashboardStats';
 import { EmptyDashboardState } from '../components/dashboard/EmptyDashboardState';
 import { DeckGrid } from '../components/dashboard/DeckGrid';
 import { computeStreak, getTotalCardsCount, getTotalDueCardsCount } from '../store/selectors/stats';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { TOKENS } from '../theme/tokens';
 
 export default function Dashboard() {
   const store = useFlashcardStore();
   const theme = useTheme();
+  const { contentMaxWidth } = useResponsiveLayout();
 
   const { groups, getDueCards, user, signIn, signOut, isLoading } = store;
 
@@ -51,33 +54,35 @@ export default function Dashboard() {
       style={[styles.root, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right']}
     >
-      {/* Top Header */}
-      <DashboardHeader user={user} onLogin={handleLogin} onLogout={handleLogout} />
+      <View style={[styles.mainContainer, { maxWidth: contentMaxWidth }]}>
+        {/* Top Header */}
+        <DashboardHeader user={user} onLogin={handleLogin} onLogout={handleLogout} />
 
-      {/* Quick Statistics Banner */}
-      {decksCount > 0 && (
-        <DashboardStats
-          decksCount={decksCount}
-          cardsCount={cardsCount}
-          dueCount={dueCount}
-          streak={streak}
-        />
-      )}
+        {/* Decks Scroll Container */}
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Quick Statistics Banner */}
+          {decksCount > 0 && (
+            <DashboardStats
+              decksCount={decksCount}
+              cardsCount={cardsCount}
+              dueCount={dueCount}
+              streak={streak}
+            />
+          )}
 
-      {/* Decks Scroll Container */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {decksCount === 0 ? (
-          <EmptyDashboardState />
-        ) : (
-          <DeckGrid
-            groups={groups}
-            onModeChange={(groupId, modeId) => {
-              const g = groups.find((x) => x.id === groupId);
-              if (g) store.updateGroup({ ...g, activeModeId: modeId });
-            }}
-          />
-        )}
-      </ScrollView>
+          {decksCount === 0 ? (
+            <EmptyDashboardState />
+          ) : (
+            <DeckGrid
+              groups={groups}
+              onModeChange={(groupId, modeId) => {
+                const g = groups.find((x) => x.id === groupId);
+                if (g) store.updateGroup({ ...g, activeModeId: modeId });
+              }}
+            />
+          )}
+        </ScrollView>
+      </View>
 
       {/* Import FAB */}
       <Animated.View entering={ZoomIn.springify().delay(400)} style={styles.fabWrapper}>
@@ -96,22 +101,29 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  mainContainer: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'center',
+    padding: TOKENS.spacing.xxs,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
-    padding: 16,
+    padding: TOKENS.spacing.lg,
     paddingBottom: 100,
+    gap: TOKENS.spacing.lg,
   },
   fabWrapper: {
     position: 'absolute',
-    right: 8,
-    bottom: 8,
-    margin: 16,
+    right: TOKENS.spacing.sm,
+    bottom: TOKENS.spacing.sm,
+    margin: TOKENS.spacing.lg,
   },
   fab: {
-    borderRadius: 16,
+    borderRadius: TOKENS.radius.lg,
   },
 });

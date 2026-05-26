@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, Button, Text, useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
+import { dialogStyles } from '../../theme/dialogStyles';
 
 interface Props {
   visible: boolean;
@@ -13,7 +14,7 @@ export function DeleteFlashcardDialog({ visible, onDismiss, onConfirm, t }: Prop
   const theme = useTheme();
 
   return (
-    <Dialog visible={visible} onDismiss={onDismiss}>
+    <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
       <Dialog.Title>{t('browse.delete_card')}</Dialog.Title>
       <Dialog.Content>
         <Text>{t('dialog.delete.desc')}</Text>
@@ -23,6 +24,7 @@ export function DeleteFlashcardDialog({ visible, onDismiss, onConfirm, t }: Prop
         <Button
           mode="contained"
           buttonColor={theme.colors.error}
+          textColor={theme.colors.onError}
           onPress={onConfirm}
           accessibilityLabel="Confirm deletion button"
         >

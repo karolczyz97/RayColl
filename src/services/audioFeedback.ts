@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
-import type { AVPlaybackSource, AVPlaybackStatus } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
+import type { AudioSource } from 'expo-audio';
 
 type BrowserWindowWithAudioContext = Window &
   typeof globalThis & {
@@ -29,17 +29,17 @@ const getAudioCtx = (() => {
   };
 })();
 
-async function playNativeSound(asset: AVPlaybackSource) {
+async function playNativeSound(asset: AudioSource) {
   try {
-    const { sound } = await Audio.Sound.createAsync(asset);
-    await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-      if (status.isLoaded && status.didJustFinish) {
-        void sound.unloadAsync().catch((err: unknown) => {
-          console.warn('Failed to unload feedback sound:', getErrorMessage(err));
-        });
+    const player = createAudioPlayer(asset, { keepAudioSessionActive: true });
+    player.play();
+    setTimeout(() => {
+      try {
+        player.remove();
+      } catch (err: unknown) {
+        console.warn('Failed to unload feedback sound:', getErrorMessage(err));
       }
-    });
+    }, 2000);
   } catch (err: unknown) {
     console.log('Native feedback sound not playable (likely mock asset):', getErrorMessage(err));
   }

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, Chip, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
+import { Text, Chip, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '../../types/models';
 import { getCardCategory } from '../../srs/srsEngine';
 import { AppIcon } from '../../components/AppIcon';
+import { AppCard } from '../../components/AppCard';
 import {
   SRS_CATEGORIES_TOKENS,
   getMasteryPercent,
@@ -36,7 +37,7 @@ function srsChip(
   const token = SRS_CATEGORIES_TOKENS[category];
   const srsColors = getReviewStatusColor(theme, category);
   return {
-    text: t(token.badgeTextKey),
+    text: t(token.labelKey),
     color: srsColors.color,
     bg: srsColors.bg,
   };
@@ -70,7 +71,7 @@ export function FlashcardListItem({
 
   if (isEditing) {
     return (
-      <Card style={styles.card} mode="outlined">
+      <AppCard style={styles.card} mode="outlined">
         <EditFlashcardForm
           card={card}
           group={group}
@@ -80,7 +81,7 @@ export function FlashcardListItem({
           onCancel={onCancel}
           t={t}
         />
-      </Card>
+      </AppCard>
     );
   }
 
@@ -100,8 +101,8 @@ export function FlashcardListItem({
       : t('browse.show_hidden_pages');
 
   return (
-    <Card style={styles.card} mode="outlined">
-      <Card.Content style={styles.cardContent}>
+    <AppCard style={styles.card} mode="outlined">
+      <AppCard.Content style={styles.cardContent}>
         {/* Primary page (front phrase) styled as a header */}
         <Text variant="titleMedium" style={[styles.primaryText, { color: theme.colors.primary }]}>
           {primaryPage}
@@ -146,8 +147,8 @@ export function FlashcardListItem({
             />
           </View>
         )}
-      </Card.Content>
-      <Card.Actions style={styles.cardActions}>
+      </AppCard.Content>
+      <AppCard.Actions style={styles.cardActions}>
         <View style={styles.cardActionsLeft}>
           <Chip
             style={{ backgroundColor: srs.bg }}
@@ -195,8 +196,8 @@ export function FlashcardListItem({
             accessibilityLabel="Delete card"
           />
         </View>
-      </Card.Actions>
-    </Card>
+      </AppCard.Actions>
+    </AppCard>
   );
 }
 

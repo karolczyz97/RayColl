@@ -150,6 +150,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function uniquePageIndexes(pageIndexes: number[]): number[] {
+  return [...new Set(pageIndexes)].sort((a, b) => a - b);
+}
+
+function getActivePageIndexes(group: FlashcardGroup): number[] {
+  const activePageCount = group.activePageCount ?? group.pageNames.length;
+  return group.pageNames.slice(0, activePageCount).map((_, index) => index);
+}
+
+function getNextHiddenPageIndex(group: FlashcardGroup, revealedPages: number[]): number | null {
+  const revealed = new Set([0, ...revealedPages]);
+  return getActivePageIndexes(group).find((pageIndex) => !revealed.has(pageIndex)) ?? null;
+}
+
+function areAllActivePagesRevealed(group: FlashcardGroup, revealedPages: number[]): boolean {
+  const revealed = new Set([0, ...revealedPages]);
+  return getActivePageIndexes(group).every((pageIndex) => revealed.has(pageIndex));
+}
+
 export function useStudySession(
   group: FlashcardGroup | null,
   steps: ModeStep[],
@@ -331,15 +350,13 @@ export function useStudySession(
       switch (step.type) {
         case 'show_page': {
           const alreadyRevealed = currentState.revealedPages;
-          const nextRevealed = alreadyRevealed.includes(step.pageIndex)
-            ? alreadyRevealed
-            : [...alreadyRevealed, step.pageIndex];
+          const nextRevealed = uniquePageIndexes([...alreadyRevealed, step.pageIndex]);
 
           if (stepIdx === currentSteps.length - 1) {
             dispatchIfMounted({
               type: 'SET_CURRENT_STEP',
               stepIndex: stepIdx,
-              revealedPages: nextRevealed,
+              revealedPages: alreadyRevealed,
               waitingForTap: true,
             });
             return;
@@ -435,7 +452,7 @@ export function useStudySession(
           }
 
           if (percent < step.successThreshold) {
-            const allPages = currentGroup.pageNames.map((_, idx) => idx);
+            const allPages = getActivePageIndexes(currentGroup);
             dispatchIfMounted({ type: 'REVEAL_PAGES', revealedPages: allPages });
 
             if (step.incorrectTtsPageIndex !== undefined) {
@@ -485,13 +502,23 @@ export function useStudySession(
   const handleCardTap = useCallback(() => {
     const currentGroup = groupRef.current;
     if (!stateRef.current.waitingForTap || !currentGroup) return;
-    const allPages = currentGroup.pageNames.map((_, i) => i);
+    const currentRevealedPages = stateRef.current.revealedPages;
+    const nextHiddenPageIndex = getNextHiddenPageIndex(currentGroup, currentRevealedPages);
+    if (nextHiddenPageIndex === null) {
+      dispatchIfMounted({ type: 'SHOW_RATINGS' });
+      return;
+    }
+
+    const nextRevealedPages = uniquePageIndexes([...currentRevealedPages, nextHiddenPageIndex]);
     dispatchIfMounted({
       type: 'SET_CURRENT_STEP',
       stepIndex: stateRef.current.currentStepIndex,
-      revealedPages: allPages,
+      revealedPages: nextRevealedPages,
+      waitingForTap: !areAllActivePagesRevealed(currentGroup, nextRevealedPages),
     });
-    dispatchIfMounted({ type: 'SHOW_RATINGS' });
+    if (areAllActivePagesRevealed(currentGroup, nextRevealedPages)) {
+      dispatchIfMounted({ type: 'SHOW_RATINGS' });
+    }
   }, [dispatchIfMounted]);
 
   const setHolding = useCallback((holding: boolean) => {

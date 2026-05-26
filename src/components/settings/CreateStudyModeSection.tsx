@@ -1,22 +1,28 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { TextInput, Text, IconButton, Button, useTheme } from 'react-native-paper';
+import { TextInput, Text, IconButton, Button, useTheme, Dialog } from 'react-native-paper';
 import type { ModeStep } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
+import { dialogStyles } from '../../theme/dialogStyles';
 
 interface Props {
+  visible: boolean;
+  onDismiss: () => void;
   newModeName: string;
-  setNewModeName: (v: string) => void;
+  setNewModeName: (value: string) => void;
   customSteps: ModeStep[];
   setCustomSteps: React.Dispatch<React.SetStateAction<ModeStep[]>>;
   saveCustomMode: () => void;
-  setStepDialogOpen: (v: boolean) => void;
+  setStepDialogOpen: (value: boolean) => void;
   setEditingModeId: (id: string | null) => void;
   t: TranslationFn;
   stepSummary: (step: ModeStep, t: TranslationFn) => string;
 }
 
 export function CreateStudyModeSection({
+  visible,
+  onDismiss,
   newModeName,
   setNewModeName,
   customSteps,
@@ -30,61 +36,70 @@ export function CreateStudyModeSection({
   const theme = useTheme();
 
   return (
-    <View style={[styles.createModeContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
-      <TextInput
-        mode="outlined"
-        label={t('settings.new_mode_name')}
-        value={newModeName}
-        onChangeText={setNewModeName}
-        style={{ marginBottom: 12, height: 44 }}
-        outlineStyle={{ borderRadius: 12 }}
-      />
-      {customSteps.map((step, i) => (
-        <View key={i} style={styles.customStepRow}>
-          <Text style={{ flex: 1 }}>{`${i + 1}. ${stepSummary(step, t)}`}</Text>
-          <IconButton
-            icon="arrow-up"
-            size={16}
+    <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
+      <Dialog.Title>{t('settings.create_mode_btn')}</Dialog.Title>
+      <Dialog.Content>
+        <TextInput
+          mode="outlined"
+          label={t('settings.new_mode_name')}
+          value={newModeName}
+          onChangeText={setNewModeName}
+          style={styles.nameInput}
+          outlineStyle={styles.inputOutline}
+        />
+        {customSteps.map((step, index) => (
+          <View key={index} style={styles.customStepRow}>
+            <Text style={styles.stepText}>{`${index + 1}. ${stepSummary(step, t)}`}</Text>
+            <IconButton
+              icon="arrow-up"
+              size={16}
+              onPress={() => {
+                const steps = [...customSteps];
+                [steps[index], steps[Math.max(0, index - 1)]] = [
+                  steps[Math.max(0, index - 1)],
+                  steps[index],
+                ];
+                setCustomSteps(steps);
+              }}
+              disabled={index === 0}
+              accessibilityLabel={`Move step ${index + 1} up`}
+            />
+            <IconButton
+              icon="arrow-down"
+              size={16}
+              onPress={() => {
+                const steps = [...customSteps];
+                const nextIndex = Math.min(steps.length - 1, index + 1);
+                [steps[index], steps[nextIndex]] = [steps[nextIndex], steps[index]];
+                setCustomSteps(steps);
+              }}
+              disabled={index === customSteps.length - 1}
+              accessibilityLabel={`Move step ${index + 1} down`}
+            />
+            <IconButton
+              icon="delete"
+              size={16}
+              iconColor={theme.colors.error}
+              onPress={() => setCustomSteps((steps) => steps.filter((_, i) => i !== index))}
+              accessibilityLabel={`Delete step ${index + 1}`}
+            />
+          </View>
+        ))}
+        <View style={styles.addStepAction}>
+          <Button
+            icon="plus"
             onPress={() => {
-              const s = [...customSteps];
-              [s[i], s[Math.max(0, i - 1)]] = [s[Math.max(0, i - 1)], s[i]];
-              setCustomSteps(s);
+              setEditingModeId(null);
+              setStepDialogOpen(true);
             }}
-            disabled={i === 0}
-            accessibilityLabel={`Move step ${i + 1} up`}
-          />
-          <IconButton
-            icon="arrow-down"
-            size={16}
-            onPress={() => {
-              const s = [...customSteps];
-              const j = Math.min(s.length - 1, i + 1);
-              [s[i], s[j]] = [s[j], s[i]];
-              setCustomSteps(s);
-            }}
-            disabled={i === customSteps.length - 1}
-            accessibilityLabel={`Move step ${i + 1} down`}
-          />
-          <IconButton
-            icon="delete"
-            size={16}
-            iconColor={theme.colors.error}
-            onPress={() => setCustomSteps((s) => s.filter((_, j) => j !== i))}
-            accessibilityLabel={`Delete step ${i + 1}`}
-          />
+            accessibilityLabel="Add new step"
+          >
+            {t('settings.add_step_btn')}
+          </Button>
         </View>
-      ))}
-      <View style={styles.createModeActions}>
-        <Button
-          icon="plus"
-          onPress={() => {
-            setEditingModeId(null);
-            setStepDialogOpen(true);
-          }}
-          accessibilityLabel="Add new step"
-        >
-          {t('settings.add_step_btn')}
-        </Button>
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button onPress={onDismiss}>{t('btn.cancel')}</Button>
         <Button
           mode="contained"
           onPress={saveCustomMode}
@@ -93,25 +108,29 @@ export function CreateStudyModeSection({
         >
           {t('settings.save_mode_btn')}
         </Button>
-      </View>
-    </View>
+      </Dialog.Actions>
+    </Dialog>
   );
 }
 
 const styles = StyleSheet.create({
-  createModeContainer: {
-    padding: 16,
-    borderRadius: 20,
-    marginTop: 8,
+  nameInput: {
+    height: TOKENS.control.height,
+    marginBottom: TOKENS.spacing.md,
+  },
+  inputOutline: {
+    borderRadius: TOKENS.control.borderRadius,
   },
   customStepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: TOKENS.spacing.xs,
   },
-  createModeActions: {
+  stepText: {
+    flex: 1,
+  },
+  addStepAction: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: TOKENS.spacing.md,
   },
 });
