@@ -19,7 +19,16 @@ import type { Flashcard } from '../../types/models';
 import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { useI18n } from '../../i18n';
-import { SegmentedProgressBar, computeCardStats } from '../../components/SegmentedProgressBar';
+import { SegmentedProgressBar } from '../../components/SegmentedProgressBar';
+import { computeCardStats } from '../../store/selectors/stats';
+import {
+  getDangerColor,
+  getDangerBgColor,
+  getInfoColor,
+  getSuccessColor,
+  getWarningColor,
+  getWarningBgColor,
+} from '../../theme/semanticColors';
 import { getVisiblePages } from '../../store/selectors/pages';
 
 // Individual page section that fades in when revealed
@@ -147,12 +156,12 @@ export default function StudyPage() {
   const progressPct = dueCards.length > 0 ? s.currentCardIndex / dueCards.length : 0;
   const matchColor =
     s.sttMatchPercent >= 85
-      ? '#4caf50'
+      ? getSuccessColor(theme)
       : s.sttMatchPercent >= 60
-        ? '#2196f3'
+        ? getInfoColor(theme)
         : s.sttMatchPercent >= 40
-          ? '#ff9800'
-          : '#f44336';
+          ? getWarningColor(theme)
+          : getDangerColor(theme);
 
   const hasTts = useMemo(() => steps.some((st) => st.type === 'speak_page'), [steps]);
   const hasStt = useMemo(() => steps.some((st) => st.type === 'listen_and_branch'), [steps]);
@@ -226,7 +235,7 @@ export default function StudyPage() {
     return (
       <View style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}>
         <Animated.View entering={ZoomIn.springify().damping(12)}>
-          <AppIcon name="check-circle" size={96} color={theme.colors.tertiary || '#4caf50'} />
+          <AppIcon name="check-circle" size={96} color={getSuccessColor(theme)} />
         </Animated.View>
         <Animated.View entering={FadeInUp.springify().delay(150)}>
           <Text variant="headlineLarge" style={styles.bravoTitle}>
@@ -351,8 +360,8 @@ export default function StudyPage() {
           <Animated.View entering={FadeIn.springify()} style={styles.ratingButtonsRow}>
             <Button
               mode="contained-tonal"
-              textColor="#d32f2f"
-              buttonColor="#ffdad6"
+              textColor={getDangerColor(theme)}
+              buttonColor={getDangerBgColor(theme)}
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={
@@ -365,8 +374,8 @@ export default function StudyPage() {
             </Button>
             <Button
               mode="contained-tonal"
-              textColor="#b86800"
-              buttonColor="#ffddb3"
+              textColor={getWarningColor(theme)}
+              buttonColor={getWarningBgColor(theme)}
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={
@@ -395,8 +404,8 @@ export default function StudyPage() {
             </Button>
             <Button
               mode="contained"
-              buttonColor="#006c4c"
-              textColor="#ffffff"
+              buttonColor={getSuccessColor(theme)}
+              textColor={theme.colors.onTertiary}
               style={styles.rateBtn}
               compact={isNarrow}
               contentStyle={
@@ -455,7 +464,7 @@ export default function StudyPage() {
                   <AppIcon
                     name="microphone"
                     size={36}
-                    color={s.isSttListening ? '#f44336' : theme.colors.outline}
+                    color={s.isSttListening ? getDangerColor(theme) : theme.colors.outline}
                   />
                 </Animated.View>
               )}

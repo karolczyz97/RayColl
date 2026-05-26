@@ -3,6 +3,7 @@ import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Card, Text, useTheme } from 'react-native-paper';
 import { AppIcon } from '../AppIcon';
 import { useI18n } from '../../i18n';
+import { getWarningColor } from '../../theme/semanticColors';
 
 interface Props {
   decksCount: number;
@@ -36,7 +37,12 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
       value: String(dueCount),
       color: dueCount > 0 ? theme.colors.error : theme.colors.outline,
     },
-    { icon: 'fire', label: t('stats.streak'), value: `${streak} 🔥`, color: '#ffa726' },
+    {
+      icon: 'fire',
+      label: t('stats.streak'),
+      value: `${streak} \u{1F525}`,
+      color: getWarningColor(theme),
+    },
   ];
 
   return (

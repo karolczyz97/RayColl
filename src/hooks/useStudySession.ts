@@ -162,6 +162,7 @@ export function useStudySession(
   const { ttsRate } = useAppTheme();
 
   const abortRef = useRef(false);
+  const isMountedRef = useRef(true);
   const sttService = useRef(getSttService());
   const lastTtsDurationRef = useRef(0);
   const holdingRef = useRef(false);
@@ -176,6 +177,22 @@ export function useStudySession(
   const ttsRateRef = useRef(ttsRate);
   const onCardReviewedRef = useRef(onCardReviewed);
   const lastExecutedCardIndexRef = useRef<number | null>(null);
+
+  const dispatchIfMounted = useCallback((action: SessionAction) => {
+    if (isMountedRef.current) {
+      dispatch(action);
+    }
+  }, []);
+
+  useEffect(() => {
+    const currentSttService = sttService.current;
+    return () => {
+      isMountedRef.current = false;
+      abortRef.current = true;
+      ttsService.cancel();
+      void currentSttService.stopListening();
+    };
+  }, []);
 
   // Filter out steps referencing hidden pages based on activePageCount
   const activePageCount = group?.activePageCount ?? group?.pageNames.length ?? 99;
@@ -209,18 +226,21 @@ export function useStudySession(
     dueCardsRef.current = dueCards;
   }, [dueCards]);
 
-  const startSession = useCallback((cards: Flashcard[], clearReviewed = true) => {
-    abortRef.current = false;
-    allCardsRef.current = cards;
-    failedCardsRef.current = [];
-    setFailedCount(0);
-    lastExecutedCardIndexRef.current = null; // Reset execution tracker
-    if (clearReviewed) {
-      reviewedCardIdsRef.current.clear();
-    }
-    setDueCards(cards);
-    dispatch({ type: 'START_SESSION', cards });
-  }, []);
+  const startSession = useCallback(
+    (cards: Flashcard[], clearReviewed = true) => {
+      abortRef.current = false;
+      allCardsRef.current = cards;
+      failedCardsRef.current = [];
+      setFailedCount(0);
+      lastExecutedCardIndexRef.current = null; // Reset execution tracker
+      if (clearReviewed) {
+        reviewedCardIdsRef.current.clear();
+      }
+      setDueCards(cards);
+      dispatchIfMounted({ type: 'START_SESSION', cards });
+    },
+    [dispatchIfMounted],
+  );
 
   const processCardReview = useCallback((card: Flashcard, rating: number) => {
     const currentGroup = groupRef.current;
@@ -245,47 +265,53 @@ export function useStudySession(
     await waitUntilReleased();
     const nextIdx = stateRef.current.currentCardIndex + 1;
     if (nextIdx >= dueCardsRef.current.length) {
-      dispatch({ type: 'FINISH_SESSION' });
+      dispatchIfMounted({ type: 'FINISH_SESSION' });
     } else {
-      dispatch({ type: 'ADVANCE_CARD', nextCardIndex: nextIdx });
+      dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIdx });
     }
-  }, [waitUntilReleased]);
+  }, [dispatchIfMounted, waitUntilReleased]);
 
   // TTS Flow Helper
-  const playTts = useCallback(async (text: string, lang: string) => {
-    const startTime = Date.now();
-    try {
-      await ttsService.speak({ text, lang, rate: ttsRateRef.current });
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.error('TTS Speak Error:', err);
-      dispatch({ type: 'SET_ERROR', errorMsg: `TTS Error: ${errMsg}` });
-    }
-    lastTtsDurationRef.current = Date.now() - startTime;
-  }, []);
+  const playTts = useCallback(
+    async (text: string, lang: string) => {
+      const startTime = Date.now();
+      try {
+        await ttsService.speak({ text, lang, rate: ttsRateRef.current });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('TTS Speak Error:', err);
+        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `TTS Error: ${errMsg}` });
+      }
+      lastTtsDurationRef.current = Date.now() - startTime;
+    },
+    [dispatchIfMounted],
+  );
 
   // STT Flow Helper
-  const runSpeechRecognition = useCallback(async (lang: string, timeoutMs: number) => {
-    playMicOnSound();
-    let recognized = '';
-    try {
-      recognized = await sttService.current.startListening({
-        language: lang,
-        timeoutMs,
-        onPartialResult: (t) => dispatch({ type: 'UPDATE_PARTIAL_STT', text: t }),
-        onListeningStateChange: (listening) => {
-          if (!listening) {
-            playMicOffSound();
-          }
-        },
-      });
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.error('STT Listen Error:', err);
-      dispatch({ type: 'SET_ERROR', errorMsg: `STT Error: ${errMsg}` });
-    }
-    return recognized;
-  }, []);
+  const runSpeechRecognition = useCallback(
+    async (lang: string, timeoutMs: number) => {
+      playMicOnSound();
+      let recognized = '';
+      try {
+        recognized = await sttService.current.startListening({
+          language: lang,
+          timeoutMs,
+          onPartialResult: (t) => dispatchIfMounted({ type: 'UPDATE_PARTIAL_STT', text: t }),
+          onListeningStateChange: (listening) => {
+            if (!listening) {
+              playMicOffSound();
+            }
+          },
+        });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('STT Listen Error:', err);
+        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `STT Error: ${errMsg}` });
+      }
+      return recognized;
+    },
+    [dispatchIfMounted],
+  );
 
   // Recursion via ref to avoid hoisting circular dependency in useCallback
   const executeStepRef = useRef<(card: Flashcard, stepIdx: number) => Promise<void>>(undefined);
@@ -297,7 +323,7 @@ export function useStudySession(
       const currentState = stateRef.current;
 
       if (abortRef.current || !currentGroup || stepIdx >= currentSteps.length) {
-        dispatch({ type: 'SHOW_RATINGS' });
+        dispatchIfMounted({ type: 'SHOW_RATINGS' });
         return;
       }
       const step = currentSteps[stepIdx];
@@ -310,7 +336,7 @@ export function useStudySession(
             : [...alreadyRevealed, step.pageIndex];
 
           if (stepIdx === currentSteps.length - 1) {
-            dispatch({
+            dispatchIfMounted({
               type: 'SET_CURRENT_STEP',
               stepIndex: stepIdx,
               revealedPages: nextRevealed,
@@ -319,7 +345,7 @@ export function useStudySession(
             return;
           }
 
-          dispatch({
+          dispatchIfMounted({
             type: 'SET_CURRENT_STEP',
             stepIndex: stepIdx,
             revealedPages: nextRevealed,
@@ -330,7 +356,7 @@ export function useStudySession(
         }
 
         case 'speak_page': {
-          dispatch({ type: 'START_SPEAKING', stepIndex: stepIdx });
+          dispatchIfMounted({ type: 'START_SPEAKING', stepIndex: stepIdx });
           const lang = currentGroup.pageLanguages[step.pageIndex] || 'en-US';
           const text = card.pages[step.pageIndex] || '';
 
@@ -339,7 +365,7 @@ export function useStudySession(
           if (step.extraPauseMs > 0) {
             await sleep(step.extraPauseMs);
           }
-          dispatch({ type: 'END_SPEAKING' });
+          dispatchIfMounted({ type: 'END_SPEAKING' });
 
           if (!abortRef.current) {
             await executeStepRef.current?.(card, stepIdx + 1);
@@ -350,7 +376,7 @@ export function useStudySession(
         case 'dynamic_pause': {
           const text = card.pages[step.nextPageIndex] || '';
           const pauseMs = text.length * 60 + (step.extraPauseMs || 0);
-          dispatch({ type: 'SET_CURRENT_STEP', stepIndex: stepIdx });
+          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex: stepIdx });
           await sleep(pauseMs);
 
           if (!abortRef.current) {
@@ -360,7 +386,7 @@ export function useStudySession(
         }
 
         case 'wait': {
-          dispatch({ type: 'SET_CURRENT_STEP', stepIndex: stepIdx });
+          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex: stepIdx });
           await sleep(step.ms);
 
           if (!abortRef.current) {
@@ -370,7 +396,7 @@ export function useStudySession(
         }
 
         case 'listen_and_branch': {
-          dispatch({ type: 'START_LISTENING', stepIndex: stepIdx });
+          dispatchIfMounted({ type: 'START_LISTENING', stepIndex: stepIdx });
           const lang = currentGroup.pageLanguages[step.pageIndex] || 'en-US';
           const softTimeout = Math.max(5000, lastTtsDurationRef.current * 3);
 
@@ -380,7 +406,7 @@ export function useStudySession(
           const original = card.pages[step.pageIndex] || '';
           const percent = matchSpeech(recognized, original);
 
-          dispatch({
+          dispatchIfMounted({
             type: 'END_LISTENING',
             text: recognized || '',
             matchPercent: percent,
@@ -402,21 +428,23 @@ export function useStudySession(
             playErrorSound();
             if (!failedCardsRef.current.find((c) => c.id === card.id)) {
               failedCardsRef.current.push(card);
-              setFailedCount(failedCardsRef.current.length);
+              if (isMountedRef.current) {
+                setFailedCount(failedCardsRef.current.length);
+              }
             }
           }
 
           if (percent < step.successThreshold) {
             const allPages = currentGroup.pageNames.map((_, idx) => idx);
-            dispatch({ type: 'REVEAL_PAGES', revealedPages: allPages });
+            dispatchIfMounted({ type: 'REVEAL_PAGES', revealedPages: allPages });
 
             if (step.incorrectTtsPageIndex !== undefined) {
               const corrLang = currentGroup.pageLanguages[step.incorrectTtsPageIndex] || 'en-US';
-              dispatch({ type: 'START_SPEAKING', stepIndex: stepIdx });
+              dispatchIfMounted({ type: 'START_SPEAKING', stepIndex: stepIdx });
               const corrStart = Date.now();
               await playTts(card.pages[step.incorrectTtsPageIndex] || '', corrLang);
               const corrDuration = Date.now() - corrStart;
-              dispatch({ type: 'END_SPEAKING' });
+              dispatchIfMounted({ type: 'END_SPEAKING' });
               await sleep(corrDuration * 2);
             } else {
               await sleep(2000);
@@ -428,9 +456,9 @@ export function useStudySession(
 
               const nextIdx = currentState.currentCardIndex + 1;
               if (nextIdx >= dueCardsRef.current.length) {
-                dispatch({ type: 'FINISH_SESSION' });
+                dispatchIfMounted({ type: 'FINISH_SESSION' });
               } else {
-                dispatch({ type: 'ADVANCE_CARD', nextCardIndex: nextIdx });
+                dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIdx });
               }
               return;
             }
@@ -439,7 +467,14 @@ export function useStudySession(
         }
       }
     },
-    [playTts, runSpeechRecognition, processCardReview, advanceToNextCard, waitUntilReleased],
+    [
+      playTts,
+      runSpeechRecognition,
+      processCardReview,
+      advanceToNextCard,
+      waitUntilReleased,
+      dispatchIfMounted,
+    ],
   );
 
   // Sync ref to current executeStep callback function
@@ -451,13 +486,13 @@ export function useStudySession(
     const currentGroup = groupRef.current;
     if (!stateRef.current.waitingForTap || !currentGroup) return;
     const allPages = currentGroup.pageNames.map((_, i) => i);
-    dispatch({
+    dispatchIfMounted({
       type: 'SET_CURRENT_STEP',
       stepIndex: stateRef.current.currentStepIndex,
       revealedPages: allPages,
     });
-    dispatch({ type: 'SHOW_RATINGS' });
-  }, []);
+    dispatchIfMounted({ type: 'SHOW_RATINGS' });
+  }, [dispatchIfMounted]);
 
   const setHolding = useCallback((holding: boolean) => {
     holdingRef.current = holding;
@@ -496,7 +531,9 @@ export function useStudySession(
       const card = dueCardsRef.current[stateRef.current.currentCardIndex];
       if (rating === 1 && !failedCardsRef.current.find((c) => c.id === card.id)) {
         failedCardsRef.current.push(card);
-        setFailedCount(failedCardsRef.current.length);
+        if (isMountedRef.current) {
+          setFailedCount(failedCardsRef.current.length);
+        }
       }
       processCardReview(card, rating);
       await advanceToNextCard();
@@ -517,7 +554,7 @@ export function useStudySession(
   const stopSession = useCallback(() => {
     abortRef.current = true;
     ttsService.cancel();
-    sttService.current.stopListening();
+    void sttService.current.stopListening();
   }, []);
 
   const compatibilityState = useMemo(

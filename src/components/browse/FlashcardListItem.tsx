@@ -133,7 +133,7 @@ export function FlashcardListItem({
         })}
 
         {hasHiddenPages && (
-          <View style={styles.toggleRow}>
+          <View style={[styles.toggleRow, { borderTopColor: theme.colors.outlineVariant }]}>
             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
               {toggleLabel}
             </Text>
@@ -224,7 +224,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 4,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e0e0e0',
     paddingTop: 4,
   },
   switch: {

@@ -4,7 +4,7 @@ import { Text, Card, useTheme, ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
-import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
+import { SegmentedProgressBar } from '../components/SegmentedProgressBar';
 import { PageHeader } from '../components/PageHeader';
 import { useI18n } from '../i18n';
 import { AppIcon } from '../components/AppIcon';
@@ -15,7 +15,15 @@ import {
   getActiveDaysCount,
   getGlobalStats,
   getLocalDateString,
+  computeCardStats,
 } from '../store/selectors/stats';
+import {
+  getDueColor,
+  getHeatmapColor,
+  getInfoColor,
+  getSuccessColor,
+  getWarningColor,
+} from '../theme/semanticColors';
 
 function HeatmapGrid({
   heatmap,
@@ -25,7 +33,6 @@ function HeatmapGrid({
   t: (key: string) => string;
 }) {
   const theme = useTheme();
-  const isDark = theme.dark;
 
   const cols = 20,
     rows = 7;
@@ -46,19 +53,7 @@ function HeatmapGrid({
   }
 
   const colorFor = (count: number): string => {
-    if (count === 0) return isDark ? '#2d2d3a' : '#eaeaf0';
-    const primary = theme.colors.primary;
-    if (primary.startsWith('#')) {
-      const base =
-        primary.length === 4
-          ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
-          : primary;
-      if (count <= 2) return `${base}40`; // 25% opacity
-      if (count <= 5) return `${base}80`; // 50% opacity
-      if (count <= 10) return `${base}c0`; // 75% opacity
-      return base; // 100% opacity
-    }
-    return primary;
+    return getHeatmapColor(theme, count);
   };
 
   const dayLabels = [
@@ -134,19 +129,29 @@ export default function StatsPage() {
   }
 
   const statCards = [
-    { icon: 'fire', label: t('stats.streak'), value: `${streak} 🔥`, color: '#ffa726' },
+    {
+      icon: 'fire',
+      label: t('stats.streak'),
+      value: `${streak} \u{1F525}`,
+      color: getWarningColor(theme),
+    },
     {
       icon: 'school',
       label: t('filter.mastered'),
       value: `${globalStats.mastered}/${totalCards}`,
-      color: '#4caf50',
+      color: getSuccessColor(theme),
     },
-    { icon: 'sync', label: t('stats.due_cards'), value: String(totalDue), color: '#f44336' },
+    {
+      icon: 'sync',
+      label: t('stats.due_cards'),
+      value: String(totalDue),
+      color: getDueColor(theme),
+    },
     {
       icon: 'calendar-month',
       label: t('stats.active_days'),
       value: String(activeDays),
-      color: '#208AEF',
+      color: getInfoColor(theme),
     },
   ];
 
@@ -166,7 +171,7 @@ export default function StatsPage() {
               <Card style={styles.statCard} mode="outlined">
                 <Card.Content style={styles.statCardContent}>
                   <AppIcon
-                    name={m.icon as any}
+                    name={m.icon}
                     size={28}
                     color={m.color}
                     style={{ marginBottom: 4 }}

@@ -1,107 +1,81 @@
-# RayColl 🚀
+# RayColl
 
-RayColl is an advanced, cross-platform flashcard study application built with **React Native**, **Expo**, **TypeScript**, and **React Native Paper (MD3/Material You)**. It supports smart spaced repetition using a custom implementation of the **FSRS (Free Spaced Repetition Scheduler)** algorithm.
+RayColl is a cross-platform flashcard study app built with Expo, React Native,
+TypeScript, expo-router, React Native Paper, Firebase, AsyncStorage, and a custom
+FSRS-style spaced repetition engine.
+
+The app is local-first: decks, study modes, review progress, and activity data
+are persisted on-device and can be synced to Firebase when the user signs in.
 
 ## Features
 
-- **Spaced Repetition (FSRS)**: Modern intervals scheduling algorithm that optimizes memory retention.
-- **Custom Study Modes**: Define custom card review flows by ordering steps like TTS, STT verification, Wait, or Show Page.
-- **TTS (Text-to-Speech)**: Multi-page auto-voice output using native voices or browser synth.
-- **STT (Speech-to-Text)**: Pronunciation check with customizable match thresholds for multiple languages.
-- **CSV/TSV Import**: Import whole decks of cards via pasted files with automatic separator, header language, and page count detection.
-- **Material You Theme**: Supports device dynamic accent colors on compatible Android 12+ systems.
-- **Local & Cloud Sync**: Local-first architecture (AsyncStorage cache) with optional Firebase Firestore sync.
+- Multi-page flashcard decks with configurable page names and languages.
+- FSRS-inspired spaced repetition scheduling for new, learning, review, and mastered cards.
+- Custom study modes made from show, speak, wait, pause, and listen-and-branch steps.
+- Text-to-speech and speech-to-text study flows with pronunciation matching.
+- CSV, TSV, semicolon, comma, and pipe-separated deck import.
+- Dashboard, browse, study, settings, import, and statistics screens via expo-router.
+- Material Design 3 UI using React Native Paper.
+- Firebase Auth and Firestore sync for signed-in users.
+- Static web export suitable for Firebase Hosting.
 
-## Project Structure
+## Tech Stack
 
-```
-src/
-├── app/                  # File-based routing pages (Expo Router)
-│   ├── browse/           # Card browsing & editing per group
-│   ├── settings/         # Deck configuration (pages, languages, modes)
-│   ├── study/            # Study/review sessions using useStudySession
-│   ├── _layout.tsx       # Root layout provider
-│   ├── app-settings.tsx  # Global configuration (theme, tts rate, backup)
-│   ├── index.tsx         # Dashboard layout
-│   └── stats.tsx         # Streak & learning analytics
-├── components/           # Shared UI components
-│   ├── browse/           # Browse screen subcomponents
-│   ├── dashboard/        # Dashboard screen subcomponents
-│   ├── import/           # Import screen subcomponents
-│   └── settings/         # Deck settings subcomponents
-├── constants/            # Configuration constants
-├── contexts/             # Context providers (ThemeContext)
-├── hooks/                # Custom React hooks (useStudySession, etc.)
-├── i18n/                 # Localization (EN, PL, DE, ES, IT)
-├── import/               # CSV/TSV parser & autodetect utilities
-├── services/             # Audio, Firebase, TTS & STT services
-├── srs/                  # Spaced repetition engine & FSRS math definitions
-├── store/                # Central app state storage
-└── types/                # TypeScript models and auth overrides
+- Expo SDK 56
+- React Native 0.85
+- React 19
+- TypeScript strict mode
+- expo-router
+- React Native Paper v5 / MD3
+- Firebase Auth and Firestore
+- AsyncStorage
+- expo-speech and `@react-native-voice/voice`
+- React Native Reanimated
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
 ```
 
-## Technology Stack
+Start Expo:
 
-- **Framework**: React Native with Expo (SDK 56)
-- **UI Library**: React Native Paper v5 (Material Design 3 / MD3 Expressive)
-- **State Management**: Local context-based reactivity with persistence layer
-- **Styling**: React Native StyleSheet with custom HSL palette mapping
-- **Database / Cloud Sync**: Firebase (Auth & Firestore)
-- **Audio Feedback**: Native speech synthesizer and microphone speech recognition services
-
-## Getting Started
-
-### Prerequisites
-
-Make sure you have Node.js installed on your machine.
-
-### Installation
-
-1. Clone the repository and install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Generate or verify the native voice patches:
-   ```bash
-   npm run postinstall
-   ```
-
-### Running Locally
-
-- **Start Expo CLI**:
-  ```bash
-  npm run start
-  ```
-- **Web App**:
-  ```bash
-  npm run web
-  ```
-- **Android Dev**:
-  ```bash
-  npm run android
-  ```
-- **iOS Dev**:
-  ```bash
-  npm run ios
-  ```
-
-## CSV / TSV Import Format
-
-Decks can be imported using standard tabular text formats. Example:
-```csv
-Word;Translation;Example
-hello;cześć;Hello, world!
-goodbye;pożegnanie;Goodbye, friend.
+```bash
+npm run start
 ```
-During copy-paste, the parser automatically detects:
-- Field delimiter (Tab, Semicolon, Comma, Pipe)
-- Column names & languages based on header content
-- Total page (columns) count per card
 
-## Configuration & Environment
+Run on web:
 
-To configure Google Sign-In and Firestore Sync, create a `.env` file in the root directory:
+```bash
+npm run web
+```
+
+Run native development builds:
+
+```bash
+npm run android
+npm run ios
+```
+
+Check code quality:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```
+
+Create a static web export:
+
+```bash
+npx expo export --platform web
+```
+
+## Environment
+
+Create a `.env` file with Firebase and Google sign-in configuration:
 
 ```env
 EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
@@ -113,4 +87,95 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
-If these environment variables are absent, the application automatically runs in **Local Mode** with AsyncStorage local cache enabled.
+When Firebase values are missing, RayColl continues to work in local-only mode.
+
+## Import Format
+
+Decks are imported from pasted tabular text. Supported separators are tab,
+semicolon, comma, and pipe.
+
+Example:
+
+```csv
+Phrase;Translation;Example
+hello;czesc;Hello, world!
+goodbye;do widzenia;Goodbye, friend.
+```
+
+The import screen detects the separator and page count, suggests page names and
+languages from the first row, previews parsed rows, then creates the deck in one
+store action. Import validation rejects empty deck names, malformed rows, empty
+imports, invalid page counts, and invalid non-empty language codes. If
+persistence fails, the newly-created deck is rolled back.
+
+## Spaced Repetition
+
+The SRS engine lives in `src/srs/srsEngine.ts`. Each flashcard stores an `SrsState`
+with difficulty, stability, repetition count, FSRS state, last review timestamp,
+and next review timestamp. Ratings are mapped to intervals through the FSRS
+calculation helpers, while selectors categorize cards as new, learning, review,
+or mastered.
+
+## Sync And Persistence
+
+AsyncStorage is the local source for guest data and the signed-in user cache.
+Firebase Firestore stores the signed-in user's cloud copy. On sign-in, local and
+cloud data are merged defensively:
+
+- groups are merged by id,
+- cards are merged by id,
+- the card with more SRS repetitions wins when both sides have the same card,
+- custom study modes are preserved,
+- activity heatmap counts keep the maximum value per day.
+
+Store persistence exposes `syncStatus`, `lastSyncError`, `lastPersistenceError`,
+and `lastStoreError` so failures are visible instead of silently swallowed.
+
+## Architecture
+
+```text
+src/
+  app/                  expo-router screens
+  components/           reusable Paper-focused UI components
+  constants/            app constants and storage keys
+  contexts/             theme context
+  hooks/                app hooks, including study session orchestration
+  import/               import parsing and validation
+  services/             Firebase, TTS, STT, and audio feedback
+  srs/                  FSRS/SRS domain logic
+  store/                state provider, actions, selectors, persistence, seed data
+  theme/                MD3 theme and semantic color helpers
+  types/                shared TypeScript models
+```
+
+Business logic should live in selectors, actions, services, or SRS/import helpers,
+not inside screen components.
+
+## MD3 And Icon Policy
+
+RayColl uses React Native Paper as the app-level UI and icon API. Application code
+should not import icon sets directly from `@expo/vector-icons`,
+`react-native-vector-icons`, or `@react-native-vector-icons/*`.
+
+Use Paper APIs instead:
+
+- `Icon`
+- `IconButton`
+- `Button icon`
+- `FAB icon`
+- `List.Icon`
+- `Avatar.Icon`
+- `TextInput.Icon`
+- `Chip icon`
+- `src/components/AppIcon.tsx`
+
+Icon names should be passed as strings such as `plus`, `delete-outline`,
+`cards-outline`, or `chart-box-outline`. ESLint blocks direct app-level vector
+icon imports.
+
+## Web Hosting
+
+`firebase.json` serves the static `dist` export and rewrites application routes to
+`index.html`. Hashed JavaScript, CSS, font, and image assets receive long-lived
+cache headers; font files also include CORS headers so Paper icon fonts load
+correctly after deployment.

@@ -1,5 +1,13 @@
 import { FlashcardGroup, Flashcard } from '../../types/models';
-import { computeCardStats, CardStats } from '../../components/SegmentedProgressBar';
+import { getCardCategory } from '../../srs/srsEngine';
+
+export interface CardStats {
+  total: number;
+  newCount: number;
+  learning: number;
+  review: number;
+  mastered: number;
+}
 
 export function getLocalDateString(d: Date): string {
   const year = d.getFullYear();
@@ -34,6 +42,23 @@ export function getTotalDueCardsCount(
 
 export function getActiveDaysCount(heatmap: Record<string, number>): number {
   return Object.keys(heatmap).length;
+}
+
+export function computeCardStats(cards: Flashcard[]): CardStats {
+  let newCount = 0;
+  let learning = 0;
+  let review = 0;
+  let mastered = 0;
+
+  for (const card of cards) {
+    const category = getCardCategory(card.srsState);
+    if (category === 'new') newCount++;
+    else if (category === 'learning') learning++;
+    else if (category === 'review') review++;
+    else if (category === 'mastered') mastered++;
+  }
+
+  return { total: cards.length, newCount, learning, review, mastered };
 }
 
 export function getGlobalStats(groups: FlashcardGroup[]): CardStats {

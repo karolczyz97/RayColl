@@ -27,6 +27,14 @@ export function getDueBgColor(theme: MD3Theme): string {
   return theme.colors.errorContainer;
 }
 
+export function getDangerColor(theme: MD3Theme): string {
+  return theme.colors.error;
+}
+
+export function getDangerBgColor(theme: MD3Theme): string {
+  return theme.colors.errorContainer;
+}
+
 export function getInfoColor(theme: MD3Theme): string {
   return theme.colors.primary;
 }
@@ -50,9 +58,10 @@ export function getHeatmapColor(theme: MD3Theme, count: number): string {
   const primary = theme.colors.primary;
   // If color is hex, we can apply opacities
   if (primary.startsWith('#')) {
-    const base = primary.length === 4
-      ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
-      : primary;
+    const base =
+      primary.length === 4
+        ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
+        : primary;
     if (count <= 2) return `${base}40`; // 25% opacity
     if (count <= 5) return `${base}80`; // 50% opacity
     if (count <= 10) return `${base}c0`; // 75% opacity
@@ -61,7 +70,10 @@ export function getHeatmapColor(theme: MD3Theme, count: number): string {
   return primary;
 }
 
-export function getReviewStatusColor(theme: MD3Theme, category: SrsCardCategory): { color: string; bg: string } {
+export function getReviewStatusColor(
+  theme: MD3Theme,
+  category: SrsCardCategory,
+): { color: string; bg: string } {
   switch (category) {
     case 'new':
       return {

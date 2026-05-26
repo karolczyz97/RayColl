@@ -4,6 +4,12 @@ import type { FlashcardGroup, Flashcard, StudyMode } from '../types/models';
 import { onAuthChange, signInWithGoogle, signOutUser } from '../services/firebase';
 import { CardFilter } from '../constants/cardFilters';
 import { validateBackupData } from '../utils/backupValidation';
+import type {
+  ImportDeckPayload,
+  ImportDeckResult,
+  NormalizedImportDeckPayload,
+} from '../import/importDeck';
+import { validateImportDeckPayload } from '../import/importDeck';
 
 import {
   addGroupAction,
@@ -36,6 +42,7 @@ import {
   getSeedVersion,
   setSeedVersion,
 } from './persistence/localPersistence';
+import type { StoreData } from './persistence/localPersistence';
 
 import { loadCloudData, saveCloudData } from './persistence/firebasePersistence';
 import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
@@ -63,6 +70,7 @@ export interface FlashcardStore {
     pageNames: string[],
     cards: Omit<Flashcard, 'id' | 'srsState'>[],
   ) => string;
+  importDeck: (payload: ImportDeckPayload) => Promise<ImportDeckResult>;
   updateGroup: (group: FlashcardGroup) => void;
   deleteGroup: (groupId: string) => void;
   addFlashcard: (groupId: string, pages: string[]) => string;
@@ -84,6 +92,10 @@ export interface FlashcardStore {
 }
 
 const FlashcardStoreContext = createContext<FlashcardStore | undefined>(undefined);
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 export function useFlashcardStore(): FlashcardStore {
   const store = useContext(FlashcardStoreContext);
@@ -126,39 +138,97 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     userRef.current = user;
   }, [user]);
 
-  // Unified persistence function
-  const persist = useCallback(
-    (g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>, uid: string | null) => {
+  const getCurrentUid = useCallback(() => userRef.current?.uid ?? null, []);
+
+  const applySnapshot = useCallback((snapshot: StoreData) => {
+    groupsRef.current = snapshot.groups;
+    studyModesRef.current = snapshot.studyModes;
+    heatmapRef.current = snapshot.activityHeatmap;
+    setGroups(snapshot.groups);
+    setStudyModes(snapshot.studyModes);
+    setHeatmap(snapshot.activityHeatmap);
+  }, []);
+
+  const persistAsync = useCallback(
+    async (
+      g: FlashcardGroup[],
+      m: StudyMode[],
+      h: Record<string, number>,
+      uid: string | null,
+    ): Promise<void> => {
       setSyncStatus('saving');
       setLastPersistenceError(null);
       setLastSyncError(null);
 
       const payload = { groups: g, studyModes: m, activityHeatmap: h };
 
-      saveLocalData(uid || undefined, payload)
-        .then(() => {
-          if (uid) {
-            setSyncStatus('syncing');
-            return saveCloudData(uid, payload)
-              .then(() => {
-                setSyncStatus('idle');
-              })
-              .catch((err) => {
-                console.error('Cloud sync failed:', err);
-                setLastSyncError(err instanceof Error ? err.message : String(err));
-                setSyncStatus('error');
-              });
-          } else {
-            setSyncStatus('idle');
-          }
-        })
-        .catch((err) => {
-          console.error('Local persistence failed:', err);
-          setLastPersistenceError(err instanceof Error ? err.message : String(err));
-          setSyncStatus('error');
-        });
+      try {
+        await saveLocalData(uid || undefined, payload);
+      } catch (err) {
+        console.error('Local persistence failed:', err);
+        setLastPersistenceError(getErrorMessage(err));
+        setSyncStatus('error');
+        throw err;
+      }
+
+      if (!uid) {
+        setSyncStatus('idle');
+        return;
+      }
+
+      try {
+        setSyncStatus('syncing');
+        await saveCloudData(uid, payload);
+        setSyncStatus('idle');
+      } catch (err) {
+        console.error('Cloud sync failed:', err);
+        setLastSyncError(getErrorMessage(err));
+        setSyncStatus('error');
+        throw err;
+      }
     },
     [],
+  );
+
+  const persist = useCallback(
+    (g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>, uid: string | null) => {
+      void persistAsync(g, m, h, uid).catch(() => undefined);
+    },
+    [persistAsync],
+  );
+
+  const persistCurrentSnapshot = useCallback(
+    (uid = getCurrentUid()) => {
+      persist(groupsRef.current, studyModesRef.current, heatmapRef.current, uid);
+    },
+    [getCurrentUid, persist],
+  );
+
+  const commitGroups = useCallback(
+    (nextGroups: FlashcardGroup[]) => {
+      groupsRef.current = nextGroups;
+      setGroups(nextGroups);
+      persistCurrentSnapshot();
+    },
+    [persistCurrentSnapshot],
+  );
+
+  const commitStudyModes = useCallback(
+    (nextStudyModes: StudyMode[]) => {
+      studyModesRef.current = nextStudyModes;
+      setStudyModes(nextStudyModes);
+      persistCurrentSnapshot();
+    },
+    [persistCurrentSnapshot],
+  );
+
+  const commitHeatmap = useCallback(
+    (nextHeatmap: Record<string, number>) => {
+      heatmapRef.current = nextHeatmap;
+      setHeatmap(nextHeatmap);
+      persistCurrentSnapshot();
+    },
+    [persistCurrentSnapshot],
   );
 
   // Sync auth state listener
@@ -214,7 +284,9 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
           );
           loadedModes = [...defaultModes, ...customModes];
 
-          await setSeedVersion(SEED_VERSION);
+          await setSeedVersion(SEED_VERSION).catch((err) => {
+            setLastPersistenceError(getErrorMessage(err));
+          });
         }
 
         if (loadedGroups.length === 0) {
@@ -225,15 +297,16 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
         }
 
         if (active) {
-          setGroups(loadedGroups);
-          setStudyModes(loadedModes);
-          setHeatmap(loadedHeatmap);
-          // Sync changes immediately to local storage
+          applySnapshot({
+            groups: loadedGroups,
+            studyModes: loadedModes,
+            activityHeatmap: loadedHeatmap,
+          });
           persist(loadedGroups, loadedModes, loadedHeatmap, targetUid);
         }
       } catch (err) {
         console.error('Failed to initialize flashcard store:', err);
-        setLastStoreError(err instanceof Error ? err.message : String(err));
+        setLastStoreError(getErrorMessage(err));
       } finally {
         if (active) {
           setIsLoading(false);
@@ -246,21 +319,20 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     return () => {
       active = false;
     };
-  }, [user, persist]);
+  }, [user, persist, applySnapshot]);
 
   const addGroup = useCallback(
     (name: string, languages: string[], pageNames: string[]) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      let newId = '';
-      setGroups((prev) => {
-        const { nextGroups, newGroupId } = addGroupAction(prev, name, languages, pageNames);
-        newId = newGroupId;
-        persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
-        return nextGroups;
-      });
-      return newId;
+      const { nextGroups, newGroupId } = addGroupAction(
+        groupsRef.current,
+        name,
+        languages,
+        pageNames,
+      );
+      commitGroups(nextGroups);
+      return newGroupId;
     },
-    [persist],
+    [commitGroups],
   );
 
   const addGroupWithCards = useCallback(
@@ -270,192 +342,181 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       pageNames: string[],
       cards: Omit<Flashcard, 'id' | 'srsState'>[],
     ) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      let newId = '';
-      setGroups((prev) => {
-        const { nextGroups, newGroupId } = addGroupWithCardsAction(
-          prev,
-          name,
-          languages,
-          pageNames,
-          cards,
-        );
-        newId = newGroupId;
-        persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
-        return nextGroups;
-      });
-      return newId;
+      const { nextGroups, newGroupId } = addGroupWithCardsAction(
+        groupsRef.current,
+        name,
+        languages,
+        pageNames,
+        cards,
+      );
+      commitGroups(nextGroups);
+      return newGroupId;
     },
-    [persist],
+    [commitGroups],
+  );
+
+  const importDeck = useCallback(
+    async (payload: ImportDeckPayload): Promise<ImportDeckResult> => {
+      let normalized: NormalizedImportDeckPayload;
+      try {
+        normalized = validateImportDeckPayload(payload);
+      } catch (err) {
+        return { ok: false, error: getErrorMessage(err) };
+      }
+
+      const previousSnapshot: StoreData = {
+        groups: groupsRef.current,
+        studyModes: studyModesRef.current,
+        activityHeatmap: heatmapRef.current,
+      };
+      const currentUid = getCurrentUid();
+      const { nextGroups, newGroupId } = addGroupWithCardsAction(
+        previousSnapshot.groups,
+        normalized.name,
+        normalized.languages,
+        normalized.pageNames,
+        normalized.cards,
+      );
+
+      groupsRef.current = nextGroups;
+      setGroups(nextGroups);
+
+      try {
+        await persistAsync(
+          nextGroups,
+          previousSnapshot.studyModes,
+          previousSnapshot.activityHeatmap,
+          currentUid,
+        );
+        return {
+          ok: true,
+          groupId: newGroupId,
+          importedCards: normalized.cards.length,
+        };
+      } catch (err) {
+        applySnapshot(previousSnapshot);
+        try {
+          await persistAsync(
+            previousSnapshot.groups,
+            previousSnapshot.studyModes,
+            previousSnapshot.activityHeatmap,
+            currentUid,
+          );
+        } catch {
+          // The original persistence error is kept below for the UI.
+        }
+        const message = getErrorMessage(err);
+        setLastPersistenceError(message);
+        setLastStoreError(message);
+        setSyncStatus('error');
+        return { ok: false, error: message };
+      }
+    },
+    [applySnapshot, getCurrentUid, persistAsync],
   );
 
   const updateGroup = useCallback(
     (group: FlashcardGroup) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = updateGroupAction(prev, group);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(updateGroupAction(groupsRef.current, group));
     },
-    [persist],
+    [commitGroups],
   );
 
   const deleteGroup = useCallback(
     (groupId: string) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = deleteGroupAction(prev, groupId);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(deleteGroupAction(groupsRef.current, groupId));
     },
-    [persist],
+    [commitGroups],
   );
 
   const setVisiblePageCount = useCallback(
     (groupId: string, count: number) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = setVisiblePageCountAction(prev, groupId, count);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(setVisiblePageCountAction(groupsRef.current, groupId, count));
     },
-    [persist],
+    [commitGroups],
   );
 
   const setStudyFilter = useCallback(
     (groupId: string, filter: CardFilter) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = setStudyFilterAction(prev, groupId, filter);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(setStudyFilterAction(groupsRef.current, groupId, filter));
     },
-    [persist],
+    [commitGroups],
   );
 
   const setActiveStudyMode = useCallback(
     (groupId: string, modeId: string) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = setActiveStudyModeAction(prev, groupId, modeId);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(setActiveStudyModeAction(groupsRef.current, groupId, modeId));
     },
-    [persist],
+    [commitGroups],
   );
 
   const addFlashcard = useCallback(
     (groupId: string, pages: string[]) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      let newId = '';
-      setGroups((prev) => {
-        const { nextGroups, newCardId } = addFlashcardAction(prev, groupId, pages);
-        newId = newCardId;
-        persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
-        return nextGroups;
-      });
-      return newId;
+      const { nextGroups, newCardId } = addFlashcardAction(groupsRef.current, groupId, pages);
+      commitGroups(nextGroups);
+      return newCardId;
     },
-    [persist],
+    [commitGroups],
   );
 
   const updateFlashcard = useCallback(
     (groupId: string, card: Flashcard) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = updateFlashcardAction(prev, groupId, card);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(updateFlashcardAction(groupsRef.current, groupId, card));
     },
-    [persist],
+    [commitGroups],
   );
 
   const deleteFlashcard = useCallback(
     (groupId: string, cardId: string) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = deleteFlashcardAction(prev, groupId, cardId);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(deleteFlashcardAction(groupsRef.current, groupId, cardId));
     },
-    [persist],
+    [commitGroups],
   );
 
   const addFlashcardsBulk = useCallback(
     (groupId: string, cards: Flashcard[]) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setGroups((prev) => {
-        const next = addFlashcardsBulkAction(prev, groupId, cards);
-        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitGroups(addFlashcardsBulkAction(groupsRef.current, groupId, cards));
     },
-    [persist],
+    [commitGroups],
   );
 
   const addStudyMode = useCallback(
     (mode: StudyMode) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setStudyModes((prev) => {
-        const next = addStudyModeAction(prev, mode);
-        persist(groupsRef.current, next, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitStudyModes(addStudyModeAction(studyModesRef.current, mode));
     },
-    [persist],
+    [commitStudyModes],
   );
 
   const updateStudyMode = useCallback(
     (mode: StudyMode) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setStudyModes((prev) => {
-        const next = updateStudyModeAction(prev, mode);
-        persist(groupsRef.current, next, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitStudyModes(updateStudyModeAction(studyModesRef.current, mode));
     },
-    [persist],
+    [commitStudyModes],
   );
 
   const deleteStudyMode = useCallback(
     (modeId: string) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
-      setStudyModes((prev) => {
-        const next = deleteStudyModeAction(prev, modeId);
-        persist(groupsRef.current, next, heatmapRef.current, currentUid);
-        return next;
-      });
+      commitStudyModes(deleteStudyModeAction(studyModesRef.current, modeId));
     },
-    [persist],
+    [commitStudyModes],
   );
 
   const resetToDefault = useCallback(() => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
+    const currentUid = getCurrentUid();
     const g = createSeedGroups();
     const m = createSeedModes();
-    const h = {};
-    setGroups(g);
-    setStudyModes(m);
-    setHeatmap(h);
-    setSeedVersion(SEED_VERSION).catch(() => {});
+    const h: Record<string, number> = {};
+    applySnapshot({ groups: g, studyModes: m, activityHeatmap: h });
+    setSeedVersion(SEED_VERSION).catch((err) => {
+      setLastPersistenceError(getErrorMessage(err));
+    });
     persist(g, m, h, currentUid);
-  }, [persist]);
+  }, [applySnapshot, getCurrentUid, persist]);
 
   const recordActivity = useCallback(() => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setHeatmap((prev) => {
-      const { nextHeatmap } = recordActivityAction(prev);
-      persist(groupsRef.current, studyModesRef.current, nextHeatmap, currentUid);
-      return nextHeatmap;
-    });
-  }, [persist]);
+    const { nextHeatmap } = recordActivityAction(heatmapRef.current);
+    commitHeatmap(nextHeatmap);
+  }, [commitHeatmap]);
 
   const getDueCards = useCallback((groupId: string): Flashcard[] => {
     const group = groupsRef.current.find((g) => g.id === groupId);
@@ -486,12 +547,12 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       },
       null,
       2,
-      );
+    );
   }, []);
 
   const importState = useCallback(
     (json: string) => {
-      const currentUid = userRef.current ? userRef.current.uid : null;
+      const currentUid = getCurrentUid();
       const data = JSON.parse(json);
 
       // Explicit validation that throws descriptive errors
@@ -501,12 +562,10 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       const m = data.studyModes;
       const h = data.activityHeatmap;
 
-      setGroups(g);
-      setStudyModes(m);
-      setHeatmap(h);
+      applySnapshot({ groups: g, studyModes: m, activityHeatmap: h });
       persist(g, m, h, currentUid);
     },
-    [persist],
+    [applySnapshot, getCurrentUid, persist],
   );
 
   return React.createElement(
@@ -526,6 +585,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
         signOut,
         addGroup,
         addGroupWithCards,
+        importDeck,
         updateGroup,
         deleteGroup,
         addFlashcard,

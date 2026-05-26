@@ -4,7 +4,8 @@ import { Card, Text, IconButton, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
-import { SegmentedProgressBar, computeCardStats } from '../SegmentedProgressBar';
+import { SegmentedProgressBar } from '../SegmentedProgressBar';
+import { computeCardStats } from '../../store/selectors/stats';
 import { StudyModeMenuButton } from './StudyModeMenuButton';
 import type { FlashcardGroup } from '../../types/models';
 

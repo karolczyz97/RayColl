@@ -43,9 +43,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint",
+    "lint": "expo lint --no-cache",
     "typecheck": "tsc --noEmit",
-    "test": "npx ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" src/srs/__tests__/srsEngine.test.ts",
+    "test": "node scripts/run-tests.mjs",
     "postinstall": "node scripts/patch-voice-gradle.js"
   },
   "private": true

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, useTheme, ActivityIndicator } from 'react-native-paper';
+import { TextInput, Button, useTheme, ActivityIndicator, Snackbar } from 'react-native-paper';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,8 +32,11 @@ export default function ImportPage() {
   const [pageNames, setPageNames] = useState(['Phrase', 'Tłumaczenie', '', '', '']);
   const [pageLangs, setPageLangs] = useState(['en-US', 'pl-PL', '', '', '']);
   const [rawText, setRawText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState('');
 
   const handleTextChange = (text: string) => {
+    setImportError('');
     setRawText(text);
     if (!text.trim()) {
       return;
@@ -74,15 +77,32 @@ export default function ImportPage() {
     return parseCSV(rawText, sepKey, pageCount);
   }, [rawText, sepKey, pageCount]);
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!name.trim()) return;
+    setIsImporting(true);
+    setImportError('');
     const langs = pageLangs.slice(0, pageCount);
     const names = pageNames.slice(0, pageCount);
     const cardsData = rows.map((row) => ({
       pages: row,
     }));
-    store.addGroupWithCards(name.trim(), langs, names, cardsData);
-    router.back();
+    try {
+      const result = await store.importDeck({
+        name,
+        languages: langs,
+        pageNames: names,
+        cards: cardsData,
+      });
+
+      if (result.ok) {
+        router.back();
+        return;
+      }
+
+      setImportError(result.error);
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleBack = () => {
@@ -152,7 +172,8 @@ export default function ImportPage() {
           <Button
             mode="contained"
             onPress={handleImport}
-            disabled={!name.trim() || rows.length === 0}
+            disabled={!name.trim() || rows.length === 0 || isImporting}
+            loading={isImporting}
             style={styles.importBtn}
             accessibilityLabel="Perform flashcard import button"
           >
@@ -160,6 +181,15 @@ export default function ImportPage() {
           </Button>
         </Animated.View>
       </ScrollView>
+
+      <Snackbar
+        visible={!!importError}
+        onDismiss={() => setImportError('')}
+        duration={6000}
+        action={{ label: 'OK', onPress: () => setImportError('') }}
+      >
+        {importError}
+      </Snackbar>
     </SafeAreaView>
   );
 }

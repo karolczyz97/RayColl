@@ -1,4 +1,5 @@
 import { saveUserData, loadUserData, UserData } from '../../services/firebase';
+import { validateBackupData } from '../../utils/backupValidation';
 
 export async function saveCloudData(userId: string, data: UserData): Promise<void> {
   try {
@@ -11,7 +12,10 @@ export async function saveCloudData(userId: string, data: UserData): Promise<voi
 
 export async function loadCloudData(userId: string): Promise<UserData | null> {
   try {
-    return await loadUserData(userId);
+    const data = await loadUserData(userId);
+    if (!data) return null;
+    validateBackupData(data);
+    return data;
   } catch (err) {
     console.error('Failed to load cloud data:', err);
     return null;

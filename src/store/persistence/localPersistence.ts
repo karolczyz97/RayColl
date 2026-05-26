@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { FlashcardGroup, StudyMode } from '../../types/models';
+import { validateBackupData } from '../../utils/backupValidation';
 
 export interface StoreData {
   groups: FlashcardGroup[];
@@ -10,13 +11,14 @@ export interface StoreData {
 
 export async function loadLocalData(userId?: string): Promise<StoreData | null> {
   try {
+    let data: StoreData | null = null;
     if (userId) {
       const cachedGroups = await AsyncStorage.getItem(STORAGE_KEYS.USER_GROUPS(userId));
       const cachedModes = await AsyncStorage.getItem(STORAGE_KEYS.USER_MODES(userId));
       const cachedHeatmap = await AsyncStorage.getItem(STORAGE_KEYS.USER_HEATMAP(userId));
 
       if (cachedGroups && cachedModes) {
-        return {
+        data = {
           groups: JSON.parse(cachedGroups),
           studyModes: JSON.parse(cachedModes),
           activityHeatmap: cachedHeatmap ? JSON.parse(cachedHeatmap) : {},
@@ -28,12 +30,17 @@ export async function loadLocalData(userId?: string): Promise<StoreData | null> 
       const storedHeatmap = await AsyncStorage.getItem(STORAGE_KEYS.LOCAL_HEATMAP);
 
       if (storedGroups && storedModes) {
-        return {
+        data = {
           groups: JSON.parse(storedGroups),
           studyModes: JSON.parse(storedModes),
           activityHeatmap: storedHeatmap ? JSON.parse(storedHeatmap) : {},
         };
       }
+    }
+
+    if (data) {
+      validateBackupData(data);
+      return data;
     }
   } catch (err) {
     console.error('Failed to load local data:', err);
@@ -43,18 +50,19 @@ export async function loadLocalData(userId?: string): Promise<StoreData | null> 
 
 export async function saveLocalData(userId: string | undefined, data: StoreData): Promise<void> {
   try {
-    if (userId) {
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_GROUPS(userId), JSON.stringify(data.groups));
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_MODES(userId), JSON.stringify(data.studyModes));
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_HEATMAP(userId),
-        JSON.stringify(data.activityHeatmap),
-      );
-    } else {
-      await AsyncStorage.setItem(STORAGE_KEYS.LOCAL_GROUPS, JSON.stringify(data.groups));
-      await AsyncStorage.setItem(STORAGE_KEYS.LOCAL_MODES, JSON.stringify(data.studyModes));
-      await AsyncStorage.setItem(STORAGE_KEYS.LOCAL_HEATMAP, JSON.stringify(data.activityHeatmap));
-    }
+    const entries: [string, string][] = userId
+      ? [
+          [STORAGE_KEYS.USER_GROUPS(userId), JSON.stringify(data.groups)],
+          [STORAGE_KEYS.USER_MODES(userId), JSON.stringify(data.studyModes)],
+          [STORAGE_KEYS.USER_HEATMAP(userId), JSON.stringify(data.activityHeatmap)],
+        ]
+      : [
+          [STORAGE_KEYS.LOCAL_GROUPS, JSON.stringify(data.groups)],
+          [STORAGE_KEYS.LOCAL_MODES, JSON.stringify(data.studyModes)],
+          [STORAGE_KEYS.LOCAL_HEATMAP, JSON.stringify(data.activityHeatmap)],
+        ];
+
+    await AsyncStorage.multiSet(entries);
   } catch (err) {
     console.error('Failed to save local data:', err);
     throw err;
@@ -64,7 +72,8 @@ export async function getSeedVersion(): Promise<number> {
   try {
     const ver = await AsyncStorage.getItem(STORAGE_KEYS.SEED_VERSION);
     return ver ? Number(ver) : 0;
-  } catch {
+  } catch (err) {
+    console.error('Failed to read seed version:', err);
     return 0;
   }
 }
@@ -72,5 +81,8 @@ export async function getSeedVersion(): Promise<number> {
 export async function setSeedVersion(version: number): Promise<void> {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.SEED_VERSION, String(version));
-  } catch {}
+  } catch (err) {
+    console.error('Failed to save seed version:', err);
+    throw err;
+  }
 }

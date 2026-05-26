@@ -1,33 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { useTheme } from 'react-native-paper';
-import type { Flashcard } from '../types/models';
-import { getCardCategory } from '../srs/srsEngine';
+import type { CardStats } from '../store/selectors/stats';
 import { useI18n } from '../i18n';
 import { getReviewStatusColor } from '../theme/semanticColors';
-
-export interface CardStats {
-  total: number;
-  newCount: number;
-  learning: number; // state 1 or 3
-  review: number; // state 2, not yet mastered
-  mastered: number; // state 2, repetitions >= 3
-}
-
-export function computeCardStats(cards: Flashcard[]): CardStats {
-  let newCount = 0,
-    learning = 0,
-    review = 0,
-    mastered = 0;
-  for (const c of cards) {
-    const category = getCardCategory(c.srsState);
-    if (category === 'new') newCount++;
-    else if (category === 'learning') learning++;
-    else if (category === 'review') review++;
-    else if (category === 'mastered') mastered++;
-  }
-  return { total: cards.length, newCount, learning, review, mastered };
-}
 
 interface Props {
   stats: CardStats;
@@ -51,7 +27,7 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
     review: reviewColors.color,
     learning: learningColors.color,
     new: newColors.color,
-    empty: theme.colors.outlineVariant || '#e0e0e0',
+    empty: theme.colors.outlineVariant,
   };
 
   if (total === 0) {
