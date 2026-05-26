@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, TextInput, Switch, Text } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
+import { getVisiblePageNames } from '../../store/selectors/pages';
 
 interface Props {
   card: Flashcard;
@@ -34,6 +35,8 @@ export function EditFlashcardForm({
     ? 'Show hidden pages'
     : t('browse.show_hidden_pages');
 
+  const displayNames = showHidden ? group.pageNames : getVisiblePageNames(group);
+
   return (
     <View style={styles.container}>
       {hasHiddenPages && (
@@ -51,7 +54,7 @@ export function EditFlashcardForm({
         <TextInput
           key={i}
           mode="outlined"
-          label={group.pageNames[i] || t('import.page_label', { index: i + 1 })}
+          label={displayNames[i] || t('import.page_label', { index: i + 1 })}
           value={page}
           onChangeText={(text) => {
             setEditPages((prev) => {

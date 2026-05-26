@@ -58,11 +58,12 @@ export default function AppSettings() {
       } else {
         Alert.alert('Success', t('app_settings.import_success') || 'Import completed!');
       }
-    } catch {
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : 'Invalid backup JSON!';
       if (Platform.OS === 'web') {
-        alert('Invalid backup JSON!');
+        alert(msg);
       } else {
-        Alert.alert('Error', 'Invalid backup JSON!');
+        Alert.alert('Error', msg);
       }
     }
   };

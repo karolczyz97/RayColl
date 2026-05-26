@@ -9,6 +9,7 @@ import type { ModeStep, StudyMode, FlashcardGroup } from '../../types/models';
 import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { CardFilter } from '../../constants/cardFilters';
+import { getVisiblePageNames, getVisiblePageLanguages } from '../../store/selectors/pages';
 
 import { DeckNameSection } from '../../components/settings/DeckNameSection';
 import { PagesConfigSection } from '../../components/settings/PagesConfigSection';
@@ -272,8 +273,8 @@ export default function SettingsPage() {
         {/* Pages configuration */}
         <PagesConfigSection
           pageCount={pageCount}
-          colNames={colNames}
-          pageLanguages={activeGroup.pageLanguages}
+          visiblePageNames={getVisiblePageNames({ ...activeGroup, pageNames: colNames })}
+          visiblePageLanguages={getVisiblePageLanguages(activeGroup)}
           adjustPageCount={adjustPageCount}
           movePageSetting={movePageSetting}
           setColNames={setColNames}

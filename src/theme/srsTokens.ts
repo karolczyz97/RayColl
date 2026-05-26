@@ -5,7 +5,6 @@ export interface SrsCategoryToken {
   labelKey: string;
   color: string; // primary color
   bg: string;    // light background
-  chipColor: 'default' | 'info' | 'warning' | 'success' | 'secondary';
   badgeTextKey: string;
 }
 
@@ -14,28 +13,24 @@ export const SRS_CATEGORIES_TOKENS: Record<SrsCardCategory, SrsCategoryToken> = 
     labelKey: 'filter.new',
     color: '#1565c0',
     bg: '#d1e4ff',
-    chipColor: 'info',
     badgeTextKey: 'srs.badge.new',
   },
   learning: {
     labelKey: 'filter.learning',
     color: '#b86800',
     bg: '#ffddb3',
-    chipColor: 'warning',
     badgeTextKey: 'srs.badge.learning',
   },
   review: {
     labelKey: 'filter.review',
     color: '#6750a4',
     bg: '#e8def8',
-    chipColor: 'secondary',
     badgeTextKey: 'srs.badge.review',
   },
   mastered: {
     labelKey: 'filter.mastered',
     color: '#006c4c',
     bg: '#c8ffc0',
-    chipColor: 'success',
     badgeTextKey: 'srs.badge.mastered',
   },
 };

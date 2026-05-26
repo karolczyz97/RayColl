@@ -6,6 +6,7 @@ import { getCardCategory } from '../../srs/srsEngine';
 import { AppIcon } from '../../components/AppIcon';
 import { SRS_CATEGORIES_TOKENS, getMasteryPercent, getDaysUntilReview } from '../../theme/srsTokens';
 import { EditFlashcardForm } from './EditFlashcardForm';
+import { getVisiblePages, getVisiblePageNames } from '../../store/selectors/pages';
 
 interface Props {
   card: Flashcard;
@@ -55,7 +56,6 @@ export function FlashcardListItem({
   const activeCount = group.activePageCount ?? group.pageNames.length;
   const totalCount = card.pages.length;
   const hasHiddenPages = totalCount > activeCount;
-  const displayCount = viewHidden ? totalCount : activeCount;
 
   if (isEditing) {
     return (
@@ -77,8 +77,11 @@ export function FlashcardListItem({
   const mastery = getMasteryPercent(card.srsState);
   const reviewIn = daysUntilReview(card.srsState, t);
 
-  const primaryPage = card.pages[0] || '—';
-  const otherPages = card.pages.slice(1, displayCount);
+  const visiblePages = getVisiblePages(card, group);
+  const visiblePageNames = getVisiblePageNames(group);
+
+  const primaryPage = viewHidden ? (card.pages[0] || '—') : (visiblePages[0] || '—');
+  const otherPages = viewHidden ? card.pages.slice(1) : visiblePages.slice(1);
 
   const toggleLabel = t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
     ? 'Show hidden pages'
@@ -96,10 +99,13 @@ export function FlashcardListItem({
         {otherPages.map((page, i) => {
           const pageIdx = i + 1;
           const isHidden = pageIdx >= activeCount;
+          const pageName = viewHidden
+            ? (group.pageNames[pageIdx] || t('import.page_label', { index: pageIdx + 1 }))
+            : visiblePageNames[pageIdx];
           return (
             <View key={pageIdx} style={styles.pageContentRow}>
               <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>
-                {group.pageNames[pageIdx] || t('import.page_label', { index: pageIdx + 1 })}
+                {pageName}
                 {isHidden ? ' (Hidden)' : ''}:{' '}
               </Text>
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1, flexWrap: 'wrap' }}>

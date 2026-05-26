@@ -4,8 +4,8 @@ import { Text, IconButton, TextInput, Menu, Button } from 'react-native-paper';
 
 interface Props {
   pageCount: number;
-  colNames: string[];
-  pageLanguages: string[];
+  visiblePageNames: string[];
+  visiblePageLanguages: string[];
   adjustPageCount: (count: number) => void;
   movePageSetting: (i: number, dir: -1 | 1) => void;
   setColNames: React.Dispatch<React.SetStateAction<string[]>>;
@@ -17,8 +17,8 @@ interface Props {
 
 export function PagesConfigSection({
   pageCount,
-  colNames,
-  pageLanguages,
+  visiblePageNames,
+  visiblePageLanguages,
   adjustPageCount,
   movePageSetting,
   setColNames,
@@ -55,7 +55,7 @@ export function PagesConfigSection({
         </View>
       </View>
 
-      {colNames.slice(0, pageCount).map((pn, i) => (
+      {visiblePageNames.map((pn, i) => (
         <View key={i} style={styles.columnRow}>
           <View style={styles.sortButtons}>
             <IconButton
@@ -80,9 +80,11 @@ export function PagesConfigSection({
             label={t('import.page_label', { index: i + 1 })}
             value={pn}
             onChangeText={(v) => {
-              const next = [...colNames];
-              next[i] = v;
-              setColNames(next);
+              setColNames((prev) => {
+                const next = [...prev];
+                next[i] = v;
+                return next;
+              });
             }}
             onBlur={() => handleColBlur(i)}
             style={styles.pageNameInput}
@@ -99,7 +101,7 @@ export function PagesConfigSection({
                 onPress={() => setLangMenuIndex(i)}
                 accessibilityLabel={`Select language for page ${i + 1}`}
               >
-                {pageLanguages[i] ? t(`lang.${pageLanguages[i]}`) : t('import.lang_label')}
+                {visiblePageLanguages[i] ? t(`lang.${visiblePageLanguages[i]}`) : t('import.lang_label')}
               </Button>
             }
           >
