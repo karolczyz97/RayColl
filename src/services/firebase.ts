@@ -50,7 +50,7 @@ export const auth = app
 export const db = app
   ? initializeFirestore(app, {
       localCache: persistentLocalCache(
-        Platform.OS === 'web' ? { tabManager: persistentMultipleTabManager() } : {}
+        Platform.OS === 'web' ? { tabManager: persistentMultipleTabManager() } : {},
       ),
     })
   : null;

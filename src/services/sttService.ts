@@ -49,13 +49,16 @@ class WebSttService implements SttService {
   private recognition: ISpeechRecognition | null = null;
 
   isSupported(): boolean {
-    return typeof window !== 'undefined' &&
-      ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+    return (
+      typeof window !== 'undefined' &&
+      ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+    );
   }
 
   startListening(options: SttOptions): Promise<string> {
     return new Promise((resolve, reject) => {
-      const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRec =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRec) {
         reject(new Error('STT not supported'));
         return;
@@ -151,7 +154,18 @@ class ReactNativeVoiceSttService implements SttService {
       let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
       const INACTIVITY_MS = 1500; // 1.5s inactivity timeout
 
+      const hardTimeout = setTimeout(async () => {
+        if (!resolved) {
+          try {
+            await Voice.stop();
+          } catch {
+            // ignore
+          }
+        }
+      }, options.timeoutMs || 15000);
+
       const cleanup = async () => {
+        clearTimeout(hardTimeout);
         if (inactivityTimer) clearTimeout(inactivityTimer);
         Voice.onSpeechStart = () => {};
         Voice.onSpeechEnd = () => {};
@@ -212,7 +226,7 @@ class ReactNativeVoiceSttService implements SttService {
         resolve(finalResult || '');
       };
 
-      Voice.start(options.language).catch(err => {
+      Voice.start(options.language).catch((err) => {
         cleanup();
         options.onListeningStateChange?.(false);
         reject(err);

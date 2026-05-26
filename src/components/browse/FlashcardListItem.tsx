@@ -4,7 +4,11 @@ import { Card, Text, Chip, IconButton, useTheme, Switch } from 'react-native-pap
 import type { Flashcard, FlashcardGroup, SrsState } from '../../types/models';
 import { getCardCategory } from '../../srs/srsEngine';
 import { AppIcon } from '../../components/AppIcon';
-import { SRS_CATEGORIES_TOKENS, getMasteryPercent, getDaysUntilReview } from '../../theme/srsTokens';
+import {
+  SRS_CATEGORIES_TOKENS,
+  getMasteryPercent,
+  getDaysUntilReview,
+} from '../../theme/srsTokens';
 import { EditFlashcardForm } from './EditFlashcardForm';
 import { getVisiblePages, getVisiblePageNames } from '../../store/selectors/pages';
 
@@ -21,7 +25,10 @@ interface Props {
   t: (key: string, replacements?: any) => string;
 }
 
-function srsChip(state: SrsState, t: (key: string) => string): { text: string; color: string; bg: string } {
+function srsChip(
+  state: SrsState,
+  t: (key: string) => string,
+): { text: string; color: string; bg: string } {
   const category = getCardCategory(state);
   const token = SRS_CATEGORIES_TOKENS[category];
   return {
@@ -80,12 +87,13 @@ export function FlashcardListItem({
   const visiblePages = getVisiblePages(card, group);
   const visiblePageNames = getVisiblePageNames(group);
 
-  const primaryPage = viewHidden ? (card.pages[0] || '—') : (visiblePages[0] || '—');
+  const primaryPage = viewHidden ? card.pages[0] || '—' : visiblePages[0] || '—';
   const otherPages = viewHidden ? card.pages.slice(1) : visiblePages.slice(1);
 
-  const toggleLabel = t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
-    ? 'Show hidden pages'
-    : t('browse.show_hidden_pages');
+  const toggleLabel =
+    t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
+      ? 'Show hidden pages'
+      : t('browse.show_hidden_pages');
 
   return (
     <Card style={styles.card} mode="outlined">
@@ -100,15 +108,21 @@ export function FlashcardListItem({
           const pageIdx = i + 1;
           const isHidden = pageIdx >= activeCount;
           const pageName = viewHidden
-            ? (group.pageNames[pageIdx] || t('import.page_label', { index: pageIdx + 1 }))
+            ? group.pageNames[pageIdx] || t('import.page_label', { index: pageIdx + 1 })
             : visiblePageNames[pageIdx];
           return (
             <View key={pageIdx} style={styles.pageContentRow}>
-              <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>
+              <Text
+                variant="labelMedium"
+                style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}
+              >
                 {pageName}
                 {isHidden ? ' (Hidden)' : ''}:{' '}
               </Text>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1, flexWrap: 'wrap' }}>
+              <Text
+                variant="bodyMedium"
+                style={{ color: theme.colors.onSurface, flex: 1, flexWrap: 'wrap' }}
+              >
                 {page || '—'}
               </Text>
             </View>
@@ -117,7 +131,9 @@ export function FlashcardListItem({
 
         {hasHiddenPages && (
           <View style={styles.toggleRow}>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>{toggleLabel}</Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
+              {toggleLabel}
+            </Text>
             <Switch
               value={viewHidden}
               onValueChange={setViewHidden}
@@ -129,7 +145,11 @@ export function FlashcardListItem({
       </Card.Content>
       <Card.Actions style={styles.cardActions}>
         <View style={styles.cardActionsLeft}>
-          <Chip style={{ backgroundColor: srs.bg }} selectedColor={srs.color} textStyle={{ color: srs.color }}>
+          <Chip
+            style={{ backgroundColor: srs.bg }}
+            selectedColor={srs.color}
+            textStyle={{ color: srs.color }}
+          >
             {srs.text}
           </Chip>
           {card.srsState.state > 0 && (

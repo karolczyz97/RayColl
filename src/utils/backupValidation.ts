@@ -1,4 +1,6 @@
-export function validateBackupData(data: any): data is { groups: any[]; studyModes: any[]; activityHeatmap: Record<string, number> } {
+export function validateBackupData(
+  data: any,
+): data is { groups: any[]; studyModes: any[]; activityHeatmap: Record<string, number> } {
   if (!data || typeof data !== 'object') {
     throw new Error('Backup data is not a valid JSON object.');
   }
@@ -36,7 +38,9 @@ export function validateBackupData(data: any): data is { groups: any[]; studyMod
         throw new Error(`Card ${card.id} in group ${group.name} must have a "pages" array.`);
       }
       if (!card.srsState || typeof card.srsState !== 'object') {
-        throw new Error(`Card ${card.id} in group ${group.name} is missing a valid "srsState" object.`);
+        throw new Error(
+          `Card ${card.id} in group ${group.name} is missing a valid "srsState" object.`,
+        );
       }
     }
   }

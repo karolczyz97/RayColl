@@ -18,9 +18,24 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
   const isNarrow = width < 480;
 
   const stats = [
-    { icon: 'book-multiple', label: t('stats.decks_title') || 'Talie', value: String(decksCount), color: theme.colors.primary },
-    { icon: 'card-multiple-outline', label: t('stats.cards_title') || 'Fiszki', value: String(cardsCount), color: theme.colors.secondary },
-    { icon: 'sync', label: t('stats.due_cards'), value: String(dueCount), color: dueCount > 0 ? theme.colors.error : theme.colors.outline },
+    {
+      icon: 'book-multiple',
+      label: t('stats.decks_title') || 'Talie',
+      value: String(decksCount),
+      color: theme.colors.primary,
+    },
+    {
+      icon: 'card-multiple-outline',
+      label: t('stats.cards_title') || 'Fiszki',
+      value: String(cardsCount),
+      color: theme.colors.secondary,
+    },
+    {
+      icon: 'sync',
+      label: t('stats.due_cards'),
+      value: String(dueCount),
+      color: dueCount > 0 ? theme.colors.error : theme.colors.outline,
+    },
     { icon: 'fire', label: t('stats.streak'), value: `${streak} 🔥`, color: '#ffa726' },
   ];
 
@@ -40,7 +55,10 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
         >
           <Card.Content style={styles.statContent}>
             <AppIcon name={s.icon} size={20} color={s.color} style={styles.icon} />
-            <Text variant="labelSmall" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              variant="labelSmall"
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
               {s.label}
             </Text>
             <Text variant="titleMedium" style={[styles.value, { color: s.color }]}>

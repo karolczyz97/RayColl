@@ -4,7 +4,7 @@ import { SrsCardCategory } from '../srs/srsEngine';
 export interface SrsCategoryToken {
   labelKey: string;
   color: string; // primary color
-  bg: string;    // light background
+  bg: string; // light background
   badgeTextKey: string;
 }
 

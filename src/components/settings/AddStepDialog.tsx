@@ -79,7 +79,9 @@ export function AddStepDialog({
           />
         )}
 
-        {(newStepType === 'speak_page' || newStepType === 'dynamic_pause' || newStepType === 'wait') && (
+        {(newStepType === 'speak_page' ||
+          newStepType === 'dynamic_pause' ||
+          newStepType === 'wait') && (
           <TextInput
             mode="outlined"
             label={t('settings.dialog.add_step.time')}

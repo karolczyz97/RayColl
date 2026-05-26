@@ -58,7 +58,8 @@ export const es: Record<string, string> = {
   'import.preview': 'Vista previa',
   'import.btn': 'Importar {count} tarjetas',
   'import.success': '¡Se importaron con éxito {count} tarjetas!',
-  'import.name_placeholder': 'Pegue datos — el separador y número de páginas se detectarán automáticamente',
+  'import.name_placeholder':
+    'Pegue datos — el separador y número de páginas se detectarán automáticamente',
   'import.upload_btn': 'Subir archivo (.csv, .txt, .json)',
   'import.sep.tab': 'Tabulador',
   'import.sep.semicolon': 'Punto y coma (;)',
@@ -90,7 +91,8 @@ export const es: Record<string, string> = {
   'settings.modes_title': 'Modo de estudio',
   'settings.steps_title': 'Secuencia de pasos',
   'settings.delete_btn': 'Eliminar baraja',
-  'settings.delete_desc': '¿Estás seguro de que quieres eliminar esta baraja? Esto eliminará todas sus tarjetas de forma permanente.',
+  'settings.delete_desc':
+    '¿Estás seguro de que quieres eliminar esta baraja? Esto eliminará todas sus tarjetas de forma permanente.',
   'settings.rename_label': 'Nombre de la baraja',
   'settings.pages_config': 'Configuración de páginas',
   'settings.active_mode': 'Modo de estudio activo',
@@ -107,7 +109,8 @@ export const es: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Índice de página (empieza por 0)',
   'settings.dialog.add_step.time': 'Tiempo (ms)',
   'settings.dialog.add_step.threshold': 'Umbral (%)',
-  'settings.dialog.delete.confirm_text': 'Para confirmar la eliminación de la baraja "{name}", escriba DELETE abajo:',
+  'settings.dialog.delete.confirm_text':
+    'Para confirmar la eliminación de la baraja "{name}", escriba DELETE abajo:',
 
   // App Settings
   'app_settings.title': 'Ajustes de la aplicación',
@@ -121,10 +124,12 @@ export const es: Record<string, string> = {
   'app_settings.import_placeholder': 'Pegue el JSON exportado aquí...',
   'app_settings.import_btn': 'Importar estado',
   'app_settings.reset_btn': 'Restablecer aplicación',
-  'app_settings.reset_confirm': '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',
+  'app_settings.reset_confirm':
+    '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
-  'app_settings.dynamic_colors.desc': 'Extraer colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.desc':
+    'Extraer colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Activado',
   'app_settings.dynamic_colors.disabled': 'Desactivado',
 

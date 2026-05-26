@@ -31,9 +31,10 @@ export function EditFlashcardForm({
 
   const displayCount = showHidden ? totalCount : activeCount;
 
-  const toggleLabel = t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
-    ? 'Show hidden pages'
-    : t('browse.show_hidden_pages');
+  const toggleLabel =
+    t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
+      ? 'Show hidden pages'
+      : t('browse.show_hidden_pages');
 
   const displayNames = showHidden ? group.pageNames : getVisiblePageNames(group);
 

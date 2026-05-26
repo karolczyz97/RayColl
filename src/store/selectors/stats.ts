@@ -27,7 +27,7 @@ export function getTotalCardsCount(groups: FlashcardGroup[]): number {
 
 export function getTotalDueCardsCount(
   groups: FlashcardGroup[],
-  getDueCards: (groupId: string) => Flashcard[]
+  getDueCards: (groupId: string) => Flashcard[],
 ): number {
   return groups.reduce((a, g) => a + getDueCards(g.id).length, 0);
 }

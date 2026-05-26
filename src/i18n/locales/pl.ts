@@ -90,7 +90,8 @@ export const pl: Record<string, string> = {
   'settings.modes_title': 'Tryb nauki',
   'settings.steps_title': 'Sekwencja kroków',
   'settings.delete_btn': 'Usuń zestaw',
-  'settings.delete_desc': 'Czy na pewno chcesz usunąć ten zestaw? Spowoduje to trwałe usunięcie wszystkich jego fiszek.',
+  'settings.delete_desc':
+    'Czy na pewno chcesz usunąć ten zestaw? Spowoduje to trwałe usunięcie wszystkich jego fiszek.',
   'settings.rename_label': 'Nazwa zestawu',
   'settings.pages_config': 'Konfiguracja stron',
   'settings.active_mode': 'Aktywny tryb nauki',
@@ -107,7 +108,8 @@ export const pl: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Indeks strony (od 0)',
   'settings.dialog.add_step.time': 'Czas (ms)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
-  'settings.dialog.delete.confirm_text': 'Aby potwierdzić usunięcie zestawu „{name}", wpisz DELETE poniżej:',
+  'settings.dialog.delete.confirm_text':
+    'Aby potwierdzić usunięcie zestawu „{name}", wpisz DELETE poniżej:',
 
   // App Settings
   'app_settings.title': 'Ustawienia aplikacji',
@@ -121,10 +123,12 @@ export const pl: Record<string, string> = {
   'app_settings.import_placeholder': 'Wklej wyeksportowany JSON tutaj...',
   'app_settings.import_btn': 'Importuj stan',
   'app_settings.reset_btn': 'Resetuj aplikację',
-  'app_settings.reset_confirm': 'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
+  'app_settings.reset_confirm':
+    'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
   'app_settings.lang': 'Język',
   'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
-  'app_settings.dynamic_colors.desc': 'Pobieraj kolory akcentów bezpośrednio z systemu (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.desc':
+    'Pobieraj kolory akcentów bezpośrednio z systemu (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Włączone',
   'app_settings.dynamic_colors.disabled': 'Wyłączone',
 

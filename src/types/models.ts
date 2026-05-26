@@ -1,8 +1,8 @@
 export interface SrsState {
-  difficulty: number;          // Trudność (1-10)
-  stability: number;           // Stabilność
-  repetitions: number;         // Liczba powtórzeń (repetitions >= 1 oznacza, że karta została "nauczona")
-  state: number;               // Stan FSRS (0: New, 1: Learning, 2: Review, 3: Relearning)
+  difficulty: number; // Trudność (1-10)
+  stability: number; // Stabilność
+  repetitions: number; // Liczba powtórzeń (repetitions >= 1 oznacza, że karta została "nauczona")
+  state: number; // Stan FSRS (0: New, 1: Learning, 2: Review, 3: Relearning)
   lastReviewTimestamp: number; // Znacznik czasu ostatniej powtórki
   nextReviewTimestamp: number; // Znacznik czasu kolejnej powtórki
 }
@@ -20,7 +20,7 @@ export interface FlashcardGroup {
   activeModeId: string;
   studyFilter?: 'all' | 'new' | 'review' | 'new+review';
   pageLanguages: string[]; // tagi BCP-47 dla stron
-  pageNames: string[];     // np. ['Słowo', 'Tłumaczenie', 'Przykład']
+  pageNames: string[]; // np. ['Słowo', 'Tłumaczenie', 'Przykład']
   activePageCount?: number; // liczba widocznych/aktywnych stron
 }
 

@@ -58,7 +58,8 @@ export const de: Record<string, string> = {
   'import.preview': 'Vorschau',
   'import.btn': 'Importieren Sie {count} Karten',
   'import.success': 'Erfolgreich {count} Karten importiert!',
-  'import.name_placeholder': 'Fügen Sie Daten ein — Trennzeichen und Seitenanzahl werden automatisch erkannt',
+  'import.name_placeholder':
+    'Fügen Sie Daten ein — Trennzeichen und Seitenanzahl werden automatisch erkannt',
   'import.upload_btn': 'Datei hochladen (.csv, .txt, .json)',
   'import.sep.tab': 'Tabstopp',
   'import.sep.semicolon': 'Semikolon (;)',
@@ -90,7 +91,8 @@ export const de: Record<string, string> = {
   'settings.modes_title': 'Lernmodus',
   'settings.steps_title': 'Schrittfolge',
   'settings.delete_btn': 'Deck löschen',
-  'settings.delete_desc': 'Sind Sie sicher, dass Sie dieses Deck löschen möchten? Dadurch werden alle seine Karten dauerhaft entfernt.',
+  'settings.delete_desc':
+    'Sind Sie sicher, dass Sie dieses Deck löschen möchten? Dadurch werden alle seine Karten dauerhaft entfernt.',
   'settings.rename_label': 'Deckname',
   'settings.pages_config': 'Seitenkonfiguration',
   'settings.active_mode': 'Aktiver Lernmodus',
@@ -107,7 +109,8 @@ export const de: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Seitenindex (beginnt bei 0)',
   'settings.dialog.add_step.time': 'Zeit (ms)',
   'settings.dialog.add_step.threshold': 'Schwellenwert (%)',
-  'settings.dialog.delete.confirm_text': 'Um das Löschen des Decks "{name}" zu bestätigen, geben Sie unten DELETE ein:',
+  'settings.dialog.delete.confirm_text':
+    'Um das Löschen des Decks "{name}" zu bestätigen, geben Sie unten DELETE ein:',
 
   // App Settings
   'app_settings.title': 'App-Einstellungen',
@@ -121,10 +124,12 @@ export const de: Record<string, string> = {
   'app_settings.import_placeholder': 'Fügen Sie exportiertes JSON hier ein...',
   'app_settings.import_btn': 'Zustand importieren',
   'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
-  'app_settings.reset_confirm': 'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',
+  'app_settings.reset_confirm':
+    'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',
   'app_settings.lang': 'Sprache',
   'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
-  'app_settings.dynamic_colors.desc': 'Akzent- und Systemfarben direkt vom Gerät extrahieren (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.desc':
+    'Akzent- und Systemfarben direkt vom Gerät extrahieren (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Aktiviert',
   'app_settings.dynamic_colors.disabled': 'Deaktiviert',
 

@@ -58,7 +58,8 @@ export const it: Record<string, string> = {
   'import.preview': 'Anteprima',
   'import.btn': 'Importa {count} carte',
   'import.success': 'Importate con successo {count} carte!',
-  'import.name_placeholder': 'Incolla i dati — il separatore e il numero di pagine verranno rilevati automaticamente',
+  'import.name_placeholder':
+    'Incolla i dati — il separatore e il numero di pagine verranno rilevati automaticamente',
   'import.upload_btn': 'Carica file (.csv, .txt, .json)',
   'import.sep.tab': 'Tabulazione',
   'import.sep.semicolon': 'Punto e virgola (;)',
@@ -90,7 +91,8 @@ export const it: Record<string, string> = {
   'settings.modes_title': 'Modalità di studio',
   'settings.steps_title': 'Sequenza di passaggi',
   'settings.delete_btn': 'Elimina mazzo',
-  'settings.delete_desc': 'Sei sicuro di voler eliminare questo mazzo? Questo rimuoverà tutte le sue carte in modo permanente.',
+  'settings.delete_desc':
+    'Sei sicuro di voler eliminare questo mazzo? Questo rimuoverà tutte le sue carte in modo permanente.',
   'settings.rename_label': 'Nome del mazzo',
   'settings.pages_config': 'Configurazione delle pagine',
   'settings.active_mode': 'Modalità di studio attiva',
@@ -107,7 +109,8 @@ export const it: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Indice pagina (inizia da 0)',
   'settings.dialog.add_step.time': 'Tempo (ms)',
   'settings.dialog.add_step.threshold': 'Soglia (%)',
-  'settings.dialog.delete.confirm_text': 'Per confermare l\'eliminazione del mazzo "{name}", digita DELETE qui sotto:',
+  'settings.dialog.delete.confirm_text':
+    'Per confermare l\'eliminazione del mazzo "{name}", digita DELETE qui sotto:',
 
   // App Settings
   'app_settings.title': 'Impostazioni app',
@@ -121,10 +124,12 @@ export const it: Record<string, string> = {
   'app_settings.import_placeholder': 'Incolla il JSON esportato qui...',
   'app_settings.import_btn': 'Importa stato',
   'app_settings.reset_btn': 'Ripristina app',
-  'app_settings.reset_confirm': 'Sei sicuro di voler ripristinare l\'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.',
+  'app_settings.reset_confirm':
+    "Sei sicuro di voler ripristinare l'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.",
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colori dinamici del sistema',
-  'app_settings.dynamic_colors.desc': 'Estrai i colori di accento e di sistema direttamente dal dispositivo (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.desc':
+    'Estrai i colori di accento e di sistema direttamente dal dispositivo (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Attivato',
   'app_settings.dynamic_colors.disabled': 'Disattivato',
 

@@ -96,25 +96,31 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   const heatmapRef = useRef(heatmap);
   const userRef = useRef(user);
 
-  useEffect(() => { groupsRef.current = groups; }, [groups]);
-  useEffect(() => { studyModesRef.current = studyModes; }, [studyModes]);
-  useEffect(() => { heatmapRef.current = heatmap; }, [heatmap]);
-  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
+  useEffect(() => {
+    studyModesRef.current = studyModes;
+  }, [studyModes]);
+  useEffect(() => {
+    heatmapRef.current = heatmap;
+  }, [heatmap]);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Unified persistence function
-  const persist = useCallback((
-    g: FlashcardGroup[],
-    m: StudyMode[],
-    h: Record<string, number>,
-    uid: string | null
-  ) => {
-    if (uid) {
-      saveCloudData(uid, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
-      saveLocalData(uid, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
-    } else {
-      saveLocalData(undefined, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
-    }
-  }, []);
+  const persist = useCallback(
+    (g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>, uid: string | null) => {
+      if (uid) {
+        saveCloudData(uid, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
+        saveLocalData(uid, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
+      } else {
+        saveLocalData(undefined, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
+      }
+    },
+    [],
+  );
 
   // Sync auth state listener
   useEffect(() => {
@@ -150,7 +156,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
           if (cloudData) {
             const merged = mergeUserData(
               { groups: loadedGroups, studyModes: loadedModes, activityHeatmap: loadedHeatmap },
-              cloudData
+              cloudData,
             );
             loadedGroups = merged.groups;
             loadedModes = merged.studyModes;
@@ -165,10 +171,10 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
           }
           const defaultModes = createSeedModes();
           const customModes = loadedModes.filter(
-            (m) => m.id !== 'classic' && m.id !== 'listen-speak'
+            (m) => m.id !== 'classic' && m.id !== 'listen-speak',
           );
           loadedModes = [...defaultModes, ...customModes];
-          
+
           await setSeedVersion(SEED_VERSION);
         }
 
@@ -202,128 +208,167 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     };
   }, [user, persist]);
 
-  const addGroup = useCallback((name: string, languages: string[], pageNames: string[]) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    let newId = '';
-    setGroups((prev) => {
-      const { nextGroups, newGroupId } = addGroupAction(prev, name, languages, pageNames);
-      newId = newGroupId;
-      persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
-      return nextGroups;
-    });
-    return newId;
-  }, [persist]);
+  const addGroup = useCallback(
+    (name: string, languages: string[], pageNames: string[]) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      let newId = '';
+      setGroups((prev) => {
+        const { nextGroups, newGroupId } = addGroupAction(prev, name, languages, pageNames);
+        newId = newGroupId;
+        persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
+        return nextGroups;
+      });
+      return newId;
+    },
+    [persist],
+  );
 
-  const updateGroup = useCallback((group: FlashcardGroup) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = updateGroupAction(prev, group);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const updateGroup = useCallback(
+    (group: FlashcardGroup) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = updateGroupAction(prev, group);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const deleteGroup = useCallback((groupId: string) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = deleteGroupAction(prev, groupId);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const deleteGroup = useCallback(
+    (groupId: string) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = deleteGroupAction(prev, groupId);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const setVisiblePageCount = useCallback((groupId: string, count: number) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = setVisiblePageCountAction(prev, groupId, count);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const setVisiblePageCount = useCallback(
+    (groupId: string, count: number) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = setVisiblePageCountAction(prev, groupId, count);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const setStudyFilter = useCallback((groupId: string, filter: CardFilter) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = setStudyFilterAction(prev, groupId, filter);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const setStudyFilter = useCallback(
+    (groupId: string, filter: CardFilter) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = setStudyFilterAction(prev, groupId, filter);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const setActiveStudyMode = useCallback((groupId: string, modeId: string) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = setActiveStudyModeAction(prev, groupId, modeId);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const setActiveStudyMode = useCallback(
+    (groupId: string, modeId: string) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = setActiveStudyModeAction(prev, groupId, modeId);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const addFlashcard = useCallback((groupId: string, pages: string[]) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    let newId = '';
-    setGroups((prev) => {
-      const { nextGroups, newCardId } = addFlashcardAction(prev, groupId, pages);
-      newId = newCardId;
-      persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
-      return nextGroups;
-    });
-    return newId;
-  }, [persist]);
+  const addFlashcard = useCallback(
+    (groupId: string, pages: string[]) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      let newId = '';
+      setGroups((prev) => {
+        const { nextGroups, newCardId } = addFlashcardAction(prev, groupId, pages);
+        newId = newCardId;
+        persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
+        return nextGroups;
+      });
+      return newId;
+    },
+    [persist],
+  );
 
-  const updateFlashcard = useCallback((groupId: string, card: Flashcard) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = updateFlashcardAction(prev, groupId, card);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const updateFlashcard = useCallback(
+    (groupId: string, card: Flashcard) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = updateFlashcardAction(prev, groupId, card);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const deleteFlashcard = useCallback((groupId: string, cardId: string) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = deleteFlashcardAction(prev, groupId, cardId);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const deleteFlashcard = useCallback(
+    (groupId: string, cardId: string) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = deleteFlashcardAction(prev, groupId, cardId);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const addFlashcardsBulk = useCallback((groupId: string, cards: Flashcard[]) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setGroups((prev) => {
-      const next = addFlashcardsBulkAction(prev, groupId, cards);
-      persist(next, studyModesRef.current, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const addFlashcardsBulk = useCallback(
+    (groupId: string, cards: Flashcard[]) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setGroups((prev) => {
+        const next = addFlashcardsBulkAction(prev, groupId, cards);
+        persist(next, studyModesRef.current, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const addStudyMode = useCallback((mode: StudyMode) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setStudyModes((prev) => {
-      const next = addStudyModeAction(prev, mode);
-      persist(groupsRef.current, next, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const addStudyMode = useCallback(
+    (mode: StudyMode) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setStudyModes((prev) => {
+        const next = addStudyModeAction(prev, mode);
+        persist(groupsRef.current, next, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const updateStudyMode = useCallback((mode: StudyMode) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setStudyModes((prev) => {
-      const next = updateStudyModeAction(prev, mode);
-      persist(groupsRef.current, next, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const updateStudyMode = useCallback(
+    (mode: StudyMode) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setStudyModes((prev) => {
+        const next = updateStudyModeAction(prev, mode);
+        persist(groupsRef.current, next, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
-  const deleteStudyMode = useCallback((modeId: string) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    setStudyModes((prev) => {
-      const next = deleteStudyModeAction(prev, modeId);
-      persist(groupsRef.current, next, heatmapRef.current, currentUid);
-      return next;
-    });
-  }, [persist]);
+  const deleteStudyMode = useCallback(
+    (modeId: string) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      setStudyModes((prev) => {
+        const next = deleteStudyModeAction(prev, modeId);
+        persist(groupsRef.current, next, heatmapRef.current, currentUid);
+        return next;
+      });
+    },
+    [persist],
+  );
 
   const resetToDefault = useCallback(() => {
     const currentUid = userRef.current ? userRef.current.uid : null;
@@ -378,22 +423,25 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     );
   }, []);
 
-  const importState = useCallback((json: string) => {
-    const currentUid = userRef.current ? userRef.current.uid : null;
-    const data = JSON.parse(json);
-    
-    // Explicit validation that throws descriptive errors
-    validateBackupData(data);
-    
-    const g = data.groups;
-    const m = data.studyModes;
-    const h = data.activityHeatmap;
+  const importState = useCallback(
+    (json: string) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      const data = JSON.parse(json);
 
-    setGroups(g);
-    setStudyModes(m);
-    setHeatmap(h);
-    persist(g, m, h, currentUid);
-  }, [persist]);
+      // Explicit validation that throws descriptive errors
+      validateBackupData(data);
+
+      const g = data.groups;
+      const m = data.studyModes;
+      const h = data.activityHeatmap;
+
+      setGroups(g);
+      setStudyModes(m);
+      setHeatmap(h);
+      persist(g, m, h, currentUid);
+    },
+    [persist],
+  );
 
   return React.createElement(
     FlashcardStoreContext.Provider,

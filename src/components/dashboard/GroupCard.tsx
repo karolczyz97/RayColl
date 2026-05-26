@@ -33,7 +33,10 @@ export function GroupCard({ group, cardWidth, onModeChange }: Props) {
         <Text variant="titleMedium" style={styles.cardTitle}>
           {group.name}
         </Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
+        <Text
+          variant="bodyMedium"
+          style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+        >
           {t('dashboard.cards_count', { count: group.cards.length })}
         </Text>
         <SegmentedProgressBar stats={cardStats} />

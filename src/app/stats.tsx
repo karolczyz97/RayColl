@@ -14,10 +14,16 @@ import {
   getTotalDueCardsCount,
   getActiveDaysCount,
   getGlobalStats,
-  getLocalDateString
+  getLocalDateString,
 } from '../store/selectors/stats';
 
-function HeatmapGrid({ heatmap, t }: { heatmap: Record<string, number>; t: (key: string) => string }) {
+function HeatmapGrid({
+  heatmap,
+  t,
+}: {
+  heatmap: Record<string, number>;
+  t: (key: string) => string;
+}) {
   const theme = useTheme();
   const isDark = theme.dark;
 
@@ -43,9 +49,10 @@ function HeatmapGrid({ heatmap, t }: { heatmap: Record<string, number>; t: (key:
     if (count === 0) return isDark ? '#2d2d3a' : '#eaeaf0';
     const primary = theme.colors.primary;
     if (primary.startsWith('#')) {
-      const base = primary.length === 4
-        ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
-        : primary;
+      const base =
+        primary.length === 4
+          ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
+          : primary;
       if (count <= 2) return `${base}40`; // 25% opacity
       if (count <= 5) return `${base}80`; // 50% opacity
       if (count <= 10) return `${base}c0`; // 75% opacity
@@ -71,26 +78,25 @@ function HeatmapGrid({ heatmap, t }: { heatmap: Record<string, number>; t: (key:
         {dayLabels.map((label, i) => (
           <View key={i} style={styles.dayLabelCell}>
             {label ? (
-              <Text style={[styles.dayLabelText, { color: theme.colors.outline }]}>
-                {label}
-              </Text>
+              <Text style={[styles.dayLabelText, { color: theme.colors.outline }]}>{label}</Text>
             ) : null}
           </View>
         ))}
       </View>
 
       {/* Grid columns */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.gridScroll}
+      >
         <View style={styles.gridContainer}>
           {columnsData.map((col, colIdx) => (
             <View key={colIdx} style={styles.gridCol}>
               {col.map((cell, rowIdx) => (
                 <View
                   key={rowIdx}
-                  style={[
-                    styles.gridCell,
-                    { backgroundColor: colorFor(cell.count) },
-                  ]}
+                  style={[styles.gridCell, { backgroundColor: colorFor(cell.count) }]}
                 />
               ))}
             </View>
@@ -129,9 +135,19 @@ export default function StatsPage() {
 
   const statCards = [
     { icon: 'fire', label: t('stats.streak'), value: `${streak} 🔥`, color: '#ffa726' },
-    { icon: 'school', label: t('filter.mastered'), value: `${globalStats.mastered}/${totalCards}`, color: '#4caf50' },
+    {
+      icon: 'school',
+      label: t('filter.mastered'),
+      value: `${globalStats.mastered}/${totalCards}`,
+      color: '#4caf50',
+    },
     { icon: 'sync', label: t('stats.due_cards'), value: String(totalDue), color: '#f44336' },
-    { icon: 'calendar-month', label: t('stats.active_days'), value: String(activeDays), color: '#208AEF' },
+    {
+      icon: 'calendar-month',
+      label: t('stats.active_days'),
+      value: String(activeDays),
+      color: '#208AEF',
+    },
   ];
 
   return (
@@ -142,32 +158,41 @@ export default function StatsPage() {
         {/* Quick stats grid */}
         <View style={styles.statsGrid}>
           {statCards.map((m, i) => (
-            <Animated.View key={i} entering={FadeInDown.springify().delay(i * 80)} style={{ minWidth: width < 600 ? '47%' : '22%' }}>
-            <Card style={styles.statCard} mode="outlined">
-              <Card.Content style={styles.statCardContent}>
-                <AppIcon name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {m.label}
-                </Text>
-                <Text variant="titleLarge" style={{ fontWeight: 'bold', color: m.color }}>
-                  {m.value}
-                </Text>
-              </Card.Content>
-            </Card>
+            <Animated.View
+              key={i}
+              entering={FadeInDown.springify().delay(i * 80)}
+              style={{ minWidth: width < 600 ? '47%' : '22%' }}
+            >
+              <Card style={styles.statCard} mode="outlined">
+                <Card.Content style={styles.statCardContent}>
+                  <AppIcon
+                    name={m.icon as any}
+                    size={28}
+                    color={m.color}
+                    style={{ marginBottom: 4 }}
+                  />
+                  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    {m.label}
+                  </Text>
+                  <Text variant="titleLarge" style={{ fontWeight: 'bold', color: m.color }}>
+                    {m.value}
+                  </Text>
+                </Card.Content>
+              </Card>
             </Animated.View>
           ))}
         </View>
 
         {/* Global Progress */}
         <Animated.View entering={FadeInDown.springify().delay(350)}>
-        <Card mode="outlined" style={styles.sectionCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionCardTitle}>
-              {t('stats.progress_title')}
-            </Text>
-            <SegmentedProgressBar stats={globalStats} showLegend />
-          </Card.Content>
-        </Card>
+          <Card mode="outlined" style={styles.sectionCard}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionCardTitle}>
+                {t('stats.progress_title')}
+              </Text>
+              <SegmentedProgressBar stats={globalStats} showLegend />
+            </Card.Content>
+          </Card>
         </Animated.View>
 
         {/* Heatmap */}

@@ -1,7 +1,9 @@
 import type { SrsState } from '../types/models';
 
 // --- FSRS Parameters (v4.5 defaults) ---
-const W = [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61];
+const W = [
+  0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61,
+];
 const DECAY = -0.5;
 const FACTOR = 0.9 ** (1 / DECAY) - 1;
 
@@ -35,18 +37,26 @@ function nextDifficulty(d: number, rating: number): number {
 
 function retrievability(elapsedDays: number, stability: number): number {
   if (stability <= 0) return 0;
-  return (1 + FACTOR * elapsedDays / stability) ** DECAY;
+  return (1 + (FACTOR * elapsedDays) / stability) ** DECAY;
 }
 
 function nextRecallStability(d: number, s: number, r: number, rating: number): number {
   const hardPenalty = rating === 2 ? W[15] : 1;
   const easyBonus = rating === 4 ? W[16] : 1;
-  return s * (1 + Math.exp(W[8]) * (11 - d) * s ** (-W[9]) *
-    (Math.exp((1 - r) * W[10]) - 1) * hardPenalty * easyBonus);
+  return (
+    s *
+    (1 +
+      Math.exp(W[8]) *
+        (11 - d) *
+        s ** -W[9] *
+        (Math.exp((1 - r) * W[10]) - 1) *
+        hardPenalty *
+        easyBonus)
+  );
 }
 
 function nextForgetStability(d: number, s: number, r: number): number {
-  return W[11] * d ** (-W[12]) * ((s + 1) ** W[13] - 1) * Math.exp((1 - r) * W[14]);
+  return W[11] * d ** -W[12] * ((s + 1) ** W[13] - 1) * Math.exp((1 - r) * W[14]);
 }
 
 export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
@@ -91,11 +101,16 @@ export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
 // --- Text normalization & speech matching ---
 
 export function normalizeText(text: string): string {
-  return text.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function levenshteinDistance(a: string, b: string): number {
-  const m = a.length, n = b.length;
+  const m = a.length,
+    n = b.length;
   const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
   for (let i = 0; i <= m; i++) dp[i][0] = i;
   for (let j = 0; j <= n; j++) dp[0][j] = j;
@@ -116,15 +131,22 @@ function wordSimilarity(recognized: string, original: string): number {
   let matched = 0;
   const used = new Set<number>();
   for (const ow of origWords) {
-    let bestScore = 0, bestIdx = -1;
+    let bestScore = 0,
+      bestIdx = -1;
     for (let i = 0; i < recWords.length; i++) {
       if (used.has(i)) continue;
       const maxLen = Math.max(ow.length, recWords[i].length);
       const dist = levenshteinDistance(ow, recWords[i]);
-      const score = maxLen > 0 ? (1 - dist / maxLen) : 1;
-      if (score > bestScore) { bestScore = score; bestIdx = i; }
+      const score = maxLen > 0 ? 1 - dist / maxLen : 1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
     }
-    if (bestIdx >= 0 && bestScore > 0.5) { matched += bestScore; used.add(bestIdx); }
+    if (bestIdx >= 0 && bestScore > 0.5) {
+      matched += bestScore;
+      used.add(bestIdx);
+    }
   }
   return (matched / origWords.length) * 100;
 }

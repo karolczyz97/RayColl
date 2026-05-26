@@ -9,9 +9,7 @@ export function EmptyDashboardState() {
 
   return (
     <View style={styles.emptyContainer}>
-      <Text style={{ color: theme.colors.onSurfaceVariant }}>
-        {t('dashboard.no_groups')}
-      </Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>{t('dashboard.no_groups')}</Text>
     </View>
   );
 }

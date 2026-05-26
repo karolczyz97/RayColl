@@ -133,7 +133,10 @@ export default function BrowsePage() {
   }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <View style={styles.header}>
         <PageHeader title={activeGroup.name} onBack={handleBack} />
         <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>

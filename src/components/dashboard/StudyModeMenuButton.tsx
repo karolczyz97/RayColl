@@ -27,7 +27,9 @@ export function StudyModeMenuButton({ group, onStudy, onModeChange }: Props) {
     return translated === key ? defaultName : translated;
   };
 
-  const modeName = activeMode ? getModeName(activeMode.id, activeMode.name) : t('mode.classic.name');
+  const modeName = activeMode
+    ? getModeName(activeMode.id, activeMode.name)
+    : t('mode.classic.name');
 
   const btnBgColor = dueCount === 0 ? theme.colors.surfaceVariant : theme.colors.primary;
   const btnTextColor = dueCount === 0 ? theme.colors.onSurfaceVariant : theme.colors.onPrimary;
@@ -39,10 +41,7 @@ export function StudyModeMenuButton({ group, onStudy, onModeChange }: Props) {
         <Pressable
           disabled={dueCount === 0}
           onPress={onStudy}
-          style={({ pressed }) => [
-            styles.pillLeft,
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.pillLeft, pressed && styles.pressed]}
           accessibilityLabel={`Start study in ${modeName} mode`}
         >
           <AppIcon name="play" size={16} color={btnTextColor} style={{ marginRight: 6 }} />
@@ -61,10 +60,7 @@ export function StudyModeMenuButton({ group, onStudy, onModeChange }: Props) {
           anchor={
             <Pressable
               onPress={() => setVisible(true)}
-              style={({ pressed }) => [
-                styles.pillRight,
-                pressed && styles.pressed,
-              ]}
+              style={({ pressed }) => [styles.pillRight, pressed && styles.pressed]}
               accessibilityLabel="Select study mode"
             >
               <AppIcon name="chevron-down" size={16} color={btnTextColor} />

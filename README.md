@@ -10,7 +10,7 @@ RayColl is an advanced, cross-platform flashcard study application built with **
 - **STT (Speech-to-Text)**: Pronunciation check with customizable match thresholds for multiple languages.
 - **CSV/TSV Import**: Import whole decks of cards via pasted files with automatic separator, header language, and page count detection.
 - **Material You Theme**: Supports device dynamic accent colors on compatible Android 12+ systems.
-- **Local & Cloud Sync**: Local-first architecture (AsyncStorage & SQLite cache) with optional Firebase Firestore sync.
+- **Local & Cloud Sync**: Local-first architecture (AsyncStorage cache) with optional Firebase Firestore sync.
 
 ## Project Structure
 
@@ -113,4 +113,4 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
-If these environment variables are absent, the application automatically runs in **Local Mode** with localStorage cache enabled.
+If these environment variables are absent, the application automatically runs in **Local Mode** with AsyncStorage local cache enabled.

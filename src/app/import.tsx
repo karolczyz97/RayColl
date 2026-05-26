@@ -21,13 +21,7 @@ import { ImportSeparatorSelector } from '../components/import/ImportSeparatorSel
 import { ImportPageConfig } from '../components/import/ImportPageConfig';
 import { ImportPreviewTable } from '../components/import/ImportPreviewTable';
 
-const POPULAR_LANGS = [
-  { code: 'pl-PL', label: 'Polski' }, { code: 'en-US', label: 'Angielski' },
-  { code: 'es-ES', label: 'Hiszpański' }, { code: 'de-DE', label: 'Niemiecki' },
-  { code: 'fr-FR', label: 'Francuski' }, { code: 'it-IT', label: 'Włoski' },
-  { code: 'pt-PT', label: 'Portugalski' }, { code: 'ru-RU', label: 'Rosyjski' },
-  { code: 'ja-JP', label: 'Japoński' }, { code: 'zh-CN', label: 'Chiński' },
-];
+import { POPULAR_LANGS } from '../constants/languages';
 
 export default function ImportPage() {
   const { t } = useI18n();
@@ -112,7 +106,10 @@ export default function ImportPage() {
   }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <PageHeader title={t('import.title')} onBack={handleBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -140,11 +137,7 @@ export default function ImportPage() {
         />
 
         {/* Separator Select */}
-        <ImportSeparatorSelector
-          sepKey={sepKey}
-          setSepKey={setSepKey}
-          t={t}
-        />
+        <ImportSeparatorSelector sepKey={sepKey} setSepKey={setSepKey} t={t} />
 
         {/* Page counter & Columns configuration */}
         <ImportPageConfig
@@ -160,12 +153,7 @@ export default function ImportPage() {
 
         {/* Preview Section */}
         {rows.length > 0 && (
-          <ImportPreviewTable
-            rows={rows}
-            pageCount={pageCount}
-            pageNames={pageNames}
-            t={t}
-          />
+          <ImportPreviewTable rows={rows} pageCount={pageCount} pageNames={pageNames} t={t} />
         )}
 
         <Animated.View entering={FadeInDown.springify().delay(100)}>

@@ -101,7 +101,9 @@ export function PagesConfigSection({
                 onPress={() => setLangMenuIndex(i)}
                 accessibilityLabel={`Select language for page ${i + 1}`}
               >
-                {visiblePageLanguages[i] ? t(`lang.${visiblePageLanguages[i]}`) : t('import.lang_label')}
+                {visiblePageLanguages[i]
+                  ? t(`lang.${visiblePageLanguages[i]}`)
+                  : t('import.lang_label')}
               </Button>
             }
           >

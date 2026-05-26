@@ -52,7 +52,13 @@ export function detectPageCount(text: string, sep: string): number {
 
 export function detectLangFromHeader(header: string): string {
   const h = header.toLowerCase().trim();
-  if (h.includes('word') || h.includes('phrase') || h.includes('english') || h.includes('angiel') || h === 'en') {
+  if (
+    h.includes('word') ||
+    h.includes('phrase') ||
+    h.includes('english') ||
+    h.includes('angiel') ||
+    h === 'en'
+  ) {
     return 'en-US';
   }
   if (h.includes('słowo') || h.includes('fraz') || h.includes('polsk') || h === 'pl') {

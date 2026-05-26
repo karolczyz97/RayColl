@@ -8,7 +8,7 @@ export function createSeedGroups(): FlashcardGroup[] {
     pages,
     srsState: createNewSrsState(),
   });
-  
+
   return [
     {
       id: uid(),

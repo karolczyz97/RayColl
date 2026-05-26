@@ -90,7 +90,8 @@ export const en: Record<string, string> = {
   'settings.modes_title': 'Study Mode',
   'settings.steps_title': 'Step Sequence',
   'settings.delete_btn': 'Delete Deck',
-  'settings.delete_desc': 'Are you sure you want to delete this deck? This will remove all its cards permanently.',
+  'settings.delete_desc':
+    'Are you sure you want to delete this deck? This will remove all its cards permanently.',
   'settings.rename_label': 'Deck Name',
   'settings.pages_config': 'Pages Configuration',
   'settings.active_mode': 'Active Study Mode',
@@ -121,10 +122,12 @@ export const en: Record<string, string> = {
   'app_settings.import_placeholder': 'Paste exported JSON here...',
   'app_settings.import_btn': 'Import State',
   'app_settings.reset_btn': 'Reset App to Defaults',
-  'app_settings.reset_confirm': 'Are you sure you want to reset the app? All custom decks and statistics will be wiped.',
+  'app_settings.reset_confirm':
+    'Are you sure you want to reset the app? All custom decks and statistics will be wiped.',
   'app_settings.lang': 'Language',
   'app_settings.dynamic_colors.title': 'Dynamic system colors',
-  'app_settings.dynamic_colors.desc': 'Extract accent and system colors directly from the device (Android 12+ / Material You).',
+  'app_settings.dynamic_colors.desc':
+    'Extract accent and system colors directly from the device (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Enabled',
   'app_settings.dynamic_colors.disabled': 'Disabled',
 

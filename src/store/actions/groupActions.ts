@@ -28,10 +28,7 @@ export function updateGroupAction(
   return groups.map((g) => (g.id === group.id ? group : g));
 }
 
-export function deleteGroupAction(
-  groups: FlashcardGroup[],
-  groupId: string,
-): FlashcardGroup[] {
+export function deleteGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
   return groups.filter((g) => g.id !== groupId);
 }
 

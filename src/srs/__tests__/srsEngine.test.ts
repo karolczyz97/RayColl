@@ -27,7 +27,9 @@ console.log('Running RayColl Spaced Repetition Engine and Parser tests...');
 
 function assertEqual<T>(actual: T, expected: T, msg?: string) {
   if (actual !== expected) {
-    throw new Error(`Assertion failed: expected ${expected}, got ${actual}${msg ? ` - ${msg}` : ''}`);
+    throw new Error(
+      `Assertion failed: expected ${expected}, got ${actual}${msg ? ` - ${msg}` : ''}`,
+    );
   }
 }
 
@@ -41,7 +43,9 @@ function assertDeepEqual<T>(actual: T, expected: T, msg?: string) {
 
 function assertOk(value: any, msg?: string) {
   if (!value) {
-    throw new Error(`Assertion failed: expected truthy value, got ${value}${msg ? ` - ${msg}` : ''}`);
+    throw new Error(
+      `Assertion failed: expected truthy value, got ${value}${msg ? ` - ${msg}` : ''}`,
+    );
   }
 }
 
@@ -50,7 +54,9 @@ function assertThrows(fn: () => void, expectedMessagePart?: string) {
     fn();
   } catch (err: any) {
     if (expectedMessagePart && !err.message.includes(expectedMessagePart)) {
-      throw new Error(`Expected error containing "${expectedMessagePart}", but got: "${err.message}"`);
+      throw new Error(
+        `Expected error containing "${expectedMessagePart}", but got: "${err.message}"`,
+      );
     }
     return;
   }
@@ -74,7 +80,11 @@ assertEqual(getCardCategory(state), 'new', 'Category should be "new"');
 const learningState = { ...state, state: 1 };
 assertEqual(getCardCategory(learningState), 'learning', 'Category should be "learning"');
 const relearningState = { ...state, state: 3 };
-assertEqual(getCardCategory(relearningState), 'learning', 'Category should be "learning" for relearning state');
+assertEqual(
+  getCardCategory(relearningState),
+  'learning',
+  'Category should be "learning" for relearning state',
+);
 const reviewState = { ...state, state: 2, repetitions: 2 };
 assertEqual(getCardCategory(reviewState), 'review', 'Category should be "review"');
 const masteredState = { ...state, state: 2, repetitions: 3 };
@@ -82,7 +92,11 @@ assertEqual(getCardCategory(masteredState), 'mastered', 'Category should be "mas
 console.log('✓ getCardCategory tests passed');
 
 // Match speech tests
-assertEqual(matchSpeech('hello world', 'Hello World!'), 100, 'Exact match case/punctuation insensitive');
+assertEqual(
+  matchSpeech('hello world', 'Hello World!'),
+  100,
+  'Exact match case/punctuation insensitive',
+);
 assertEqual(matchSpeech('hello', 'hello world'), 50, 'Partial match');
 assertEqual(matchSpeech('', ''), 100, 'Empty match');
 console.log('✓ matchSpeech tests passed');
@@ -101,7 +115,6 @@ assertOk(firstReview.stability > 0, 'Stability should increase');
 assertOk(firstReview.difficulty > 0, 'Difficulty should be calculated');
 assertEqual(firstReview.state, 2, 'State should change to 2 (Review)');
 console.log('✓ calculateFsrs tests passed');
-
 
 // ==========================================
 // 2. CSV / TSV Import Parser Tests
@@ -136,16 +149,18 @@ assertEqual(detectLangFromHeader('italiano'), 'it-IT');
 console.log('✓ detectLangFromHeader tests passed');
 
 // parseCSV
-assertDeepEqual(
-  parseCSV('hello;world\nfoo;bar', 'semicolon', 2),
-  [['hello', 'world'], ['foo', 'bar']]
-);
+assertDeepEqual(parseCSV('hello;world\nfoo;bar', 'semicolon', 2), [
+  ['hello', 'world'],
+  ['foo', 'bar'],
+]);
 assertDeepEqual(
   parseCSV('hello;world\nfoo', 'semicolon', 2),
-  [['hello', 'world'], ['foo', '']] // pad with empty slot
+  [
+    ['hello', 'world'],
+    ['foo', ''],
+  ], // pad with empty slot
 );
 console.log('✓ parseCSV tests passed');
-
 
 // ==========================================
 // 3. Page Config & Selectors Tests
@@ -172,7 +187,7 @@ const mockCard: Flashcard = {
 assertDeepEqual(
   getVisiblePages(mockCard, mockGroup),
   ['hello', 'cześć'],
-  'Should slice card pages to activePageCount'
+  'Should slice card pages to activePageCount',
 );
 
 const shortCard: Flashcard = {
@@ -183,19 +198,19 @@ const shortCard: Flashcard = {
 assertDeepEqual(
   getVisiblePages(shortCard, mockGroup),
   ['hello', ''],
-  'Should pad visible pages to activePageCount if card lacks slots'
+  'Should pad visible pages to activePageCount if card lacks slots',
 );
 
 // getVisiblePageNames & Languages
 assertDeepEqual(
   getVisiblePageNames(mockGroup),
   ['Front', 'Back'],
-  'Should slice pageNames to activePageCount'
+  'Should slice pageNames to activePageCount',
 );
 assertDeepEqual(
   getVisiblePageLanguages(mockGroup),
   ['en-US', 'pl-PL'],
-  'Should slice pageLanguages to activePageCount'
+  'Should slice pageLanguages to activePageCount',
 );
 
 // ensureCardHasPageSlots
@@ -218,7 +233,6 @@ assertEqual(normalized.pageLanguages.length, 3);
 assertEqual(normalized.pageNames[1], 'Page 2');
 assertEqual(normalized.pageLanguages[1], 'en-US');
 console.log('✓ Page config and selector tests passed');
-
 
 // ==========================================
 // 4. Verification of Pages Model Bounds (No Data Loss)
@@ -246,14 +260,25 @@ assertDeepEqual(getVisiblePages(myCard, myGroup), ['Word', 'Tłumaczenie', 'Hidd
 
 // 2. Decrease activePageCount to 2
 const groupReduced = { ...myGroup, activePageCount: 2 };
-assertDeepEqual(getVisiblePages(myCard, groupReduced), ['Word', 'Tłumaczenie'], 'Visible pages should be sliced to 2');
-assertDeepEqual(myCard.pages, ['Word', 'Tłumaczenie', 'Hidden Example Note'], 'Physical card.pages array MUST NOT be truncated!');
+assertDeepEqual(
+  getVisiblePages(myCard, groupReduced),
+  ['Word', 'Tłumaczenie'],
+  'Visible pages should be sliced to 2',
+);
+assertDeepEqual(
+  myCard.pages,
+  ['Word', 'Tłumaczenie', 'Hidden Example Note'],
+  'Physical card.pages array MUST NOT be truncated!',
+);
 
 // 3. Increase activePageCount back to 3
 const groupRestored = { ...myGroup, activePageCount: 3 };
-assertDeepEqual(getVisiblePages(myCard, groupRestored), ['Word', 'Tłumaczenie', 'Hidden Example Note'], 'Hidden pages must be fully recovered!');
+assertDeepEqual(
+  getVisiblePages(myCard, groupRestored),
+  ['Word', 'Tłumaczenie', 'Hidden Example Note'],
+  'Hidden pages must be fully recovered!',
+);
 console.log('✓ Page reduction / enlargement data loss prevention tests passed');
-
 
 // ==========================================
 // 5. Card Filtering Tests
@@ -288,7 +313,6 @@ assertDeepEqual(filterCards(allCards, 'review'), [dueCard]);
 // filter = 'new+review'
 assertDeepEqual(filterCards(allCards, 'new+review'), [newCard, dueCard]);
 console.log('✓ Card filtering tests passed');
-
 
 // ==========================================
 // 6. Backup Validation Tests
@@ -328,12 +352,23 @@ assertOk(validateBackupData(validBackup));
 // Should throw on invalid backups
 assertThrows(() => validateBackupData(null), 'Backup data is not a valid JSON object.');
 assertThrows(() => validateBackupData({}), 'Backup data must contain a "groups" array.');
-assertThrows(() => validateBackupData({ groups: [] }), 'Backup data must contain a "studyModes" array.');
-assertThrows(() => validateBackupData({ groups: [], studyModes: [] }), 'Backup data must contain an "activityHeatmap" object.');
-assertThrows(() => validateBackupData({ groups: [null], studyModes: [], activityHeatmap: {} }), 'Each group must be a valid object.');
-assertThrows(() => validateBackupData({ groups: [{ id: 123 }], studyModes: [], activityHeatmap: {} }), 'Each group must have a string id.');
+assertThrows(
+  () => validateBackupData({ groups: [] }),
+  'Backup data must contain a "studyModes" array.',
+);
+assertThrows(
+  () => validateBackupData({ groups: [], studyModes: [] }),
+  'Backup data must contain an "activityHeatmap" object.',
+);
+assertThrows(
+  () => validateBackupData({ groups: [null], studyModes: [], activityHeatmap: {} }),
+  'Each group must be a valid object.',
+);
+assertThrows(
+  () => validateBackupData({ groups: [{ id: 123 }], studyModes: [], activityHeatmap: {} }),
+  'Each group must have a string id.',
+);
 console.log('✓ Backup validation tests passed');
-
 
 console.log('\n==========================================');
 console.log('All tests completed successfully! 🎉');

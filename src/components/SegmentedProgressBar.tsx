@@ -9,13 +9,16 @@ import { SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
 export interface CardStats {
   total: number;
   newCount: number;
-  learning: number;   // state 1 or 3
-  review: number;     // state 2, not yet mastered
-  mastered: number;   // state 2, repetitions >= 3
+  learning: number; // state 1 or 3
+  review: number; // state 2, not yet mastered
+  mastered: number; // state 2, repetitions >= 3
 }
 
 export function computeCardStats(cards: Flashcard[]): CardStats {
-  let newCount = 0, learning = 0, review = 0, mastered = 0;
+  let newCount = 0,
+    learning = 0,
+    review = 0,
+    mastered = 0;
   for (const c of cards) {
     const category = getCardCategory(c.srsState);
     if (category === 'new') newCount++;
@@ -48,7 +51,9 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
 
   if (total === 0) {
     return (
-      <View style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: colors.empty }]} />
+      <View
+        style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: colors.empty }]}
+      />
     );
   }
 
@@ -57,11 +62,13 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
     { count: review, color: colors.review, label: t('srs.badge.review') },
     { count: learning, color: colors.learning, label: t('srs.badge.learning') },
     { count: newCount, color: colors.new, label: t('srs.badge.new') },
-  ].filter(s => s.count > 0);
+  ].filter((s) => s.count > 0);
 
   return (
     <View style={styles.container}>
-      <View style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: colors.empty }]}>
+      <View
+        style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: colors.empty }]}
+      >
         {segments.map((seg, i) => {
           const widthPercent = (seg.count / total) * 100;
           return (
@@ -79,10 +86,30 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
       {showLegend && (
         <View style={styles.legendContainer}>
           {[
-            { color: colors.mastered, bg: SRS_CATEGORIES_TOKENS.mastered.bg, label: t('srs.badge.mastered'), count: mastered },
-            { color: colors.review, bg: SRS_CATEGORIES_TOKENS.review.bg, label: t('srs.badge.review'), count: review },
-            { color: colors.learning, bg: SRS_CATEGORIES_TOKENS.learning.bg, label: t('srs.badge.learning'), count: learning },
-            { color: colors.new, bg: SRS_CATEGORIES_TOKENS.new.bg, label: t('srs.badge.new'), count: newCount },
+            {
+              color: colors.mastered,
+              bg: SRS_CATEGORIES_TOKENS.mastered.bg,
+              label: t('srs.badge.mastered'),
+              count: mastered,
+            },
+            {
+              color: colors.review,
+              bg: SRS_CATEGORIES_TOKENS.review.bg,
+              label: t('srs.badge.review'),
+              count: review,
+            },
+            {
+              color: colors.learning,
+              bg: SRS_CATEGORIES_TOKENS.learning.bg,
+              label: t('srs.badge.learning'),
+              count: learning,
+            },
+            {
+              color: colors.new,
+              bg: SRS_CATEGORIES_TOKENS.new.bg,
+              label: t('srs.badge.new'),
+              count: newCount,
+            },
           ].map((item, i) => (
             <View key={i} style={[styles.legendItem, { backgroundColor: item.bg }]}>
               <View style={[styles.dot, { backgroundColor: item.color }]} />

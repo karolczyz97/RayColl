@@ -41,15 +41,15 @@ export async function loadLocalData(userId?: string): Promise<StoreData | null> 
   return null;
 }
 
-export async function saveLocalData(
-  userId: string | undefined,
-  data: StoreData,
-): Promise<void> {
+export async function saveLocalData(userId: string | undefined, data: StoreData): Promise<void> {
   try {
     if (userId) {
       await AsyncStorage.setItem(STORAGE_KEYS.USER_GROUPS(userId), JSON.stringify(data.groups));
       await AsyncStorage.setItem(STORAGE_KEYS.USER_MODES(userId), JSON.stringify(data.studyModes));
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_HEATMAP(userId), JSON.stringify(data.activityHeatmap));
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_HEATMAP(userId),
+        JSON.stringify(data.activityHeatmap),
+      );
     } else {
       await AsyncStorage.setItem(STORAGE_KEYS.LOCAL_GROUPS, JSON.stringify(data.groups));
       await AsyncStorage.setItem(STORAGE_KEYS.LOCAL_MODES, JSON.stringify(data.studyModes));

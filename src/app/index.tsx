@@ -9,11 +9,7 @@ import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { DashboardStats } from '../components/dashboard/DashboardStats';
 import { EmptyDashboardState } from '../components/dashboard/EmptyDashboardState';
 import { DeckGrid } from '../components/dashboard/DeckGrid';
-import {
-  computeStreak,
-  getTotalCardsCount,
-  getTotalDueCardsCount
-} from '../store/selectors/stats';
+import { computeStreak, getTotalCardsCount, getTotalDueCardsCount } from '../store/selectors/stats';
 
 export default function Dashboard() {
   const store = useFlashcardStore();
@@ -51,7 +47,10 @@ export default function Dashboard() {
   }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       {/* Top Header */}
       <DashboardHeader user={user} onLogin={handleLogin} onLogout={handleLogout} />
 
@@ -73,7 +72,7 @@ export default function Dashboard() {
           <DeckGrid
             groups={groups}
             onModeChange={(groupId, modeId) => {
-              const g = groups.find(x => x.id === groupId);
+              const g = groups.find((x) => x.id === groupId);
               if (g) store.updateGroup({ ...g, activeModeId: modeId });
             }}
           />

@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pl } from './locales/pl';
@@ -31,12 +38,20 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     async function loadSavedLanguage() {
       try {
         const saved = await AsyncStorage.getItem('td-lang');
-        if (saved && (saved === 'pl' || saved === 'en' || saved === 'de' || saved === 'es' || saved === 'it')) {
+        if (
+          saved &&
+          (saved === 'pl' || saved === 'en' || saved === 'de' || saved === 'es' || saved === 'it')
+        ) {
           setLanguageState(saved as LanguageCode);
         } else if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
           // Auto-detect browser language on web
           const browserLang = navigator.language.slice(0, 2);
-          if (browserLang === 'pl' || browserLang === 'de' || browserLang === 'es' || browserLang === 'it') {
+          if (
+            browserLang === 'pl' ||
+            browserLang === 'de' ||
+            browserLang === 'es' ||
+            browserLang === 'it'
+          ) {
             setLanguageState(browserLang as LanguageCode);
           }
         }
@@ -58,16 +73,19 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const t = useCallback((key: string, replacements?: Record<string, string | number>): string => {
-    const langDict = translations[language] || translations['en'];
-    let val = langDict[key] || translations['en'][key] || key;
-    if (replacements) {
-      Object.entries(replacements).forEach(([k, v]) => {
-        val = val.replace(`{${k}}`, String(v));
-      });
-    }
-    return val;
-  }, [language]);
+  const t = useCallback(
+    (key: string, replacements?: Record<string, string | number>): string => {
+      const langDict = translations[language] || translations['en'];
+      let val = langDict[key] || translations['en'][key] || key;
+      if (replacements) {
+        Object.entries(replacements).forEach(([k, v]) => {
+          val = val.replace(`{${k}}`, String(v));
+        });
+      }
+      return val;
+    },
+    [language],
+  );
 
   // Sync html lang attribute on web
   useEffect(() => {
@@ -79,6 +97,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return React.createElement(
     I18nContext.Provider,
     { value: { language, setLanguage, t, isI18nLoading } },
-    children
+    children,
   );
 }

@@ -53,7 +53,11 @@ export function DashboardHeader({ user, onLogin, onLogout }: Props) {
               >
                 <Avatar.Image
                   size={36}
-                  source={user.photoURL ? { uri: user.photoURL } : require('../../../assets/images/icon.png')}
+                  source={
+                    user.photoURL
+                      ? { uri: user.photoURL }
+                      : require('../../../assets/images/icon.png')
+                  }
                 />
               </Pressable>
             }
@@ -61,13 +65,20 @@ export function DashboardHeader({ user, onLogin, onLogout }: Props) {
             <View style={styles.userMenuContent}>
               <Avatar.Image
                 size={48}
-                source={user.photoURL ? { uri: user.photoURL } : require('../../../assets/images/icon.png')}
+                source={
+                  user.photoURL
+                    ? { uri: user.photoURL }
+                    : require('../../../assets/images/icon.png')
+                }
                 style={{ marginBottom: 8 }}
               />
               <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
                 {user.displayName || t('auth.local')}
               </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+              >
                 {user.email}
               </Text>
               <Button

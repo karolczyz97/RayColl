@@ -30,7 +30,7 @@ class TtsService {
     if (!this.synth) return null;
     const voices = this.synth.getVoices();
     const langPrefix = lang.split('-')[0].toLowerCase();
-    const matching = voices.filter(v => {
+    const matching = voices.filter((v) => {
       const vLang = v.lang.toLowerCase();
       return vLang === lang.toLowerCase() || vLang.startsWith(langPrefix);
     });
@@ -82,7 +82,7 @@ class TtsService {
     if (Platform.OS === 'web') {
       if (!this.synth) return [];
       const prefix = lang.split('-')[0].toLowerCase();
-      return this.synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(prefix));
+      return this.synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith(prefix));
     } else {
       // expo-speech doesn't provide synchronous listing on all platforms, return empty or mock
       return [];

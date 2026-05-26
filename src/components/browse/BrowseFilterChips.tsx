@@ -30,8 +30,13 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         selected={browseFilter === 'learning'}
         showSelectedCheck={false}
         onPress={() => setBrowseFilter('learning')}
-        style={[styles.chip, browseFilter === 'learning' && { backgroundColor: SRS_CATEGORIES_TOKENS.learning.bg }]}
-        selectedColor={browseFilter === 'learning' ? SRS_CATEGORIES_TOKENS.learning.color : undefined}
+        style={[
+          styles.chip,
+          browseFilter === 'learning' && { backgroundColor: SRS_CATEGORIES_TOKENS.learning.bg },
+        ]}
+        selectedColor={
+          browseFilter === 'learning' ? SRS_CATEGORIES_TOKENS.learning.color : undefined
+        }
         accessibilityLabel="Filter learning cards"
       >
         {`${t('filter.learning')} (${stats.learning})`}
@@ -40,7 +45,10 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         selected={browseFilter === 'review'}
         showSelectedCheck={false}
         onPress={() => setBrowseFilter('review')}
-        style={[styles.chip, browseFilter === 'review' && { backgroundColor: SRS_CATEGORIES_TOKENS.review.bg }]}
+        style={[
+          styles.chip,
+          browseFilter === 'review' && { backgroundColor: SRS_CATEGORIES_TOKENS.review.bg },
+        ]}
         selectedColor={browseFilter === 'review' ? SRS_CATEGORIES_TOKENS.review.color : undefined}
         accessibilityLabel="Filter review cards"
       >
@@ -50,7 +58,10 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         selected={browseFilter === 'new'}
         showSelectedCheck={false}
         onPress={() => setBrowseFilter('new')}
-        style={[styles.chip, browseFilter === 'new' && { backgroundColor: SRS_CATEGORIES_TOKENS.new.bg }]}
+        style={[
+          styles.chip,
+          browseFilter === 'new' && { backgroundColor: SRS_CATEGORIES_TOKENS.new.bg },
+        ]}
         selectedColor={browseFilter === 'new' ? SRS_CATEGORIES_TOKENS.new.color : undefined}
         accessibilityLabel="Filter new cards"
       >
@@ -60,8 +71,13 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         selected={browseFilter === 'mastered'}
         showSelectedCheck={false}
         onPress={() => setBrowseFilter('mastered')}
-        style={[styles.chip, browseFilter === 'mastered' && { backgroundColor: SRS_CATEGORIES_TOKENS.mastered.bg }]}
-        selectedColor={browseFilter === 'mastered' ? SRS_CATEGORIES_TOKENS.mastered.color : undefined}
+        style={[
+          styles.chip,
+          browseFilter === 'mastered' && { backgroundColor: SRS_CATEGORIES_TOKENS.mastered.bg },
+        ]}
+        selectedColor={
+          browseFilter === 'mastered' ? SRS_CATEGORIES_TOKENS.mastered.color : undefined
+        }
         accessibilityLabel="Filter mastered cards"
       >
         {`${t('filter.mastered')} (${stats.mastered})`}

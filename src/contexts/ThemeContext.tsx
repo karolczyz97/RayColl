@@ -37,10 +37,13 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     async function loadSettings() {
       try {
         const savedTheme = await AsyncStorage.getItem(STORAGE_KEYS.THEME_PREF);
-        if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')) {
+        if (
+          savedTheme &&
+          (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')
+        ) {
           setThemePrefState(savedTheme as ThemePref);
         }
-        
+
         const savedSysColors = await AsyncStorage.getItem(STORAGE_KEYS.USE_SYSTEM_COLORS);
         if (savedSysColors !== null) {
           setUseSystemColorsState(savedSysColors === 'true');

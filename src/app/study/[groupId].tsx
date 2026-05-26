@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Text, Button, ProgressBar, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -59,23 +59,12 @@ function CardPageSection({
   }));
 
   return (
-    <View
-      style={[
-        styles.pageRow,
-        hasBorderTop && styles.pageRowBorder,
-        { borderColor },
-      ]}
-    >
-      <Text style={[styles.pageLabel, { color: labelColor }]}>
-        {pageName}
-      </Text>
+    <View style={[styles.pageRow, hasBorderTop && styles.pageRowBorder, { borderColor }]}>
+      <Text style={[styles.pageLabel, { color: labelColor }]}>{pageName}</Text>
       <Animated.View style={animatedStyle}>
         <Text
           variant="headlineMedium"
-          style={[
-            styles.cardText,
-            { color: isPrimary ? primaryColor : textColor },
-          ]}
+          style={[styles.cardText, { color: isPrimary ? primaryColor : textColor }]}
         >
           {isRevealed ? pageContent || '—' : ' '}
         </Text>
@@ -92,17 +81,21 @@ export default function StudyPage() {
   const { width } = useWindowDimensions();
   const isNarrow = width < 480;
 
-  const getButtonText = useCallback((key: string) => {
-    if (isNarrow) return '';
-    const text = t(key);
-    return text.split(' (')[0];
-  }, [isNarrow, t]);
+  const getButtonText = useCallback(
+    (key: string) => {
+      if (isNarrow) return '';
+      const text = t(key);
+      return text.split(' (')[0];
+    },
+    [isNarrow, t],
+  );
 
   const group = store.groups.find((g) => g.id === groupId) || null;
 
   const activeGroup = group;
 
-  const mode = store.studyModes.find((m) => m.id === activeGroup?.activeModeId) || store.studyModes[0];
+  const mode =
+    store.studyModes.find((m) => m.id === activeGroup?.activeModeId) || store.studyModes[0];
   const steps = useMemo(() => mode?.steps || [], [mode]);
 
   const onCardReviewed = useCallback(
@@ -110,7 +103,7 @@ export default function StudyPage() {
       store.updateFlashcard(gId, card);
       store.recordActivity();
     },
-    [store]
+    [store],
   );
 
   const {
@@ -130,14 +123,21 @@ export default function StudyPage() {
   const currentCard = dueCards[s.currentCardIndex] || null;
 
   // Start session on mount/group load
+  const startedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (activeGroup) {
-      const due = store.getDueCards(activeGroup.id);
+    if (store.isLoading) return;
+    if (startedRef.current === groupId) return;
+
+    const currentGroup = store.groups.find((g) => g.id === groupId);
+    if (currentGroup) {
+      const due = store.getDueCards(currentGroup.id);
       if (due.length > 0) {
         startSession(due);
+        startedRef.current = groupId;
       }
     }
-  }, [groupId, store.isLoading, activeGroup, startSession, store]);
+  }, [groupId, store.isLoading, startSession, store]);
 
   const handleBack = () => {
     stopSession();
@@ -149,10 +149,10 @@ export default function StudyPage() {
     s.sttMatchPercent >= 85
       ? '#4caf50'
       : s.sttMatchPercent >= 60
-      ? '#2196f3'
-      : s.sttMatchPercent >= 40
-      ? '#ff9800'
-      : '#f44336';
+        ? '#2196f3'
+        : s.sttMatchPercent >= 40
+          ? '#ff9800'
+          : '#f44336';
 
   const hasTts = useMemo(() => steps.some((st) => st.type === 'speak_page'), [steps]);
   const hasStt = useMemo(() => steps.some((st) => st.type === 'listen_and_branch'), [steps]);
@@ -171,7 +171,7 @@ export default function StudyPage() {
       ttsScale.value = withRepeat(
         withSequence(withSpring(1.25, { damping: 3 }), withSpring(1, { damping: 3 })),
         -1,
-        true
+        true,
       );
     } else {
       ttsScale.value = withSpring(1);
@@ -188,7 +188,7 @@ export default function StudyPage() {
       sttScale.value = withRepeat(
         withSequence(withSpring(1.25, { damping: 3 }), withSpring(1, { damping: 3 })),
         -1,
-        true
+        true,
       );
     } else {
       sttScale.value = withSpring(1);
@@ -234,7 +234,10 @@ export default function StudyPage() {
           </Text>
         </Animated.View>
         <Animated.View entering={FadeInUp.springify().delay(250)}>
-          <Text variant="bodyLarge" style={[styles.finishedDesc, { color: theme.colors.onSurfaceVariant }]}>
+          <Text
+            variant="bodyLarge"
+            style={[styles.finishedDesc, { color: theme.colors.onSurfaceVariant }]}
+          >
             {dueCards.length === 0 ? t('study.no_due') : t('study.finished_desc')}
           </Text>
         </Animated.View>
@@ -248,7 +251,12 @@ export default function StudyPage() {
 
         <Animated.View entering={FadeInUp.springify().delay(450)} style={styles.actionButtons}>
           {failedCount > 0 && (
-            <Button mode="contained" buttonColor={theme.colors.error} onPress={restartFailed} style={styles.actionBtn}>
+            <Button
+              mode="contained"
+              buttonColor={theme.colors.error}
+              onPress={restartFailed}
+              style={styles.actionBtn}
+            >
               {t('study.restart_failed')} ({failedCount})
             </Button>
           )}
@@ -269,7 +277,11 @@ export default function StudyPage() {
       <View style={styles.header}>
         <PageHeader title={activeGroup.name} onBack={handleBack} />
         <View style={styles.progressBarWrapper}>
-          <ProgressBar progress={progressPct} color={theme.colors.primary} style={styles.progressBar} />
+          <ProgressBar
+            progress={progressPct}
+            color={theme.colors.primary}
+            style={styles.progressBar}
+          />
         </View>
         <Text style={[styles.progressCounter, { color: theme.colors.onSurfaceVariant }]}>
           {s.currentCardIndex + 1}/{dueCards.length}
@@ -298,7 +310,7 @@ export default function StudyPage() {
               if (!currentCard) return null;
               const activePageCount = activeGroup.activePageCount ?? activeGroup.pageNames.length;
               const visiblePages = getVisiblePages(currentCard, activeGroup);
-              
+
               return activeGroup.pageNames.slice(0, activePageCount).map((pageName, pi) => {
                 const isRevealed = pi === 0 || s.revealedPages.includes(pi) || s.showRatingButtons;
                 return (
@@ -321,7 +333,10 @@ export default function StudyPage() {
             {s.waitingForTap && (
               <View style={styles.tapIndicator}>
                 <AppIcon name="gesture-tap" size={20} color={theme.colors.outline} />
-                <Text variant="labelMedium" style={{ color: theme.colors.outline, fontWeight: 'bold' }}>
+                <Text
+                  variant="labelMedium"
+                  style={{ color: theme.colors.outline, fontWeight: 'bold' }}
+                >
                   {t('study.tap_to_reveal')}
                 </Text>
               </View>
@@ -340,7 +355,9 @@ export default function StudyPage() {
               buttonColor="#ffdad6"
               style={styles.rateBtn}
               compact={isNarrow}
-              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
+              contentStyle={
+                isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}
+              }
               icon={({ size, color }) => <AppIcon name="replay" size={size} color={color} />}
               onPress={() => handleRating(1)}
             >
@@ -352,8 +369,12 @@ export default function StudyPage() {
               buttonColor="#ffddb3"
               style={styles.rateBtn}
               compact={isNarrow}
-              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <AppIcon name="emoticon-sad-outline" size={size} color={color} />}
+              contentStyle={
+                isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}
+              }
+              icon={({ size, color }) => (
+                <AppIcon name="emoticon-sad-outline" size={size} color={color} />
+              )}
               onPress={() => handleRating(2)}
             >
               {getButtonText('study.rating.2')}
@@ -362,8 +383,12 @@ export default function StudyPage() {
               mode="contained"
               style={styles.rateBtn}
               compact={isNarrow}
-              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <AppIcon name="emoticon-happy-outline" size={size} color={color} />}
+              contentStyle={
+                isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}
+              }
+              icon={({ size, color }) => (
+                <AppIcon name="emoticon-happy-outline" size={size} color={color} />
+              )}
               onPress={() => handleRating(3)}
             >
               {getButtonText('study.rating.3')}
@@ -374,8 +399,12 @@ export default function StudyPage() {
               textColor="#ffffff"
               style={styles.rateBtn}
               compact={isNarrow}
-              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
-              icon={({ size, color }) => <AppIcon name="emoticon-excited-outline" size={size} color={color} />}
+              contentStyle={
+                isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}
+              }
+              icon={({ size, color }) => (
+                <AppIcon name="emoticon-excited-outline" size={size} color={color} />
+              )}
               onPress={() => handleRating(4)}
             >
               {getButtonText('study.rating.4')}
@@ -386,15 +415,23 @@ export default function StudyPage() {
             {/* Recognized voice display */}
             <View style={styles.sttTextWrapper}>
               {s.sttResultText ? (
-                <View style={[styles.sttResultBox, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <View
+                  style={[styles.sttResultBox, { backgroundColor: theme.colors.surfaceVariant }]}
+                >
                   <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
                     {t('study.recognized')}
                   </Text>
-                  <Text variant="bodyLarge" style={{ fontWeight: 'bold', color: theme.colors.onSurface }}>
+                  <Text
+                    variant="bodyLarge"
+                    style={{ fontWeight: 'bold', color: theme.colors.onSurface }}
+                  >
                     {s.sttResultText}
                   </Text>
                   {s.sttMatchPercent > 0 && (
-                    <Text variant="labelSmall" style={{ color: matchColor, fontWeight: 'bold', marginTop: 4 }}>
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: matchColor, fontWeight: 'bold', marginTop: 4 }}
+                    >
                       {t('study.match_percent', { percent: s.sttMatchPercent })}
                     </Text>
                   )}

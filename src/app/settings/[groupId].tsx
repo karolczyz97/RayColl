@@ -10,6 +10,8 @@ import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { CardFilter } from '../../constants/cardFilters';
 import { getVisiblePageNames, getVisiblePageLanguages } from '../../store/selectors/pages';
+import { POPULAR_LANGS } from '../../constants/languages';
+import { uid } from '../../utils/id';
 
 import { DeckNameSection } from '../../components/settings/DeckNameSection';
 import { PagesConfigSection } from '../../components/settings/PagesConfigSection';
@@ -19,25 +21,6 @@ import { StudyModeStepsEditor } from '../../components/settings/StudyModeStepsEd
 import { CreateStudyModeSection } from '../../components/settings/CreateStudyModeSection';
 import { DeleteDeckDialog } from '../../components/settings/DeleteDeckDialog';
 import { AddStepDialog } from '../../components/settings/AddStepDialog';
-
-function uid(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-const POPULAR_LANGS = [
-  { code: 'pl-PL', label: 'Polski' }, { code: 'en-US', label: 'Angielski' },
-  { code: 'es-ES', label: 'Hiszpański' }, { code: 'de-DE', label: 'Niemiecki' },
-  { code: 'fr-FR', label: 'Francuski' }, { code: 'it-IT', label: 'Włoski' },
-  { code: 'pt-PT', label: 'Portugalski' }, { code: 'ru-RU', label: 'Rosyjski' },
-  { code: 'ja-JP', label: 'Japoński' }, { code: 'zh-CN', label: 'Chiński' },
-];
 
 const DEFAULT_MODE_IDS = ['classic', 'listen-speak'];
 
@@ -52,7 +35,10 @@ function stepSummary(step: ModeStep, t: (key: string, replacements?: any) => str
     case 'wait':
       return t('step.wait', { ms: step.ms });
     case 'listen_and_branch':
-      return t('step.listen_and_branch', { index: step.pageIndex + 1, threshold: step.successThreshold });
+      return t('step.listen_and_branch', {
+        index: step.pageIndex + 1,
+        threshold: step.successThreshold,
+      });
   }
 }
 
@@ -245,7 +231,10 @@ export default function SettingsPage() {
   };
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <PageHeader
         title={t('settings.title', { name: activeGroup.name })}
         onBack={() => router.back()}
