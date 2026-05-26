@@ -4,7 +4,7 @@ import { useTheme } from 'react-native-paper';
 import type { Flashcard } from '../types/models';
 import { getCardCategory } from '../srs/srsEngine';
 import { useI18n } from '../i18n';
-import { SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
+import { getReviewStatusColor } from '../theme/semanticColors';
 
 export interface CardStats {
   total: number;
@@ -40,12 +40,17 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
   const { t } = useI18n();
   const theme = useTheme();
 
+  const masteredColors = getReviewStatusColor(theme, 'mastered');
+  const reviewColors = getReviewStatusColor(theme, 'review');
+  const learningColors = getReviewStatusColor(theme, 'learning');
+  const newColors = getReviewStatusColor(theme, 'new');
+
   // MD3 Expressive tonal color tokens
   const colors = {
-    mastered: SRS_CATEGORIES_TOKENS.mastered.color,
-    review: SRS_CATEGORIES_TOKENS.review.color,
-    learning: SRS_CATEGORIES_TOKENS.learning.color,
-    new: SRS_CATEGORIES_TOKENS.new.color,
+    mastered: masteredColors.color,
+    review: reviewColors.color,
+    learning: learningColors.color,
+    new: newColors.color,
     empty: theme.colors.outlineVariant || '#e0e0e0',
   };
 
@@ -88,25 +93,25 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
           {[
             {
               color: colors.mastered,
-              bg: SRS_CATEGORIES_TOKENS.mastered.bg,
+              bg: masteredColors.bg,
               label: t('srs.badge.mastered'),
               count: mastered,
             },
             {
               color: colors.review,
-              bg: SRS_CATEGORIES_TOKENS.review.bg,
+              bg: reviewColors.bg,
               label: t('srs.badge.review'),
               count: review,
             },
             {
               color: colors.learning,
-              bg: SRS_CATEGORIES_TOKENS.learning.bg,
+              bg: learningColors.bg,
               label: t('srs.badge.learning'),
               count: learning,
             },
             {
               color: colors.new,
-              bg: SRS_CATEGORIES_TOKENS.new.bg,
+              bg: newColors.bg,
               label: t('srs.badge.new'),
               count: newCount,
             },

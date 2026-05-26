@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, Chip, IconButton, useTheme, Switch } from 'react-native-paper';
+import { Card, Text, Chip, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '../../types/models';
 import { getCardCategory } from '../../srs/srsEngine';
 import { AppIcon } from '../../components/AppIcon';
@@ -11,6 +11,7 @@ import {
 } from '../../theme/srsTokens';
 import { EditFlashcardForm } from './EditFlashcardForm';
 import { getVisiblePages, getVisiblePageNames } from '../../store/selectors/pages';
+import { getReviewStatusColor } from '../../theme/semanticColors';
 
 interface Props {
   card: Flashcard;
@@ -27,14 +28,16 @@ interface Props {
 
 function srsChip(
   state: SrsState,
+  theme: MD3Theme,
   t: (key: string) => string,
 ): { text: string; color: string; bg: string } {
   const category = getCardCategory(state);
   const token = SRS_CATEGORIES_TOKENS[category];
+  const srsColors = getReviewStatusColor(theme, category);
   return {
     text: t(token.badgeTextKey),
-    color: token.color,
-    bg: token.bg,
+    color: srsColors.color,
+    bg: srsColors.bg,
   };
 }
 
@@ -80,7 +83,7 @@ export function FlashcardListItem({
     );
   }
 
-  const srs = srsChip(card.srsState, t);
+  const srs = srsChip(card.srsState, theme, t);
   const mastery = getMasteryPercent(card.srsState);
   const reviewIn = daysUntilReview(card.srsState, t);
 

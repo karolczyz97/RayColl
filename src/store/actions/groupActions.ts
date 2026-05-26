@@ -1,6 +1,7 @@
-import { FlashcardGroup } from '../../types/models';
+import { FlashcardGroup, Flashcard } from '../../types/models';
 import { CardFilter } from '../../constants/cardFilters';
 import { uid } from '../../utils/id';
+import { createNewSrsState } from '../../srs/srsEngine';
 
 export function addGroupAction(
   groups: FlashcardGroup[],
@@ -70,4 +71,30 @@ export function setActiveStudyModeAction(
   modeId: string,
 ): FlashcardGroup[] {
   return groups.map((g) => (g.id === groupId ? { ...g, activeModeId: modeId } : g));
+}
+
+export function addGroupWithCardsAction(
+  groups: FlashcardGroup[],
+  name: string,
+  languages: string[],
+  pageNames: string[],
+  cardsData: Omit<Flashcard, 'id' | 'srsState'>[],
+): { nextGroups: FlashcardGroup[]; newGroupId: string } {
+  const newGroupId = uid();
+  const cards: Flashcard[] = cardsData.map((c) => ({
+    id: uid(),
+    pages: c.pages,
+    srsState: createNewSrsState(),
+  }));
+
+  const g: FlashcardGroup = {
+    id: newGroupId,
+    name: name.trim(),
+    cards,
+    activeModeId: 'classic',
+    pageLanguages: languages,
+    pageNames,
+    activePageCount: pageNames.length,
+  };
+  return { nextGroups: [...groups, g], newGroupId };
 }

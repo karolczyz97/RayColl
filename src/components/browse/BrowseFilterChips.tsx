@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
-import { Chip } from 'react-native-paper';
-import { SRS_CATEGORIES_TOKENS } from '../../theme/srsTokens';
+import { useTheme, Chip } from 'react-native-paper';
+import { getReviewStatusColor } from '../../theme/semanticColors';
 
 interface Props {
   browseFilter: 'all' | 'learning' | 'review' | 'new' | 'mastered';
@@ -11,6 +11,13 @@ interface Props {
 }
 
 export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: Props) {
+  const theme = useTheme();
+
+  const newColors = getReviewStatusColor(theme, 'new');
+  const learningColors = getReviewStatusColor(theme, 'learning');
+  const reviewColors = getReviewStatusColor(theme, 'review');
+  const masteredColors = getReviewStatusColor(theme, 'mastered');
+
   return (
     <ScrollView
       horizontal
@@ -32,10 +39,10 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         onPress={() => setBrowseFilter('learning')}
         style={[
           styles.chip,
-          browseFilter === 'learning' && { backgroundColor: SRS_CATEGORIES_TOKENS.learning.bg },
+          browseFilter === 'learning' && { backgroundColor: learningColors.bg },
         ]}
         selectedColor={
-          browseFilter === 'learning' ? SRS_CATEGORIES_TOKENS.learning.color : undefined
+          browseFilter === 'learning' ? learningColors.color : undefined
         }
         accessibilityLabel="Filter learning cards"
       >
@@ -47,9 +54,9 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         onPress={() => setBrowseFilter('review')}
         style={[
           styles.chip,
-          browseFilter === 'review' && { backgroundColor: SRS_CATEGORIES_TOKENS.review.bg },
+          browseFilter === 'review' && { backgroundColor: reviewColors.bg },
         ]}
-        selectedColor={browseFilter === 'review' ? SRS_CATEGORIES_TOKENS.review.color : undefined}
+        selectedColor={browseFilter === 'review' ? reviewColors.color : undefined}
         accessibilityLabel="Filter review cards"
       >
         {`${t('filter.review')} (${stats.review})`}
@@ -60,9 +67,9 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         onPress={() => setBrowseFilter('new')}
         style={[
           styles.chip,
-          browseFilter === 'new' && { backgroundColor: SRS_CATEGORIES_TOKENS.new.bg },
+          browseFilter === 'new' && { backgroundColor: newColors.bg },
         ]}
-        selectedColor={browseFilter === 'new' ? SRS_CATEGORIES_TOKENS.new.color : undefined}
+        selectedColor={browseFilter === 'new' ? newColors.color : undefined}
         accessibilityLabel="Filter new cards"
       >
         {`${t('filter.new')} (${stats.newCount})`}
@@ -73,10 +80,10 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         onPress={() => setBrowseFilter('mastered')}
         style={[
           styles.chip,
-          browseFilter === 'mastered' && { backgroundColor: SRS_CATEGORIES_TOKENS.mastered.bg },
+          browseFilter === 'mastered' && { backgroundColor: masteredColors.bg },
         ]}
         selectedColor={
-          browseFilter === 'mastered' ? SRS_CATEGORIES_TOKENS.mastered.color : undefined
+          browseFilter === 'mastered' ? masteredColors.color : undefined
         }
         accessibilityLabel="Filter mastered cards"
       >

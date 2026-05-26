@@ -12,6 +12,7 @@ import {
   setVisiblePageCountAction,
   setStudyFilterAction,
   setActiveStudyModeAction,
+  addGroupWithCardsAction,
 } from './actions/groupActions';
 
 import {
@@ -49,9 +50,19 @@ export interface FlashcardStore {
   activityHeatmap: Record<string, number>;
   isLoading: boolean;
   user: User | null;
+  syncStatus: 'idle' | 'loading' | 'saving' | 'syncing' | 'error';
+  lastSyncError: string | null;
+  lastPersistenceError: string | null;
+  lastStoreError: string | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   addGroup: (name: string, languages: string[], pageNames: string[]) => string;
+  addGroupWithCards: (
+    name: string,
+    languages: string[],
+    pageNames: string[],
+    cards: Omit<Flashcard, 'id' | 'srsState'>[],
+  ) => string;
   updateGroup: (group: FlashcardGroup) => void;
   deleteGroup: (groupId: string) => void;
   addFlashcard: (groupId: string, pages: string[]) => string;
@@ -90,6 +101,12 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Sync status and error state
+  const [syncStatus, setSyncStatus] = useState<FlashcardStore['syncStatus']>('idle');
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [lastPersistenceError, setLastPersistenceError] = useState<string | null>(null);
+  const [lastStoreError, setLastStoreError] = useState<string | null>(null);
+
   // Keep references to latest states
   const groupsRef = useRef(groups);
   const studyModesRef = useRef(studyModes);
@@ -112,12 +129,34 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   // Unified persistence function
   const persist = useCallback(
     (g: FlashcardGroup[], m: StudyMode[], h: Record<string, number>, uid: string | null) => {
-      if (uid) {
-        saveCloudData(uid, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
-        saveLocalData(uid, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
-      } else {
-        saveLocalData(undefined, { groups: g, studyModes: m, activityHeatmap: h }).catch(() => {});
-      }
+      setSyncStatus('saving');
+      setLastPersistenceError(null);
+      setLastSyncError(null);
+
+      const payload = { groups: g, studyModes: m, activityHeatmap: h };
+
+      saveLocalData(uid || undefined, payload)
+        .then(() => {
+          if (uid) {
+            setSyncStatus('syncing');
+            return saveCloudData(uid, payload)
+              .then(() => {
+                setSyncStatus('idle');
+              })
+              .catch((err) => {
+                console.error('Cloud sync failed:', err);
+                setLastSyncError(err instanceof Error ? err.message : String(err));
+                setSyncStatus('error');
+              });
+          } else {
+            setSyncStatus('idle');
+          }
+        })
+        .catch((err) => {
+          console.error('Local persistence failed:', err);
+          setLastPersistenceError(err instanceof Error ? err.message : String(err));
+          setSyncStatus('error');
+        });
     },
     [],
   );
@@ -194,6 +233,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
         }
       } catch (err) {
         console.error('Failed to initialize flashcard store:', err);
+        setLastStoreError(err instanceof Error ? err.message : String(err));
       } finally {
         if (active) {
           setIsLoading(false);
@@ -214,6 +254,32 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       let newId = '';
       setGroups((prev) => {
         const { nextGroups, newGroupId } = addGroupAction(prev, name, languages, pageNames);
+        newId = newGroupId;
+        persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
+        return nextGroups;
+      });
+      return newId;
+    },
+    [persist],
+  );
+
+  const addGroupWithCards = useCallback(
+    (
+      name: string,
+      languages: string[],
+      pageNames: string[],
+      cards: Omit<Flashcard, 'id' | 'srsState'>[],
+    ) => {
+      const currentUid = userRef.current ? userRef.current.uid : null;
+      let newId = '';
+      setGroups((prev) => {
+        const { nextGroups, newGroupId } = addGroupWithCardsAction(
+          prev,
+          name,
+          languages,
+          pageNames,
+          cards,
+        );
         newId = newGroupId;
         persist(nextGroups, studyModesRef.current, heatmapRef.current, currentUid);
         return nextGroups;
@@ -420,7 +486,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       },
       null,
       2,
-    );
+      );
   }, []);
 
   const importState = useCallback(
@@ -452,9 +518,14 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
         activityHeatmap: heatmap,
         isLoading,
         user,
+        syncStatus,
+        lastSyncError,
+        lastPersistenceError,
+        lastStoreError,
         signIn,
         signOut,
         addGroup,
+        addGroupWithCards,
         updateGroup,
         deleteGroup,
         addFlashcard,

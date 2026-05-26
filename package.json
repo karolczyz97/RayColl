@@ -45,6 +45,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "test": "npx ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" src/srs/__tests__/srsEngine.test.ts",
     "postinstall": "node scripts/patch-voice-gradle.js"
   },
   "private": true

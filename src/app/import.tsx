@@ -14,8 +14,6 @@ import {
   parseCSV,
   detectLangFromHeader,
 } from '../import/importParser';
-import { uid } from '../utils/id';
-import { createNewSrsState } from '../srs/srsEngine';
 
 import { ImportSeparatorSelector } from '../components/import/ImportSeparatorSelector';
 import { ImportPageConfig } from '../components/import/ImportPageConfig';
@@ -80,16 +78,10 @@ export default function ImportPage() {
     if (!name.trim()) return;
     const langs = pageLangs.slice(0, pageCount);
     const names = pageNames.slice(0, pageCount);
-    const groupId = store.addGroup(name.trim(), langs, names);
-
-    // Bulk load cards
-    const newCards = rows.map((row) => ({
-      id: uid(),
+    const cardsData = rows.map((row) => ({
       pages: row,
-      srsState: createNewSrsState(),
     }));
-    store.addFlashcardsBulk(groupId, newCards);
-
+    store.addGroupWithCards(name.trim(), langs, names, cardsData);
     router.back();
   };
 
