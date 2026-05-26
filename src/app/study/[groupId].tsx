@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Text, Button, ProgressBar, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import Animated, {
@@ -89,6 +89,14 @@ export default function StudyPage() {
   const { t } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 480;
+
+  const getButtonText = useCallback((key: string) => {
+    if (isNarrow) return '';
+    const text = t(key);
+    return text.split(' (')[0];
+  }, [isNarrow, t]);
 
   const group = store.groups.find((g) => g.id === groupId) || null;
 
@@ -333,30 +341,38 @@ export default function StudyPage() {
               textColor="#d32f2f"
               buttonColor="#ffdad6"
               style={styles.rateBtn}
+              icon={({ size, color }) => <MaterialDesignIcons name="replay" size={size} color={color} />}
               onPress={() => handleRating(1)}
             >
-              {t('study.rating.1')}
+              {getButtonText('study.rating.1')}
             </Button>
             <Button
               mode="contained-tonal"
               textColor="#b86800"
               buttonColor="#ffddb3"
               style={styles.rateBtn}
+              icon={({ size, color }) => <MaterialDesignIcons name="emoticon-sad-outline" size={size} color={color} />}
               onPress={() => handleRating(2)}
             >
-              {t('study.rating.2')}
+              {getButtonText('study.rating.2')}
             </Button>
-            <Button mode="contained" style={styles.rateBtn} onPress={() => handleRating(3)}>
-              {t('study.rating.3')}
+            <Button
+              mode="contained"
+              style={styles.rateBtn}
+              icon={({ size, color }) => <MaterialDesignIcons name="emoticon-happy-outline" size={size} color={color} />}
+              onPress={() => handleRating(3)}
+            >
+              {getButtonText('study.rating.3')}
             </Button>
             <Button
               mode="contained"
               buttonColor="#006c4c"
               textColor="#ffffff"
               style={styles.rateBtn}
+              icon={({ size, color }) => <MaterialDesignIcons name="emoticon-excited-outline" size={size} color={color} />}
               onPress={() => handleRating(4)}
             >
-              {t('study.rating.4')}
+              {getButtonText('study.rating.4')}
             </Button>
           </Animated.View>
         ) : hasTts || hasStt ? (

@@ -5,6 +5,7 @@ import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import { I18nProvider, useI18n } from '../i18n';
 import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
 
@@ -71,6 +72,11 @@ function InnerLayout() {
   const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
 
+  const [fontsLoaded] = useFonts({
+    'Material Design Icons': require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
+    MaterialDesignIcons: require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
+  });
+
   const theme = React.useMemo(() => {
     if (useSystemColors) {
       const baseTheme = isDark ? MD3DarkTheme : MD3LightTheme;
@@ -87,16 +93,15 @@ function InnerLayout() {
     }
   }, [isDark, useSystemColors, materialColors]);
 
-  // Hide the splash screen only after settings and translations are loaded.
-  // Icon fonts are now auto-loaded by @react-native-vector-icons.
+  // Hide the splash screen only after settings, translations, and fonts are loaded.
   React.useEffect(() => {
-    const isReady = !isI18nLoading && !isThemeLoading;
+    const isReady = !isI18nLoading && !isThemeLoading && fontsLoaded;
     if (isReady) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isI18nLoading, isThemeLoading]);
+  }, [isI18nLoading, isThemeLoading, fontsLoaded]);
 
-  if (isI18nLoading || isThemeLoading) {
+  if (isI18nLoading || isThemeLoading || !fontsLoaded) {
     return null; // Let the splash screen stay visible
   }
 
