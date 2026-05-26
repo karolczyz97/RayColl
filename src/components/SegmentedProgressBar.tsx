@@ -31,17 +31,17 @@ interface Props {
   showLegend?: boolean;
 }
 
-export function SegmentedProgressBar({ stats, height = 10, showLegend = false }: Props) {
+export function SegmentedProgressBar({ stats, height = 12, showLegend = false }: Props) {
   const { total, newCount, learning, review, mastered } = stats;
   const { t } = useI18n();
   const theme = useTheme();
 
-  // Color tokens
+  // MD3 Expressive tonal color tokens
   const colors = {
-    mastered: '#4caf50',
-    review: '#7c4dff',
-    learning: '#ffa726',
-    new: '#42a5f5',
+    mastered: '#006c4c',
+    review: '#6750a4',
+    learning: '#b86800',
+    new: '#1565c0',
     empty: theme.colors.outlineVariant || '#e0e0e0',
   };
 
@@ -78,14 +78,14 @@ export function SegmentedProgressBar({ stats, height = 10, showLegend = false }:
       {showLegend && (
         <View style={styles.legendContainer}>
           {[
-            { color: colors.mastered, label: t('srs.badge.mastered'), count: mastered },
-            { color: colors.review, label: t('srs.badge.review'), count: review },
-            { color: colors.learning, label: t('srs.badge.learning'), count: learning },
-            { color: colors.new, label: t('srs.badge.new'), count: newCount },
+            { color: colors.mastered, bg: '#c8ffc0', label: t('srs.badge.mastered'), count: mastered },
+            { color: colors.review, bg: '#e8def8', label: t('srs.badge.review'), count: review },
+            { color: colors.learning, bg: '#ffddb3', label: t('srs.badge.learning'), count: learning },
+            { color: colors.new, bg: '#d1e4ff', label: t('srs.badge.new'), count: newCount },
           ].map((item, i) => (
-            <View key={i} style={styles.legendItem}>
+            <View key={i} style={[styles.legendItem, { backgroundColor: item.bg }]}>
               <View style={[styles.dot, { backgroundColor: item.color }]} />
-              <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+              <Text style={[styles.legendText, { color: item.color }]}>
                 {item.label} ({item.count})
               </Text>
             </View>
@@ -116,6 +116,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
   dot: {
     width: 8,
@@ -123,6 +126,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   legendText: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

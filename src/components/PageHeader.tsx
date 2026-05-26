@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { IconButton, Text } from 'react-native-paper';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface PageHeaderProps {
   title: string;
@@ -10,13 +11,13 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, onBack, action }: PageHeaderProps) {
   return (
-    <View style={styles.container}>
+    <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
       <IconButton icon="arrow-left" size={24} onPress={onBack} style={styles.backBtn} />
       <Text variant="titleLarge" style={styles.title} numberOfLines={1}>
         {title}
       </Text>
       {action}
-    </View>
+    </Animated.View>
   );
 }
 

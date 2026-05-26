@@ -1,16 +1,19 @@
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { Text, Card, Button, ProgressBar, useTheme, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { Text, Button, ProgressBar, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  interpolate,
   withRepeat,
   withSequence,
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
 } from 'react-native-reanimated';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useStudySession } from '../../hooks/useStudySession';
 import type { Flashcard } from '../../types/models';
@@ -18,6 +21,68 @@ import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { useI18n } from '../../i18n';
 import { SegmentedProgressBar, computeCardStats } from '../../components/SegmentedProgressBar';
+
+// Individual page section that fades in when revealed
+function CardPageSection({
+  pageName,
+  pageContent,
+  isRevealed,
+  isPrimary,
+  hasBorderTop,
+  borderColor,
+  primaryColor,
+  textColor,
+  labelColor,
+}: {
+  pageName: string;
+  pageContent: string;
+  isRevealed: boolean;
+  isPrimary: boolean;
+  hasBorderTop: boolean;
+  borderColor: string;
+  primaryColor: string;
+  textColor: string;
+  labelColor: string;
+}) {
+  const opacity = useSharedValue(isRevealed ? 1 : 0);
+
+  useEffect(() => {
+    opacity.value = withSpring(isRevealed ? 1 : 0, {
+      damping: 20,
+      stiffness: 120,
+      mass: 0.8,
+    });
+  }, [isRevealed]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <View
+      style={[
+        styles.pageRow,
+        hasBorderTop && styles.pageRowBorder,
+        { borderColor },
+      ]}
+    >
+      <Text style={[styles.pageLabel, { color: labelColor }]}>
+        {pageName}
+      </Text>
+      <Animated.View style={animatedStyle}>
+        <Text
+          variant="headlineMedium"
+          style={[
+            styles.cardText,
+            { color: isPrimary ? primaryColor : textColor },
+          ]}
+        >
+          {isRevealed ? pageContent || '—' : ' '}
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function StudyPage() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -89,50 +154,12 @@ export default function StudyPage() {
   const hasTts = useMemo(() => steps.some((st) => st.type === 'speak_page'), [steps]);
   const hasStt = useMemo(() => steps.some((st) => st.type === 'listen_and_branch'), [steps]);
 
-  // Card Animation Values
-  const rotateY = useSharedValue(0);
+  // Card scale animation (press in/out)
   const scale = useSharedValue(1);
 
-  // Sync rotation with revealed status / rating buttons
-  useEffect(() => {
-    rotateY.value = withSpring(s.showRatingButtons ? 180 : 0, {
-      damping: 15,
-      stiffness: 90,
-    });
-  }, [s.showRatingButtons]);
-
-  // Reset rotation on card change
-  useEffect(() => {
-    rotateY.value = 0;
-  }, [s.currentCardIndex]);
-
-  // Animated Styles for Card Container
-  const cardAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: scale.value },
-        { perspective: 1000 },
-        { rotateY: `${rotateY.value}deg` },
-      ],
-    };
-  });
-
-  const frontStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(rotateY.value, [0, 90, 180], [1, 0, 0]);
-    return {
-      opacity,
-      display: rotateY.value > 90 ? 'none' : 'flex',
-    };
-  });
-
-  const backStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(rotateY.value, [0, 90, 180], [0, 0, 1]);
-    return {
-      opacity,
-      transform: [{ rotateY: '180deg' }],
-      display: rotateY.value < 90 ? 'none' : 'flex',
-    };
-  });
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   // Micro-animations for TTS and STT Icons
   const ttsScale = useSharedValue(1);
@@ -148,11 +175,9 @@ export default function StudyPage() {
     }
   }, [s.isTtsPlaying]);
 
-  const ttsIconStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: ttsScale.value }],
-    };
-  });
+  const ttsIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ttsScale.value }],
+  }));
 
   const sttScale = useSharedValue(1);
   useEffect(() => {
@@ -167,19 +192,17 @@ export default function StudyPage() {
     }
   }, [s.isSttListening]);
 
-  const sttIconStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: sttScale.value }],
-    };
-  });
+  const sttIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sttScale.value }],
+  }));
 
   const pressIn = () => {
-    scale.value = withSpring(0.95);
+    scale.value = withSpring(0.96, { damping: 12, stiffness: 150 });
     setHolding(true);
   };
 
   const pressOut = () => {
-    scale.value = withSpring(1);
+    scale.value = withSpring(1, { damping: 12, stiffness: 150 });
     setHolding(false);
   };
 
@@ -199,22 +222,28 @@ export default function StudyPage() {
   if (s.isSessionFinished || dueCards.length === 0) {
     return (
       <View style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}>
-        <MaterialCommunityIcons name="check-circle" size={96} color="#4caf50" style={{ marginBottom: 16 }} />
-        <Text variant="headlineLarge" style={styles.bravoTitle}>
-          {t('study.bravo')}
-        </Text>
-        <Text variant="bodyLarge" style={[styles.finishedDesc, { color: theme.colors.onSurfaceVariant }]}>
-          {dueCards.length === 0 ? t('study.no_due') : t('study.finished_desc')}
-        </Text>
+        <Animated.View entering={ZoomIn.springify().damping(12)}>
+          <MaterialDesignIcons name="check-circle" size={96} color={theme.colors.tertiary || '#4caf50'} />
+        </Animated.View>
+        <Animated.View entering={FadeInUp.springify().delay(150)}>
+          <Text variant="headlineLarge" style={styles.bravoTitle}>
+            {t('study.bravo')}
+          </Text>
+        </Animated.View>
+        <Animated.View entering={FadeInUp.springify().delay(250)}>
+          <Text variant="bodyLarge" style={[styles.finishedDesc, { color: theme.colors.onSurfaceVariant }]}>
+            {dueCards.length === 0 ? t('study.no_due') : t('study.finished_desc')}
+          </Text>
+        </Animated.View>
 
-        <View style={styles.statsSummary}>
+        <Animated.View entering={FadeInUp.springify().delay(350)} style={styles.statsSummary}>
           <Text variant="titleMedium" style={styles.statsTitle}>
             {t('stats.deck_progress')}
           </Text>
           <SegmentedProgressBar stats={computeCardStats(activeGroup.cards)} showLegend />
-        </View>
+        </Animated.View>
 
-        <View style={styles.actionButtons}>
+        <Animated.View entering={FadeInUp.springify().delay(450)} style={styles.actionButtons}>
           {failedCount > 0 && (
             <Button mode="contained" buttonColor={theme.colors.error} onPress={restartFailed} style={styles.actionBtn}>
               {t('study.restart_failed')} ({failedCount})
@@ -226,7 +255,7 @@ export default function StudyPage() {
           <Button mode="outlined" onPress={handleBack} style={styles.actionBtn}>
             {t('study.back_to_panel')}
           </Button>
-        </View>
+        </Animated.View>
       </View>
     );
   }
@@ -244,7 +273,7 @@ export default function StudyPage() {
         </Text>
       </View>
 
-      {/* Main card viewport */}
+      {/* Main card viewport — N sections, fade-in-place for each page */}
       <View style={styles.cardContainer}>
         <Pressable
           style={styles.cardPressable}
@@ -252,51 +281,45 @@ export default function StudyPage() {
           onPressOut={pressOut}
           onPress={s.waitingForTap ? handleCardTap : undefined}
         >
-          <Animated.View style={[styles.animatedCard, cardAnimatedStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant }]}>
-            {/* Card Front Side */}
-            <Animated.View style={[styles.cardSide, frontStyle]}>
-              {currentCard &&
-                activeGroup.pageNames.map((pageName, pi) => {
-                  const isRevealed = s.revealedPages.includes(pi);
-                  if (pi > 0 && !isRevealed) return null; // Show only revealed on front
+          <Animated.View
+            style={[
+              styles.animatedCard,
+              cardAnimatedStyle,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {currentCard &&
+              activeGroup.pageNames.map((pageName, pi) => {
+                // Page 0 (front) is always revealed; others fade in when revealed
+                const isRevealed = pi === 0 || s.revealedPages.includes(pi) || s.showRatingButtons;
 
-                  return (
-                    <View key={pi} style={[styles.pageRow, pi > 0 && styles.pageRowBorder, { borderColor: theme.colors.outlineVariant }]}>
-                      <Text style={[styles.pageLabel, { color: theme.colors.onSurfaceVariant }]}>
-                        {pageName}
-                      </Text>
-                      <Text variant="headlineMedium" style={[styles.cardText, { color: pi === 0 ? theme.colors.primary : theme.colors.onSurface }]}>
-                        {currentCard.pages[pi] || '—'}
-                      </Text>
-                    </View>
-                  );
-                })}
-              {s.waitingForTap && (
-                <View style={styles.tapIndicator}>
-                  <MaterialCommunityIcons name="gesture-tap" size={20} color={theme.colors.outline} />
-                  <Text variant="labelMedium" style={{ color: theme.colors.outline, fontWeight: 'bold' }}>
-                    {t('study.tap_to_reveal')}
-                  </Text>
-                </View>
-              )}
-            </Animated.View>
+                return (
+                  <CardPageSection
+                    key={`${s.currentCardIndex}-${pi}`}
+                    pageName={pageName}
+                    pageContent={currentCard.pages[pi]}
+                    isRevealed={isRevealed}
+                    isPrimary={pi === 0}
+                    hasBorderTop={pi > 0}
+                    borderColor={theme.colors.outlineVariant}
+                    primaryColor={theme.colors.primary}
+                    textColor={theme.colors.onSurface}
+                    labelColor={theme.colors.onSurfaceVariant}
+                  />
+                );
+              })}
 
-            {/* Card Back Side */}
-            <Animated.View style={[styles.cardSide, backStyle]}>
-              {currentCard &&
-                activeGroup.pageNames.map((pageName, pi) => {
-                  return (
-                    <View key={pi} style={[styles.pageRow, pi > 0 && styles.pageRowBorder, { borderColor: theme.colors.outlineVariant }]}>
-                      <Text style={[styles.pageLabel, { color: theme.colors.onSurfaceVariant }]}>
-                        {pageName}
-                      </Text>
-                      <Text variant="headlineMedium" style={[styles.cardText, { color: pi === 0 ? theme.colors.primary : theme.colors.onSurface }]}>
-                        {currentCard.pages[pi] || '—'}
-                      </Text>
-                    </View>
-                  );
-                })}
-            </Animated.View>
+            {s.waitingForTap && (
+              <View style={styles.tapIndicator}>
+                <MaterialDesignIcons name="gesture-tap" size={20} color={theme.colors.outline} />
+                <Text variant="labelMedium" style={{ color: theme.colors.outline, fontWeight: 'bold' }}>
+                  {t('study.tap_to_reveal')}
+                </Text>
+              </View>
+            )}
           </Animated.View>
         </Pressable>
       </View>
@@ -304,19 +327,21 @@ export default function StudyPage() {
       {/* Bottom control zone */}
       <View style={[styles.bottomControlZone, { height: hasTts || hasStt ? 180 : 80 }]}>
         {s.showRatingButtons ? (
-          <View style={styles.ratingButtonsRow}>
+          <Animated.View entering={FadeIn.springify()} style={styles.ratingButtonsRow}>
             <Button
-              mode="outlined"
-              textColor="#f44336"
-              style={[styles.rateBtn, { borderColor: '#f44336' }]}
+              mode="contained-tonal"
+              textColor="#d32f2f"
+              buttonColor="#ffdad6"
+              style={styles.rateBtn}
               onPress={() => handleRating(1)}
             >
               {t('study.rating.1')}
             </Button>
             <Button
-              mode="outlined"
-              textColor="#ff9800"
-              style={[styles.rateBtn, { borderColor: '#ff9800' }]}
+              mode="contained-tonal"
+              textColor="#b86800"
+              buttonColor="#ffddb3"
+              style={styles.rateBtn}
               onPress={() => handleRating(2)}
             >
               {t('study.rating.2')}
@@ -326,14 +351,14 @@ export default function StudyPage() {
             </Button>
             <Button
               mode="contained"
-              buttonColor="#4caf50"
+              buttonColor="#006c4c"
               textColor="#ffffff"
               style={styles.rateBtn}
               onPress={() => handleRating(4)}
             >
               {t('study.rating.4')}
             </Button>
-          </View>
+          </Animated.View>
         ) : hasTts || hasStt ? (
           <View style={styles.feedbackContainer}>
             {/* Recognized voice display */}
@@ -359,7 +384,7 @@ export default function StudyPage() {
             <View style={styles.audioIconsRow}>
               {hasTts && (
                 <Animated.View style={[styles.iconWrapper, ttsIconStyle]}>
-                  <MaterialCommunityIcons
+                  <MaterialDesignIcons
                     name="volume-high"
                     size={36}
                     color={s.isTtsPlaying ? theme.colors.primary : theme.colors.outline}
@@ -368,7 +393,7 @@ export default function StudyPage() {
               )}
               {hasStt && (
                 <Animated.View style={[styles.iconWrapper, sttIconStyle]}>
-                  <MaterialCommunityIcons
+                  <MaterialDesignIcons
                     name="microphone"
                     size={36}
                     color={s.isSttListening ? '#f44336' : theme.colors.outline}
@@ -403,12 +428,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   progressBar: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
   },
   progressCounter: {
     fontSize: 12,
     textAlign: 'right',
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   cardContainer: {
     flex: 1,
@@ -421,22 +448,17 @@ const styles = StyleSheet.create({
   },
   animatedCard: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: 28,
     borderWidth: 1,
-    elevation: 4,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     padding: 24,
     maxWidth: 600,
     width: '100%',
     alignSelf: 'center',
-  },
-  cardSide: {
-    flex: 1,
-    justifyContent: 'center',
-    width: '100%',
   },
   pageRow: {
     flex: 1,
@@ -449,11 +471,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   pageLabel: {
-    fontSize: 12,
+    fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   cardText: {
     textAlign: 'center',
@@ -465,7 +487,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     position: 'absolute',
-    bottom: 0,
+    bottom: 12,
     left: 0,
     right: 0,
   },
@@ -493,7 +515,7 @@ const styles = StyleSheet.create({
   },
   sttResultBox: {
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     width: '100%',
     alignItems: 'center',
   },
@@ -518,6 +540,7 @@ const styles = StyleSheet.create({
   },
   bravoTitle: {
     fontWeight: 'bold',
+    marginTop: 16,
     marginBottom: 8,
   },
   finishedDesc: {

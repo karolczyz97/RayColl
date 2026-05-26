@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Text, TextInput, Card, Button, Chip, IconButton, Portal, Dialog, useTheme, FAB, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
+import Animated, { FadeInDown, ZoomIn, Layout } from 'react-native-reanimated';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
 import { SegmentedProgressBar, computeCardStats } from '../../components/SegmentedProgressBar';
@@ -9,21 +10,23 @@ import type { Flashcard, SrsState } from '../../types/models';
 import { getCardCategory, CATEGORIES } from '../../srs/srsEngine';
 import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 
 type BrowseFilter = 'all' | 'learning' | 'review' | 'new' | 'mastered';
 
-function srsChip(state: SrsState, t: (key: string) => string): { text: string; color: string } {
+function srsChip(state: SrsState, t: (key: string) => string): { text: string; color: string; bg: string } {
   const category = getCardCategory(state);
-  const colors = {
-    new: '#42a5f5',
-    learning: '#ffa726',
-    review: '#7c4dff',
-    mastered: '#4caf50',
+  const colors: Record<string, { color: string; bg: string }> = {
+    new: { color: '#1565c0', bg: '#d1e4ff' },
+    learning: { color: '#b86800', bg: '#ffddb3' },
+    review: { color: '#6750a4', bg: '#e8def8' },
+    mastered: { color: '#006c4c', bg: '#c8ffc0' },
   };
+  const c = colors[category] || { color: '#757575', bg: '#e0e0e0' };
   return {
     text: t(`srs.badge.${category}`),
-    color: colors[category] || '#757575',
+    color: c.color,
+    bg: c.bg,
   };
 }
 
@@ -183,8 +186,8 @@ export default function BrowsePage() {
           selected={browseFilter === 'learning'}
           showSelectedCheck={false}
           onPress={() => setBrowseFilter('learning')}
-          style={[styles.chip, browseFilter === 'learning' && { backgroundColor: '#ffa726' }]}
-          selectedColor={browseFilter === 'learning' ? '#ffffff' : undefined}
+          style={[styles.chip, browseFilter === 'learning' && { backgroundColor: '#ffddb3' }]}
+          selectedColor={browseFilter === 'learning' ? '#b86800' : undefined}
         >
           {`${t('filter.learning')} (${stats.learning})`}
         </Chip>
@@ -192,8 +195,8 @@ export default function BrowsePage() {
           selected={browseFilter === 'review'}
           showSelectedCheck={false}
           onPress={() => setBrowseFilter('review')}
-          style={[styles.chip, browseFilter === 'review' && { backgroundColor: '#7c4dff' }]}
-          selectedColor={browseFilter === 'review' ? '#ffffff' : undefined}
+          style={[styles.chip, browseFilter === 'review' && { backgroundColor: '#e8def8' }]}
+          selectedColor={browseFilter === 'review' ? '#6750a4' : undefined}
         >
           {`${t('filter.review')} (${stats.review})`}
         </Chip>
@@ -201,8 +204,8 @@ export default function BrowsePage() {
           selected={browseFilter === 'new'}
           showSelectedCheck={false}
           onPress={() => setBrowseFilter('new')}
-          style={[styles.chip, browseFilter === 'new' && { backgroundColor: '#42a5f5' }]}
-          selectedColor={browseFilter === 'new' ? '#ffffff' : undefined}
+          style={[styles.chip, browseFilter === 'new' && { backgroundColor: '#d1e4ff' }]}
+          selectedColor={browseFilter === 'new' ? '#1565c0' : undefined}
         >
           {`${t('filter.new')} (${stats.newCount})`}
         </Chip>
@@ -210,8 +213,8 @@ export default function BrowsePage() {
           selected={browseFilter === 'mastered'}
           showSelectedCheck={false}
           onPress={() => setBrowseFilter('mastered')}
-          style={[styles.chip, browseFilter === 'mastered' && { backgroundColor: '#4caf50' }]}
-          selectedColor={browseFilter === 'mastered' ? '#ffffff' : undefined}
+          style={[styles.chip, browseFilter === 'mastered' && { backgroundColor: '#c8ffc0' }]}
+          selectedColor={browseFilter === 'mastered' ? '#006c4c' : undefined}
         >
           {`${t('filter.mastered')} (${stats.mastered})`}
         </Chip>
@@ -274,25 +277,25 @@ export default function BrowsePage() {
                   </Card.Content>
                   <Card.Actions style={styles.cardActions}>
                     <View style={styles.cardActionsLeft}>
-                      <Chip style={{ backgroundColor: srs.color }} selectedColor="#ffffff">
+                      <Chip style={{ backgroundColor: srs.bg }} selectedColor={srs.color} textStyle={{ color: srs.color }}>
                         {srs.text}
                       </Chip>
                       {card.srsState.state > 0 && (
                         <View style={styles.statsIconsRow}>
                           <View style={styles.statIconItem}>
-                            <MaterialCommunityIcons name="thumb-up-outline" size={14} color={theme.colors.outline} />
+                            <MaterialDesignIcons name="thumb-up-outline" size={14} color={theme.colors.outline} />
                             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                               {mastery}%
                             </Text>
                           </View>
                           <View style={styles.statIconItem}>
-                            <MaterialCommunityIcons name="sync" size={14} color={theme.colors.outline} />
+                            <MaterialDesignIcons name="sync" size={14} color={theme.colors.outline} />
                             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                               {card.srsState.repetitions}
                             </Text>
                           </View>
                           <View style={styles.statIconItem}>
-                            <MaterialCommunityIcons name="calendar-month-outline" size={14} color={theme.colors.outline} />
+                            <MaterialDesignIcons name="calendar-month-outline" size={14} color={theme.colors.outline} />
                             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                               {reviewIn}
                             </Text>
@@ -384,7 +387,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   cardContent: {
@@ -436,6 +439,6 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 8,
     bottom: 8,
-    borderRadius: 16,
+    borderRadius: 20,
   },
 });

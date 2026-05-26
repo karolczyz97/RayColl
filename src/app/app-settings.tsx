@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Platform, Share, Alert } from 'react-native';
 import { Text, Button, Divider, useTheme, Card, SegmentedButtons, TextInput, Portal, Dialog, ActivityIndicator, Menu } from 'react-native-paper';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
@@ -116,6 +117,7 @@ export default function AppSettings() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Language Section */}
+        <Animated.View entering={FadeInDown.springify().delay(0)}>
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>
@@ -146,8 +148,10 @@ export default function AppSettings() {
             </Menu>
           </Card.Content>
         </Card>
+        </Animated.View>
 
         {/* Theme Section */}
+        <Animated.View entering={FadeInDown.springify().delay(80)}>
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>
@@ -165,8 +169,10 @@ export default function AppSettings() {
             />
           </Card.Content>
         </Card>
+        </Animated.View>
 
         {/* Dynamic System Colors Section */}
+        <Animated.View entering={FadeInDown.springify().delay(160)}>
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>
@@ -186,8 +192,10 @@ export default function AppSettings() {
             />
           </Card.Content>
         </Card>
+        </Animated.View>
 
         {/* TTS Speed Rate Section */}
+        <Animated.View entering={FadeInDown.springify().delay(240)}>
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>
@@ -211,8 +219,10 @@ export default function AppSettings() {
             </View>
           </Card.Content>
         </Card>
+        </Animated.View>
 
         {/* Export / Import Backup Section */}
+        <Animated.View entering={FadeInDown.springify().delay(320)}>
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>
@@ -228,8 +238,10 @@ export default function AppSettings() {
             </View>
           </Card.Content>
         </Card>
+        </Animated.View>
 
         {/* Reset / Danger Zone */}
+        <Animated.View entering={FadeInDown.springify().delay(400)}>
         <Card style={[styles.card, { borderColor: theme.colors.error }]} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={[styles.cardTitle, { color: theme.colors.error }]}>
@@ -243,6 +255,7 @@ export default function AppSettings() {
             </Button>
           </Card.Content>
         </Card>
+        </Animated.View>
       </ScrollView>
 
       {/* Portal Dialogs */}
@@ -304,7 +317,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
   },
   cardTitle: {
     fontWeight: 'bold',

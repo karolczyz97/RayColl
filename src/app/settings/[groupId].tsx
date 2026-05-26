@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, TextInput, Button, IconButton, useTheme, Divider, Menu, Portal, Dialog, List, ActivityIndicator, Card } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
+import ReanimatedView, { FadeInDown } from 'react-native-reanimated';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
 import type { ModeStep, StudyMode } from '../../types/models';
@@ -709,7 +710,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   stepsCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   stepControls: {
@@ -724,7 +725,7 @@ const styles = StyleSheet.create({
   },
   createModeContainer: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     marginTop: 8,
   },
   customStepRow: {

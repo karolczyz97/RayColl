@@ -1,41 +1,28 @@
-import React, { useState, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Animated, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import Animated, { FadeInDown, ZoomIn, Layout, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Text, Card, Button, FAB, Avatar, IconButton, Menu, useTheme, ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { useI18n } from '../i18n';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import type { FlashcardGroup } from '../types/models';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 
 function PressableCard({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
+  const scaleVal = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleVal.value }],
+  }));
   const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 6,
-    }).start();
+    scaleVal.value = withSpring(0.96, { damping: 12, stiffness: 150 });
   };
-
   const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 6,
-    }).start();
+    scaleVal.value = withSpring(1, { damping: 12, stiffness: 150 });
   };
-
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={onPress}
-      >
+    <Animated.View style={animStyle}>
+      <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress}>
         {children}
       </Pressable>
     </Animated.View>
@@ -68,7 +55,7 @@ function GroupStudyMenuButton({
   const modeName = activeMode ? getModeName(activeMode.id, activeMode.name) : t('mode.classic.name');
 
   const btnBgColor = dueCount === 0 ? theme.colors.surfaceVariant : theme.colors.primary;
-  const btnTextColor = dueCount === 0 ? theme.colors.onSurfaceDisabled : theme.colors.onPrimary;
+  const btnTextColor = dueCount === 0 ? theme.colors.onSurfaceVariant : theme.colors.onPrimary;
 
   return (
     <View style={styles.studyButtonGroup}>
@@ -82,7 +69,7 @@ function GroupStudyMenuButton({
             pressed && styles.pressed,
           ]}
         >
-          <MaterialCommunityIcons name="play" size={16} color={btnTextColor} style={{ marginRight: 6 }} />
+          <MaterialDesignIcons name="play" size={16} color={btnTextColor} style={{ marginRight: 6 }} />
           <Text style={[styles.pillText, { color: btnTextColor }]} numberOfLines={1}>
             {modeName}
           </Text>
@@ -103,7 +90,7 @@ function GroupStudyMenuButton({
                 pressed && styles.pressed,
               ]}
             >
-              <MaterialCommunityIcons name="chevron-down" size={16} color={btnTextColor} />
+              <MaterialDesignIcons name="chevron-down" size={16} color={btnTextColor} />
             </Pressable>
           }
         >
@@ -214,7 +201,7 @@ export default function Dashboard() {
           </View>
         ) : (
           <View style={styles.grid}>
-            {groups.map((group) => {
+            {groups.map((group, index) => {
               const dueCount = getDueCards(group.id).length;
               const cardStats = computeCardStats(group.cards);
               const numColumns = width < 600 ? 1 : width < 960 ? 2 : 3;
@@ -224,7 +211,12 @@ export default function Dashboard() {
               const currentWidth = width > maxW ? maxW : width;
               const cardWidth = (currentWidth - padding * 2 - gap * (numColumns - 1)) / numColumns;
               return (
-                <View key={group.id} style={[styles.gridItem, { width: cardWidth }]}>
+                <Animated.View
+                  key={group.id}
+                  entering={FadeInDown.springify().delay(Math.min(index * 80, 600))}
+                  layout={Layout.springify()}
+                  style={[styles.gridItem, { width: cardWidth }]}
+                >
                   <PressableCard onPress={() => router.push(`/study/${group.id}`)}>
                     <Card style={styles.card} mode="elevated">
                       <Card.Content>
@@ -266,7 +258,7 @@ export default function Dashboard() {
                       </Card.Actions>
                     </Card>
                   </PressableCard>
-                </View>
+                </Animated.View>
               );
             })}
           </View>
@@ -274,7 +266,9 @@ export default function Dashboard() {
       </ScrollView>
 
       {/* Import FAB */}
-      <FAB icon="plus" style={styles.fab} onPress={() => router.push('/import')} />
+      <Animated.View entering={ZoomIn.springify().delay(400)} style={styles.fabWrapper}>
+        <FAB icon="plus" style={styles.fab} onPress={() => router.push('/import')} />
+      </Animated.View>
     </View>
   );
 }
@@ -334,7 +328,7 @@ const styles = StyleSheet.create({
     // Width computed dynamically in render loop
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 24,
   },
   cardTitle: {
     fontWeight: 'bold',
@@ -362,7 +356,7 @@ const styles = StyleSheet.create({
   pillContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 100,
+    borderRadius: 20,
     height: 40,
     width: '100%',
     overflow: 'hidden',
@@ -394,11 +388,13 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.75,
   },
-  fab: {
+  fabWrapper: {
     position: 'absolute',
-    margin: 16,
     right: 8,
     bottom: 8,
+    margin: 16,
+  },
+  fab: {
     borderRadius: 16,
   },
 });

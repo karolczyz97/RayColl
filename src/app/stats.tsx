@@ -2,11 +2,12 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Text, Card, useTheme, ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import { PageHeader } from '../components/PageHeader';
 import { useI18n } from '../i18n';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 
 function computeStreak(heatmap: Record<string, number>): number {
   const today = new Date();
@@ -148,9 +149,10 @@ export default function StatsPage() {
         {/* Quick stats grid */}
         <View style={styles.statsGrid}>
           {statCards.map((m, i) => (
-            <Card key={i} style={[styles.statCard, { minWidth: width < 600 ? '47%' : '22%' }]} mode="outlined">
+            <Animated.View key={i} entering={FadeInDown.springify().delay(i * 80)} style={{ minWidth: width < 600 ? '47%' : '22%' }}>
+            <Card style={styles.statCard} mode="outlined">
               <Card.Content style={styles.statCardContent}>
-                <MaterialCommunityIcons name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
+                <MaterialDesignIcons name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
                 <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
                   {m.label}
                 </Text>
@@ -159,10 +161,12 @@ export default function StatsPage() {
                 </Text>
               </Card.Content>
             </Card>
+            </Animated.View>
           ))}
         </View>
 
         {/* Global Progress */}
+        <Animated.View entering={FadeInDown.springify().delay(350)}>
         <Card mode="outlined" style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionCardTitle}>
@@ -171,6 +175,7 @@ export default function StatsPage() {
             <SegmentedProgressBar stats={globalStats} showLegend />
           </Card.Content>
         </Card>
+        </Animated.View>
 
         {/* Heatmap */}
         <Card mode="outlined" style={styles.sectionCard}>

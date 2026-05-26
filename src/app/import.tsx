@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, TextInput, Button, IconButton, useTheme, Card, Menu, ActivityIndicator } from 'react-native-paper';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { PageHeader } from '../components/PageHeader';
@@ -223,7 +224,7 @@ export default function ImportPage() {
 
         {/* Preview Section */}
         {rows.length > 0 && (
-          <View style={styles.previewSection}>
+          <Animated.View entering={FadeIn.springify()} style={styles.previewSection}>
             <Text variant="titleMedium" style={styles.previewTitle}>
               {`${t('import.preview')} (${rows.length})`}
             </Text>
@@ -249,9 +250,10 @@ export default function ImportPage() {
                 ))}
               </View>
             </ScrollView>
-          </View>
+          </Animated.View>
         )}
 
+        <Animated.View entering={FadeInDown.springify().delay(100)}>
         <Button
           mode="contained"
           onPress={handleImport}
@@ -260,6 +262,7 @@ export default function ImportPage() {
         >
           {t('import.btn', { count: rows.length })}
         </Button>
+        </Animated.View>
       </ScrollView>
     </View>
   );
