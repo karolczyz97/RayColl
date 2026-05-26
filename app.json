@@ -18,8 +18,7 @@
       "package": "com.raycoll.app",
       "permissions": [
         "RECORD_AUDIO",
-        "INTERNET",
-        "android.permission.RECORD_AUDIO"
+        "INTERNET"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -66,6 +65,12 @@
         "projectId": "077bddf4-8cc0-4aff-8297-71a6b2ca2e37"
       }
     },
-    "owner": "karolczyz97"
+    "owner": "karolczyz97",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/077bddf4-8cc0-4aff-8297-71a6b2ca2e37"
+    }
   }
 }
