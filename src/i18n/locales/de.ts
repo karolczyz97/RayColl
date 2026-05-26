@@ -74,6 +74,8 @@ export const de: Record<string, string> = {
 
   // Stats
   'stats.title': 'Lernstatistiken',
+  'stats.decks_title': 'Stapel',
+  'stats.cards_title': 'Karten',
   'stats.heatmap_title': 'Aktivität in den letzten 140 Tagen',
   'stats.progress_title': 'Deck-Fortschritt',
   'stats.streak': 'Tage in Folge',

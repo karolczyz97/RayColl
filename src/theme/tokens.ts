@@ -17,7 +17,7 @@ export const TOKENS = {
     full: 9999,
   },
   layout: {
-    maxWidth: 960,
+    maxWidth: 1200,
     webWidth: '100%',
   },
   motion: {

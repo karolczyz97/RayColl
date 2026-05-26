@@ -73,6 +73,8 @@ export const en: Record<string, string> = {
 
   // Stats
   'stats.title': 'Study Statistics',
+  'stats.decks_title': 'Decks',
+  'stats.cards_title': 'Cards',
   'stats.heatmap_title': 'Activity in the last 140 days',
   'stats.progress_title': 'Deck Progress',
   'stats.streak': 'Day streak',

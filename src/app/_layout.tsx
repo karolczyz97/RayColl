@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   webInner: {
     flex: 1,
     width: '100%',
-    maxWidth: 960,
+    maxWidth: 1200,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,

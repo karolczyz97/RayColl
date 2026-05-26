@@ -73,6 +73,8 @@ export const pl: Record<string, string> = {
 
   // Stats
   'stats.title': 'Statystyki nauki',
+  'stats.decks_title': 'Talie',
+  'stats.cards_title': 'Fiszki',
   'stats.heatmap_title': 'Aktywność w ostatnich 140 dniach',
   'stats.progress_title': 'Postęp w zestawach',
   'stats.streak': 'Seria dni',

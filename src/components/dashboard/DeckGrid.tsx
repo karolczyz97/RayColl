@@ -13,11 +13,11 @@ export function DeckGrid({ groups, onModeChange }: Props) {
   const { width } = useWindowDimensions();
 
   const { cardWidth } = useMemo(() => {
-    const numCols = width < 600 ? 1 : width < 960 ? 2 : 3;
+    const maxW = 1200;
+    const currentWidth = width > maxW ? maxW : width;
+    const numCols = currentWidth < 600 ? 1 : currentWidth < 900 ? 2 : currentWidth < 1200 ? 3 : 4;
     const padding = 16;
     const gap = 16;
-    const maxW = 960;
-    const currentWidth = width > maxW ? maxW : width;
     const widthCalculated = (currentWidth - padding * 2 - gap * (numCols - 1)) / numCols;
     return { cardWidth: widthCalculated };
   }, [width]);

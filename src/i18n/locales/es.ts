@@ -74,6 +74,8 @@ export const es: Record<string, string> = {
 
   // Stats
   'stats.title': 'Estadísticas de estudio',
+  'stats.decks_title': 'Mazos',
+  'stats.cards_title': 'Tarjetas',
   'stats.heatmap_title': 'Actividad en los últimos 140 días',
   'stats.progress_title': 'Progreso de la baraja',
   'stats.streak': 'Racha de días',
