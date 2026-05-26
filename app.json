@@ -35,6 +35,7 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-vector-icons/material-design-icons",
       [
         "expo-splash-screen",
         {
