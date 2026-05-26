@@ -5,7 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import ReanimatedView, { FadeInDown } from 'react-native-reanimated';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
-import type { ModeStep, StudyMode } from '../../types/models';
+import type { ModeStep, StudyMode, FlashcardGroup } from '../../types/models';
 import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
 
@@ -83,6 +83,39 @@ export default function SettingsPage() {
 
   const removedNamesRef = useRef<string[]>([]);
   const removedLangsRef = useRef<string[]>([]);
+
+  const [deckName, setDeckName] = useState(activeGroup?.name || '');
+  const [colNames, setColNames] = useState(activeGroup?.pageNames || []);
+
+  React.useEffect(() => {
+    if (activeGroup) {
+      setDeckName(activeGroup.name);
+    }
+  }, [activeGroup?.name]);
+
+  React.useEffect(() => {
+    if (activeGroup) {
+      setColNames(activeGroup.pageNames);
+    }
+  }, [activeGroup?.pageNames]);
+
+  const handleNameBlur = () => {
+    if (!activeGroup) return;
+    const trimmed = deckName.trim();
+    if (trimmed && trimmed !== activeGroup.name) {
+      store.updateGroup({ ...activeGroup, name: trimmed } as FlashcardGroup);
+    }
+  };
+
+  const handleColBlur = (i: number) => {
+    if (!activeGroup) return;
+    const trimmed = colNames[i]?.trim();
+    if (trimmed && trimmed !== activeGroup.pageNames[i]) {
+      const nextNames = [...activeGroup.pageNames];
+      nextNames[i] = trimmed;
+      store.updateGroup({ ...activeGroup, pageNames: nextNames } as FlashcardGroup);
+    }
+  };
 
   if (store.isLoading) {
     return (
@@ -252,8 +285,9 @@ export default function SettingsPage() {
         <TextInput
           mode="outlined"
           label={t('settings.rename_label')}
-          value={activeGroup.name}
-          onChangeText={handleRename}
+          value={deckName}
+          onChangeText={setDeckName}
+          onBlur={handleNameBlur}
           style={styles.input}
           outlineStyle={{ borderRadius: 12 }}
         />
@@ -283,7 +317,7 @@ export default function SettingsPage() {
           </View>
         </View>
 
-        {activeGroup.pageNames.map((pn, i) => (
+        {colNames.map((pn, i) => (
           <View key={i} style={styles.columnRow}>
             <View style={styles.sortButtons}>
               <IconButton
@@ -305,7 +339,12 @@ export default function SettingsPage() {
               mode="outlined"
               label={t('import.page_label', { index: i + 1 })}
               value={pn}
-              onChangeText={(v) => updatePageNameValue(i, v)}
+              onChangeText={(v) => {
+                const next = [...colNames];
+                next[i] = v;
+                setColNames(next);
+              }}
+              onBlur={() => handleColBlur(i)}
               style={styles.pageNameInput}
               outlineStyle={{ borderRadius: 12 }}
             />

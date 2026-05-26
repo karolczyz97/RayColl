@@ -5,9 +5,9 @@ import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import * as SplashScreen from 'expo-splash-screen';
-import { useFonts } from 'expo-font';
 import { I18nProvider, useI18n } from '../i18n';
 import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
+import { FlashcardStoreProvider } from '../hooks/useFlashcardStore';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -72,14 +72,6 @@ function InnerLayout() {
   const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
 
-  const [fontsLoaded] = useFonts(
-    Platform.OS === 'web'
-      ? {
-          'Material Design Icons': require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
-          MaterialDesignIcons: require('@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf'),
-        }
-      : {}
-  );
 
   const theme = React.useMemo(() => {
     if (useSystemColors) {
@@ -99,13 +91,13 @@ function InnerLayout() {
 
   // Hide the splash screen only after settings, translations, and fonts are loaded.
   React.useEffect(() => {
-    const isReady = !isI18nLoading && !isThemeLoading && fontsLoaded;
+    const isReady = !isI18nLoading && !isThemeLoading;
     if (isReady) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isI18nLoading, isThemeLoading, fontsLoaded]);
+  }, [isI18nLoading, isThemeLoading]);
 
-  if (isI18nLoading || isThemeLoading || !fontsLoaded) {
+  if (isI18nLoading || isThemeLoading) {
     return null; // Let the splash screen stay visible
   }
 
@@ -143,7 +135,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <I18nProvider>
         <AppThemeProvider>
-          <InnerLayout />
+          <FlashcardStoreProvider>
+            <InnerLayout />
+          </FlashcardStoreProvider>
         </AppThemeProvider>
       </I18nProvider>
     </SafeAreaProvider>

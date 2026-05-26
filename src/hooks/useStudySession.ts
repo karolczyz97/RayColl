@@ -38,13 +38,27 @@ export function useStudySession(
   const allCardsRef = useRef<Flashcard[]>([]);
   const failedCardsRef = useRef<Flashcard[]>([]);
 
-  const startSession = useCallback((cards: Flashcard[]) => {
+  const reviewedCardIdsRef = useRef<Set<string>>(new Set());
+
+  const startSession = useCallback((cards: Flashcard[], clearReviewed = true) => {
     abortRef.current = false;
     allCardsRef.current = cards;
     failedCardsRef.current = [];
+    if (clearReviewed) {
+      reviewedCardIdsRef.current.clear();
+    }
     setDueCards(cards);
     setState({ ...INITIAL_STATE, revealedPages: [] });
   }, []);
+
+  const processCardReview = useCallback((card: Flashcard, rating: number) => {
+    if (!group) return;
+    if (!reviewedCardIdsRef.current.has(card.id)) {
+      reviewedCardIdsRef.current.add(card.id);
+      const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, rating) };
+      onCardReviewed(group.id, updated);
+    }
+  }, [group, onCardReviewed]);
 
   const waitUntilReleased = useCallback(async () => {
     while (holdingRef.current) await sleep(100);
@@ -143,8 +157,7 @@ export function useStudySession(
           const autoRating = mapMatchToRating(percent);
           await sleep(600);
           if (!abortRef.current) {
-            const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, autoRating) };
-            onCardReviewed(group.id, updated);
+            processCardReview(card, autoRating);
             await advanceToNextCard();
             return;
           }
@@ -175,8 +188,7 @@ export function useStudySession(
 
           if (!abortRef.current) {
             await waitUntilReleased();
-            const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, 1) };
-            onCardReviewed(group.id, updated);
+            processCardReview(card, 1);
             setState(prev => {
               const nextIdx = prev.currentCardIndex + 1;
               if (nextIdx >= dueCards.length) {
@@ -216,18 +228,17 @@ export function useStudySession(
     if (rating === 1 && !failedCardsRef.current.find(c => c.id === card.id)) {
       failedCardsRef.current.push(card);
     }
-    const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, rating) };
-    onCardReviewed(group.id, updated);
+    processCardReview(card, rating);
     await advanceToNextCard();
-  }, [group, dueCards, state.currentCardIndex, onCardReviewed, advanceToNextCard]);
+  }, [group, dueCards, state.currentCardIndex, processCardReview, advanceToNextCard]);
 
   const restartSession = useCallback(() => {
-    startSession(allCardsRef.current);
+    startSession(allCardsRef.current, true);
   }, [startSession]);
 
   const restartFailed = useCallback(() => {
     if (failedCardsRef.current.length > 0) {
-      startSession([...failedCardsRef.current]);
+      startSession([...failedCardsRef.current], false);
     }
   }, [startSession]);
 

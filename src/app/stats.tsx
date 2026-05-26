@@ -7,7 +7,14 @@ import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import { PageHeader } from '../components/PageHeader';
 import { useI18n } from '../i18n';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+function getLocalDateString(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 function computeStreak(heatmap: Record<string, number>): number {
   const today = new Date();
@@ -15,7 +22,7 @@ function computeStreak(heatmap: Record<string, number>): number {
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = getLocalDateString(d);
     if (heatmap[key]) streak++;
     else break;
   }
@@ -38,7 +45,7 @@ function HeatmapGrid({ heatmap, t }: { heatmap: Record<string, number>; t: (key:
       const daysBack = col * 7 + (6 - row);
       const d = new Date(today);
       d.setDate(d.getDate() - daysBack);
-      const key = d.toISOString().slice(0, 10);
+      const key = getLocalDateString(d);
       colCells.push({ date: key, count: heatmap[key] || 0 });
     }
     columnsData.push(colCells);
@@ -152,7 +159,7 @@ export default function StatsPage() {
             <Animated.View key={i} entering={FadeInDown.springify().delay(i * 80)} style={{ minWidth: width < 600 ? '47%' : '22%' }}>
             <Card style={styles.statCard} mode="outlined">
               <Card.Content style={styles.statCardContent}>
-                <MaterialDesignIcons name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
+                <MaterialCommunityIcons name={m.icon as any} size={28} color={m.color} style={{ marginBottom: 4 }} />
                 <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
                   {m.label}
                 </Text>

@@ -13,7 +13,7 @@ import Animated, {
   FadeInUp,
   ZoomIn,
 } from 'react-native-reanimated';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useStudySession } from '../../hooks/useStudySession';
 import type { Flashcard } from '../../types/models';
@@ -231,7 +231,7 @@ export default function StudyPage() {
     return (
       <View style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}>
         <Animated.View entering={ZoomIn.springify().damping(12)}>
-          <MaterialDesignIcons name="check-circle" size={96} color={theme.colors.tertiary || '#4caf50'} />
+          <MaterialCommunityIcons name="check-circle" size={96} color={theme.colors.tertiary || '#4caf50'} />
         </Animated.View>
         <Animated.View entering={FadeInUp.springify().delay(150)}>
           <Text variant="headlineLarge" style={styles.bravoTitle}>
@@ -322,7 +322,7 @@ export default function StudyPage() {
 
             {s.waitingForTap && (
               <View style={styles.tapIndicator}>
-                <MaterialDesignIcons name="gesture-tap" size={20} color={theme.colors.outline} />
+                <MaterialCommunityIcons name="gesture-tap" size={20} color={theme.colors.outline} />
                 <Text variant="labelMedium" style={{ color: theme.colors.outline, fontWeight: 'bold' }}>
                   {t('study.tap_to_reveal')}
                 </Text>
@@ -341,7 +341,9 @@ export default function StudyPage() {
               textColor="#d32f2f"
               buttonColor="#ffdad6"
               style={styles.rateBtn}
-              icon={({ size, color }) => <MaterialDesignIcons name="replay" size={size} color={color} />}
+              compact={isNarrow}
+              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
+              icon={({ size, color }) => <MaterialCommunityIcons name="replay" size={size} color={color} />}
               onPress={() => handleRating(1)}
             >
               {getButtonText('study.rating.1')}
@@ -351,7 +353,9 @@ export default function StudyPage() {
               textColor="#b86800"
               buttonColor="#ffddb3"
               style={styles.rateBtn}
-              icon={({ size, color }) => <MaterialDesignIcons name="emoticon-sad-outline" size={size} color={color} />}
+              compact={isNarrow}
+              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
+              icon={({ size, color }) => <MaterialCommunityIcons name="emoticon-sad-outline" size={size} color={color} />}
               onPress={() => handleRating(2)}
             >
               {getButtonText('study.rating.2')}
@@ -359,7 +363,9 @@ export default function StudyPage() {
             <Button
               mode="contained"
               style={styles.rateBtn}
-              icon={({ size, color }) => <MaterialDesignIcons name="emoticon-happy-outline" size={size} color={color} />}
+              compact={isNarrow}
+              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
+              icon={({ size, color }) => <MaterialCommunityIcons name="emoticon-happy-outline" size={size} color={color} />}
               onPress={() => handleRating(3)}
             >
               {getButtonText('study.rating.3')}
@@ -369,7 +375,9 @@ export default function StudyPage() {
               buttonColor="#006c4c"
               textColor="#ffffff"
               style={styles.rateBtn}
-              icon={({ size, color }) => <MaterialDesignIcons name="emoticon-excited-outline" size={size} color={color} />}
+              compact={isNarrow}
+              contentStyle={isNarrow ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : {}}
+              icon={({ size, color }) => <MaterialCommunityIcons name="emoticon-excited-outline" size={size} color={color} />}
               onPress={() => handleRating(4)}
             >
               {getButtonText('study.rating.4')}
@@ -400,7 +408,7 @@ export default function StudyPage() {
             <View style={styles.audioIconsRow}>
               {hasTts && (
                 <Animated.View style={[styles.iconWrapper, ttsIconStyle]}>
-                  <MaterialDesignIcons
+                  <MaterialCommunityIcons
                     name="volume-high"
                     size={36}
                     color={s.isTtsPlaying ? theme.colors.primary : theme.colors.outline}
@@ -409,7 +417,7 @@ export default function StudyPage() {
               )}
               {hasStt && (
                 <Animated.View style={[styles.iconWrapper, sttIconStyle]}>
-                  <MaterialDesignIcons
+                  <MaterialCommunityIcons
                     name="microphone"
                     size={36}
                     color={s.isSttListening ? '#f44336' : theme.colors.outline}

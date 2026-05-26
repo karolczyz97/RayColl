@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from 'firebase/auth';
 import type { FlashcardGroup, Flashcard, StudyMode } from '../types/models';
@@ -93,7 +93,7 @@ export interface FlashcardStore {
   exportState: () => string;
 }
 
-export function useFlashcardStore(): FlashcardStore {
+function useInitializeFlashcardStore(): FlashcardStore {
   const [groups, setGroups] = useState<FlashcardGroup[]>([]);
   const [studyModes, setStudyModes] = useState<StudyMode[]>([]);
   const [heatmap, setHeatmap] = useState<Record<string, number>>({});
@@ -341,7 +341,11 @@ export function useFlashcardStore(): FlashcardStore {
   }, [persist]);
 
   const recordActivity = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
     setHeatmap(prev => {
       const next = { ...prev, [today]: (prev[today] || 0) + 1 };
       persist(groupsRef.current, studyModesRef.current, next);
@@ -391,4 +395,19 @@ export function useFlashcardStore(): FlashcardStore {
     addStudyMode, deleteStudyMode, resetToDefault, recordActivity,
     getDueCards, getGroupProgress, importState, exportState,
   };
+}
+
+const FlashcardStoreContext = createContext<FlashcardStore | null>(null);
+
+export function FlashcardStoreProvider({ children }: { children: React.ReactNode }) {
+  const store = useInitializeFlashcardStore();
+  return React.createElement(FlashcardStoreContext.Provider, { value: store }, children);
+}
+
+export function useFlashcardStore(): FlashcardStore {
+  const store = useContext(FlashcardStoreContext);
+  if (!store) {
+    throw new Error('useFlashcardStore must be used within a FlashcardStoreProvider');
+  }
+  return store;
 }

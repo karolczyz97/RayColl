@@ -17,11 +17,35 @@ const POPULAR_LANGS = [
   { code: 'ja-JP', label: 'Japoński' }, { code: 'zh-CN', label: 'Chiński' },
 ];
 
+function parseCSVLine(line: string, sep: string): string[] {
+  const result: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        currentField += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === sep && !inQuotes) {
+      result.push(currentField.trim());
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  result.push(currentField.trim());
+  return result;
+}
+
 function detectSeparator(text: string): string {
   const firstLine = text.split('\n').find(l => l.trim()) || '';
   const counts: Record<string, number> = {};
   for (const [key, sep] of Object.entries(SEPARATORS)) {
-    counts[key] = firstLine.split(sep).length - 1;
+    counts[key] = parseCSVLine(firstLine, sep).length - 1;
   }
   let best = 'semicolon';
   for (const [key, count] of Object.entries(counts)) {
@@ -33,7 +57,7 @@ function detectSeparator(text: string): string {
 function detectPageCount(text: string, sep: string): number {
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length === 0) return 2;
-  const counts = lines.map(l => l.split(sep).length);
+  const counts = lines.map(l => parseCSVLine(l, sep).length);
   const maxCols = Math.max(...counts);
   return Math.max(2, Math.min(5, maxCols));
 }
@@ -80,7 +104,7 @@ export default function ImportPage() {
       .split('\n')
       .filter(l => l.trim())
       .map(line => {
-        const parts = line.split(sep).map(s => s.trim());
+        const parts = parseCSVLine(line, sep);
         while (parts.length < pageCount) parts.push('');
         return parts.slice(0, pageCount);
       });

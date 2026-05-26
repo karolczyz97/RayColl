@@ -7,7 +7,7 @@ import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { useI18n } from '../i18n';
 import { SegmentedProgressBar, computeCardStats } from '../components/SegmentedProgressBar';
 import type { FlashcardGroup } from '../types/models';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 function PressableCard({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
   const scaleVal = useSharedValue(1);
@@ -69,7 +69,7 @@ function GroupStudyMenuButton({
             pressed && styles.pressed,
           ]}
         >
-          <MaterialDesignIcons name="play" size={16} color={btnTextColor} style={{ marginRight: 6 }} />
+          <MaterialCommunityIcons name="play" size={16} color={btnTextColor} style={{ marginRight: 6 }} />
           <Text style={[styles.pillText, { color: btnTextColor }]} numberOfLines={1}>
             {modeName}
           </Text>
@@ -90,7 +90,7 @@ function GroupStudyMenuButton({
                 pressed && styles.pressed,
               ]}
             >
-              <MaterialDesignIcons name="chevron-down" size={16} color={btnTextColor} />
+              <MaterialCommunityIcons name="chevron-down" size={16} color={btnTextColor} />
             </Pressable>
           }
         >

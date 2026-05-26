@@ -10,7 +10,7 @@ import type { Flashcard, SrsState } from '../../types/models';
 import { getCardCategory, CATEGORIES } from '../../srs/srsEngine';
 import { PageHeader } from '../../components/PageHeader';
 import { GroupNotFound } from '../../components/GroupNotFound';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type BrowseFilter = 'all' | 'learning' | 'review' | 'new' | 'mastered';
 
@@ -283,19 +283,19 @@ export default function BrowsePage() {
                       {card.srsState.state > 0 && (
                         <View style={styles.statsIconsRow}>
                           <View style={styles.statIconItem}>
-                            <MaterialDesignIcons name="thumb-up-outline" size={14} color={theme.colors.outline} />
+                            <MaterialCommunityIcons name="thumb-up-outline" size={14} color={theme.colors.outline} />
                             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                               {mastery}%
                             </Text>
                           </View>
                           <View style={styles.statIconItem}>
-                            <MaterialDesignIcons name="sync" size={14} color={theme.colors.outline} />
+                            <MaterialCommunityIcons name="sync" size={14} color={theme.colors.outline} />
                             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                               {card.srsState.repetitions}
                             </Text>
                           </View>
                           <View style={styles.statIconItem}>
-                            <MaterialDesignIcons name="calendar-month-outline" size={14} color={theme.colors.outline} />
+                            <MaterialCommunityIcons name="calendar-month-outline" size={14} color={theme.colors.outline} />
                             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                               {reviewIn}
                             </Text>

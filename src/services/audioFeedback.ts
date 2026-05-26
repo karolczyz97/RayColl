@@ -21,8 +21,8 @@ async function playNativeSound(asset: any) {
         sound.unloadAsync().catch(() => {});
       }
     });
-  } catch (err) {
-    console.warn('Failed to play native feedback sound:', err);
+  } catch (err: any) {
+    console.log('Native feedback sound not playable (likely mock asset):', err?.message || err);
   }
 }
 
