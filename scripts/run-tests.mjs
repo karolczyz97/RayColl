@@ -20,7 +20,21 @@ require.extensions['.ts'] = (module, filename) => {
 };
 
 try {
-  require('../src/srs/__tests__/srsEngine.test.ts');
+  const testFiles = [
+    '../src/srs/__tests__/srsEngine.test.ts',
+    '../src/store/persistence/__tests__/persistenceQueue.test.ts',
+    '../src/store/selectors/__tests__/merge.test.ts',
+    '../src/import/__tests__/importParser.test.ts',
+    '../src/store/actions/__tests__/groupActions.test.ts',
+    '../src/store/actions/__tests__/cardActions.test.ts',
+  ];
+
+  for (const file of testFiles) {
+    const mod = require(file);
+    if (typeof mod.runTests === 'function') {
+      await mod.runTests();
+    }
+  }
 } finally {
   if (previousTsLoader) {
     require.extensions['.ts'] = previousTsLoader;

@@ -69,13 +69,13 @@ export function AppSelect({
           style={[
             styles.menu,
             anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-            ({ transformOrigin: 'top' } as any),
+            { transformOrigin: 'top' },
           ]}
           contentStyle={[
             styles.menuContent,
             { backgroundColor: theme.colors.elevation.level2 },
             anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-            ({ transformOrigin: 'top' } as any),
+            { transformOrigin: 'top' },
           ]}
           anchor={
             <TouchableRipple

@@ -67,6 +67,17 @@ npm run typecheck
 npm run test
 ```
 
+Refactor regression baseline:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```
+
+Use [scripts/regression-checklist.md](/C:/Users/Karol/.gemini/antigravity/scratch/TensorDeck/scripts/regression-checklist.md)
+after each refactor step for the manual functional baseline.
+
 Create a static web export:
 
 ```bash
@@ -150,6 +161,14 @@ src/
 
 Business logic should live in selectors, actions, services, or SRS/import helpers,
 not inside screen components.
+
+## Quality Rules
+
+- Screens and presentational components may call store actions only. They must not call Firebase services directly.
+- High-frequency changes should use queued persistence. Critical operations should use immediate flush.
+- Route files in `src/app` should stay thin and move business logic into `features/*`, `store/*`, `services/*`, `selectors/*`, or `actions/*`.
+- Prefer shared UI primitives such as `AppTextInput`, `SectionCard`, `AppScreen`, `AnimatedSection`, `MetricGrid`, `ConfirmDialog`, `DangerDialog`, `AppSnackbar`, and `SyncStatusBanner`.
+- Avoid new magic inline styles like `outlineStyle={{ borderRadius: 12 }}` in screens. Use `TOKENS` and base components instead.
 
 ## MD3 And Icon Policy
 

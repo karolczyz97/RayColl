@@ -18,6 +18,26 @@ export const TOKENS = {
     pill: 9999,
     full: 9999,
   },
+  typography: {
+    size: {
+      xs: 12,
+      sm: 14,
+      md: 16,
+      lg: 20,
+    },
+    weight: {
+      regular: '400' as const,
+      medium: '500' as const,
+      bold: '700' as const,
+    },
+  },
+  opacity: {
+    subtle: 0.12,
+    medium: 0.32,
+  },
+  surface: {
+    hoverScale: 1.015,
+  },
   touchTarget: {
     min: 48,
     compact: 40,

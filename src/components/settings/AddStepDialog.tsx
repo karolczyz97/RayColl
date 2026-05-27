@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Dialog, Button, TextInput } from 'react-native-paper';
+import { Dialog, Button } from 'react-native-paper';
 import { AppSelect } from '../AppSelect';
 import type { TranslationFn } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { dialogStyles } from '../../theme/dialogStyles';
+import { AppNumberInput } from '../forms/AppNumberInput';
 
 interface Props {
   visible: boolean;
@@ -52,14 +53,11 @@ export function AddStepDialog({
         />
 
         {newStepType !== 'wait' && (
-          <TextInput
-            mode="outlined"
+          <AppNumberInput
             label={t('settings.dialog.add_step.page_idx')}
-            keyboardType="numeric"
-            value={String(newPageIdx)}
-            onChangeText={(value) => setNewPageIdx(Number(value) || 0)}
-            style={styles.input}
-            outlineStyle={styles.inputOutline}
+            value={newPageIdx}
+            onChange={setNewPageIdx}
+            min={0}
             accessibilityLabel="Page index input"
           />
         )}
@@ -67,27 +65,22 @@ export function AddStepDialog({
         {(newStepType === 'speak_page' ||
           newStepType === 'dynamic_pause' ||
           newStepType === 'wait') && (
-          <TextInput
-            mode="outlined"
+          <AppNumberInput
             label={t('settings.dialog.add_step.time')}
-            keyboardType="numeric"
-            value={String(newMs)}
-            onChangeText={(value) => setNewMs(Number(value) || 0)}
-            style={styles.input}
-            outlineStyle={styles.inputOutline}
+            value={newMs}
+            onChange={setNewMs}
+            min={0}
             accessibilityLabel="Duration in milliseconds input"
           />
         )}
 
         {newStepType === 'listen_and_branch' && (
-          <TextInput
-            mode="outlined"
+          <AppNumberInput
             label={t('settings.dialog.add_step.threshold')}
-            keyboardType="numeric"
-            value={String(newThreshold)}
-            onChangeText={(value) => setNewThreshold(Number(value) || 0)}
-            style={styles.input}
-            outlineStyle={styles.inputOutline}
+            value={newThreshold}
+            onChange={setNewThreshold}
+            min={0}
+            max={100}
             accessibilityLabel="Success threshold input"
           />
         )}
@@ -105,11 +98,5 @@ export function AddStepDialog({
 const styles = StyleSheet.create({
   dialogContent: {
     gap: TOKENS.spacing.md,
-  },
-  input: {
-    height: TOKENS.control.height,
-  },
-  inputOutline: {
-    borderRadius: TOKENS.control.borderRadius,
   },
 });

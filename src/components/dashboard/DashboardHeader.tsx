@@ -2,13 +2,13 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Avatar, IconButton, TouchableRipple, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
-import type { User } from 'firebase/auth';
 import { useI18n } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { AppMenuButton } from '../AppMenuButton';
+import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
 
 interface Props {
-  user: User | null;
+  user: FlashcardStoreState['user'];
   onLogin: () => void;
   onLogout: () => void;
 }

@@ -40,13 +40,13 @@ export function AppMenuButton({
         onDismiss={close}
         style={[
           styles.menu,
-          ({ transformOrigin: align === 'right' ? 'top right' : 'top left' } as any),
+          { transformOrigin: align === 'right' ? 'top right' : 'top left' },
         ]}
         contentStyle={[
           styles.menuContent,
           { backgroundColor: theme.colors.elevation.level2 },
           { width: menuWidth, maxWidth: menuWidth },
-          ({ transformOrigin: align === 'right' ? 'top right' : 'top left' } as any),
+          { transformOrigin: align === 'right' ? 'top right' : 'top left' },
         ]}
         anchor={
           <View
@@ -80,7 +80,12 @@ export function AppMenuButton({
                 styles.menuItem,
                 item.selected && { backgroundColor: theme.colors.secondaryContainer },
               ]}
-              titleStyle={{ color: textColor, fontWeight: item.selected ? '700' : '500' }}
+              titleStyle={{
+                color: textColor,
+                fontWeight: item.selected
+                  ? TOKENS.typography.weight.bold
+                  : TOKENS.typography.weight.medium,
+              }}
             />
           );
         })}

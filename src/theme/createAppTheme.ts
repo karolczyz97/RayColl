@@ -1,5 +1,6 @@
 import { MD3LightTheme, MD3DarkTheme, MD3Theme } from 'react-native-paper';
 import { Material3Theme } from '@pchmn/expo-material3-theme';
+import { TOKENS } from './tokens';
 
 export const lightTheme: MD3Theme = {
   ...MD3LightTheme,
@@ -69,11 +70,15 @@ export function createAppTheme({
     const colors = isDark ? materialColors.dark : materialColors.light;
     return {
       ...baseTheme,
+      roundness: TOKENS.radius.md,
       colors: {
         ...baseTheme.colors,
         ...colors,
       },
     };
   }
-  return isDark ? darkTheme : lightTheme;
+  return {
+    ...(isDark ? darkTheme : lightTheme),
+    roundness: TOKENS.radius.md,
+  };
 }

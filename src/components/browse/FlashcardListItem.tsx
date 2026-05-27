@@ -10,6 +10,7 @@ import {
   getMasteryPercent,
   getDaysUntilReview,
 } from '../../theme/srsTokens';
+import { TOKENS } from '../../theme/tokens';
 import { EditFlashcardForm } from './EditFlashcardForm';
 import { getVisiblePages, getVisiblePageNames } from '../../store/selectors/pages';
 import { getReviewStatusColor } from '../../theme/semanticColors';
@@ -203,52 +204,52 @@ export function FlashcardListItem({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
+    borderRadius: TOKENS.radius.xl,
     overflow: 'hidden',
   },
   cardContent: {
-    paddingBottom: 4,
-    gap: 8,
+    paddingBottom: TOKENS.spacing.xs,
+    gap: TOKENS.spacing.sm,
   },
   primaryText: {
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontWeight: TOKENS.typography.weight.bold,
+    marginBottom: TOKENS.spacing.xs,
   },
   pageContentRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 4,
-    marginTop: 2,
+    gap: TOKENS.spacing.xs,
+    marginTop: TOKENS.spacing.xxs,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: TOKENS.spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 4,
+    paddingTop: TOKENS.spacing.xs,
   },
   switch: {
     transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
   cardActions: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: TOKENS.spacing.md,
+    paddingVertical: TOKENS.spacing.xs,
     justifyContent: 'space-between',
   },
   cardActionsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: TOKENS.spacing.md,
   },
   statsIconsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: TOKENS.spacing.sm,
   },
   statIconItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: TOKENS.spacing.xxs,
   },
   cardActionsRight: {
     flexDirection: 'row',

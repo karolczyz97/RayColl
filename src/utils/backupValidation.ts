@@ -6,6 +6,10 @@ export interface BackupData {
   activityHeatmap: Record<string, number>;
 }
 
+export function validateUserData(data: unknown): data is BackupData {
+  return validateBackupData(data);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }

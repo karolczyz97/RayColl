@@ -1,173 +1,24 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react';
 import type { FlashcardGroup, Flashcard, ModeStep } from '../types/models';
-import { calculateFsrs, matchSpeech, mapMatchToRating } from '../srs/srsEngine';
+import { calculateFsrs, mapMatchToRating, matchSpeech } from '../srs/srsEngine';
 import { ttsService } from '../services/ttsService';
 import { getSttService } from '../services/sttService';
 import {
-  playMicOnSound,
-  playMicOffSound,
-  playSuccessSound,
   playErrorSound,
+  playMicOffSound,
+  playMicOnSound,
+  playSuccessSound,
 } from '../services/audioFeedback';
 import { useAppTheme } from '../contexts/ThemeContext';
-
-export type SessionStatus =
-  | 'idle'
-  | 'speaking'
-  | 'listening'
-  | 'checking'
-  | 'revealed'
-  | 'finished'
-  | 'error';
-
-export interface StudySessionState {
-  status: SessionStatus;
-  currentCardIndex: number;
-  currentStepIndex: number;
-  revealedPages: number[];
-  sttResultText: string;
-  sttMatchPercent: number;
-  waitingForTap: boolean;
-  errorMsg?: string;
-}
-
-const INITIAL_STATE: StudySessionState = {
-  status: 'idle',
-  currentCardIndex: 0,
-  currentStepIndex: 0,
-  revealedPages: [],
-  sttResultText: '',
-  sttMatchPercent: 0,
-  waitingForTap: false,
-  errorMsg: undefined,
-};
-
-type SessionAction =
-  | { type: 'START_SESSION'; cards: Flashcard[] }
-  | {
-      type: 'SET_CURRENT_STEP';
-      stepIndex: number;
-      revealedPages?: number[];
-      waitingForTap?: boolean;
-    }
-  | { type: 'START_SPEAKING'; stepIndex: number }
-  | { type: 'END_SPEAKING' }
-  | { type: 'START_LISTENING'; stepIndex: number }
-  | { type: 'UPDATE_PARTIAL_STT'; text: string }
-  | { type: 'END_LISTENING'; text: string; matchPercent: number }
-  | { type: 'REVEAL_PAGES'; revealedPages: number[]; waitingForTap?: boolean }
-  | { type: 'SHOW_RATINGS' }
-  | { type: 'FINISH_SESSION' }
-  | { type: 'ADVANCE_CARD'; nextCardIndex: number }
-  | { type: 'SET_ERROR'; errorMsg: string }
-  | { type: 'CLEAR_ERROR' };
-
-function sessionReducer(state: StudySessionState, action: SessionAction): StudySessionState {
-  switch (action.type) {
-    case 'START_SESSION':
-      return {
-        ...INITIAL_STATE,
-      };
-    case 'SET_CURRENT_STEP':
-      return {
-        ...state,
-        currentStepIndex: action.stepIndex,
-        revealedPages: action.revealedPages ?? state.revealedPages,
-        waitingForTap: action.waitingForTap ?? state.waitingForTap,
-      };
-    case 'START_SPEAKING':
-      return {
-        ...state,
-        status: 'speaking',
-        currentStepIndex: action.stepIndex,
-      };
-    case 'END_SPEAKING':
-      return {
-        ...state,
-        status: 'idle',
-      };
-    case 'START_LISTENING':
-      return {
-        ...state,
-        status: 'listening',
-        currentStepIndex: action.stepIndex,
-        sttResultText: '',
-        sttMatchPercent: 0,
-      };
-    case 'UPDATE_PARTIAL_STT':
-      return {
-        ...state,
-        sttResultText: action.text,
-      };
-    case 'END_LISTENING':
-      return {
-        ...state,
-        status: 'checking',
-        sttResultText: action.text,
-        sttMatchPercent: action.matchPercent,
-      };
-    case 'REVEAL_PAGES':
-      return {
-        ...state,
-        revealedPages: action.revealedPages,
-        waitingForTap: action.waitingForTap ?? state.waitingForTap,
-      };
-    case 'SHOW_RATINGS':
-      return {
-        ...state,
-        status: 'revealed',
-        waitingForTap: false,
-      };
-    case 'FINISH_SESSION':
-      return {
-        ...state,
-        status: 'finished',
-        waitingForTap: false,
-      };
-    case 'ADVANCE_CARD':
-      return {
-        ...INITIAL_STATE,
-        currentCardIndex: action.nextCardIndex,
-      };
-    case 'SET_ERROR':
-      return {
-        ...state,
-        status: 'error',
-        errorMsg: action.errorMsg,
-      };
-    case 'CLEAR_ERROR':
-      return {
-        ...state,
-        errorMsg: undefined,
-        status: 'idle',
-      };
-    default:
-      return state;
-  }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function uniquePageIndexes(pageIndexes: number[]): number[] {
-  return [...new Set(pageIndexes)].sort((a, b) => a - b);
-}
-
-function getActivePageIndexes(group: FlashcardGroup): number[] {
-  const activePageCount = group.activePageCount ?? group.pageNames.length;
-  return group.pageNames.slice(0, activePageCount).map((_, index) => index);
-}
-
-function getNextHiddenPageIndex(group: FlashcardGroup, revealedPages: number[]): number | null {
-  const revealed = new Set([0, ...revealedPages]);
-  return getActivePageIndexes(group).find((pageIndex) => !revealed.has(pageIndex)) ?? null;
-}
-
-function areAllActivePagesRevealed(group: FlashcardGroup, revealedPages: number[]): boolean {
-  const revealed = new Set([0, ...revealedPages]);
-  return getActivePageIndexes(group).every((pageIndex) => revealed.has(pageIndex));
-}
+import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '../features/study/session/sessionReducer';
+import {
+  areAllActivePagesRevealed,
+  getActivePageIndexes,
+  getNextHiddenPageIndex,
+  sleep,
+  uniquePageIndexes,
+} from '../features/study/session/sessionUtils';
+import type { SessionAction } from '../features/study/session/sessionTypes';
 
 export function useStudySession(
   group: FlashcardGroup | null,
@@ -175,11 +26,9 @@ export function useStudySession(
   onCardReviewed: (groupId: string, card: Flashcard) => void,
 ) {
   const [dueCards, setDueCards] = useState<Flashcard[]>([]);
-  const [state, dispatch] = useReducer(sessionReducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(sessionReducer, INITIAL_STUDY_SESSION_STATE);
   const [failedCount, setFailedCount] = useState(0);
-
   const { ttsRate } = useAppTheme();
-
   const abortRef = useRef(false);
   const isMountedRef = useRef(true);
   const sttService = useRef(getSttService());
@@ -188,14 +37,14 @@ export function useStudySession(
   const allCardsRef = useRef<Flashcard[]>([]);
   const failedCardsRef = useRef<Flashcard[]>([]);
   const reviewedCardIdsRef = useRef<Set<string>>(new Set());
-
-  // Refs for stable executeStep dependencies
   const groupRef = useRef(group);
   const activeStepsRef = useRef<ModeStep[]>([]);
   const stateRef = useRef(state);
   const ttsRateRef = useRef(ttsRate);
   const onCardReviewedRef = useRef(onCardReviewed);
   const lastExecutedCardIndexRef = useRef<number | null>(null);
+  const dueCardsRef = useRef(dueCards);
+  const activePageCount = group?.activePageCount ?? group?.pageNames.length ?? 99;
 
   const dispatchIfMounted = useCallback((action: SessionAction) => {
     if (isMountedRef.current) {
@@ -213,15 +62,15 @@ export function useStudySession(
     };
   }, []);
 
-  // Filter out steps referencing hidden pages based on activePageCount
-  const activePageCount = group?.activePageCount ?? group?.pageNames.length ?? 99;
-  const activeSteps = useMemo(() => {
-    return steps.filter((step) => {
-      if ('pageIndex' in step && step.pageIndex >= activePageCount) return false;
-      if ('nextPageIndex' in step && step.nextPageIndex >= activePageCount) return false;
-      return true;
-    });
-  }, [steps, activePageCount]);
+  const activeSteps = useMemo(
+    () =>
+      steps.filter((step) => {
+        if ('pageIndex' in step && step.pageIndex >= activePageCount) return false;
+        if ('nextPageIndex' in step && step.nextPageIndex >= activePageCount) return false;
+        return true;
+      }),
+    [activePageCount, steps],
+  );
 
   useEffect(() => {
     groupRef.current = group;
@@ -238,9 +87,6 @@ export function useStudySession(
   useEffect(() => {
     onCardReviewedRef.current = onCardReviewed;
   }, [onCardReviewed]);
-
-  // Keep dueCards ref to avoid rebuild dependencies in callbacks
-  const dueCardsRef = useRef(dueCards);
   useEffect(() => {
     dueCardsRef.current = dueCards;
   }, [dueCards]);
@@ -251,7 +97,7 @@ export function useStudySession(
       allCardsRef.current = cards;
       failedCardsRef.current = [];
       setFailedCount(0);
-      lastExecutedCardIndexRef.current = null; // Reset execution tracker
+      lastExecutedCardIndexRef.current = null;
       if (clearReviewed) {
         reviewedCardIdsRef.current.clear();
       }
@@ -282,31 +128,29 @@ export function useStudySession(
 
   const advanceToNextCard = useCallback(async () => {
     await waitUntilReleased();
-    const nextIdx = stateRef.current.currentCardIndex + 1;
-    if (nextIdx >= dueCardsRef.current.length) {
+    const nextIndex = stateRef.current.currentCardIndex + 1;
+    if (nextIndex >= dueCardsRef.current.length) {
       dispatchIfMounted({ type: 'FINISH_SESSION' });
     } else {
-      dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIdx });
+      dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIndex });
     }
   }, [dispatchIfMounted, waitUntilReleased]);
 
-  // TTS Flow Helper
   const playTts = useCallback(
     async (text: string, lang: string) => {
       const startTime = Date.now();
       try {
         await ttsService.speak({ text, lang, rate: ttsRateRef.current });
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err);
         console.error('TTS Speak Error:', err);
-        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `TTS Error: ${errMsg}` });
+        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `TTS Error: ${message}` });
       }
       lastTtsDurationRef.current = Date.now() - startTime;
     },
     [dispatchIfMounted],
   );
 
-  // STT Flow Helper
   const runSpeechRecognition = useCallback(
     async (lang: string, timeoutMs: number) => {
       playMicOnSound();
@@ -315,7 +159,7 @@ export function useStudySession(
         recognized = await sttService.current.startListening({
           language: lang,
           timeoutMs,
-          onPartialResult: (t) => dispatchIfMounted({ type: 'UPDATE_PARTIAL_STT', text: t }),
+          onPartialResult: (text) => dispatchIfMounted({ type: 'UPDATE_PARTIAL_STT', text }),
           onListeningStateChange: (listening) => {
             if (!listening) {
               playMicOffSound();
@@ -323,39 +167,39 @@ export function useStudySession(
           },
         });
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err);
         console.error('STT Listen Error:', err);
-        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `STT Error: ${errMsg}` });
+        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `STT Error: ${message}` });
       }
       return recognized;
     },
     [dispatchIfMounted],
   );
 
-  // Recursion via ref to avoid hoisting circular dependency in useCallback
-  const executeStepRef = useRef<(card: Flashcard, stepIdx: number) => Promise<void>>(undefined);
+  const executeStepRef = useRef<(card: Flashcard, stepIndex: number) => Promise<void>>(undefined);
 
   const executeStep = useCallback(
-    async (card: Flashcard, stepIdx: number) => {
+    async (card: Flashcard, stepIndex: number) => {
       const currentGroup = groupRef.current;
       const currentSteps = activeStepsRef.current;
       const currentState = stateRef.current;
 
-      if (abortRef.current || !currentGroup || stepIdx >= currentSteps.length) {
+      if (abortRef.current || !currentGroup || stepIndex >= currentSteps.length) {
         dispatchIfMounted({ type: 'SHOW_RATINGS' });
         return;
       }
-      const step = currentSteps[stepIdx];
+
+      const step = currentSteps[stepIndex];
 
       switch (step.type) {
         case 'show_page': {
           const alreadyRevealed = currentState.revealedPages;
           const nextRevealed = uniquePageIndexes([...alreadyRevealed, step.pageIndex]);
 
-          if (stepIdx === currentSteps.length - 1) {
+          if (stepIndex === currentSteps.length - 1) {
             dispatchIfMounted({
               type: 'SET_CURRENT_STEP',
-              stepIndex: stepIdx,
+              stepIndex,
               revealedPages: alreadyRevealed,
               waitingForTap: true,
             });
@@ -364,62 +208,54 @@ export function useStudySession(
 
           dispatchIfMounted({
             type: 'SET_CURRENT_STEP',
-            stepIndex: stepIdx,
+            stepIndex,
             revealedPages: nextRevealed,
           });
 
-          await executeStepRef.current?.(card, stepIdx + 1);
+          await executeStepRef.current?.(card, stepIndex + 1);
           break;
         }
 
         case 'speak_page': {
-          dispatchIfMounted({ type: 'START_SPEAKING', stepIndex: stepIdx });
-          const lang = currentGroup.pageLanguages[step.pageIndex] || 'en-US';
-          const text = card.pages[step.pageIndex] || '';
-
-          await playTts(text, lang);
-
+          dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
+          await playTts(card.pages[step.pageIndex] || '', currentGroup.pageLanguages[step.pageIndex] || 'en-US');
           if (step.extraPauseMs > 0) {
             await sleep(step.extraPauseMs);
           }
           dispatchIfMounted({ type: 'END_SPEAKING' });
 
           if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIdx + 1);
+            await executeStepRef.current?.(card, stepIndex + 1);
           }
           break;
         }
 
         case 'dynamic_pause': {
           const text = card.pages[step.nextPageIndex] || '';
-          const pauseMs = text.length * 60 + (step.extraPauseMs || 0);
-          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex: stepIdx });
-          await sleep(pauseMs);
+          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
+          await sleep(text.length * 60 + (step.extraPauseMs || 0));
 
           if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIdx + 1);
+            await executeStepRef.current?.(card, stepIndex + 1);
           }
           break;
         }
 
         case 'wait': {
-          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex: stepIdx });
+          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
           await sleep(step.ms);
 
           if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIdx + 1);
+            await executeStepRef.current?.(card, stepIndex + 1);
           }
           break;
         }
 
         case 'listen_and_branch': {
-          dispatchIfMounted({ type: 'START_LISTENING', stepIndex: stepIdx });
+          dispatchIfMounted({ type: 'START_LISTENING', stepIndex });
           const lang = currentGroup.pageLanguages[step.pageIndex] || 'en-US';
           const softTimeout = Math.max(5000, lastTtsDurationRef.current * 3);
-
           const recognized = await runSpeechRecognition(lang, softTimeout + 10000);
-
-          // Compute match
           const original = card.pages[step.pageIndex] || '';
           const percent = matchSpeech(recognized, original);
 
@@ -429,7 +265,6 @@ export function useStudySession(
             matchPercent: percent,
           });
 
-          // Show result for a moment
           await sleep(1200);
 
           if (percent >= step.successThreshold) {
@@ -443,7 +278,7 @@ export function useStudySession(
             }
           } else {
             playErrorSound();
-            if (!failedCardsRef.current.find((c) => c.id === card.id)) {
+            if (!failedCardsRef.current.find((item) => item.id === card.id)) {
               failedCardsRef.current.push(card);
               if (isMountedRef.current) {
                 setFailedCount(failedCardsRef.current.length);
@@ -452,17 +287,21 @@ export function useStudySession(
           }
 
           if (percent < step.successThreshold) {
-            const allPages = getActivePageIndexes(currentGroup);
-            dispatchIfMounted({ type: 'REVEAL_PAGES', revealedPages: allPages });
+            dispatchIfMounted({
+              type: 'REVEAL_PAGES',
+              revealedPages: getActivePageIndexes(currentGroup),
+            });
 
             if (step.incorrectTtsPageIndex !== undefined) {
-              const corrLang = currentGroup.pageLanguages[step.incorrectTtsPageIndex] || 'en-US';
-              dispatchIfMounted({ type: 'START_SPEAKING', stepIndex: stepIdx });
-              const corrStart = Date.now();
-              await playTts(card.pages[step.incorrectTtsPageIndex] || '', corrLang);
-              const corrDuration = Date.now() - corrStart;
+              dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
+              const correctionStart = Date.now();
+              await playTts(
+                card.pages[step.incorrectTtsPageIndex] || '',
+                currentGroup.pageLanguages[step.incorrectTtsPageIndex] || 'en-US',
+              );
+              const correctionDuration = Date.now() - correctionStart;
               dispatchIfMounted({ type: 'END_SPEAKING' });
-              await sleep(corrDuration * 2);
+              await sleep(correctionDuration * 2);
             } else {
               await sleep(2000);
             }
@@ -470,12 +309,11 @@ export function useStudySession(
             if (!abortRef.current) {
               await waitUntilReleased();
               processCardReview(card, 1);
-
-              const nextIdx = currentState.currentCardIndex + 1;
-              if (nextIdx >= dueCardsRef.current.length) {
+              const nextIndex = currentState.currentCardIndex + 1;
+              if (nextIndex >= dueCardsRef.current.length) {
                 dispatchIfMounted({ type: 'FINISH_SESSION' });
               } else {
-                dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIdx });
+                dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIndex });
               }
               return;
             }
@@ -484,17 +322,9 @@ export function useStudySession(
         }
       }
     },
-    [
-      playTts,
-      runSpeechRecognition,
-      processCardReview,
-      advanceToNextCard,
-      waitUntilReleased,
-      dispatchIfMounted,
-    ],
+    [advanceToNextCard, dispatchIfMounted, playTts, processCardReview, runSpeechRecognition, waitUntilReleased],
   );
 
-  // Sync ref to current executeStep callback function
   useEffect(() => {
     executeStepRef.current = executeStep;
   }, [executeStep]);
@@ -533,16 +363,13 @@ export function useStudySession(
     if (state.status === 'revealed' || state.waitingForTap) return;
     const card = dueCards[state.currentCardIndex];
     if (!card) return;
+    if (lastExecutedCardIndexRef.current === state.currentCardIndex) return;
 
-    if (lastExecutedCardIndexRef.current === state.currentCardIndex) {
-      return;
-    }
     lastExecutedCardIndexRef.current = state.currentCardIndex;
-
     let active = true;
     const timer = setTimeout(() => {
       if (active) {
-        executeStep(card, 0);
+        void executeStep(card, 0);
       }
     }, 0);
 
@@ -550,13 +377,13 @@ export function useStudySession(
       active = false;
       clearTimeout(timer);
     };
-  }, [state.currentCardIndex, state.status, state.waitingForTap, dueCards, executeStep]);
+  }, [dueCards, executeStep, state.currentCardIndex, state.status, state.waitingForTap]);
 
   const handleRating = useCallback(
     async (rating: number) => {
       if (!groupRef.current || dueCardsRef.current.length === 0) return;
       const card = dueCardsRef.current[stateRef.current.currentCardIndex];
-      if (rating === 1 && !failedCardsRef.current.find((c) => c.id === card.id)) {
+      if (rating === 1 && !failedCardsRef.current.find((item) => item.id === card.id)) {
         failedCardsRef.current.push(card);
         if (isMountedRef.current) {
           setFailedCount(failedCardsRef.current.length);
@@ -565,7 +392,7 @@ export function useStudySession(
       processCardReview(card, rating);
       await advanceToNextCard();
     },
-    [processCardReview, advanceToNextCard],
+    [advanceToNextCard, processCardReview],
   );
 
   const restartSession = useCallback(() => {

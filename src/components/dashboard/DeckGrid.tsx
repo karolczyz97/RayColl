@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
-import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { Layout } from 'react-native-reanimated';
 import { GroupCard } from './GroupCard';
 import type { FlashcardGroup } from '../../types/models';
 import { TOKENS } from '../../theme/tokens';
+import { AnimatedSection } from '../layout/AnimatedSection';
 
 interface Props {
   groups: FlashcardGroup[];
@@ -27,7 +28,7 @@ export function DeckGrid({ groups, onModeChange }: Props) {
     );
   }, [currentWidth]);
 
-  const { numCols, cardWidth } = useMemo(() => {
+  const { cardWidth } = useMemo(() => {
     const minCardWidth = TOKENS.layout.minCardWidth;
     const maxCols = TOKENS.layout.maxCols;
 
@@ -38,17 +39,16 @@ export function DeckGrid({ groups, onModeChange }: Props) {
 
     // Subtract 1px to absorb floating-point rounding errors and prevent layout wrapping glitches
     const widthCalculated = ((availableWidth - gap * (numColsCalculated - 1)) / numColsCalculated) - 1;
-    return { numCols: numColsCalculated, cardWidth: widthCalculated };
+    return { cardWidth: widthCalculated };
   }, [currentWidth, gap, groups.length]);
 
   const widthStyle = useMemo(() => {
-    if (Platform.OS === 'web') {
-      return {
-        width: `calc((100% - ${(numCols - 1) * gap}px) / ${numCols})`,
-      };
-    }
-    return { width: cardWidth };
-  }, [numCols, gap, cardWidth]);
+    return {
+      width: cardWidth,
+      maxWidth: cardWidth,
+      flexBasis: cardWidth,
+    };
+  }, [cardWidth]);
 
   return (
     <View
@@ -56,16 +56,13 @@ export function DeckGrid({ groups, onModeChange }: Props) {
       onLayout={(event) => setMeasuredWidth(event.nativeEvent.layout.width)}
     >
       {groups.map((group, index) => (
-        <Animated.View
-          key={group.id}
-          entering={FadeInDown.springify().delay(Math.min(index * 80, 600))}
-          layout={Layout.springify()}
-          style={[styles.gridItem, widthStyle as any]}
-        >
-          <GroupCard
-            group={group}
-            onModeChange={(modeId) => onModeChange(group.id, modeId)}
-          />
+        <Animated.View key={group.id} layout={Layout.springify()} style={[styles.gridItem, widthStyle]}>
+          <AnimatedSection index={index}>
+            <GroupCard
+              group={group}
+              onModeChange={(modeId) => onModeChange(group.id, modeId)}
+            />
+          </AnimatedSection>
         </Animated.View>
       ))}
     </View>

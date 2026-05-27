@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, TextInput, Switch, Text } from 'react-native-paper';
+import { Button, Switch, Text } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { getVisiblePageNames } from '../../store/selectors/pages';
 import type { TranslationFn } from '../../i18n';
+import { AppTextInput } from '../forms/AppTextInput';
+import { TOKENS } from '../../theme/tokens';
 
 interface Props {
   card: Flashcard;
@@ -53,9 +55,8 @@ export function EditFlashcardForm({
       )}
 
       {editPages.slice(0, displayCount).map((page, i) => (
-        <TextInput
+        <AppTextInput
           key={i}
-          mode="outlined"
           label={displayNames[i] || t('import.page_label', { index: i + 1 })}
           value={page}
           onChangeText={(text) => {
@@ -66,7 +67,6 @@ export function EditFlashcardForm({
             });
           }}
           style={styles.editInput}
-          outlineStyle={{ borderRadius: 12 }}
           accessibilityLabel={`Edit page ${i + 1}`}
         />
       ))}
@@ -83,8 +83,8 @@ export function EditFlashcardForm({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    gap: 12,
+    padding: TOKENS.spacing.lg,
+    gap: TOKENS.spacing.md,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -93,11 +93,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   editInput: {
-    height: 44,
+    minHeight: TOKENS.control.compactHeight,
   },
   editingActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: TOKENS.spacing.sm,
   },
 });

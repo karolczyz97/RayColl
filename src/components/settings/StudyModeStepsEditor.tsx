@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Divider, List, IconButton, Button, useTheme } from 'react-native-paper';
+import { Divider, List, IconButton, Button, useTheme } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
-import { AppCard } from '../AppCard';
+import { SectionCard } from '../layout/SectionCard';
 
 interface Props {
   activeMode: StudyMode;
@@ -34,11 +34,7 @@ export function StudyModeStepsEditor({
   };
 
   return (
-    <AppCard mode="outlined" style={styles.stepsCard}>
-      <AppCard.Content>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          {t('settings.mode_steps', { name: getModeName(activeMode) })}
-        </Text>
+    <SectionCard title={t('settings.mode_steps', { name: getModeName(activeMode) })}>
         <View style={styles.stepsList}>
           {activeMode.steps.map((step, index) => (
             <View key={index}>
@@ -91,20 +87,11 @@ export function StudyModeStepsEditor({
             {t('settings.add_step_btn')}
           </Button>
         )}
-      </AppCard.Content>
-    </AppCard>
+    </SectionCard>
   );
 }
 
 const styles = StyleSheet.create({
-  stepsCard: {
-    borderRadius: TOKENS.radius.xl,
-    overflow: 'hidden',
-  },
-  sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: TOKENS.spacing.md,
-  },
   stepsList: {
     borderRadius: TOKENS.control.borderRadius,
     overflow: 'hidden',

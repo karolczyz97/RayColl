@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { TOKENS } from '../theme/tokens';
 
 type PaperCardProps = ComponentProps<typeof Card>;
 
@@ -23,18 +24,20 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
   const handleHoverIn = () => {
     if (!isHoverEnabled) return;
     setHovered(true);
-    scale.value = withTiming(1.015, { duration: 120 });
+    scale.value = withTiming(TOKENS.surface.hoverScale, {
+      duration: TOKENS.motion.duration.short,
+    });
   };
 
   const handleHoverOut = () => {
     if (!isHoverEnabled) return;
     setHovered(false);
-    scale.value = withTiming(1, { duration: 120 });
+    scale.value = withTiming(1, { duration: TOKENS.motion.duration.short });
   };
 
   const layoutStyle = useMemo(() => {
     const flatStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
-    return {
+    const nextStyle: ViewStyle = {
       alignSelf: flatStyle?.alignSelf,
       flex: flatStyle?.flex,
       flexBasis: flatStyle?.flexBasis,
@@ -52,8 +55,9 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
       maxWidth: flatStyle?.maxWidth,
       minWidth: flatStyle?.minWidth,
       width: flatStyle?.width ?? '100%',
-      ...(Platform.OS === 'web' ? { cursor: 'default' } : {}) as any,
     };
+
+    return nextStyle;
   }, [style]);
 
   const cardStyle = useMemo(() => [style, styles.card, hovered && styles.hovered], [hovered, style]);

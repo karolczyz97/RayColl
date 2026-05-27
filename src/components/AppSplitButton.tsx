@@ -47,13 +47,13 @@ export function AppSplitButton({
       style={[
         styles.menu,
         anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-        ({ transformOrigin: 'top' } as any),
+        { transformOrigin: 'top' },
       ]}
       contentStyle={[
         styles.menuContent,
         { backgroundColor: theme.colors.elevation.level2 },
         anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-        ({ transformOrigin: 'top' } as any),
+        { transformOrigin: 'top' },
       ]}
       anchor={
         <Surface
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   label: {
     flexShrink: 1,
-    fontWeight: '700',
+    fontWeight: TOKENS.typography.weight.bold,
   },
   divider: {
     alignSelf: 'center',

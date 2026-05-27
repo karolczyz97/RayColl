@@ -31,4 +31,33 @@ module.exports = defineConfig([
       ]
     },
   }
+  ,
+  {
+    files: ["src/app/**/*.ts", "src/app/**/*.tsx", "src/components/**/*.ts", "src/components/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          "paths": [
+            {
+              "name": "firebase/auth",
+              "message": "UI files must not call Firebase directly. Go through store actions or persistence boundaries."
+            },
+            {
+              "name": "firebase/firestore",
+              "message": "UI files must not call Firebase directly. Go through store actions or persistence boundaries."
+            },
+            {
+              "name": "../services/firebase",
+              "message": "UI files must not call Firebase services directly. Use store actions only."
+            },
+            {
+              "name": "../../services/firebase",
+              "message": "UI files must not call Firebase services directly. Use store actions only."
+            }
+          ]
+        }
+      ]
+    },
+  }
 ]);

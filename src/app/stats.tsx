@@ -1,136 +1,46 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, useTheme, ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTheme } from 'react-native-paper';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { SegmentedProgressBar } from '../components/SegmentedProgressBar';
-import { PageHeader } from '../components/PageHeader';
 import { useI18n } from '../i18n';
-import { AppIcon } from '../components/AppIcon';
-import { AppCard } from '../components/AppCard';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
-import { TOKENS } from '../theme/tokens';
 import {
   computeStreak,
   getTotalCardsCount,
   getTotalDueCardsCount,
   getActiveDaysCount,
   getGlobalStats,
-  getLocalDateString,
-  computeCardStats,
 } from '../store/selectors/stats';
 import {
   getDueColor,
-  getHeatmapColor,
   getInfoColor,
   getSuccessColor,
   getWarningColor,
 } from '../theme/semanticColors';
-
-function HeatmapGrid({
-  heatmap,
-  t,
-}: {
-  heatmap: Record<string, number>;
-  t: (key: string) => string;
-}) {
-  const theme = useTheme();
-
-  const cols = 20,
-    rows = 7;
-  const today = new Date();
-  const columnsData: { date: string; count: number }[][] = [];
-
-  // Generate grid columns (from oldest to newest)
-  for (let col = cols - 1; col >= 0; col--) {
-    const colCells: { date: string; count: number }[] = [];
-    for (let row = 0; row < rows; row++) {
-      const daysBack = col * 7 + (6 - row);
-      const d = new Date(today);
-      d.setDate(d.getDate() - daysBack);
-      const key = getLocalDateString(d);
-      colCells.push({ date: key, count: heatmap[key] || 0 });
-    }
-    columnsData.push(colCells);
-  }
-
-  const colorFor = (count: number): string => {
-    return getHeatmapColor(theme, count);
-  };
-
-  const dayLabels = [
-    t('stats.day.mon'),
-    '',
-    t('stats.day.wed'),
-    '',
-    t('stats.day.fri'),
-    '',
-    t('stats.day.sun'),
-  ];
-
-  return (
-    <View style={styles.heatmapContainer}>
-      <View style={styles.gridWrapper}>
-        {/* Day labels column */}
-        <View style={styles.dayLabelsCol}>
-          {dayLabels.map((label, i) => (
-            <View key={i} style={styles.dayLabelCell}>
-              {label ? (
-                <Text style={[styles.dayLabelText, { color: theme.colors.outline }]}>{label}</Text>
-              ) : null}
-            </View>
-          ))}
-        </View>
-
-        {/* Grid columns */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.gridScroll}
-        >
-          <View style={styles.gridContainer}>
-            {columnsData.map((col, colIdx) => (
-              <View key={colIdx} style={styles.gridCol}>
-                {col.map((cell, rowIdx) => (
-                  <View
-                    key={rowIdx}
-                    style={[styles.gridCell, { backgroundColor: colorFor(cell.count) }]}
-                  />
-                ))}
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-    </View>
-  );
-}
+import { AppScreen } from '../components/layout/AppScreen';
+import { AnimatedSection } from '../components/layout/AnimatedSection';
+import { LoadingState } from '../components/layout/LoadingState';
+import { SectionCard } from '../components/layout/SectionCard';
+import { MetricGrid } from '../components/metrics/MetricGrid';
+import { HeatmapGrid } from '../features/stats/HeatmapGrid';
+import { DeckProgressList } from '../features/stats/DeckProgressList';
 
 export default function StatsPage() {
   const { t } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
-  const { width, formMaxWidth } = useResponsiveLayout();
-
+  const { formMaxWidth } = useResponsiveLayout();
   const { groups, activityHeatmap, getDueCards, isLoading } = store;
 
   const totalCards = useMemo(() => getTotalCardsCount(groups), [groups]);
-  const totalDue = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [groups, getDueCards]);
+  const totalDue = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [getDueCards, groups]);
   const streak = useMemo(() => computeStreak(activityHeatmap), [activityHeatmap]);
   const activeDays = useMemo(() => getActiveDaysCount(activityHeatmap), [activityHeatmap]);
   const globalStats = useMemo(() => getGlobalStats(groups), [groups]);
 
-  const handleBack = () => {
-    router.back();
-  };
-
   if (isLoading) {
-    return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+    return <LoadingState />;
   }
 
   const statCards = [
@@ -161,181 +71,28 @@ export default function StatsPage() {
   ];
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <PageHeader title={t('stats.title')} onBack={handleBack} />
+    <AppScreen title={t('stats.title')} onBack={() => router.back()} maxWidth={formMaxWidth}>
+      <AnimatedSection index={0}>
+        <MetricGrid items={statCards} />
+      </AnimatedSection>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.mainContainer, { maxWidth: formMaxWidth }]}>
-          {/* Quick stats grid */}
-          <View style={styles.statsGrid}>
-            {statCards.map((m, i) => (
-              <Animated.View
-                key={i}
-                entering={FadeInDown.springify().delay(i * 80)}
-                style={{ minWidth: width < 600 ? '47%' : '22%' }}
-              >
-                <AppCard style={styles.statCard} mode="outlined">
-                  <AppCard.Content style={styles.statCardContent}>
-                    <AppIcon
-                      name={m.icon}
-                      size={28}
-                      color={m.color}
-                      style={{ marginBottom: 4 }}
-                    />
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      {m.label}
-                    </Text>
-                    <Text variant="titleLarge" style={{ fontWeight: 'bold', color: m.color }}>
-                      {m.value}
-                    </Text>
-                  </AppCard.Content>
-                </AppCard>
-              </Animated.View>
-            ))}
-          </View>
+      <AnimatedSection index={1}>
+        <SectionCard title={t('stats.progress_title')}>
+          <SegmentedProgressBar stats={globalStats} showLegend />
+        </SectionCard>
+      </AnimatedSection>
 
-          {/* Global Progress */}
-          <Animated.View entering={FadeInDown.springify().delay(350)}>
-            <AppCard mode="outlined" style={styles.sectionCard}>
-              <AppCard.Content>
-                <Text variant="titleMedium" style={styles.sectionCardTitle}>
-                  {t('stats.progress_title')}
-                </Text>
-                <SegmentedProgressBar stats={globalStats} showLegend />
-              </AppCard.Content>
-            </AppCard>
-          </Animated.View>
+      <AnimatedSection index={2}>
+        <SectionCard title={t('stats.heatmap_title')}>
+          <HeatmapGrid heatmap={activityHeatmap} t={t} />
+        </SectionCard>
+      </AnimatedSection>
 
-          {/* Heatmap */}
-          <AppCard mode="outlined" style={styles.sectionCard}>
-            <AppCard.Content>
-              <Text variant="titleMedium" style={styles.sectionCardTitle}>
-                {t('stats.heatmap_title')}
-              </Text>
-              <HeatmapGrid heatmap={activityHeatmap} t={t} />
-            </AppCard.Content>
-          </AppCard>
-
-          {/* Decks Progress */}
-          <AppCard mode="outlined" style={styles.sectionCard}>
-            <AppCard.Content>
-              <Text variant="titleMedium" style={styles.sectionCardTitle}>
-                {t('stats.deck_progress')}
-              </Text>
-              {groups.map((g) => {
-                const groupStats = computeCardStats(g.cards);
-                return (
-                  <View key={g.id} style={styles.deckRow}>
-                    <View style={styles.deckRowHeader}>
-                      <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>
-                        {g.name}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {t('stats.cards_count', { count: g.cards.length })}
-                      </Text>
-                    </View>
-                    <SegmentedProgressBar stats={groupStats} />
-                  </View>
-                );
-              })}
-            </AppCard.Content>
-          </AppCard>
-        </View>
-      </ScrollView>
-    </View>
+      <AnimatedSection index={3}>
+        <SectionCard title={t('stats.deck_progress')}>
+          <DeckProgressList groups={groups} t={t} />
+        </SectionCard>
+      </AnimatedSection>
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    paddingHorizontal: TOKENS.spacing.xxs,
-    paddingTop: 48,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 64,
-    gap: 16,
-  },
-  mainContainer: {
-    width: '100%',
-    alignSelf: 'center',
-    gap: 16,
-    padding: TOKENS.spacing.xxs,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 16,
-  },
-  statCardContent: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  sectionCard: {
-    borderRadius: 16,
-  },
-  sectionCardTitle: {
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  heatmapContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  gridWrapper: {
-    position: 'relative',
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 337,
-  },
-  dayLabelsCol: {
-    position: 'absolute',
-    left: -28,
-    width: 24,
-    justifyContent: 'space-around',
-    height: 116,
-  },
-  dayLabelCell: {
-    height: 14,
-    justifyContent: 'center',
-  },
-  dayLabelText: {
-    fontSize: 9,
-  },
-  gridScroll: {
-    paddingBottom: 4,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    gap: 3,
-    height: 116,
-  },
-  gridCol: {
-    flexDirection: 'column',
-    gap: 3,
-  },
-  gridCell: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-  },
-  deckRow: {
-    marginBottom: 16,
-  },
-  deckRowHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-});
