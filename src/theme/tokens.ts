@@ -45,6 +45,11 @@ export const TOKENS = {
   layout: {
     maxWidth: 1200,
     webWidth: '100%',
+    minCardWidth: 280,
+    maxCols: 4,
+    minGap: 8,
+    maxGap: 32,
+    gapRatio: 0.0266,
   },
   motion: {
     duration: {

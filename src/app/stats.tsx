@@ -70,37 +70,39 @@ function HeatmapGrid({
   ];
 
   return (
-    <View style={styles.heatmapWrapper}>
-      {/* Day labels column */}
-      <View style={styles.dayLabelsCol}>
-        {dayLabels.map((label, i) => (
-          <View key={i} style={styles.dayLabelCell}>
-            {label ? (
-              <Text style={[styles.dayLabelText, { color: theme.colors.outline }]}>{label}</Text>
-            ) : null}
-          </View>
-        ))}
-      </View>
-
-      {/* Grid columns */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.gridScroll}
-      >
-        <View style={styles.gridContainer}>
-          {columnsData.map((col, colIdx) => (
-            <View key={colIdx} style={styles.gridCol}>
-              {col.map((cell, rowIdx) => (
-                <View
-                   key={rowIdx}
-                  style={[styles.gridCell, { backgroundColor: colorFor(cell.count) }]}
-                />
-              ))}
+    <View style={styles.heatmapContainer}>
+      <View style={styles.gridWrapper}>
+        {/* Day labels column */}
+        <View style={styles.dayLabelsCol}>
+          {dayLabels.map((label, i) => (
+            <View key={i} style={styles.dayLabelCell}>
+              {label ? (
+                <Text style={[styles.dayLabelText, { color: theme.colors.outline }]}>{label}</Text>
+              ) : null}
             </View>
           ))}
         </View>
-      </ScrollView>
+
+        {/* Grid columns */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.gridScroll}
+        >
+          <View style={styles.gridContainer}>
+            {columnsData.map((col, colIdx) => (
+              <View key={colIdx} style={styles.gridCol}>
+                {col.map((cell, rowIdx) => (
+                  <View
+                    key={rowIdx}
+                    style={[styles.gridCell, { backgroundColor: colorFor(cell.count) }]}
+                  />
+                ))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -287,12 +289,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  heatmapWrapper: {
-    flexDirection: 'row',
+  heatmapContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  gridWrapper: {
+    position: 'relative',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 337,
   },
   dayLabelsCol: {
+    position: 'absolute',
+    left: -28,
+    width: 24,
     justifyContent: 'space-around',
-    paddingRight: 6,
     height: 116,
   },
   dayLabelCell: {

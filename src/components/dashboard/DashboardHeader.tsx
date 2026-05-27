@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { Text, Avatar, IconButton, Menu, Button, useTheme } from 'react-native-paper';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Text, Avatar, IconButton, TouchableRipple, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import type { User } from 'firebase/auth';
 import { useI18n } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
+import { AppMenuButton } from '../AppMenuButton';
 
 interface Props {
   user: User | null;
@@ -14,7 +16,6 @@ interface Props {
 export function DashboardHeader({ user, onLogin, onLogout }: Props) {
   const { t } = useI18n();
   const theme = useTheme();
-  const [userMenuVisible, setUserMenuVisible] = useState(false);
 
   return (
     <View style={styles.topBar}>
@@ -43,13 +44,15 @@ export function DashboardHeader({ user, onLogin, onLogout }: Props) {
           accessibilityLabel={t('app_settings.title')}
         />
         {user ? (
-          <Menu
-            visible={userMenuVisible}
-            onDismiss={() => setUserMenuVisible(false)}
-            anchor={
-              <Pressable
-                onPress={() => setUserMenuVisible(true)}
+          <AppMenuButton
+            align="right"
+            menuWidth={TOKENS.menu.minWidth}
+            renderAnchor={({ open, visible }) => (
+              <TouchableRipple
+                onPress={open}
+                style={styles.avatarAnchor}
                 accessibilityLabel="Open user profile menu"
+                accessibilityState={{ expanded: visible }}
               >
                 <Avatar.Image
                   size={36}
@@ -59,41 +62,41 @@ export function DashboardHeader({ user, onLogin, onLogout }: Props) {
                       : require('../../../assets/images/icon.png')
                   }
                 />
-              </Pressable>
+              </TouchableRipple>
+            )}
+            header={
+              <View style={styles.userMenuContent}>
+                <Avatar.Image
+                  size={48}
+                  source={
+                    user.photoURL
+                      ? { uri: user.photoURL }
+                      : require('../../../assets/images/icon.png')
+                  }
+                  style={styles.userMenuAvatar}
+                />
+                <Text variant="titleMedium" style={styles.userName}>
+                  {user.displayName || t('auth.local')}
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  style={[styles.userEmail, { color: theme.colors.onSurfaceVariant }]}
+                >
+                  {user.email}
+                </Text>
+              </View>
             }
-          >
-            <View style={styles.userMenuContent}>
-              <Avatar.Image
-                size={48}
-                source={
-                  user.photoURL
-                    ? { uri: user.photoURL }
-                    : require('../../../assets/images/icon.png')
-                }
-                style={{ marginBottom: 8 }}
-              />
-              <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-                {user.displayName || t('auth.local')}
-              </Text>
-              <Text
-                variant="bodySmall"
-                style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
-              >
-                {user.email}
-              </Text>
-              <Button
-                mode="outlined"
-                textColor={theme.colors.error}
-                style={{ borderColor: theme.colors.error, width: '100%' }}
-                onPress={() => {
+            items={[
+              {
+                label: t('btn.logout'),
+                leadingIcon: 'logout',
+                destructive: true,
+                onPress: () => {
                   onLogout();
-                  setUserMenuVisible(false);
-                }}
-              >
-                {t('btn.logout')}
-              </Button>
-            </View>
-          </Menu>
+                },
+              },
+            ]}
+          />
         ) : (
           <IconButton
             icon="account-circle"
@@ -112,14 +115,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: TOKENS.spacing.lg,
+    paddingTop: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.lg,
   },
   logoGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: TOKENS.spacing.sm,
   },
   logoIcon: {
     backgroundColor: 'transparent',
@@ -131,9 +134,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  userMenuContent: {
-    padding: 16,
+  avatarAnchor: {
     alignItems: 'center',
-    minWidth: 200,
+    justifyContent: 'center',
+    minHeight: TOKENS.touchTarget.min,
+    minWidth: TOKENS.touchTarget.min,
+    borderRadius: TOKENS.radius.pill,
+  },
+  userMenuContent: {
+    padding: TOKENS.spacing.lg,
+    alignItems: 'center',
+  },
+  userMenuAvatar: {
+    marginBottom: TOKENS.spacing.sm,
+  },
+  userName: {
+    fontWeight: 'bold',
+  },
+  userEmail: {
+    marginBottom: TOKENS.spacing.sm,
   },
 });

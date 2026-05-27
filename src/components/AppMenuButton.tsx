@@ -24,72 +24,81 @@ export function AppMenuButton({
   renderAnchor,
   items,
   header,
-  menuWidth,
+  menuWidth = 200,
   align = 'left',
 }: AppMenuButtonProps) {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
-  const [anchorWidth, setAnchorWidth] = useState(0);
 
   const close = () => setVisible(false);
 
-  const offset = align === 'right' && menuWidth && anchorWidth ? menuWidth - anchorWidth : 0;
-
   return (
-    <Menu
-      visible={visible}
-      onDismiss={close}
-      style={[
-        styles.menu,
-        offset > 0 ? { marginLeft: -offset } : undefined,
-        ({ transformOrigin: align === 'right' ? 'top right' : 'top left' } as any),
-      ]}
-      contentStyle={[
-        styles.menuContent,
-        { backgroundColor: theme.colors.elevation.level2 },
-        menuWidth ? { width: menuWidth, maxWidth: menuWidth } : undefined,
-        ({ transformOrigin: align === 'right' ? 'top right' : 'top left' } as any),
-      ]}
-      anchor={
-        <View
-          onLayout={(e) => setAnchorWidth(e.nativeEvent.layout.width)}
-          style={styles.anchorWrapper}
-        >
-          {renderAnchor({ open: () => setVisible(true), visible })}
-        </View>
-      }
-    >
-      {header}
-      {items.map((item) => {
-        const textColor = item.destructive
-          ? theme.colors.error
-          : item.selected
-            ? theme.colors.onSecondaryContainer
-            : theme.colors.onSurface;
-
-        return (
-          <Menu.Item
-            key={item.label}
-            title={item.label}
-            leadingIcon={item.selected ? 'check' : item.leadingIcon}
-            disabled={item.disabled}
-            onPress={() => {
-              close();
-              item.onPress();
-            }}
+    <View style={styles.container}>
+      {renderAnchor({ open: () => setVisible(true), visible })}
+      <Menu
+        visible={visible}
+        onDismiss={close}
+        style={[
+          styles.menu,
+          ({ transformOrigin: align === 'right' ? 'top right' : 'top left' } as any),
+        ]}
+        contentStyle={[
+          styles.menuContent,
+          { backgroundColor: theme.colors.elevation.level2 },
+          { width: menuWidth, maxWidth: menuWidth },
+          ({ transformOrigin: align === 'right' ? 'top right' : 'top left' } as any),
+        ]}
+        anchor={
+          <View
             style={[
-              styles.menuItem,
-              item.selected && { backgroundColor: theme.colors.secondaryContainer },
+              styles.dummyAnchor,
+              { width: menuWidth },
+              align === 'right' ? { right: 0 } : { left: 0 },
             ]}
-            titleStyle={{ color: textColor, fontWeight: item.selected ? '700' : '500' }}
           />
-        );
-      })}
-    </Menu>
+        }
+      >
+        {header}
+        {items.map((item) => {
+          const textColor = item.destructive
+            ? theme.colors.error
+            : item.selected
+              ? theme.colors.onSecondaryContainer
+              : theme.colors.onSurface;
+
+          return (
+            <Menu.Item
+              key={item.label}
+              title={item.label}
+              leadingIcon={item.selected ? 'check' : item.leadingIcon}
+              disabled={item.disabled}
+              onPress={() => {
+                close();
+                item.onPress();
+              }}
+              style={[
+                styles.menuItem,
+                item.selected && { backgroundColor: theme.colors.secondaryContainer },
+              ]}
+              titleStyle={{ color: textColor, fontWeight: item.selected ? '700' : '500' }}
+            />
+          );
+        })}
+      </Menu>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+  },
+  dummyAnchor: {
+    position: 'absolute',
+    top: 0,
+    height: 1,
+    backgroundColor: 'transparent',
+  },
   menu: {
     marginTop: TOKENS.menu.gap,
   },
@@ -102,8 +111,4 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: '100%',
   },
-  anchorWrapper: {
-    alignSelf: 'flex-start',
-  },
 });
-

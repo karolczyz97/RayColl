@@ -52,6 +52,7 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
       maxWidth: flatStyle?.maxWidth,
       minWidth: flatStyle?.minWidth,
       width: flatStyle?.width ?? '100%',
+      ...(Platform.OS === 'web' ? { cursor: 'default' } : {}) as any,
     };
   }, [style]);
 

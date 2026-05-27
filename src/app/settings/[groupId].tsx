@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { IconButton, useTheme, Portal, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
 import type { TranslationFn } from '../../i18n';
@@ -24,6 +25,7 @@ import { DeleteDeckDialog } from '../../components/settings/DeleteDeckDialog';
 import { AddStepDialog } from '../../components/settings/AddStepDialog';
 import { AppCard } from '../../components/AppCard';
 import { TOKENS } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 
 const DEFAULT_MODE_IDS = ['classic', 'listen-speak'];
 
@@ -50,6 +52,7 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
+  const { isCompact, isExpanded, contentMaxWidth } = useResponsiveLayout();
 
   const group = store.groups.find((g) => g.id === groupId);
 
@@ -244,6 +247,172 @@ export default function SettingsPage() {
     listen_and_branch: t('step.type.listen_and_branch'),
   };
 
+  const leftColumnContent = (
+    <>
+      {/* Rename Field Card */}
+      <Animated.View entering={FadeInDown.springify().delay(0)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <DeckNameSection
+              deckName={deckName}
+              onChangeText={setDeckName}
+              onBlur={handleNameBlur}
+              t={t}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Study Scope Selection Card */}
+      <Animated.View entering={FadeInDown.springify().delay(80)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <StudyScopeSection
+              studyFilter={activeGroup.studyFilter || 'new+review'}
+              onFilterChange={onFilterChange}
+              t={t}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Pages configuration Card */}
+      <Animated.View entering={FadeInDown.springify().delay(160)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <PagesConfigSection
+              pageCount={pageCount}
+              visiblePageNames={getVisiblePageNames({ ...activeGroup, pageNames: colNames })}
+              visiblePageLanguages={getVisiblePageLanguages(activeGroup)}
+              adjustPageCount={adjustPageCount}
+              movePageSetting={movePageSetting}
+              setColNames={setColNames}
+              handleColBlur={handleColBlur}
+              updatePageLangValue={updatePageLangValue}
+              t={t}
+              popularLangs={POPULAR_LANGS}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+    </>
+  );
+
+  const rightColumnContent = (
+    <>
+      {/* Study Mode Selection Card */}
+      <Animated.View entering={FadeInDown.springify().delay(240)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <StudyModeSelector
+              activeModeId={activeGroup.activeModeId}
+              onModeChange={onModeChange}
+              studyModes={store.studyModes}
+              t={t}
+              onCreateMode={openCreateModeDialog}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Active Mode Steps */}
+      {activeMode && (
+        <Animated.View entering={FadeInDown.springify().delay(320)}>
+          <StudyModeStepsEditor
+            activeMode={activeMode}
+            isDefaultMode={isDefaultMode}
+            moveStep={moveStep}
+            deleteStep={deleteStep}
+            addStepToMode={addStepToMode}
+            t={t}
+            stepSummary={stepSummary}
+          />
+        </Animated.View>
+      )}
+    </>
+  );
+
+  const singleColumnContent = (
+    <View style={[styles.singleColumn, !isCompact && { maxWidth: 600 }]}>
+      {/* Rename Field Card */}
+      <Animated.View entering={FadeInDown.springify().delay(0)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <DeckNameSection
+              deckName={deckName}
+              onChangeText={setDeckName}
+              onBlur={handleNameBlur}
+              t={t}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Pages configuration Card */}
+      <Animated.View entering={FadeInDown.springify().delay(80)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <PagesConfigSection
+              pageCount={pageCount}
+              visiblePageNames={getVisiblePageNames({ ...activeGroup, pageNames: colNames })}
+              visiblePageLanguages={getVisiblePageLanguages(activeGroup)}
+              adjustPageCount={adjustPageCount}
+              movePageSetting={movePageSetting}
+              setColNames={setColNames}
+              handleColBlur={handleColBlur}
+              updatePageLangValue={updatePageLangValue}
+              t={t}
+              popularLangs={POPULAR_LANGS}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Study Scope Selection Card */}
+      <Animated.View entering={FadeInDown.springify().delay(160)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <StudyScopeSection
+              studyFilter={activeGroup.studyFilter || 'new+review'}
+              onFilterChange={onFilterChange}
+              t={t}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Study Mode Selection Card */}
+      <Animated.View entering={FadeInDown.springify().delay(240)}>
+        <AppCard style={styles.card} mode="outlined">
+          <AppCard.Content>
+            <StudyModeSelector
+              activeModeId={activeGroup.activeModeId}
+              onModeChange={onModeChange}
+              studyModes={store.studyModes}
+              t={t}
+              onCreateMode={openCreateModeDialog}
+            />
+          </AppCard.Content>
+        </AppCard>
+      </Animated.View>
+
+      {/* Active Mode Steps */}
+      {activeMode && (
+        <Animated.View entering={FadeInDown.springify().delay(320)}>
+          <StudyModeStepsEditor
+            activeMode={activeMode}
+            isDefaultMode={isDefaultMode}
+            moveStep={moveStep}
+            deleteStep={deleteStep}
+            addStepToMode={addStepToMode}
+            t={t}
+            stepSummary={stepSummary}
+          />
+        </Animated.View>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView
       style={[styles.root, { backgroundColor: theme.colors.background }]}
@@ -263,69 +432,16 @@ export default function SettingsPage() {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <AppCard style={styles.card} mode="outlined">
-          <AppCard.Content>
-            <DeckNameSection
-              deckName={deckName}
-              onChangeText={setDeckName}
-              onBlur={handleNameBlur}
-              t={t}
-            />
-          </AppCard.Content>
-        </AppCard>
-
-        <AppCard style={styles.card} mode="outlined">
-          <AppCard.Content>
-            <PagesConfigSection
-              pageCount={pageCount}
-              visiblePageNames={getVisiblePageNames({ ...activeGroup, pageNames: colNames })}
-              visiblePageLanguages={getVisiblePageLanguages(activeGroup)}
-              adjustPageCount={adjustPageCount}
-              movePageSetting={movePageSetting}
-              setColNames={setColNames}
-              handleColBlur={handleColBlur}
-              updatePageLangValue={updatePageLangValue}
-              t={t}
-              popularLangs={POPULAR_LANGS}
-            />
-          </AppCard.Content>
-        </AppCard>
-
-        <AppCard style={styles.card} mode="outlined">
-          <AppCard.Content>
-            <StudyModeSelector
-              activeModeId={activeGroup.activeModeId}
-              onModeChange={onModeChange}
-              studyModes={store.studyModes}
-              t={t}
-              onCreateMode={openCreateModeDialog}
-            />
-          </AppCard.Content>
-        </AppCard>
-
-        <AppCard style={styles.card} mode="outlined">
-          <AppCard.Content>
-            <StudyScopeSection
-              studyFilter={activeGroup.studyFilter || 'new+review'}
-              onFilterChange={onFilterChange}
-              t={t}
-            />
-          </AppCard.Content>
-        </AppCard>
-
-        {/* Active Mode Steps */}
-        {activeMode && (
-          <StudyModeStepsEditor
-            activeMode={activeMode}
-            isDefaultMode={isDefaultMode}
-            moveStep={moveStep}
-            deleteStep={deleteStep}
-            addStepToMode={addStepToMode}
-            t={t}
-            stepSummary={stepSummary}
-          />
-        )}
-
+        <View style={[styles.mainContainer, { maxWidth: contentMaxWidth }]}>
+          {isExpanded ? (
+            <View style={styles.row}>
+              <View style={styles.column}>{leftColumnContent}</View>
+              <View style={styles.column}>{rightColumnContent}</View>
+            </View>
+          ) : (
+            singleColumnContent
+          )}
+        </View>
       </ScrollView>
 
       {/* Portal Dialogs */}
@@ -377,6 +493,7 @@ export default function SettingsPage() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    paddingHorizontal: TOKENS.spacing.xxs,
   },
   centerContainer: {
     flex: 1,
@@ -384,8 +501,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingHorizontal: TOKENS.spacing.lg,
     paddingBottom: TOKENS.spacing.xxl * 2,
+    gap: TOKENS.spacing.lg,
+  },
+  mainContainer: {
+    width: '100%',
+    alignSelf: 'center',
+    gap: TOKENS.spacing.lg,
+    padding: TOKENS.spacing.xxs,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: TOKENS.spacing.xl,
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  column: {
+    flex: 1,
+    gap: TOKENS.spacing.lg,
+  },
+  singleColumn: {
+    width: '100%',
+    alignSelf: 'center',
     gap: TOKENS.spacing.lg,
   },
   card: {

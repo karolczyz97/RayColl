@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, TextInput, Menu, Button } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
+
+const LANGUAGE_SELECT_WIDTH = 140;
 
 interface Props {
   pageCount: number;
@@ -41,6 +44,7 @@ export function PagesConfigSection({
           <IconButton
             icon="minus-box"
             size={28}
+            style={styles.counterBtn}
             onPress={() => adjustPageCount(pageCount - 1)}
             disabled={pageCount <= 2}
             accessibilityLabel="Decrease visible pages count"
@@ -49,6 +53,7 @@ export function PagesConfigSection({
           <IconButton
             icon="plus-box"
             size={28}
+            style={styles.counterBtn}
             onPress={() => adjustPageCount(pageCount + 1)}
             disabled={pageCount >= 5}
             accessibilityLabel="Increase visible pages count"
@@ -142,12 +147,17 @@ const styles = StyleSheet.create({
   counterButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: LANGUAGE_SELECT_WIDTH,
+    justifyContent: 'center',
   },
   counterText: {
     fontSize: 18,
     fontWeight: 'bold',
-    minWidth: 24,
+    minWidth: TOKENS.touchTarget.compact,
     textAlign: 'center',
+  },
+  counterBtn: {
+    margin: 0,
   },
   columnRow: {
     flexDirection: 'row',
@@ -169,7 +179,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   langBtn: {
-    minWidth: 100,
+    width: LANGUAGE_SELECT_WIDTH,
     height: 40,
     justifyContent: 'center',
   },

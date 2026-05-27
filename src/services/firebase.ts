@@ -125,7 +125,8 @@ export interface UserData {
 
 export async function saveUserData(uid: string, data: UserData): Promise<void> {
   if (!db) return;
-  await setDoc(doc(db, 'users', uid), data as unknown as Record<string, unknown>);
+  const cleanedData = JSON.parse(JSON.stringify(data));
+  await setDoc(doc(db, 'users', uid), cleanedData);
 }
 
 export async function loadUserData(uid: string): Promise<UserData | null> {
