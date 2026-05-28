@@ -6,6 +6,8 @@ const W = [
 ];
 const DECAY = -0.5;
 const FACTOR = 0.9 ** (1 / DECAY) - 1;
+const MIN_INTERVAL_DAYS = 0.1;
+const MAX_INTERVAL_DAYS = 3650;
 
 export function createNewSrsState(): SrsState {
   return {
@@ -84,7 +86,7 @@ export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
     }
   }
 
-  newS = Math.max(newS, 0.1);
+  newS = clamp(newS, MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS);
   const interval = newS; // stability = days until retrievability drops to 90%
   const nextReview = now + interval * 24 * 60 * 60 * 1000;
 

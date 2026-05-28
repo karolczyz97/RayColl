@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { AppSelect } from '../AppSelect';
-import { CARD_FILTER_OPTIONS, CardFilter } from '../../constants/cardFilters';
+import { CARD_FILTER_OPTIONS, type CardFilter } from '../../constants/cardFilters';
 import { TOKENS } from '../../theme/tokens';
 import type { TranslationFn } from '../../i18n';
 
@@ -10,6 +10,10 @@ interface Props {
   studyFilter: CardFilter;
   onFilterChange: (filter: CardFilter) => void;
   t: TranslationFn;
+}
+
+function isCardFilter(value: string): value is CardFilter {
+  return CARD_FILTER_OPTIONS.some((filter) => filter.value === value);
 }
 
 export function StudyScopeSection({ studyFilter, onFilterChange, t }: Props) {
@@ -26,7 +30,11 @@ export function StudyScopeSection({ studyFilter, onFilterChange, t }: Props) {
       <AppSelect
         value={studyFilter}
         options={options}
-        onChange={(value) => onFilterChange(value as CardFilter)}
+        onChange={(value) => {
+          if (isCardFilter(value)) {
+            onFilterChange(value);
+          }
+        }}
         accessibilityLabel="Study scope filter selection"
       />
     </View>

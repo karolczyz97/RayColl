@@ -23,6 +23,7 @@ interface FlashcardListProps {
   maxToRenderPerBatch?: number;
   windowSize?: number;
   showHeader?: boolean;
+  emptyLabel?: string;
 }
 
 export function FlashcardList({
@@ -39,6 +40,7 @@ export function FlashcardList({
   maxToRenderPerBatch = 12,
   windowSize = 7,
   showHeader = true,
+  emptyLabel,
 }: FlashcardListProps) {
   const theme = useTheme();
   const { useTwoColumnLayout } = useResponsiveLayout();
@@ -77,6 +79,15 @@ export function FlashcardList({
         </View>
       )}
       ListHeaderComponent={header}
+      ListEmptyComponent={
+        emptyLabel ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+              {emptyLabel}
+            </Text>
+          </View>
+        ) : null
+      }
       style={style}
       scrollEnabled={scrollEnabled}
       contentContainerStyle={[styles.listContainer, contentContainerStyle]}
@@ -104,5 +115,12 @@ const styles = StyleSheet.create({
   },
   columnCell: {
     flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: TOKENS.spacing.xxl,
+  },
+  emptyText: {
+    textAlign: 'center',
   },
 });

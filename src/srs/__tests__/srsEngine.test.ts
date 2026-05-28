@@ -21,7 +21,7 @@ import {
   normalizeGroupPageConfig,
 } from '../../store/selectors/pages';
 import { filterCards } from '../../store/selectors/dueCards';
-import { DEFAULT_STUDY_FILTER } from '../../store/storeDataNormalization';
+import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../../store/storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
 import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
@@ -118,6 +118,25 @@ assertEqual(firstReview.repetitions, 1, 'Repetitions should increment');
 assertOk(firstReview.stability > 0, 'Stability should increase');
 assertOk(firstReview.difficulty > 0, 'Difficulty should be calculated');
 assertEqual(firstReview.state, 2, 'State should change to 2 (Review)');
+const dayMs = 24 * 60 * 60 * 1000;
+const extremeReview = calculateFsrs(
+  {
+    difficulty: 100,
+    stability: 1_000_000,
+    repetitions: 999,
+    state: 2,
+    lastReviewTimestamp: Date.now() - 730 * dayMs,
+    nextReviewTimestamp: Date.now() - 365 * dayMs,
+  },
+  4,
+);
+assertOk(Number.isFinite(extremeReview.nextReviewTimestamp), 'Extreme next review should stay finite');
+assertOk(extremeReview.difficulty <= 10, 'Extreme difficulty should be clamped');
+assertOk(extremeReview.stability <= 3650, 'Extreme interval should be capped to 10 years');
+assertOk(
+  extremeReview.nextReviewTimestamp - extremeReview.lastReviewTimestamp <= 3650 * dayMs + 1000,
+  'Extreme due interval should not exceed the cap',
+);
 console.log('✓ calculateFsrs tests passed');
 
 // ==========================================
@@ -250,6 +269,24 @@ assertEqual(normalized.pageNames.length, 3);
 assertEqual(normalized.pageLanguages.length, 3);
 assertEqual(normalized.pageNames[1], 'Page 2');
 assertEqual(normalized.pageLanguages[1], 'en-US');
+const normalizableBackup = {
+  groups: [
+    {
+      ...unnormalizedGroup,
+      activePageCount: Number.NaN,
+      pageNames: ['Front', 'Back', 'Extra', 'Overflow', 'Too much', 'Ignored'],
+      pageLanguages: ['en-US'],
+      cards: [],
+    },
+  ],
+  studyModes: [],
+  activityHeatmap: {},
+};
+assertOk(validateBackupData(normalizableBackup), 'Backup validation should accept normalizable page config');
+const normalizedStoreData = normalizeStoreData(normalizableBackup);
+assertEqual(normalizedStoreData.groups[0].activePageCount, 5);
+assertEqual(normalizedStoreData.groups[0].pageNames.length, 5);
+assertEqual(normalizedStoreData.groups[0].pageLanguages.length, 5);
 console.log('✓ Page config and selector tests passed');
 
 // ==========================================
@@ -386,6 +423,15 @@ assertThrows(
 assertThrows(
   () => validateBackupData({ groups: [{ id: 123 }], studyModes: [], activityHeatmap: {} }),
   'Each group must have a string id.',
+);
+assertThrows(
+  () =>
+    validateBackupData({
+      groups: [],
+      studyModes: [{ id: 'broken', name: 'Broken', steps: [{ type: 'show_page' }] }],
+      activityHeatmap: {},
+    }),
+  'invalid pageIndex',
 );
 console.log('✓ Backup validation tests passed');
 

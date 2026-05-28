@@ -94,15 +94,10 @@ export async function saveCloudData(userId: string, data: UserData): Promise<voi
 }
 
 export async function loadCloudData(userId: string): Promise<UserData | null> {
-  try {
-    const data = await loadUserData(userId);
-    if (!data) return null;
-    validateBackupData(data);
-    const normalized = normalizeStoreData(data);
-    cloudSnapshotCache.set(userId, cloneUserData(normalized));
-    return normalized;
-  } catch (err) {
-    console.error('Failed to load cloud data:', err);
-    return null;
-  }
+  const data = await loadUserData(userId);
+  if (!data) return null;
+  validateBackupData(data);
+  const normalized = normalizeStoreData(data);
+  cloudSnapshotCache.set(userId, cloneUserData(normalized));
+  return normalized;
 }

@@ -17,6 +17,20 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const MIN_TTS_RATE = 0.5;
+const MAX_TTS_RATE = 2.0;
+
+function isThemePref(value: string): value is ThemePref {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
+function clampTtsRate(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1.0;
+  }
+
+  return Math.max(MIN_TTS_RATE, Math.min(MAX_TTS_RATE, value));
+}
 
 export function useAppTheme() {
   const context = useContext(ThemeContext);
@@ -34,32 +48,37 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const [ttsRate, setTtsRateState] = useState<number>(1.0);
 
   useEffect(() => {
+    let active = true;
+
     async function loadSettings() {
       try {
         const savedTheme = await AsyncStorage.getItem(STORAGE_KEYS.THEME_PREF);
-        if (
-          savedTheme &&
-          (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')
-        ) {
-          setThemePrefState(savedTheme as ThemePref);
+        if (active && savedTheme && isThemePref(savedTheme)) {
+          setThemePrefState(savedTheme);
         }
 
         const savedSysColors = await AsyncStorage.getItem(STORAGE_KEYS.USE_SYSTEM_COLORS);
-        if (savedSysColors !== null) {
+        if (active && savedSysColors !== null) {
           setUseSystemColorsState(savedSysColors === 'true');
         }
 
         const savedTtsRate = await AsyncStorage.getItem(STORAGE_KEYS.TTS_RATE);
-        if (savedTtsRate !== null) {
-          setTtsRateState(parseFloat(savedTtsRate));
+        if (active && savedTtsRate !== null) {
+          setTtsRateState(clampTtsRate(parseFloat(savedTtsRate)));
         }
       } catch (err) {
         console.warn('Failed to load theme settings:', err);
       } finally {
-        setIsThemeLoading(false);
+        if (active) {
+          setIsThemeLoading(false);
+        }
       }
     }
     loadSettings();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const setThemePref = async (pref: ThemePref) => {
@@ -81,9 +100,10 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setTtsRate = async (val: number) => {
-    setTtsRateState(val);
+    const nextValue = clampTtsRate(val);
+    setTtsRateState(nextValue);
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.TTS_RATE, String(val));
+      await AsyncStorage.setItem(STORAGE_KEYS.TTS_RATE, String(nextValue));
     } catch (err) {
       console.warn('Failed to save TTS rate:', err);
     }

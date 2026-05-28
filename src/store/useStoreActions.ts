@@ -57,7 +57,7 @@ interface UseStoreActionsParams {
   commitHeatmap: (nextHeatmap: Record<string, number>, options?: PersistOptions) => void;
 }
 
-export function useStoreActions({
+export function useStoreActionsCore({
   groupsRef,
   studyModesRef,
   heatmapRef,
@@ -132,10 +132,18 @@ export function useStoreActions({
         normalized.cards,
       );
 
+      try {
+        await flushPersistence();
+      } catch (err) {
+        const message = getErrorMessage(err);
+        setLastPersistenceError(message);
+        setLastStoreError(message);
+        setSyncStatus('error');
+        return { ok: false, error: message };
+      }
+
       groupsRef.current = nextGroups;
       setGroups(nextGroups);
-
-      await flushPersistence();
 
       try {
         await persistNow({

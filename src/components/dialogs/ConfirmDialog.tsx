@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Dialog, Text, useTheme } from 'react-native-paper';
+import { Button, Dialog, Portal, Text, useTheme } from 'react-native-paper';
 import { dialogStyles } from '../../theme/dialogStyles';
 
 export interface ConfirmDialogProps {
@@ -28,23 +28,25 @@ export function ConfirmDialog({
   const theme = useTheme();
 
   return (
-    <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
-      <Dialog.Title>{title}</Dialog.Title>
-      <Dialog.Content>
-        <Text selectable>{message}</Text>
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button onPress={onDismiss}>{cancelLabel}</Button>
-        <Button
-          mode="contained"
-          onPress={onConfirm}
-          buttonColor={destructive ? theme.colors.error : undefined}
-          textColor={destructive ? theme.colors.onError : undefined}
-          disabled={disabled}
-        >
-          {confirmLabel}
-        </Button>
-      </Dialog.Actions>
-    </Dialog>
+    <Portal>
+      <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
+        <Dialog.Title>{title}</Dialog.Title>
+        <Dialog.Content>
+          <Text selectable>{message}</Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={onDismiss}>{cancelLabel}</Button>
+          <Button
+            mode="contained"
+            onPress={onConfirm}
+            buttonColor={destructive ? theme.colors.error : undefined}
+            textColor={destructive ? theme.colors.onError : undefined}
+            disabled={disabled}
+          >
+            {confirmLabel}
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
   );
 }

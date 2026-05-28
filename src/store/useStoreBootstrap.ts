@@ -19,9 +19,11 @@ interface UseStoreBootstrapParams {
   user: User | null;
   setUser: Dispatch<SetStateAction<User | null>>;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
+  setLastSyncError: Dispatch<SetStateAction<string | null>>;
   setLastPersistenceError: Dispatch<SetStateAction<string | null>>;
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
   applySnapshot: (snapshot: StoreData) => void;
+  persistLocalSnapshot: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
   persistNow: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
 }
 
@@ -29,9 +31,11 @@ export function useStoreBootstrap({
   user,
   setUser,
   setIsLoading,
+  setLastSyncError,
   setLastPersistenceError,
   setLastStoreError,
   applySnapshot,
+  persistLocalSnapshot,
   persistNow,
 }: UseStoreBootstrapParams) {
   useEffect(() => {
@@ -59,8 +63,19 @@ export function useStoreBootstrap({
           loadedHeatmap = localCache.activityHeatmap;
         }
 
+        let cloudLoadFailed = false;
         if (targetUid) {
-          const cloudData = await loadCloudData(targetUid);
+          let cloudData: StoreData | null = null;
+          try {
+            cloudData = await loadCloudData(targetUid);
+            setLastSyncError(null);
+          } catch (err) {
+            cloudLoadFailed = true;
+            const message = getErrorMessage(err);
+            setLastSyncError(message);
+            setLastStoreError(message);
+          }
+
           if (cloudData) {
             const merged = mergeUserData(
               { groups: loadedGroups, studyModes: loadedModes, activityHeatmap: loadedHeatmap },
@@ -102,7 +117,11 @@ export function useStoreBootstrap({
             activityHeatmap: loadedHeatmap,
           });
           applySnapshot(snapshot);
-          await persistNow({ uid: targetUid, ...snapshot });
+          if (cloudLoadFailed) {
+            await persistLocalSnapshot({ uid: targetUid, ...snapshot });
+          } else {
+            await persistNow({ uid: targetUid, ...snapshot });
+          }
         }
       } catch (err) {
         console.error('Failed to initialize flashcard store:', err);
@@ -119,5 +138,14 @@ export function useStoreBootstrap({
     return () => {
       active = false;
     };
-  }, [applySnapshot, persistNow, setIsLoading, setLastPersistenceError, setLastStoreError, user]);
+  }, [
+    applySnapshot,
+    persistLocalSnapshot,
+    persistNow,
+    setIsLoading,
+    setLastPersistenceError,
+    setLastStoreError,
+    setLastSyncError,
+    user,
+  ]);
 }

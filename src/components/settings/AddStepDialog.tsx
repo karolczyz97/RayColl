@@ -13,6 +13,7 @@ interface Props {
   newStepType: string;
   setNewStepType: (type: string) => void;
   newPageIdx: number;
+  pageCount: number;
   setNewPageIdx: (idx: number) => void;
   newMs: number;
   setNewMs: (ms: number) => void;
@@ -29,6 +30,7 @@ export function AddStepDialog({
   newStepType,
   setNewStepType,
   newPageIdx,
+  pageCount,
   setNewPageIdx,
   newMs,
   setNewMs,
@@ -58,6 +60,7 @@ export function AddStepDialog({
             value={newPageIdx}
             onChange={setNewPageIdx}
             min={0}
+            max={Math.max(0, pageCount - 1)}
             accessibilityLabel="Page index input"
           />
         )}

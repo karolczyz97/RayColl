@@ -6,10 +6,6 @@ export interface BackupData {
   activityHeatmap: Record<string, number>;
 }
 
-export function validateUserData(data: unknown): data is BackupData {
-  return validateBackupData(data);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -17,6 +13,60 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function assertNumber(value: unknown, message: string): asserts value is number {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     throw new Error(message);
+  }
+}
+
+function assertNonNegativeNumber(value: unknown, message: string): asserts value is number {
+  assertNumber(value, message);
+  if (value < 0) {
+    throw new Error(message);
+  }
+}
+
+function assertStudyModeStep(step: unknown, modeId: string, index: number): void {
+  if (!isRecord(step)) {
+    throw new Error(`Step ${index + 1} in study mode ${modeId} must be a valid object.`);
+  }
+
+  switch (step.type) {
+    case 'show_page':
+      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      return;
+    case 'speak_page':
+      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.extraPauseMs,
+        `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
+      );
+      return;
+    case 'dynamic_pause':
+      assertNonNegativeNumber(
+        step.nextPageIndex,
+        `Step ${index + 1} in study mode ${modeId} has invalid nextPageIndex.`,
+      );
+      assertNonNegativeNumber(
+        step.extraPauseMs,
+        `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
+      );
+      return;
+    case 'wait':
+      assertNonNegativeNumber(step.ms, `Step ${index + 1} in study mode ${modeId} has invalid ms.`);
+      return;
+    case 'listen_and_branch':
+      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.successThreshold,
+        `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`,
+      );
+      if (step.incorrectTtsPageIndex !== undefined) {
+        assertNonNegativeNumber(
+          step.incorrectTtsPageIndex,
+          `Step ${index + 1} in study mode ${modeId} has invalid incorrectTtsPageIndex.`,
+        );
+      }
+      return;
+    default:
+      throw new Error(`Step ${index + 1} in study mode ${modeId} has an unsupported type.`);
   }
 }
 
@@ -109,12 +159,16 @@ export function validateBackupData(data: unknown): data is BackupData {
     if (typeof mode.id !== 'string') {
       throw new Error('Each study mode must have a string id.');
     }
+    const modeId = mode.id;
     if (typeof mode.name !== 'string') {
-      throw new Error(`Study mode with ID ${mode.id} must have a name.`);
+      throw new Error(`Study mode with ID ${modeId} must have a name.`);
     }
     if (!Array.isArray(mode.steps)) {
-      throw new Error(`Study mode with ID ${mode.id} must have a "steps" array.`);
+      throw new Error(`Study mode with ID ${modeId} must have a "steps" array.`);
     }
+    mode.steps.forEach((step, index) => {
+      assertStudyModeStep(step, modeId, index);
+    });
   }
 
   return true;

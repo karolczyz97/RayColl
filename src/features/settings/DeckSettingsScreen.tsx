@@ -199,6 +199,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
           newStepType={newStepType}
           setNewStepType={setNewStepType}
           newPageIdx={newPageIdx}
+          pageCount={pageCount}
           setNewPageIdx={setNewPageIdx}
           newMs={newMs}
           setNewMs={setNewMs}
@@ -209,16 +210,17 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
           stepLabels={stepLabels}
         />
 
-        <DeleteDeckDialog
-          visible={deleteDialogOpen}
-          onDismiss={() => setDeleteDialogOpen(false)}
-          deckName={activeGroup.name}
-          deleteConfirmText={deleteConfirmText}
-          setDeleteConfirmText={setDeleteConfirmText}
-          onDelete={handleDeleteGroup}
-          t={t}
-        />
       </Portal>
+
+      <DeleteDeckDialog
+        visible={deleteDialogOpen}
+        onDismiss={() => setDeleteDialogOpen(false)}
+        deckName={activeGroup.name}
+        deleteConfirmText={deleteConfirmText}
+        setDeleteConfirmText={setDeleteConfirmText}
+        onDelete={handleDeleteGroup}
+        t={t}
+      />
     </AppScreen>
   );
 }

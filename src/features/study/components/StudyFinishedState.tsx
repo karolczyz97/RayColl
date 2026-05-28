@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 import type { FlashcardGroup } from '../../../types/models';
@@ -7,6 +8,7 @@ import { AppIcon } from '../../../components/AppIcon';
 import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
 import { computeCardStats } from '../../../store/selectors/stats';
 import { getSuccessColor } from '../../../theme/semanticColors';
+import { TOKENS } from '../../../theme/tokens';
 
 interface StudyFinishedStateProps {
   activeGroup: FlashcardGroup;
@@ -42,7 +44,10 @@ export function StudyFinishedState({
   const theme = useTheme();
 
   return (
-    <View style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      edges={['top', 'left', 'right', 'bottom']}
+      style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}
+    >
       <Animated.View entering={ZoomIn.springify().damping(12)}>
         <AppIcon name="check-circle" size={96} color={getSuccessColor(theme)} />
       </Animated.View>
@@ -77,7 +82,7 @@ export function StudyFinishedState({
           {backToPanelLabel}
         </Button>
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -86,31 +91,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: TOKENS.spacing.xl,
   },
   bravoTitle: {
     fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: TOKENS.spacing.lg,
+    marginBottom: TOKENS.spacing.sm,
   },
   finishedDescription: {
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: TOKENS.spacing.xxl,
   },
   statsSummary: {
     width: '100%',
     maxWidth: 400,
-    marginBottom: 32,
+    marginBottom: TOKENS.spacing.xxl,
   },
   statsTitle: {
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: TOKENS.spacing.lg,
   },
   actionButtons: {
     width: '100%',
     maxWidth: 320,
-    gap: 12,
+    gap: TOKENS.spacing.md,
   },
   actionButton: {
     borderRadius: 100,

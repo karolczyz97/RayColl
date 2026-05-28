@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { SegmentedButtons, useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
+import type { CardStats } from '../../store/selectors/stats';
 import { TOKENS } from '../../theme/tokens';
 import {
   BROWSE_FILTER_ORDER,
@@ -13,15 +14,19 @@ import {
 interface Props {
   browseFilter: BrowseFilter;
   setBrowseFilter: (filter: BrowseFilter) => void;
-  stats: { total: number; learning: number; review: number; newCount: number; mastered: number };
+  stats: CardStats;
   t: TranslationFn;
+}
+
+function isBrowseFilter(value: string): value is BrowseFilter {
+  return BROWSE_FILTER_ORDER.some((filter) => filter === value);
 }
 
 export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: Props) {
   const theme = useTheme();
 
   const buttons = BROWSE_FILTER_ORDER.map((filter) => {
-    const count = stats[BROWSE_FILTER_STATS_KEY[filter]] as number;
+    const count = stats[BROWSE_FILTER_STATS_KEY[filter]];
     const isSelected = browseFilter === filter;
 
     return {
@@ -42,7 +47,11 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
   return (
     <SegmentedButtons
       value={browseFilter}
-      onValueChange={(filter) => setBrowseFilter(filter as BrowseFilter)}
+      onValueChange={(filter) => {
+        if (isBrowseFilter(filter)) {
+          setBrowseFilter(filter);
+        }
+      }}
       buttons={buttons}
       style={styles.segmentedButtons}
     />
@@ -60,7 +69,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   segmentLabel: {
-    fontSize: 12,
+    fontSize: TOKENS.typography.size.xs,
     lineHeight: 16,
     textAlign: 'center',
   },

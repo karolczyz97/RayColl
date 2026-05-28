@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useI18n } from '../i18n';
+import { TOKENS } from '../theme/tokens';
 
 interface GroupNotFoundProps {
   onBack: () => void;
@@ -23,13 +24,13 @@ export function GroupNotFound({ onBack }: GroupNotFoundProps) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
+    padding: TOKENS.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
   },
   text: {
-    marginBottom: 16,
+    marginBottom: TOKENS.spacing.lg,
     fontWeight: 'bold',
     textAlign: 'center',
   },

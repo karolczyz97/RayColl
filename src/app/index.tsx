@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { FAB } from 'react-native-paper';
@@ -15,12 +15,13 @@ import { AppScreen } from '../components/layout/AppScreen';
 import { AnimatedSection } from '../components/layout/AnimatedSection';
 import { LoadingState } from '../components/layout/LoadingState';
 import { SyncStatusBanner } from '../components/feedback/SyncStatusBanner';
+import { ROUTES } from '../constants/routes';
 
 export default function Dashboard() {
   const store = useFlashcardStore();
   const { contentMaxWidth } = useResponsiveLayout();
 
-  const { groups, getDueCards, user, signIn, signOut, isLoading } = store;
+  const { groups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap } = store;
 
   const handleLogin = async () => {
     try {
@@ -41,7 +42,15 @@ export default function Dashboard() {
   const decksCount = groups.length;
   const cardsCount = useMemo(() => getTotalCardsCount(groups), [groups]);
   const dueCount = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [groups, getDueCards]);
-  const streak = useMemo(() => computeStreak(store.activityHeatmap), [store.activityHeatmap]);
+  const streak = useMemo(() => computeStreak(activityHeatmap), [activityHeatmap]);
+
+  const handleModeChange = useCallback(
+    (groupId: string, modeId: string) => {
+      const g = groups.find((x) => x.id === groupId);
+      if (g) updateGroup({ ...g, activeModeId: modeId });
+    },
+    [groups, updateGroup],
+  );
 
   if (isLoading) {
     return <LoadingState />;
@@ -84,10 +93,7 @@ export default function Dashboard() {
             <AnimatedSection index={3}>
               <DeckGrid
                 groups={groups}
-                onModeChange={(groupId, modeId) => {
-                  const g = groups.find((x) => x.id === groupId);
-                  if (g) store.updateGroup({ ...g, activeModeId: modeId });
-                }}
+                onModeChange={handleModeChange}
               />
             </AnimatedSection>
           )}
@@ -99,7 +105,7 @@ export default function Dashboard() {
         <FAB
           icon="plus"
           style={styles.fab}
-          onPress={() => router.push('/import')}
+          onPress={() => router.push(ROUTES.IMPORT)}
           accessibilityLabel="Create new flashcard deck"
         />
       </Animated.View>

@@ -136,14 +136,14 @@ export function useImportDeckDraft() {
     setSepKey(detectedSep);
     setCustomSep('');
 
-    const separator = SEPARATORS[detectedSep as keyof typeof SEPARATORS] || ';';
+    const separator = SEPARATORS[detectedSep] || ';';
     const detectedCount = detectPageCount(safeText, separator);
     setPageCount(detectedCount);
 
-    const firstLine = safeText.split('\n')[0] || '';
-    if (firstLine !== lastDetectedFirstLine.current) {
-      lastDetectedFirstLine.current = firstLine;
-      const parts = firstLine.split(separator);
+    const parts = parseCSVRaw(safeText, separator)[0] ?? [];
+    const headerKey = parts.join('\u0000');
+    if (headerKey !== lastDetectedFirstLine.current) {
+      lastDetectedFirstLine.current = headerKey;
       if (parts.length > 0) {
         setPageNames((prev) => {
           const next = [...prev];
@@ -235,19 +235,26 @@ export function useImportDeckDraft() {
 
         if (fileContent) {
           setImportError('');
-          setRawText(fileContent);
+          const fileLines = fileContent.split('\n');
+          const fileLimited = fileLines.length > IMPORT_LINE_LIMIT;
+          const safeFileContent = fileLimited
+            ? fileLines.slice(0, IMPORT_LINE_LIMIT).join('\n')
+            : fileContent;
+          if (fileLimited) {
+            setImportError('import.err.too_many_lines');
+          }
+          setRawText(safeFileContent);
 
-          const detectedSep = detectSeparator(fileContent);
-          const separator = SEPARATORS[detectedSep as keyof typeof SEPARATORS] || ';';
-          const detectedCount = detectPageCount(fileContent, separator);
+          const detectedSep = detectSeparator(safeFileContent);
+          const separator = SEPARATORS[detectedSep] || ';';
+          const detectedCount = detectPageCount(safeFileContent, separator);
 
           setSepKey(detectedSep);
           setPageCount(detectedCount);
-          rebuildPreviewFromText(fileContent, detectedSep, detectedCount);
+          rebuildPreviewFromText(safeFileContent, detectedSep, detectedCount);
 
-          const firstLine = fileContent.split('\n')[0] || '';
-          lastDetectedFirstLine.current = firstLine;
-          const parts = firstLine.split(separator);
+          const parts = parseCSVRaw(safeFileContent, separator)[0] ?? [];
+          lastDetectedFirstLine.current = parts.join('\u0000');
           if (parts.length > 0) {
             setPageNames((prev) => {
               const next = [...prev];
@@ -295,6 +302,8 @@ export function useImportDeckDraft() {
       }
 
       setImportError(result.error);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed.');
     } finally {
       setIsImporting(false);
     }

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 import type { ViewStyle } from 'react-native';
-import { Card } from 'react-native-paper';
+import { Card, useTheme } from 'react-native-paper';
 import type { ComponentProps } from 'react';
 import Animated, {
   useAnimatedStyle,
@@ -14,6 +14,7 @@ type PaperCardProps = ComponentProps<typeof Card>;
 
 function AppCardBase({ style, ...props }: PaperCardProps) {
   const [hovered, setHovered] = useState(false);
+  const theme = useTheme();
   const scale = useSharedValue(1);
 
   const isHoverEnabled = Platform.OS === 'web';
@@ -64,7 +65,14 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
     return nextStyle;
   }, [style]);
 
-  const cardStyle = useMemo(() => [style, styles.card, hovered && styles.hovered], [hovered, style]);
+  const hoverStyle = useMemo<ViewStyle | undefined>(() => {
+    if (!hovered || Platform.OS !== 'web') return undefined;
+    return {
+      boxShadow: `0 0 0 1px ${theme.colors.outlineVariant}, 0 10px 24px ${theme.colors.shadow}`,
+    } as ViewStyle;
+  }, [hovered, theme.colors.outlineVariant, theme.colors.shadow]);
+
+  const cardStyle = useMemo(() => [style, styles.card, hoverStyle], [hoverStyle, style]);
 
   return (
     <Pressable
@@ -93,7 +101,4 @@ const styles = StyleSheet.create({
   hoverLayer: {
     overflow: 'visible',
   },
-  hovered: {
-    boxShadow: '0 0 0 1px rgba(208, 188, 255, 0.22), 0 10px 24px rgba(0, 0, 0, 0.18)',
-  } as ViewStyle,
 });

@@ -13,7 +13,7 @@ import { StoreActionsContext } from './StoreActionsContext';
 import { StoreStateContext } from './StoreStateContext';
 import { useStorePersistence } from './useStorePersistence';
 import { useStoreBootstrap } from './useStoreBootstrap';
-import { useStoreActions } from './useStoreActions';
+import { useStoreActionsCore } from './useStoreActions';
 
 const FlashcardStoreContext = createContext<FlashcardStore | undefined>(undefined);
 
@@ -74,13 +74,15 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     user,
     setUser,
     setIsLoading,
+    setLastSyncError,
     setLastPersistenceError,
     setLastStoreError,
     applySnapshot: persistence.applySnapshot,
+    persistLocalSnapshot: persistence.persistLocalSnapshot,
     persistNow: persistence.persistNow,
   });
 
-  const actions = useStoreActions({
+  const actions = useStoreActionsCore({
     groupsRef,
     studyModesRef,
     heatmapRef,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Button, Portal } from 'react-native-paper';
+import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { AppSnackbar } from '../../components/feedback/AppSnackbar';
@@ -148,14 +148,12 @@ export function ImportScreen() {
         </Button>
       </View>
 
-      <Portal>
-        <DeleteFlashcardDialog
-          visible={!!draft.deleteCardId}
-          onDismiss={() => draft.setDeleteCardId(null)}
-          onConfirm={draft.confirmDeleteCard}
-          t={t}
-        />
-      </Portal>
+      <DeleteFlashcardDialog
+        visible={!!draft.deleteCardId}
+        onDismiss={() => draft.setDeleteCardId(null)}
+        onConfirm={draft.confirmDeleteCard}
+        t={t}
+      />
 
       <AppSnackbar
         visible={!!draft.importError}

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { FAB, Portal, Text, useTheme } from 'react-native-paper';
+import { FAB, Text, useTheme } from 'react-native-paper';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
 import { BrowseFilterChips } from '../../components/browse/BrowseFilterChips';
@@ -165,18 +165,17 @@ export function BrowseScreen() {
         t={t}
         style={styles.list}
         contentContainerStyle={styles.listContainer}
+        emptyLabel={t('browse.no_cards')}
       />
 
       <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />
 
-      <Portal>
-        <DeleteFlashcardDialog
-          visible={!!deleteCardId}
-          onDismiss={() => setDeleteCardId(null)}
-          onConfirm={confirmDeleteCard}
-          t={t}
-        />
-      </Portal>
+      <DeleteFlashcardDialog
+        visible={!!deleteCardId}
+        onDismiss={() => setDeleteCardId(null)}
+        onConfirm={confirmDeleteCard}
+        t={t}
+      />
 
       <EditFlashcardDialog
         visible={!!editingId}

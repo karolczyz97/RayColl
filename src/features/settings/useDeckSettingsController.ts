@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import type { FlashcardGroup, ModeStep, StudyMode } from '../../types/models';
+import type { ModeStep, StudyMode } from '../../types/models';
 import type { CardFilter } from '../../constants/cardFilters';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
@@ -59,7 +59,7 @@ export function useDeckSettingsController() {
     if (!activeGroup) return;
     const trimmed = deckName.trim();
     if (trimmed && trimmed !== activeGroup.name) {
-      store.updateGroup({ ...activeGroup, name: trimmed } as FlashcardGroup);
+      store.updateGroup({ ...activeGroup, name: trimmed });
     }
   };
 
@@ -69,7 +69,7 @@ export function useDeckSettingsController() {
     if (trimmed && trimmed !== activeGroup.pageNames[index]) {
       const nextNames = [...activeGroup.pageNames];
       nextNames[index] = trimmed;
-      store.updateGroup({ ...activeGroup, pageNames: nextNames } as FlashcardGroup);
+      store.updateGroup({ ...activeGroup, pageNames: nextNames });
     }
   };
 
@@ -132,21 +132,22 @@ export function useDeckSettingsController() {
 
   const confirmAddStep = () => {
     let step: ModeStep;
+    const safePageIdx = Math.max(0, Math.min(pageCount - 1, Math.trunc(newPageIdx)));
     switch (newStepType) {
       case 'show_page':
-        step = { type: 'show_page', pageIndex: newPageIdx };
+        step = { type: 'show_page', pageIndex: safePageIdx };
         break;
       case 'speak_page':
-        step = { type: 'speak_page', pageIndex: newPageIdx, extraPauseMs: newMs };
+        step = { type: 'speak_page', pageIndex: safePageIdx, extraPauseMs: newMs };
         break;
       case 'dynamic_pause':
-        step = { type: 'dynamic_pause', nextPageIndex: newPageIdx, extraPauseMs: newMs };
+        step = { type: 'dynamic_pause', nextPageIndex: safePageIdx, extraPauseMs: newMs };
         break;
       case 'wait':
         step = { type: 'wait', ms: newMs };
         break;
       case 'listen_and_branch':
-        step = { type: 'listen_and_branch', pageIndex: newPageIdx, successThreshold: newThreshold };
+        step = { type: 'listen_and_branch', pageIndex: safePageIdx, successThreshold: newThreshold };
         break;
       default:
         return;

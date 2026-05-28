@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
 
 interface Props {
   search: string;
@@ -18,7 +19,7 @@ export function BrowseSearchBar({ search, setSearch, t }: Props) {
       onChangeText={setSearch}
       style={styles.searchBar}
       left={<TextInput.Icon icon="magnify" />}
-      outlineStyle={{ borderRadius: 12 }}
+      outlineStyle={styles.outline}
       accessibilityLabel="Search flashcards input"
     />
   );
@@ -26,6 +27,9 @@ export function BrowseSearchBar({ search, setSearch, t }: Props) {
 
 const styles = StyleSheet.create({
   searchBar: {
-    marginBottom: 12,
+    marginBottom: TOKENS.spacing.md,
+  },
+  outline: {
+    borderRadius: TOKENS.radius.md,
   },
 });

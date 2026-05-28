@@ -13,10 +13,19 @@ export function useStudyPageController() {
   const { width } = useWindowDimensions();
   const isNarrow = width < 480;
 
-  const activeGroup = store.groups.find((group) => group.id === groupId) || null;
+  const {
+    groups,
+    studyModes,
+    isLoading,
+    reviewFlashcard,
+    getDueCards,
+    flushPersistence,
+  } = store;
+
+  const activeGroup = groups.find((group) => group.id === groupId) || null;
   const mode =
-    store.studyModes.find((studyMode) => studyMode.id === activeGroup?.activeModeId) ||
-    store.studyModes[0];
+    studyModes.find((studyMode) => studyMode.id === activeGroup?.activeModeId) ||
+    studyModes[0];
   const steps = useMemo(() => mode?.steps || [], [mode]);
 
   const getButtonText = useCallback(
@@ -30,9 +39,9 @@ export function useStudyPageController() {
 
   const onCardReviewed = useCallback(
     (activeGroupId: string, card: Flashcard) => {
-      store.reviewFlashcard(activeGroupId, card);
+      reviewFlashcard(activeGroupId, card);
     },
-    [store],
+    [reviewFlashcard],
   );
 
   const {
@@ -51,37 +60,37 @@ export function useStudyPageController() {
   const startedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (store.isLoading) return;
+    if (isLoading) return;
     if (startedRef.current === groupId) return;
 
-    const currentGroup = store.groups.find((group) => group.id === groupId);
+    const currentGroup = groups.find((group) => group.id === groupId);
     if (currentGroup) {
-      const due = store.getDueCards(currentGroup.id);
+      const due = getDueCards(currentGroup.id);
       if (due.length > 0) {
         startSession(due);
         startedRef.current = groupId;
       }
     }
-  }, [groupId, startSession, store]);
+  }, [groupId, startSession, isLoading, groups, getDueCards]);
 
   const handleBack = useCallback(() => {
     stopSession();
-    void store.flushPersistence();
+    void flushPersistence();
     router.back();
-  }, [stopSession, store]);
+  }, [stopSession, flushPersistence]);
 
   useEffect(() => {
     return () => {
       stopSession();
-      void store.flushPersistence();
+      void flushPersistence();
     };
-  }, [stopSession, store]);
+  }, [stopSession, flushPersistence]);
 
   useEffect(() => {
     if (sessionState.isSessionFinished) {
-      void store.flushPersistence();
+      void flushPersistence();
     }
-  }, [sessionState.isSessionFinished, store]);
+  }, [sessionState.isSessionFinished, flushPersistence]);
 
   return {
     activeGroup,
@@ -95,7 +104,7 @@ export function useStudyPageController() {
     handleRating,
     hasStt: steps.some((step) => step.type === 'listen_and_branch'),
     hasTts: steps.some((step) => step.type === 'speak_page'),
-    isLoading: store.isLoading,
+    isLoading,
     isNarrow,
     progressPct: dueCards.length > 0 ? sessionState.currentCardIndex / dueCards.length : 0,
     restartFailed,

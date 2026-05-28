@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { TOKENS } from '../../../theme/tokens';
 
 interface CardPageSectionProps {
   pageName: string;
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    paddingVertical: 12,
+    paddingVertical: TOKENS.spacing.md,
   },
   pageRowBorder: {
     borderTopWidth: 1,
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
-    marginBottom: 8,
+    marginBottom: TOKENS.spacing.sm,
     fontWeight: '700',
   },
   cardText: {

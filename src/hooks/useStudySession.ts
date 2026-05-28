@@ -44,7 +44,7 @@ export function useStudySession(
   const onCardReviewedRef = useRef(onCardReviewed);
   const lastExecutedCardIndexRef = useRef<number | null>(null);
   const dueCardsRef = useRef(dueCards);
-  const activePageCount = group?.activePageCount ?? 99;
+  const activePageCount = group?.activePageCount ?? Infinity;
 
   const dispatchIfMounted = useCallback((action: SessionAction) => {
     if (isMountedRef.current) {
@@ -355,6 +355,14 @@ export function useStudySession(
     holdingRef.current = holding;
   }, []);
 
+  const getFreshCards = useCallback((cards: Flashcard[]) => {
+    const currentGroup = groupRef.current;
+    if (!currentGroup) return cards;
+
+    const cardsById = new Map(currentGroup.cards.map((card) => [card.id, card]));
+    return cards.map((card) => cardsById.get(card.id) ?? card);
+  }, []);
+
   useEffect(() => {
     if (dueCards.length === 0 || state.status === 'finished') {
       lastExecutedCardIndexRef.current = null;
@@ -396,14 +404,14 @@ export function useStudySession(
   );
 
   const restartSession = useCallback(() => {
-    startSession(allCardsRef.current, true);
-  }, [startSession]);
+    startSession(getFreshCards(allCardsRef.current), true);
+  }, [getFreshCards, startSession]);
 
   const restartFailed = useCallback(() => {
     if (failedCardsRef.current.length > 0) {
-      startSession([...failedCardsRef.current], false);
+      startSession(getFreshCards(failedCardsRef.current), false);
     }
-  }, [startSession]);
+  }, [getFreshCards, startSession]);
 
   const stopSession = useCallback(() => {
     abortRef.current = true;

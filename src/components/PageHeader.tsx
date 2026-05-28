@@ -9,12 +9,24 @@ interface PageHeaderProps {
   title: string;
   onBack: () => void;
   action?: React.ReactNode;
+  backAccessibilityLabel?: string;
 }
 
-export function PageHeader({ title, onBack, action }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  onBack,
+  action,
+  backAccessibilityLabel = 'Go back',
+}: PageHeaderProps) {
   return (
     <Animated.View entering={FadeIn.duration(MOTION.fadeDuration)} style={styles.container}>
-      <IconButton icon="arrow-left" size={24} onPress={onBack} style={styles.backBtn} />
+      <IconButton
+        icon="arrow-left"
+        size={24}
+        onPress={onBack}
+        style={styles.backBtn}
+        accessibilityLabel={backAccessibilityLabel}
+      />
       <Text variant="titleLarge" style={styles.title} numberOfLines={1}>
         {title}
       </Text>

@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TranslationFn } from '../../../i18n';
 import type { Flashcard, FlashcardGroup } from '../../../types/models';
 import { StudyStatusBanner } from './StudyStatusBanner';
 import { StudyCard } from './StudyCard';
 import { StudyControls } from './StudyControls';
 import { StudyFinishedState } from './StudyFinishedState';
+import { TOKENS } from '../../../theme/tokens';
 
 interface StudyScreenProps {
   activeGroup: FlashcardGroup;
@@ -77,7 +79,7 @@ export function StudyScreen({
   }
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
       <StudyStatusBanner
         title={activeGroup.name}
         progress={progressPct}
@@ -105,19 +107,25 @@ export function StudyScreen({
         sttResultText={sessionState.sttResultText}
         sttMatchPercent={sessionState.sttMatchPercent}
         getButtonText={getButtonText}
+        ratingLabels={[
+          t('study.rating.1'),
+          t('study.rating.2'),
+          t('study.rating.3'),
+          t('study.rating.4'),
+        ]}
         recognizedLabel={t('study.recognized')}
         matchPercentLabel={t('study.match_percent', { percent: sessionState.sttMatchPercent })}
         onRate={handleRating}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: TOKENS.spacing.lg,
     paddingTop: 48,
-    paddingBottom: 24,
+    paddingBottom: TOKENS.spacing.xl,
   },
 });

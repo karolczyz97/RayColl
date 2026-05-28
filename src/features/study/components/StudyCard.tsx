@@ -6,6 +6,7 @@ import type { Flashcard, FlashcardGroup } from '../../../types/models';
 import { AppIcon } from '../../../components/AppIcon';
 import { getVisiblePages } from '../../../store/selectors/pages';
 import { CardPageSection } from './CardPageSection';
+import { TOKENS } from '../../../theme/tokens';
 
 interface StudyCardProps {
   currentCard: Flashcard | null;
@@ -60,6 +61,8 @@ export function StudyCard({
         onPressIn={pressIn}
         onPressOut={pressOut}
         onPress={waitingForTap ? onCardTap : undefined}
+        accessibilityRole={waitingForTap ? 'button' : undefined}
+        accessibilityLabel={waitingForTap ? tapToRevealLabel : undefined}
       >
         <Animated.View
           style={[
@@ -101,7 +104,7 @@ export function StudyCard({
           {waitingForTap ? (
             <View style={styles.tapIndicator}>
               <AppIcon name="gesture-tap" size={20} color={theme.colors.outline} />
-              <Text variant="labelMedium" style={{ color: theme.colors.outline, fontWeight: 'bold' }}>
+              <Text variant="labelMedium" style={[styles.tapLabel, { color: theme.colors.outline }]}>
                 {tapToRevealLabel}
               </Text>
             </View>
@@ -117,20 +120,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'stretch',
     justifyContent: 'center',
-    marginVertical: 8,
+    marginVertical: TOKENS.spacing.sm,
   },
   cardPressable: {
     flex: 1,
   },
   animatedCard: {
     flex: 1,
-    borderRadius: 28,
+    borderRadius: TOKENS.radius.xxl,
     borderWidth: 1,
     elevation: 2,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
-    padding: 24,
+    padding: TOKENS.spacing.xl,
     maxWidth: 600,
     width: '100%',
     alignSelf: 'center',
@@ -141,8 +144,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     position: 'absolute',
-    bottom: 12,
+    bottom: TOKENS.spacing.md,
     left: 0,
     right: 0,
+  },
+  tapLabel: {
+    fontWeight: 'bold',
   },
 });

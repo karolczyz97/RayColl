@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: TOKENS.spacing.xs,
   },
   editInput: {
     minHeight: TOKENS.control.compactHeight,

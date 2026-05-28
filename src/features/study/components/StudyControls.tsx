@@ -18,6 +18,7 @@ import {
   getWarningBgColor,
   getWarningColor,
 } from '../../../theme/semanticColors';
+import { TOKENS } from '../../../theme/tokens';
 
 interface StudyControlsProps {
   isNarrow: boolean;
@@ -29,6 +30,7 @@ interface StudyControlsProps {
   sttResultText: string;
   sttMatchPercent: number;
   getButtonText: (key: string) => string;
+  ratingLabels: [string, string, string, string];
   recognizedLabel: string;
   matchPercentLabel: string;
   onRate: (rating: number) => void;
@@ -44,6 +46,7 @@ export function StudyControls({
   sttResultText,
   sttMatchPercent,
   getButtonText,
+  ratingLabels,
   recognizedLabel,
   matchPercentLabel,
   onRate,
@@ -105,6 +108,7 @@ export function StudyControls({
             contentStyle={isNarrow ? styles.compactContent : undefined}
             icon={({ size, color }) => <AppIcon name="replay" size={size} color={color} />}
             onPress={() => onRate(1)}
+            accessibilityLabel={ratingLabels[0]}
           >
             {getButtonText('study.rating.1')}
           </Button>
@@ -119,6 +123,7 @@ export function StudyControls({
               <AppIcon name="emoticon-sad-outline" size={size} color={color} />
             )}
             onPress={() => onRate(2)}
+            accessibilityLabel={ratingLabels[1]}
           >
             {getButtonText('study.rating.2')}
           </Button>
@@ -131,6 +136,7 @@ export function StudyControls({
               <AppIcon name="emoticon-happy-outline" size={size} color={color} />
             )}
             onPress={() => onRate(3)}
+            accessibilityLabel={ratingLabels[2]}
           >
             {getButtonText('study.rating.3')}
           </Button>
@@ -145,6 +151,7 @@ export function StudyControls({
               <AppIcon name="emoticon-excited-outline" size={size} color={color} />
             )}
             onPress={() => onRate(4)}
+            accessibilityLabel={ratingLabels[3]}
           >
             {getButtonText('study.rating.4')}
           </Button>
@@ -161,7 +168,7 @@ export function StudyControls({
                   {sttResultText}
                 </Text>
                 {sttMatchPercent > 0 ? (
-                  <Text variant="labelSmall" style={{ color: matchColor, fontWeight: 'bold', marginTop: 4 }}>
+                  <Text variant="labelSmall" style={[styles.matchPercentText, { color: matchColor }]}>
                     {matchPercentLabel}
                   </Text>
                 ) : null}
@@ -198,11 +205,11 @@ export function StudyControls({
 const styles = StyleSheet.create({
   bottomControlZone: {
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: TOKENS.spacing.lg,
   },
   ratingButtonsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: TOKENS.spacing.sm,
     width: '100%',
   },
   rateButton: {
@@ -224,8 +231,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sttResultBox: {
-    padding: 12,
-    borderRadius: 16,
+    padding: TOKENS.spacing.md,
+    borderRadius: TOKENS.radius.lg,
     width: '100%',
     alignItems: 'center',
   },
@@ -236,13 +243,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 32,
+    gap: TOKENS.spacing.xxl,
     height: 60,
   },
   iconWrapper: {
-    width: 48,
-    height: 48,
+    width: TOKENS.touchTarget.min,
+    height: TOKENS.touchTarget.min,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  matchPercentText: {
+    fontWeight: 'bold',
+    marginTop: TOKENS.spacing.xs,
   },
 });

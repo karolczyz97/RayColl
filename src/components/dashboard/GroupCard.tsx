@@ -7,6 +7,7 @@ import { useI18n } from '../../i18n';
 import { AppCard } from '../AppCard';
 import { SegmentedProgressBar } from '../SegmentedProgressBar';
 import { computeCardStats } from '../../store/selectors/stats';
+import { ROUTES } from '../../constants/routes';
 import { StudyModeMenuButton } from './StudyModeMenuButton';
 import type { FlashcardGroup } from '../../types/models';
 import { TOKENS } from '../../theme/tokens';
@@ -53,20 +54,20 @@ export function GroupCard({ group, onModeChange }: Props) {
             icon="eye-outline"
             size={20}
             iconColor={theme.colors.primary}
-            onPress={() => router.push(`/browse/${group.id}`)}
+            onPress={() => router.push(ROUTES.browseDeck(group.id))}
             accessibilityLabel={`Browse cards in deck ${group.name}`}
           />
           <IconButton
             icon="tune"
             size={20}
             iconColor={theme.colors.primary}
-            onPress={() => router.push(`/settings/${group.id}`)}
+            onPress={() => router.push(ROUTES.deckSettings(group.id))}
             accessibilityLabel={`Configure settings for deck ${group.name}`}
           />
           <View style={styles.studyModeAction}>
             <StudyModeMenuButton
               group={group}
-              onStudy={() => router.push(`/study/${group.id}`)}
+              onStudy={() => router.push(ROUTES.studyDeck(group.id))}
               onModeChange={onModeChange}
             />
           </View>

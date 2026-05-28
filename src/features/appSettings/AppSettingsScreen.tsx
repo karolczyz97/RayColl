@@ -25,6 +25,16 @@ const LANGUAGE_OPTIONS = [
   { label: 'Italiano', value: 'it' },
 ] satisfies { label: string; value: LanguageCode }[];
 
+const THEME_OPTIONS = ['light', 'system', 'dark'] satisfies ThemePref[];
+
+function isLanguageCode(value: string): value is LanguageCode {
+  return LANGUAGE_OPTIONS.some((option) => option.value === value);
+}
+
+function isThemePref(value: string): value is ThemePref {
+  return THEME_OPTIONS.some((option) => option === value);
+}
+
 export function AppSettingsScreen() {
   const { t, language, setLanguage } = useI18n();
   const store = useFlashcardStore();
@@ -47,28 +57,30 @@ export function AppSettingsScreen() {
   };
 
   const handleExport = async () => {
-    const data = store.exportState();
-
-    if (Platform.OS === 'web') {
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'fiszki-backup.json';
-      anchor.click();
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    const { Share } = await import('react-native');
-
     try {
+      const data = store.exportState();
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'fiszki-backup.json';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        return;
+      }
+
+      const { Share } = await import('react-native');
       await Share.share({
         message: data,
         title: 'RayColl Backup',
       });
     } catch (error) {
       console.warn('Export failed:', error);
+      setSnackbarMessage(getLabel('app_settings.export_error', 'Export failed.'));
     }
   };
 
@@ -112,7 +124,11 @@ export function AppSettingsScreen() {
           <AppSelect
             value={language}
             options={LANGUAGE_OPTIONS}
-            onChange={(value) => setLanguage(value as LanguageCode)}
+            onChange={(value) => {
+              if (isLanguageCode(value)) {
+                setLanguage(value);
+              }
+            }}
             accessibilityLabel="Select app language"
           />
         </SectionCard>
@@ -122,7 +138,11 @@ export function AppSettingsScreen() {
         <SectionCard title={t('app_settings.theme')}>
           <SegmentedButtons
             value={themePref}
-            onValueChange={(value) => setThemePref(value as ThemePref)}
+            onValueChange={(value) => {
+              if (isThemePref(value)) {
+                setThemePref(value);
+              }
+            }}
             buttons={[
               { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
               {
@@ -144,7 +164,11 @@ export function AppSettingsScreen() {
           </Text>
           <SegmentedButtons
             value={useSystemColors ? 'true' : 'false'}
-            onValueChange={(value) => setUseSystemColors(value === 'true')}
+            onValueChange={(value) => {
+              if (value === 'true' || value === 'false') {
+                setUseSystemColors(value === 'true');
+              }
+            }}
             buttons={[
               {
                 value: 'true',

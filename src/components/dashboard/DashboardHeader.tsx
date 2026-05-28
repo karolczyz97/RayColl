@@ -4,6 +4,7 @@ import { Text, Avatar, IconButton, TouchableRipple, useTheme } from 'react-nativ
 import { router } from 'expo-router';
 import { useI18n } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
+import { ROUTES } from '../../constants/routes';
 import { AppMenuButton } from '../AppMenuButton';
 import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
 
@@ -34,13 +35,13 @@ export function DashboardHeader({ user, onLogin, onLogout }: Props) {
         <IconButton
           icon="chart-bar"
           size={24}
-          onPress={() => router.push('/stats')}
+          onPress={() => router.push(ROUTES.STATS)}
           accessibilityLabel={t('stats.title')}
         />
         <IconButton
           icon="cog"
           size={24}
-          onPress={() => router.push('/app-settings')}
+          onPress={() => router.push(ROUTES.APP_SETTINGS)}
           accessibilityLabel={t('app_settings.title')}
         />
         {user ? (

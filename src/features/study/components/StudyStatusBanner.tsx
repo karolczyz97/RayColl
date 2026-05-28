@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ProgressBar, Text, useTheme } from 'react-native-paper';
 import { PageHeader } from '../../../components/PageHeader';
+import { TOKENS } from '../../../theme/tokens';
 
 interface StudyStatusBannerProps {
   title: string;
@@ -33,18 +34,18 @@ export function StudyStatusBanner({
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 16,
+    marginBottom: TOKENS.spacing.lg,
   },
   progressBarWrapper: {
-    marginVertical: 12,
+    marginVertical: TOKENS.spacing.md,
     width: '100%',
   },
   progressBar: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: TOKENS.radius.xs,
   },
   progressCounter: {
-    fontSize: 12,
+    fontSize: TOKENS.typography.size.xs,
     textAlign: 'right',
     fontWeight: '600',
     letterSpacing: 0.5,

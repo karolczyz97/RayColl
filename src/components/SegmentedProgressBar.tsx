@@ -5,6 +5,7 @@ import type { CardStats } from '../store/selectors/stats';
 import { useI18n } from '../i18n';
 import { getReviewStatusColor } from '../theme/semanticColors';
 import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
+import { TOKENS } from '../theme/tokens';
 
 const STATS_KEY: Record<string, keyof CardStats> = {
   new: 'newCount',
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
+    gap: TOKENS.spacing.md,
     marginTop: 10,
   },
   legendTop: {
@@ -119,10 +120,10 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
+    gap: TOKENS.spacing.xs,
+    paddingHorizontal: TOKENS.spacing.sm,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: TOKENS.radius.md,
   },
   dot: {
     width: 8,

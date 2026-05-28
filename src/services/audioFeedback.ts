@@ -40,8 +40,8 @@ async function playNativeSound(asset: AudioSource) {
         console.warn('Failed to unload feedback sound:', getErrorMessage(err));
       }
     }, 2000);
-  } catch (err: unknown) {
-    console.log('Native feedback sound not playable (likely mock asset):', getErrorMessage(err));
+  } catch {
+    // Feedback sounds are non-critical and can fail with mock assets in tests.
   }
 }
 

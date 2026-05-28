@@ -263,6 +263,7 @@ export function useStorePersistence({
     applySnapshot,
     getSnapshot,
     persistNow,
+    persistLocalSnapshot,
     persistCurrentSnapshot,
     flushPersistence,
     commitGroups,

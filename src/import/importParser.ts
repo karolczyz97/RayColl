@@ -5,6 +5,10 @@ export const SEPARATORS: Record<string, string> = {
   pipe: '|',
 };
 
+function normalizeCsvText(text: string): string {
+  return text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+}
+
 export function parseCSVLine(line: string, sep: string): string[] {
   const result: string[] = [];
   let currentField = '';
@@ -30,7 +34,9 @@ export function parseCSVLine(line: string, sep: string): string[] {
 }
 
 export function detectSeparator(text: string): string {
-  const firstLine = text.split('\n').find((l) => l.trim()) || '';
+  const firstLine = normalizeCsvText(text)
+    .split('\n')
+    .find((l) => l.trim()) || '';
   const counts: Record<string, number> = {};
   for (const [key, sep] of Object.entries(SEPARATORS)) {
     counts[key] = parseCSVLine(firstLine, sep).length - 1;
@@ -43,7 +49,9 @@ export function detectSeparator(text: string): string {
 }
 
 export function detectPageCount(text: string, sep: string): number {
-  const lines = text.split('\n').filter((l) => l.trim());
+  const lines = normalizeCsvText(text)
+    .split('\n')
+    .filter((l) => l.trim());
   if (lines.length === 0) return 2;
   const counts = lines.map((l) => parseCSVLine(l, sep).length);
   const maxCols = Math.max(...counts);
@@ -83,26 +91,57 @@ function resolveSep(keyOrChar: string): string {
   return SEPARATORS[keyOrChar] ?? keyOrChar;
 }
 
+function parseFullText(text: string, sep: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') {
+      if (inQuotes && text[i + 1] === '"') {
+        currentField += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === sep && !inQuotes) {
+      currentRow.push(currentField.trim());
+      currentField = '';
+    } else if (char === '\n' && !inQuotes) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some((f) => f.trim())) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+
+  currentRow.push(currentField.trim());
+  if (currentRow.some((f) => f.trim())) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+}
+
 export function parseCSV(text: string, sepKey: string, pageCount: number): string[][] {
   const sep = resolveSep(sepKey);
-  return text
-    .split('\n')
-    .filter((l) => l.trim())
-    .map((line) => {
-      const parts = parseCSVLine(line, sep);
-      while (parts.length < pageCount) {
-        parts.push('');
-      }
-      return parts.slice(0, pageCount);
-    });
+  return parseFullText(normalizeCsvText(text), sep).map((parts) => {
+    while (parts.length < pageCount) {
+      parts.push('');
+    }
+    return parts.slice(0, pageCount);
+  });
 }
 
 export function parseCSVRaw(text: string, sepKey: string): string[][] {
   const sep = resolveSep(sepKey);
-  return text
-    .split('\n')
-    .filter((l) => l.trim())
-    .map((line) => parseCSVLine(line, sep));
+  return parseFullText(normalizeCsvText(text), sep);
 }
 
 export function serializeCSV(rows: string[][], sepKey: string): string {

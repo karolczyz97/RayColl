@@ -1,10 +1,12 @@
 import React from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { AppErrorBoundary } from '../../components/feedback/AppErrorBoundary';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { LoadingState } from '../../components/layout/LoadingState';
 import { StudyScreen } from '../../features/study/components/StudyScreen';
 import { useStudyPageController } from '../../features/study/hooks/useStudyPageController';
 
-export default function StudyPage() {
+function StudyPageContent() {
   const controller = useStudyPageController();
 
   if (controller.isLoading) {
@@ -16,4 +18,14 @@ export default function StudyPage() {
   }
 
   return <StudyScreen {...controller} activeGroup={controller.activeGroup} />;
+}
+
+export default function StudyPage() {
+  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+
+  return (
+    <AppErrorBoundary resetKey={groupId} title="Study screen crashed">
+      <StudyPageContent />
+    </AppErrorBoundary>
+  );
 }
