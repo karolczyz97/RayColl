@@ -16,5 +16,7 @@ export function stepSummary(step: ModeStep, t: TranslationFn): string {
         index: step.pageIndex + 1,
         threshold: step.successThreshold,
       });
+    case 'rate_knowledge':
+      return t('step.rate_knowledge');
   }
 }

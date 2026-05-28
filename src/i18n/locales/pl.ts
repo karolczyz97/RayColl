@@ -148,6 +148,7 @@ export const pl: Record<string, string> = {
   'step.dynamic_pause': 'Pauza dyn. (str. {index}, +{pause}ms)',
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
+  'step.rate_knowledge': 'Oceń znajomość',
 
   // Step types (labels)
   'step.type.show_page': 'Pokaż stronę',
@@ -155,6 +156,7 @@ export const pl: Record<string, string> = {
   'step.type.dynamic_pause': 'Pauza dynamiczna',
   'step.type.wait': 'Odczekaj (ms)',
   'step.type.listen_and_branch': 'Weryfikuj wymowę (STT)',
+  'step.type.rate_knowledge': 'Oceń znajomość (wyświetl przyciski oceny)',
 
   // Study Filters
   'filter.new_review': 'Nowe + Powtórki',

@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
 import { AppTextInput } from '../../components/forms/AppTextInput';
@@ -23,7 +24,7 @@ export function ImportSourceCard({
   t,
 }: ImportSourceCardProps) {
   return (
-    <SectionCard>
+    <SectionCard style={styles.card} contentStyle={styles.cardContent}>
       <AppTextInput
         label={t('dashboard.name_label')}
         value={name}
@@ -32,12 +33,11 @@ export function ImportSourceCard({
       />
       <AppTextInput
         multiline
-        numberOfLines={5}
         label={t('import.csv_label')}
         value={rawText}
         onChangeText={onRawTextChange}
         placeholder={t('import.name_placeholder')}
-        style={{ minHeight: 120 }}
+        style={styles.csvInput}
         accessibilityLabel="CSV TSV raw text input"
       />
       <Button
@@ -54,3 +54,16 @@ export function ImportSourceCard({
     </SectionCard>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    flex: 1,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  csvInput: {
+    flex: 1,
+    minHeight: 80,
+  },
+});

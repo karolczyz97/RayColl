@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { HelperText, Icon, Menu, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '../theme/tokens';
@@ -37,6 +37,12 @@ export function AppSelect({
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [anchorWidth, setAnchorWidth] = useState<number | undefined>(undefined);
+  const anchorRef = useRef<View>(null);
+
+  // Prime layout cache on mount so first Menu open animates from the correct position
+  useLayoutEffect(() => {
+    anchorRef.current?.measure(() => {});
+  }, []);
 
   const selected = options.find((option) => option.value === value);
   const borderColor = error
@@ -60,6 +66,7 @@ export function AppSelect({
       ) : null}
 
       <View
+        ref={anchorRef}
         onLayout={(event) => setAnchorWidth(event.nativeEvent.layout.width)}
         style={styles.anchorWrapper}
       >
@@ -79,7 +86,7 @@ export function AppSelect({
           ]}
           anchor={
             <TouchableRipple
-              onPress={() => !disabled && setOpen((current) => !current)}
+              onPress={() => !disabled && setOpen(true)}
               disabled={disabled}
               style={[
                 styles.field,

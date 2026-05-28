@@ -48,6 +48,9 @@ export type ModeStep =
       pageIndex: number;
       successThreshold: number; // np. 70 (%)
       incorrectTtsPageIndex?: number;
+    }
+  | {
+      type: 'rate_knowledge';
     };
 
 export interface StudyMode {

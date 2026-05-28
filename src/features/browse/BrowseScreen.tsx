@@ -215,7 +215,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContainer: {
-    gap: TOKENS.spacing.lg,
     paddingBottom: 100,
   },
   fab: {

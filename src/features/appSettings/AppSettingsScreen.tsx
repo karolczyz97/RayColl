@@ -109,6 +109,64 @@ export function AppSettingsScreen() {
     return <LoadingState />;
   }
 
+  const theme = useTheme();
+
+  const getThemeButtons = () => {
+    const options = [
+      { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
+      { value: 'system', label: t('app_settings.theme.system'), icon: 'theme-light-dark' },
+      { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
+    ];
+    return options.map((opt) => ({
+      ...opt,
+      style: {
+        backgroundColor: themePref === opt.value ? theme.colors.secondaryContainer : theme.colors.surfaceVariant,
+        borderColor: 'transparent',
+        borderWidth: 0,
+      },
+      checkedColor: theme.colors.onSecondaryContainer,
+      uncheckedColor: theme.colors.onSurfaceVariant,
+    }));
+  };
+
+  const getSystemColorButtons = () => {
+    const options = [
+      { value: 'true', label: t('app_settings.dynamic_colors.enabled'), icon: 'palette' },
+      { value: 'false', label: t('app_settings.dynamic_colors.disabled'), icon: 'palette-swatch-outline' },
+    ];
+    const currentVal = useSystemColors ? 'true' : 'false';
+    return options.map((opt) => ({
+      ...opt,
+      style: {
+        backgroundColor: currentVal === opt.value ? theme.colors.secondaryContainer : theme.colors.surfaceVariant,
+        borderColor: 'transparent',
+        borderWidth: 0,
+      },
+      checkedColor: theme.colors.onSecondaryContainer,
+      uncheckedColor: theme.colors.onSurfaceVariant,
+    }));
+  };
+
+  const getTtsButtons = () => {
+    const options = [
+      { value: '0.7', label: '0.7x' },
+      { value: '1', label: '1.0x' },
+      { value: '1.3', label: '1.3x' },
+      { value: '1.6', label: '1.6x' },
+    ];
+    const currentVal = String(ttsRate);
+    return options.map((opt) => ({
+      ...opt,
+      style: {
+        backgroundColor: currentVal === opt.value ? theme.colors.secondaryContainer : theme.colors.surfaceVariant,
+        borderColor: 'transparent',
+        borderWidth: 0,
+      },
+      checkedColor: theme.colors.onSecondaryContainer,
+      uncheckedColor: theme.colors.onSurfaceVariant,
+    }));
+  };
+
   return (
     <AppScreen title={t('app_settings.title')} onBack={() => router.back()} maxWidth={formMaxWidth}>
       <SyncStatusBanner
@@ -143,16 +201,15 @@ export function AppSettingsScreen() {
                 setThemePref(value);
               }
             }}
-            buttons={[
-              { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
+            buttons={getThemeButtons()}
+            style={[
+              styles.segmentedButtons,
               {
-                value: 'system',
-                label: t('app_settings.theme.system'),
-                icon: 'theme-light-dark',
+                backgroundColor: theme.colors.surfaceVariant,
+                borderRadius: TOKENS.radius.pill,
+                overflow: 'hidden',
               },
-              { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
             ]}
-            style={styles.segmentedButtons}
           />
         </SectionCard>
       </AnimatedSection>
@@ -169,19 +226,15 @@ export function AppSettingsScreen() {
                 setUseSystemColors(value === 'true');
               }
             }}
-            buttons={[
+            buttons={getSystemColorButtons()}
+            style={[
+              styles.segmentedButtons,
               {
-                value: 'true',
-                label: t('app_settings.dynamic_colors.enabled'),
-                icon: 'palette',
-              },
-              {
-                value: 'false',
-                label: t('app_settings.dynamic_colors.disabled'),
-                icon: 'palette-swatch-outline',
+                backgroundColor: theme.colors.surfaceVariant,
+                borderRadius: TOKENS.radius.pill,
+                overflow: 'hidden',
               },
             ]}
-            style={styles.segmentedButtons}
           />
         </SectionCard>
       </AnimatedSection>
@@ -194,11 +247,14 @@ export function AppSettingsScreen() {
           <SegmentedButtons
             value={String(ttsRate)}
             onValueChange={(value) => void handleTtsRateChange(parseFloat(value))}
-            buttons={[
-              { value: '0.7', label: '0.7x' },
-              { value: '1', label: '1.0x' },
-              { value: '1.3', label: '1.3x' },
-              { value: '1.6', label: '1.6x' },
+            buttons={getTtsButtons()}
+            style={[
+              styles.segmentedButtons,
+              {
+                backgroundColor: theme.colors.surfaceVariant,
+                borderRadius: TOKENS.radius.pill,
+                overflow: 'hidden',
+              },
             ]}
           />
         </SectionCard>

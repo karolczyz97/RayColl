@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
-import type { ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { Card, useTheme } from 'react-native-paper';
 import type { ComponentProps } from 'react';
 import Animated, {
@@ -12,7 +12,7 @@ import { TOKENS } from '../theme/tokens';
 
 type PaperCardProps = ComponentProps<typeof Card>;
 
-function AppCardBase({ style, ...props }: PaperCardProps) {
+function AppCardBase({ style, mode = 'elevated', ...props }: PaperCardProps) {
   const [hovered, setHovered] = useState(false);
   const theme = useTheme();
   const scale = useSharedValue(1);
@@ -72,6 +72,12 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
     } as ViewStyle;
   }, [hovered, theme.colors.outlineVariant, theme.colors.shadow]);
 
+  // Propagate flex to inner layers so flex: 1 works on AppCard
+  const innerFlexStyle = useMemo<StyleProp<ViewStyle>>(() => {
+    const flatStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
+    return flatStyle?.flex != null ? { flex: flatStyle.flex } : undefined;
+  }, [style]);
+
   const cardStyle = useMemo(() => [style, styles.card, hoverStyle], [hoverStyle, style]);
 
   return (
@@ -80,8 +86,8 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
       onHoverOut={handleHoverOut}
       style={layoutStyle}
     >
-      <Animated.View style={[styles.hoverLayer, animatedStyle]}>
-        <Card {...props} style={cardStyle} />
+      <Animated.View style={[styles.hoverLayer, innerFlexStyle, animatedStyle]}>
+        <Card mode={mode} {...props} style={cardStyle} />
       </Animated.View>
     </Pressable>
   );

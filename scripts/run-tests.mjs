@@ -27,6 +27,7 @@ try {
     '../src/import/__tests__/importParser.test.ts',
     '../src/store/actions/__tests__/groupActions.test.ts',
     '../src/store/actions/__tests__/cardActions.test.ts',
+    '../src/features/study/session/__tests__/sessionState.test.ts',
   ];
 
   for (const file of testFiles) {

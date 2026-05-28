@@ -149,6 +149,7 @@ export const it: Record<string, string> = {
   'step.dynamic_pause': 'Pausa dinamica (pag. {index}, +{pause}ms)',
   'step.wait': 'Attendi {ms}ms',
   'step.listen_and_branch': 'STT pagina {index} (soglia {threshold}%)',
+  'step.rate_knowledge': 'Valuta conoscenza',
 
   // Step types (labels)
   'step.type.show_page': 'Mostra pagina',
@@ -156,6 +157,7 @@ export const it: Record<string, string> = {
   'step.type.dynamic_pause': 'Pausa dinamica',
   'step.type.wait': 'Attendi (ms)',
   'step.type.listen_and_branch': 'Verifica voce (STT)',
+  'step.type.rate_knowledge': 'Valuta conoscenza (mostra pulsanti di valutazione)',
 
   // Study Filters
   'filter.new_review': 'Nuove + in scadenza',

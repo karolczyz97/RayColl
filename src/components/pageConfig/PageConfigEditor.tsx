@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Text } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
@@ -6,6 +6,7 @@ import { TOKENS } from '../../theme/tokens';
 import { AppSelect } from '../AppSelect';
 import { AppFormRow } from '../forms/AppFormRow';
 import { AppTextInput } from '../forms/AppTextInput';
+import { TextEntryDialog } from '../dialogs/TextEntryDialog';
 
 type PageConfigEditorMode = 'import' | 'settings';
 
@@ -49,69 +50,70 @@ export function PageConfigEditor({
   onSepKeyChange,
   customSep = '',
 }: PageConfigEditorProps) {
+  const [customDialogVisible, setCustomDialogVisible] = useState(false);
+  const [customDraftValue, setCustomDraftValue] = useState('');
+
   const languageOptions = popularLangs.map((lang) => ({
     label: t(`lang.${lang.code}`),
     value: lang.code,
   }));
 
   const separatorOptions = [
-    { label: 'Tab', value: 'tab' },
-    { label: ';', value: 'semicolon' },
-    { label: ',', value: 'comma' },
-    { label: '|', value: 'pipe' },
-    { label: t('import.sep.custom'), value: 'custom' },
+    { label: t('import.sep.tab'), value: 'tab' },
+    { label: t('import.sep.semicolon'), value: 'semicolon' },
+    { label: t('import.sep.comma'), value: 'comma' },
+    { label: t('import.sep.pipe'), value: 'pipe' },
+    {
+      label: sepKey === 'custom' && customSep ? `"${customSep}"` : t('import.sep.custom'),
+      value: 'custom',
+    },
   ];
 
   const hasSeparator = sepKey !== undefined && onSepKeyChange !== undefined;
 
   return (
     <View style={styles.container}>
-      {hasSeparator ? (
-        <AppFormRow style={styles.pageRow}>
-          <AppTextInput
-            label={t('import.separator')}
-            value={sepKey === 'custom' ? customSep : ''}
-            onChangeText={(val) => {
-              onSepKeyChange!('custom', val);
-            }}
-            editable={sepKey === 'custom'}
-            style={styles.pageNameInput}
-            accessibilityLabel="Custom separator input"
-          />
-          <View style={styles.languageInput}>
+      <View style={styles.counterRow}>
+        <View style={styles.counterLeft}>
+          <Text>{t('import.pages_count')}</Text>
+          <View style={styles.counterButtons}>
+            <IconButton
+              icon="minus-box"
+              size={28}
+              style={styles.counterButton}
+              onPress={() => onPageCountChange(Math.max(2, pageCount - 1))}
+              disabled={pageCount <= 2}
+              accessibilityLabel={`${mode} decrease page count`}
+            />
+            <Text style={styles.counterText}>{pageCount}</Text>
+            <IconButton
+              icon="plus-box"
+              size={28}
+              style={styles.counterButton}
+              onPress={() => onPageCountChange(Math.min(5, pageCount + 1))}
+              disabled={pageCount >= 5}
+              accessibilityLabel={`${mode} increase page count`}
+            />
+          </View>
+        </View>
+
+        {hasSeparator ? (
+          <View style={styles.separatorSelect}>
             <AppSelect
-              value={sepKey}
+              value={sepKey ?? null}
               options={separatorOptions}
               onChange={(key) => {
-                onSepKeyChange!(key, key === 'custom' ? customSep : undefined);
+                if (key === 'custom') {
+                  setCustomDraftValue(customSep ?? '');
+                  setCustomDialogVisible(true);
+                } else {
+                  onSepKeyChange!(key);
+                }
               }}
               accessibilityLabel="Select CSV separator"
             />
           </View>
-        </AppFormRow>
-      ) : null}
-
-      <View style={styles.counterRow}>
-        <Text>{t('import.pages_count')}</Text>
-        <View style={styles.counterButtons}>
-          <IconButton
-            icon="minus-box"
-            size={28}
-            style={styles.counterButton}
-            onPress={() => onPageCountChange(Math.max(2, pageCount - 1))}
-            disabled={pageCount <= 2}
-            accessibilityLabel={`${mode} decrease page count`}
-          />
-          <Text style={styles.counterText}>{pageCount}</Text>
-          <IconButton
-            icon="plus-box"
-            size={28}
-            style={styles.counterButton}
-            onPress={() => onPageCountChange(Math.min(5, pageCount + 1))}
-            disabled={pageCount >= 5}
-            accessibilityLabel={`${mode} increase page count`}
-          />
-        </View>
+        ) : null}
       </View>
 
       {Array.from({ length: pageCount }).map((_, index) => (
@@ -156,11 +158,27 @@ export function PageConfigEditor({
           </View>
         </AppFormRow>
       ))}
+
+      {hasSeparator ? (
+        <TextEntryDialog
+          visible={customDialogVisible}
+          title={t('import.separator')}
+          value={customDraftValue}
+          onChangeText={setCustomDraftValue}
+          onDismiss={() => setCustomDialogVisible(false)}
+          onConfirm={() => {
+            onSepKeyChange!('custom', customDraftValue);
+            setCustomDialogVisible(false);
+          }}
+          confirmLabel={t('btn.save')}
+          cancelLabel={t('btn.cancel')}
+          disabled={!customDraftValue.trim()}
+        />
+      ) : null}
     </View>
   );
 }
 
-// SEP_CHAR_LABELS exported for tests / other consumers
 export { SEP_CHAR_LABELS };
 
 const styles = StyleSheet.create({
@@ -172,6 +190,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: TOKENS.spacing.sm,
+  },
+  counterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: TOKENS.spacing.sm,
   },
   counterButtons: {
     flexDirection: 'row',
@@ -185,6 +208,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     minWidth: TOKENS.touchTarget.compact,
     textAlign: 'center',
+  },
+  separatorSelect: {
+    width: 160,
   },
   pageRow: {
     alignItems: 'center',

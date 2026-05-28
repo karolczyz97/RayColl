@@ -317,6 +317,19 @@ export function useStudySession(
               }
               return;
             }
+          break;
+        }
+        case 'rate_knowledge': {
+          const alreadyRevealed = currentState.revealedPages;
+          if (areAllActivePagesRevealed(currentGroup, alreadyRevealed)) {
+            dispatchIfMounted({ type: 'SHOW_RATINGS' });
+          } else {
+            dispatchIfMounted({
+              type: 'SET_CURRENT_STEP',
+              stepIndex,
+              revealedPages: alreadyRevealed,
+              waitingForTap: true,
+            });
           }
           break;
         }

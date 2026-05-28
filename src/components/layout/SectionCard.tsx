@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { AppCard } from '../AppCard';
 import { TOKENS } from '../../theme/tokens';
@@ -11,6 +12,8 @@ interface SectionCardProps {
   danger?: boolean;
   actions?: React.ReactNode;
   titleAlign?: 'left' | 'center';
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
 }
 
 export function SectionCard({
@@ -20,12 +23,14 @@ export function SectionCard({
   danger = false,
   actions,
   titleAlign = 'left',
+  style,
+  contentStyle,
 }: SectionCardProps) {
   const theme = useTheme();
 
   return (
-    <AppCard mode={mode} style={[styles.card, danger && { borderColor: theme.colors.error }]}>
-      <AppCard.Content style={styles.content}>
+    <AppCard mode={mode} style={[styles.card, danger && { borderColor: theme.colors.error }, style]}>
+      <AppCard.Content style={[styles.content, contentStyle]}>
         {title ? (
           <Text
             variant="titleMedium"

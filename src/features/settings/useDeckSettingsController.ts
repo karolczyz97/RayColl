@@ -149,6 +149,9 @@ export function useDeckSettingsController() {
       case 'listen_and_branch':
         step = { type: 'listen_and_branch', pageIndex: safePageIdx, successThreshold: newThreshold };
         break;
+      case 'rate_knowledge':
+        step = { type: 'rate_knowledge' };
+        break;
       default:
         return;
     }
@@ -189,6 +192,7 @@ export function useDeckSettingsController() {
       dynamic_pause: t('step.type.dynamic_pause'),
       wait: t('step.type.wait'),
       listen_and_branch: t('step.type.listen_and_branch'),
+      rate_knowledge: t('step.type.rate_knowledge'),
     }),
     [t],
   );

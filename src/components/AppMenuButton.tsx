@@ -1,5 +1,5 @@
-import React, { type ReactNode, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import React, { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Menu, useTheme } from 'react-native-paper';
 import { TOKENS } from '../theme/tokens';
 
@@ -29,8 +29,18 @@ export function AppMenuButton({
 }: AppMenuButtonProps) {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
+  const anchorRef = useRef<View>(null);
 
   const close = () => setVisible(false);
+
+  // Prime layout cache on mount so first Menu open animates from the correct position
+  useLayoutEffect(() => {
+    anchorRef.current?.measure(() => {});
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    setVisible(true);
+  }, []);
 
   return (
     <Menu
@@ -48,7 +58,11 @@ export function AppMenuButton({
         { width: menuWidth, maxWidth: menuWidth },
         { transformOrigin: align === 'right' ? 'top right' : 'top left' },
       ]}
-      anchor={renderAnchor({ open: () => setVisible(true), visible })}
+      anchor={
+        <View ref={anchorRef} collapsable={false}>
+          {renderAnchor({ open: handleOpen, visible })}
+        </View>
+      }
     >
       {header}
       {items.map((item) => {

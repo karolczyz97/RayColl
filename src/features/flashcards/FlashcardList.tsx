@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
@@ -46,6 +46,11 @@ export function FlashcardList({
   const { useTwoColumnLayout } = useResponsiveLayout();
   const numColumns = useTwoColumnLayout ? 2 : 1;
 
+  const ItemSeparator = useCallback(
+    () => <View style={styles.itemSeparator} />,
+    [],
+  );
+
   const pageNames = getVisiblePageNames(group);
 
   const header =
@@ -60,24 +65,34 @@ export function FlashcardList({
       </View>
     ) : null;
 
+  const data = numColumns > 1 && cards.length % 2 !== 0
+    ? [...cards, { id: 'empty-dummy-cell', pages: [], srsState: {} as any }]
+    : cards;
+
   return (
     <FlatList
       key={`flashcard-list-${numColumns}`}
-      data={cards}
+      data={data}
       keyExtractor={(item) => item.id}
       numColumns={numColumns}
       columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-      renderItem={({ item }) => (
-        <View style={numColumns > 1 ? styles.columnCell : undefined}>
-          <FlashcardListItem
-            card={item}
-            group={group}
-            onStartEdit={() => onStartEdit(item)}
-            onDelete={() => onDelete(item.id)}
-            t={t}
-          />
-        </View>
-      )}
+      ItemSeparatorComponent={ItemSeparator}
+      renderItem={({ item }) => {
+        if (item.id === 'empty-dummy-cell') {
+          return <View style={numColumns > 1 ? styles.columnCell : undefined} />;
+        }
+        return (
+          <View style={numColumns > 1 ? styles.columnCell : undefined}>
+            <FlashcardListItem
+              card={item}
+              group={group}
+              onStartEdit={() => onStartEdit(item)}
+              onDelete={() => onDelete(item.id)}
+              t={t}
+            />
+          </View>
+        );
+      }}
       ListHeaderComponent={header}
       ListEmptyComponent={
         emptyLabel ? (
@@ -100,8 +115,9 @@ export function FlashcardList({
 }
 
 const styles = StyleSheet.create({
-  listContainer: {
-    gap: TOKENS.spacing.lg,
+  listContainer: {},
+  itemSeparator: {
+    height: TOKENS.spacing.lg,
   },
   headerRow: {
     paddingHorizontal: TOKENS.spacing.sm,
@@ -115,6 +131,7 @@ const styles = StyleSheet.create({
   },
   columnCell: {
     flex: 1,
+    maxWidth: '50%',
   },
   emptyState: {
     alignItems: 'center',

@@ -7,9 +7,7 @@ export function createSeedModes(): StudyMode[] {
       name: 'Klasyczny',
       steps: [
         { type: 'show_page', pageIndex: 0 },
-        { type: 'speak_page', pageIndex: 0, extraPauseMs: 500 },
-        { type: 'dynamic_pause', nextPageIndex: 1, extraPauseMs: 1000 },
-        { type: 'show_page', pageIndex: 1 },
+        { type: 'rate_knowledge' },
       ],
     },
     {
