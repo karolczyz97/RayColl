@@ -50,6 +50,7 @@ export const es: Record<string, string> = {
   'browse.add_card': 'Añadir tarjeta',
   'browse.edit_card': 'Editar tarjeta',
   'browse.no_cards': 'No se encontraron tarjetas.',
+  'browse.min_filled_pages': 'Rellena al menos 2 campos para guardar esta tarjeta.',
 
   // Import
   'import.title': 'Importar tarjetas',
@@ -65,10 +66,10 @@ export const es: Record<string, string> = {
   'import.sep.semicolon': 'Punto y coma (;)',
   'import.sep.comma': 'Coma (,)',
   'import.sep.pipe': 'Barra (|)',
+  'import.sep.custom': 'Personalizado',
+  'import.err.too_many_lines': 'Entrada truncada a 500 líneas.',
   'import.pages_count': 'Número de páginas:',
   'import.page_label': 'Página {index}',
-  'import.page_name_label': 'Nombre de página {index}',
-  'import.lang_label': 'Idioma',
   'import.import_create_btn': 'Importar y crear baraja',
   'import.preview_rows': 'Vista previa ({count} filas)',
 
@@ -82,6 +83,7 @@ export const es: Record<string, string> = {
   'stats.active_days': 'Días activos',
   'stats.due_cards': 'Pendientes',
   'stats.deck_progress': 'Progreso de barajas',
+  'stats.overall_progress': 'Progreso general',
   'stats.cards_count': '{count} tarjetas',
   'stats.day.mon': 'Lun',
   'stats.day.wed': 'Mié',

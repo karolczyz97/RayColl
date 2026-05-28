@@ -30,7 +30,7 @@ export function AppScreen({
   const theme = useTheme();
 
   const content = (
-    <ScreenContent maxWidth={maxWidth} style={contentStyle}>
+    <ScreenContent maxWidth={maxWidth} fill={!scroll} style={contentStyle}>
       {children}
     </ScreenContent>
   );
@@ -43,7 +43,9 @@ export function AppScreen({
       {title && onBack ? <PageHeader title={title} onBack={onBack} action={action} /> : null}
 
       {scroll ? (
-        <ScrollView contentContainerStyle={styles.scrollContent}>{content}</ScrollView>
+        <ScrollView style={styles.flexFill} contentContainerStyle={styles.scrollContent}>
+          {content}
+        </ScrollView>
       ) : (
         <View style={styles.flexFill}>{content}</View>
       )}
@@ -54,12 +56,13 @@ export function AppScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: TOKENS.spacing.xxs,
+    paddingHorizontal: TOKENS.spacing.sm,
   },
   scrollContent: {
     paddingBottom: TOKENS.spacing.xxl * 2,
   },
   flexFill: {
     flex: 1,
+    minHeight: 0,
   },
 });

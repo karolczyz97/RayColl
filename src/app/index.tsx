@@ -50,22 +50,20 @@ export default function Dashboard() {
   return (
     <AppScreen scroll={false} maxWidth={contentMaxWidth}>
       <View style={styles.mainContainer}>
+        <SyncStatusBanner
+          syncStatus={store.syncStatus}
+          lastSyncError={store.lastSyncError}
+          lastPersistenceError={store.lastPersistenceError}
+          lastStoreError={store.lastStoreError}
+        />
+
         {/* Top Header */}
         <AnimatedSection index={0}>
           <DashboardHeader user={user} onLogin={handleLogin} onLogout={handleLogout} />
         </AnimatedSection>
 
-        <AnimatedSection index={1}>
-          <SyncStatusBanner
-            syncStatus={store.syncStatus}
-            lastSyncError={store.lastSyncError}
-            lastPersistenceError={store.lastPersistenceError}
-            lastStoreError={store.lastStoreError}
-          />
-        </AnimatedSection>
-
         {/* Decks Scroll Container */}
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {/* Quick Statistics Banner */}
           {decksCount > 0 && (
             <AnimatedSection index={2}>
@@ -111,6 +109,9 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   mainContainer: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   scrollContent: {

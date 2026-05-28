@@ -1,7 +1,7 @@
 import { Flashcard, FlashcardGroup } from '../../types/models';
 
 export function getVisiblePages(card: Flashcard, group: FlashcardGroup): string[] {
-  const count = group.activePageCount ?? group.pageNames.length;
+  const count = group.activePageCount;
   const pages = [...card.pages];
   while (pages.length < count) {
     pages.push('');
@@ -10,13 +10,11 @@ export function getVisiblePages(card: Flashcard, group: FlashcardGroup): string[
 }
 
 export function getVisiblePageNames(group: FlashcardGroup): string[] {
-  const count = group.activePageCount ?? group.pageNames.length;
-  return group.pageNames.slice(0, count);
+  return group.pageNames.slice(0, group.activePageCount);
 }
 
 export function getVisiblePageLanguages(group: FlashcardGroup): string[] {
-  const count = group.activePageCount ?? group.pageLanguages.length;
-  return group.pageLanguages.slice(0, count);
+  return group.pageLanguages.slice(0, group.activePageCount);
 }
 
 export function ensureCardHasPageSlots(card: Flashcard, minPageCount: number): Flashcard {
@@ -28,7 +26,7 @@ export function ensureCardHasPageSlots(card: Flashcard, minPageCount: number): F
 }
 
 export function normalizeGroupPageConfig(group: FlashcardGroup): FlashcardGroup {
-  const activeCount = group.activePageCount ?? group.pageNames.length;
+  const activeCount = group.activePageCount;
   const names = [...group.pageNames];
   const langs = [...group.pageLanguages];
   while (names.length < activeCount) {

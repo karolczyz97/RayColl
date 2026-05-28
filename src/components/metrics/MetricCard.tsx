@@ -45,9 +45,12 @@ const styles = StyleSheet.create({
     marginBottom: TOKENS.spacing.xxs,
   },
   label: {
+    width: '100%',
     textAlign: 'center',
   },
   value: {
+    width: '100%',
+    textAlign: 'center',
     fontWeight: TOKENS.typography.weight.bold,
     fontVariant: ['tabular-nums'],
   },

@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { Portal, Snackbar, useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
 import type { SyncStatus } from '../../store/FlashcardStoreTypes';
 import { TOKENS } from '../../theme/tokens';
@@ -46,31 +46,40 @@ export function SyncStatusBanner({
   const isError = !!errorMessage || syncStatus === 'error';
 
   return (
-    <View
-      style={[
-        styles.banner,
-        {
-          backgroundColor: isError ? theme.colors.errorContainer : theme.colors.primaryContainer,
-        },
-      ]}
-    >
-      <Text
-        selectable
-        variant="bodySmall"
-        style={{
-          color: isError ? theme.colors.onErrorContainer : theme.colors.onPrimaryContainer,
+    <Portal>
+      <Snackbar
+        visible
+        onDismiss={() => undefined}
+        duration={Snackbar.DURATION_SHORT}
+        style={[
+          styles.snackbar,
+          {
+            backgroundColor: isError ? theme.colors.errorContainer : theme.colors.inverseSurface,
+          },
+        ]}
+        wrapperStyle={styles.wrapper}
+        theme={{
+          colors: {
+            inverseOnSurface: isError
+              ? theme.colors.onErrorContainer
+              : theme.colors.inverseOnSurface,
+          },
         }}
       >
         {statusText}
-      </Text>
-    </View>
+      </Snackbar>
+    </Portal>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
+  wrapper: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 520,
+    paddingHorizontal: TOKENS.spacing.lg,
+  },
+  snackbar: {
     borderRadius: TOKENS.radius.lg,
-    paddingHorizontal: TOKENS.spacing.md,
-    paddingVertical: TOKENS.spacing.sm,
   },
 });

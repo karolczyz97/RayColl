@@ -162,6 +162,11 @@ src/
 Business logic should live in selectors, actions, services, or SRS/import helpers,
 not inside screen components.
 
+Runtime store data should be canonical. Normalize local storage, Firebase data,
+backup imports, and merge results at the boundary before they reach screens or
+selectors. Prefer a single normalization layer in `src/store/storeDataNormalization.ts`
+over repeating `|| default` and `?? fallback` across the app.
+
 ## Quality Rules
 
 - Screens and presentational components may call store actions only. They must not call Firebase services directly.
@@ -169,6 +174,7 @@ not inside screen components.
 - Route files in `src/app` should stay thin and move business logic into `features/*`, `store/*`, `services/*`, `selectors/*`, or `actions/*`.
 - Prefer shared UI primitives such as `AppTextInput`, `SectionCard`, `AppScreen`, `AnimatedSection`, `MetricGrid`, `ConfirmDialog`, `DangerDialog`, `AppSnackbar`, and `SyncStatusBanner`.
 - Avoid new magic inline styles like `outlineStyle={{ borderRadius: 12 }}` in screens. Use `TOKENS` and base components instead.
+- Prefer canonical runtime fields over optional domain config when the app already has a real default. For deck config, normalize `studyFilter`, `activePageCount`, `pageNames`, and `pageLanguages` once instead of handling missing values ad hoc in UI code.
 
 ## MD3 And Icon Policy
 

@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
 import { db } from '../../services/firebase';
+import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../storeDataNormalization';
 import {
   FIRESTORE_SCHEMA_VERSION,
   type FirestoreActivityDayDoc,
@@ -107,8 +108,10 @@ export async function loadUserDataV2(uid: string): Promise<UserData | null> {
         activeModeId: deckData.activeModeId,
         pageLanguages: deckData.pageLanguages,
         pageNames: deckData.pageNames,
-        activePageCount: deckData.activePageCount,
-        studyFilter: deckData.studyFilter,
+        activePageCount:
+          deckData.activePageCount ??
+          Math.max(deckData.pageNames.length, deckData.pageLanguages.length),
+        studyFilter: deckData.studyFilter ?? DEFAULT_STUDY_FILTER,
       };
 
       return group;
@@ -133,11 +136,11 @@ export async function loadUserDataV2(uid: string): Promise<UserData | null> {
     activityHeatmap[dayDoc.id] = dayData.count;
   });
 
-  return {
+  return normalizeStoreData({
     groups,
     studyModes,
     activityHeatmap,
-  };
+  });
 }
 
 export async function saveDeck(uid: string, group: FlashcardGroup): Promise<void> {

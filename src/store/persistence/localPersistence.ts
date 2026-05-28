@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { FlashcardGroup, StudyMode } from '../../types/models';
+import { normalizeStoreData } from '../storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
 
 export interface StoreData {
@@ -40,7 +41,7 @@ export async function loadLocalData(userId?: string): Promise<StoreData | null> 
 
     if (data) {
       validateBackupData(data);
-      return data;
+      return normalizeStoreData(data);
     }
   } catch (err) {
     console.error('Failed to load local data:', err);

@@ -9,6 +9,13 @@ import { AppTextInput } from '../forms/AppTextInput';
 
 type PageConfigEditorMode = 'import' | 'settings';
 
+const SEP_CHAR_LABELS: Record<string, string> = {
+  tab: 'Tab',
+  semicolon: ';',
+  comma: ',',
+  pipe: '|',
+};
+
 interface PageConfigEditorProps {
   mode: PageConfigEditorMode;
   pageCount: number;
@@ -21,6 +28,9 @@ interface PageConfigEditorProps {
   onPageNameBlur?: (index: number) => void;
   onPageLanguageChange: (index: number, value: string) => void;
   onMovePage?: (index: number, direction: -1 | 1) => void;
+  sepKey?: string;
+  onSepKeyChange?: (key: string, customSep?: string) => void;
+  customSep?: string;
 }
 
 export function PageConfigEditor({
@@ -35,14 +45,52 @@ export function PageConfigEditor({
   onPageNameBlur,
   onPageLanguageChange,
   onMovePage,
+  sepKey,
+  onSepKeyChange,
+  customSep = '',
 }: PageConfigEditorProps) {
   const languageOptions = popularLangs.map((lang) => ({
     label: t(`lang.${lang.code}`),
     value: lang.code,
   }));
 
+  const separatorOptions = [
+    { label: 'Tab', value: 'tab' },
+    { label: ';', value: 'semicolon' },
+    { label: ',', value: 'comma' },
+    { label: '|', value: 'pipe' },
+    { label: t('import.sep.custom'), value: 'custom' },
+  ];
+
+  const hasSeparator = sepKey !== undefined && onSepKeyChange !== undefined;
+
   return (
     <View style={styles.container}>
+      {hasSeparator ? (
+        <AppFormRow style={styles.pageRow}>
+          <AppTextInput
+            label={t('import.separator')}
+            value={sepKey === 'custom' ? customSep : ''}
+            onChangeText={(val) => {
+              onSepKeyChange!('custom', val);
+            }}
+            editable={sepKey === 'custom'}
+            style={styles.pageNameInput}
+            accessibilityLabel="Custom separator input"
+          />
+          <View style={styles.languageInput}>
+            <AppSelect
+              value={sepKey}
+              options={separatorOptions}
+              onChange={(key) => {
+                onSepKeyChange!(key, key === 'custom' ? customSep : undefined);
+              }}
+              accessibilityLabel="Select CSV separator"
+            />
+          </View>
+        </AppFormRow>
+      ) : null}
+
       <View style={styles.counterRow}>
         <Text>{t('import.pages_count')}</Text>
         <View style={styles.counterButtons}>
@@ -68,33 +116,29 @@ export function PageConfigEditor({
 
       {Array.from({ length: pageCount }).map((_, index) => (
         <AppFormRow key={index} style={styles.pageRow}>
-          {mode === 'settings' ? (
+          {onMovePage ? (
             <View style={styles.sortButtons}>
               <IconButton
                 icon="arrow-up"
-                size={16}
+                size={18}
                 style={styles.sortButton}
-                onPress={() => onMovePage?.(index, -1)}
-                disabled={!onMovePage || index === 0}
+                onPress={() => onMovePage(index, -1)}
+                disabled={index === 0}
                 accessibilityLabel={`Move page ${index + 1} up`}
               />
               <IconButton
                 icon="arrow-down"
-                size={16}
+                size={18}
                 style={styles.sortButton}
-                onPress={() => onMovePage?.(index, 1)}
-                disabled={!onMovePage || index === pageCount - 1}
+                onPress={() => onMovePage(index, 1)}
+                disabled={index === pageCount - 1}
                 accessibilityLabel={`Move page ${index + 1} down`}
               />
             </View>
           ) : null}
 
           <AppTextInput
-            label={
-              mode === 'import'
-                ? t('import.page_name_label', { index: index + 1 })
-                : t('import.page_label', { index: index + 1 })
-            }
+            label={t('import.page_label', { index: index + 1 })}
             value={pageNames[index] ?? ''}
             onChangeText={(value) => onPageNameChange(index, value)}
             onBlur={onPageNameBlur ? () => onPageNameBlur(index) : undefined}
@@ -104,7 +148,6 @@ export function PageConfigEditor({
 
           <View style={styles.languageInput}>
             <AppSelect
-              label={t('import.lang_label')}
               value={pageLanguages[index] ?? ''}
               options={languageOptions}
               onChange={(value) => onPageLanguageChange(index, value)}
@@ -116,6 +159,9 @@ export function PageConfigEditor({
     </View>
   );
 }
+
+// SEP_CHAR_LABELS exported for tests / other consumers
+export { SEP_CHAR_LABELS };
 
 const styles = StyleSheet.create({
   container: {
@@ -141,12 +187,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pageRow: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   sortButtons: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: TOKENS.spacing.xxs,
   },
   sortButton: {
     margin: 0,

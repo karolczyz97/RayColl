@@ -32,6 +32,7 @@ import { getDueCards as selectDueCards } from './selectors/dueCards';
 import { getGroupProgress as selectGroupProgress } from './selectors/progress';
 import { setSeedVersion, type StoreData } from './persistence/localPersistence';
 import type { PersistOptions } from './FlashcardStoreTypes';
+import { normalizeStoreData } from './storeDataNormalization';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -306,7 +307,7 @@ export function useStoreActions({
     (groupId: string): Flashcard[] => {
       const group = groupsRef.current.find((item) => item.id === groupId);
       if (!group) return [];
-      return selectDueCards(group.cards, group.studyFilter || 'new+review');
+      return selectDueCards(group.cards, group.studyFilter);
     },
     [groupsRef],
   );
@@ -337,11 +338,11 @@ export function useStoreActions({
       const data = JSON.parse(json);
       validateBackupData(data);
 
-      applySnapshot({
+      applySnapshot(normalizeStoreData({
         groups: data.groups,
         studyModes: data.studyModes,
         activityHeatmap: data.activityHeatmap,
-      });
+      }));
 
       persistCurrentSnapshot({ immediate: true });
     },

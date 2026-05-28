@@ -1,6 +1,7 @@
 import { FlashcardGroup, Flashcard } from '../../types/models';
 import { createNewSrsState } from '../../srs/srsEngine';
 import { uid } from '../../utils/id';
+import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
 
 export function createSeedGroups(): FlashcardGroup[] {
   const mk = (pages: string[]): Flashcard => ({
@@ -14,6 +15,7 @@ export function createSeedGroups(): FlashcardGroup[] {
       id: uid(),
       name: 'Angielski - Podstawy',
       activeModeId: 'classic',
+      studyFilter: DEFAULT_STUDY_FILTER,
       pageLanguages: ['en-US', 'pl-PL'],
       pageNames: ['Phrase', 'Tłumaczenie'],
       activePageCount: 2,
@@ -29,6 +31,7 @@ export function createSeedGroups(): FlashcardGroup[] {
       id: uid(),
       name: 'Hiszpański - Podstawy',
       activeModeId: 'classic',
+      studyFilter: DEFAULT_STUDY_FILTER,
       pageLanguages: ['es-ES', 'pl-PL'],
       pageNames: ['Palabra', 'Tłumaczenie'],
       activePageCount: 2,

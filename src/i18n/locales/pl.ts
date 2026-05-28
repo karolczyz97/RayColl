@@ -50,6 +50,7 @@ export const pl: Record<string, string> = {
   'browse.add_card': 'Dodaj fiszkę',
   'browse.edit_card': 'Edytuj fiszkę',
   'browse.no_cards': 'Nie znaleziono fiszek.',
+  'browse.min_filled_pages': 'Wypełnij przynajmniej 2 pola, aby zapisać fiszkę.',
 
   // Import
   'import.title': 'Importuj fiszki',
@@ -64,10 +65,10 @@ export const pl: Record<string, string> = {
   'import.sep.semicolon': 'Średnik (;)',
   'import.sep.comma': 'Przecinek (,)',
   'import.sep.pipe': 'Kreska (|)',
+  'import.sep.custom': 'Własny',
+  'import.err.too_many_lines': 'Wejście ograniczone do 500 linii.',
   'import.pages_count': 'Liczba stron:',
   'import.page_label': 'Strona {index}',
-  'import.page_name_label': 'Nazwa strony {index}',
-  'import.lang_label': 'Język',
   'import.import_create_btn': 'Importuj i utwórz grupę',
   'import.preview_rows': 'Podgląd ({count} wierszy)',
 
@@ -81,6 +82,7 @@ export const pl: Record<string, string> = {
   'stats.active_days': 'Dni aktywności',
   'stats.due_cards': 'Do powtórki',
   'stats.deck_progress': 'Postępy zestawów',
+  'stats.overall_progress': 'Ogólny postęp',
   'stats.cards_count': '{count} fiszek',
   'stats.day.mon': 'Pon',
   'stats.day.wed': 'Śr',

@@ -21,6 +21,7 @@ import {
   normalizeGroupPageConfig,
 } from '../../store/selectors/pages';
 import { filterCards } from '../../store/selectors/dueCards';
+import { DEFAULT_STUDY_FILTER } from '../../store/storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
 import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
@@ -187,6 +188,7 @@ const mockGroup: FlashcardGroup = {
   name: 'Mock Deck',
   cards: [],
   activeModeId: 'classic',
+  studyFilter: DEFAULT_STUDY_FILTER,
   pageNames: ['Front', 'Back', 'Example'],
   pageLanguages: ['en-US', 'pl-PL', 'en-US'],
   activePageCount: 2,
@@ -238,6 +240,7 @@ const unnormalizedGroup: FlashcardGroup = {
   name: 'Unnormalized',
   cards: [],
   activeModeId: 'classic',
+  studyFilter: DEFAULT_STUDY_FILTER,
   pageNames: ['Front'],
   pageLanguages: [],
   activePageCount: 3,
@@ -265,6 +268,7 @@ const myGroup: FlashcardGroup = {
   name: 'Test Deck',
   cards: [myCard],
   activeModeId: 'classic',
+  studyFilter: DEFAULT_STUDY_FILTER,
   pageNames: ['Front', 'Back', 'Example'],
   pageLanguages: ['en-US', 'pl-PL', 'en-US'],
   activePageCount: 3,

@@ -50,6 +50,7 @@ export const en: Record<string, string> = {
   'browse.add_card': 'Add Flashcard',
   'browse.edit_card': 'Edit Flashcard',
   'browse.no_cards': 'No flashcards found.',
+  'browse.min_filled_pages': 'Fill at least 2 pages to save this flashcard.',
 
   // Import
   'import.title': 'Import Flashcards',
@@ -64,10 +65,10 @@ export const en: Record<string, string> = {
   'import.sep.semicolon': 'Semicolon (;)',
   'import.sep.comma': 'Comma (,)',
   'import.sep.pipe': 'Pipe (|)',
+  'import.sep.custom': 'Custom',
+  'import.err.too_many_lines': 'Input truncated to 500 lines.',
   'import.pages_count': 'Page count:',
   'import.page_label': 'Page {index}',
-  'import.page_name_label': 'Page {index} Name',
-  'import.lang_label': 'Language',
   'import.import_create_btn': 'Import & Create Deck',
   'import.preview_rows': 'Preview ({count} rows)',
 
@@ -81,6 +82,7 @@ export const en: Record<string, string> = {
   'stats.active_days': 'Active days',
   'stats.due_cards': 'Due cards',
   'stats.deck_progress': 'Deck Progress',
+  'stats.overall_progress': 'Overall Progress',
   'stats.cards_count': '{count} cards',
   'stats.day.mon': 'Mon',
   'stats.day.wed': 'Wed',

@@ -50,6 +50,7 @@ export const it: Record<string, string> = {
   'browse.add_card': 'Aggiungi flashcard',
   'browse.edit_card': 'Modifica flashcard',
   'browse.no_cards': 'Nessuna flashcard trovata.',
+  'browse.min_filled_pages': 'Compila almeno 2 campi per salvare questa flashcard.',
 
   // Import
   'import.title': 'Importa flashcard',
@@ -65,10 +66,10 @@ export const it: Record<string, string> = {
   'import.sep.semicolon': 'Punto e virgola (;)',
   'import.sep.comma': 'Virgola (,)',
   'import.sep.pipe': 'Barra verticale (|)',
+  'import.sep.custom': 'Personalizzato',
+  'import.err.too_many_lines': 'Input troncato a 500 righe.',
   'import.pages_count': 'Numero di pagine:',
   'import.page_label': 'Pagina {index}',
-  'import.page_name_label': 'Nome pagina {index}',
-  'import.lang_label': 'Lingua',
   'import.import_create_btn': 'Importa e crea mazzo',
   'import.preview_rows': 'Anteprima ({count} righe)',
 
@@ -82,6 +83,7 @@ export const it: Record<string, string> = {
   'stats.active_days': 'Giorni attivi',
   'stats.due_cards': 'In scadenza',
   'stats.deck_progress': 'Progresso dei mazzi',
+  'stats.overall_progress': 'Progresso generale',
   'stats.cards_count': '{count} carte',
   'stats.day.mon': 'Lun',
   'stats.day.wed': 'Mer',

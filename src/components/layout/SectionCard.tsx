@@ -10,14 +10,16 @@ interface SectionCardProps {
   mode?: 'elevated' | 'outlined' | 'contained';
   danger?: boolean;
   actions?: React.ReactNode;
+  titleAlign?: 'left' | 'center';
 }
 
 export function SectionCard({
   title,
   children,
-  mode = 'outlined',
+  mode = 'elevated',
   danger = false,
   actions,
+  titleAlign = 'left',
 }: SectionCardProps) {
   const theme = useTheme();
 
@@ -25,7 +27,14 @@ export function SectionCard({
     <AppCard mode={mode} style={[styles.card, danger && { borderColor: theme.colors.error }]}>
       <AppCard.Content style={styles.content}>
         {title ? (
-          <Text variant="titleMedium" style={[styles.title, danger && { color: theme.colors.error }]}>
+          <Text
+            variant="titleMedium"
+            style={[
+              styles.title,
+              titleAlign === 'center' && styles.centerTitle,
+              danger && { color: theme.colors.error },
+            ]}
+          >
             {title}
           </Text>
         ) : null}
@@ -42,9 +51,13 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: TOKENS.spacing.md,
+    paddingBottom: TOKENS.spacing.lg,
   },
   title: {
     fontWeight: '700',
     marginBottom: TOKENS.spacing.xs,
+  },
+  centerTitle: {
+    textAlign: 'center',
   },
 });

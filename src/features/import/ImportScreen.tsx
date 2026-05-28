@@ -21,7 +21,7 @@ import { useImportDeckDraft } from './useImportDeckDraft';
 export function ImportScreen() {
   const { t } = useI18n();
   const store = useFlashcardStore();
-  const { isCompact, isExpanded, contentMaxWidth, formMaxWidth } = useResponsiveLayout();
+  const { isExpanded, contentMaxWidth } = useResponsiveLayout();
   const draft = useImportDeckDraft();
 
   if (store.isLoading) {
@@ -32,6 +32,7 @@ export function ImportScreen() {
     <ImportConfigCard
       sepKey={draft.sepKey}
       onSepKeyChange={draft.handleSepKeyChange}
+      customSep={draft.customSep}
       pageCount={draft.pageCount}
       pageNames={draft.pageNames}
       pageLanguages={draft.pageLangs}
@@ -50,6 +51,7 @@ export function ImportScreen() {
           return next;
         });
       }}
+      onMovePage={draft.handleMovePage}
       popularLangs={POPULAR_LANGS}
       t={t}
     />
@@ -90,7 +92,7 @@ export function ImportScreen() {
       )}
 
       {draft.cards.length > 0 ? (
-        <AnimatedSection index={2}>
+        <AnimatedSection index={2} style={styles.previewSection}>
           <ImportPreviewSection
             cards={draft.cards}
             group={draft.previewGroup}
@@ -114,41 +116,37 @@ export function ImportScreen() {
       onBack={() => router.back()}
       maxWidth={contentMaxWidth}
       scroll={false}
+      contentStyle={styles.screenContent}
     >
+      <SyncStatusBanner
+        syncStatus={store.syncStatus}
+        lastSyncError={store.lastSyncError}
+        lastPersistenceError={store.lastPersistenceError}
+        lastStoreError={store.lastStoreError}
+        t={t}
+      />
+
       <FlatList
-        data={[{ key: 'content' }]}
-        keyExtractor={(item) => item.key}
-        renderItem={() => (
-          <>
-            <AnimatedSection index={3}>
-              <SyncStatusBanner
-                syncStatus={store.syncStatus}
-                lastSyncError={store.lastSyncError}
-                lastPersistenceError={store.lastPersistenceError}
-                lastStoreError={store.lastStoreError}
-                t={t}
-              />
-            </AnimatedSection>
-            <AnimatedSection
-              index={4}
-              style={[styles.importButtonWrapper, !isCompact && { maxWidth: formMaxWidth }]}
-            >
-              <Button
-                mode="contained"
-                onPress={() => void draft.submitImport()}
-                disabled={!draft.name.trim() || draft.cards.length === 0 || draft.isImporting}
-                loading={draft.isImporting}
-                style={styles.importButton}
-                accessibilityLabel="Perform flashcard import button"
-              >
-                {t('import.btn', { count: draft.cards.length })}
-              </Button>
-            </AnimatedSection>
-          </>
-        )}
+        data={[]}
+        keyExtractor={(item: { key: string }) => item.key}
+        style={styles.list}
+        renderItem={null}
         ListHeaderComponent={topCards}
         contentContainerStyle={styles.listContent}
       />
+
+      <View style={styles.floatingButtonContainer} pointerEvents="box-none">
+        <Button
+          mode="contained"
+          onPress={() => void draft.submitImport()}
+          disabled={!draft.name.trim() || draft.cards.length === 0 || draft.isImporting}
+          loading={draft.isImporting}
+          style={styles.importButton}
+          accessibilityLabel="Perform flashcard import button"
+        >
+          {t('import.btn', { count: draft.cards.length })}
+        </Button>
+      </View>
 
       <Portal>
         <DeleteFlashcardDialog
@@ -161,7 +159,7 @@ export function ImportScreen() {
 
       <AppSnackbar
         visible={!!draft.importError}
-        message={draft.importError}
+        message={draft.importError ? t(draft.importError) : ''}
         onDismiss={() => draft.setImportError('')}
       />
     </AppScreen>
@@ -171,7 +169,14 @@ export function ImportScreen() {
 const styles = StyleSheet.create({
   listContent: {
     gap: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.spacing.xxl * 2,
+    paddingBottom: TOKENS.control.height + TOKENS.spacing.xl * 2 + TOKENS.spacing.xxl,
+  },
+  screenContent: {
+    flex: 1,
+    minHeight: 0,
+  },
+  list: {
+    flex: 1,
   },
   row: {
     flexDirection: 'row',
@@ -186,13 +191,23 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: TOKENS.spacing.lg,
   },
-  importButtonWrapper: {
-    width: '100%',
-    alignSelf: 'center',
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: TOKENS.spacing.xl,
+    left: TOKENS.spacing.xl,
+    right: TOKENS.spacing.xl,
+    alignItems: 'center',
   },
   importButton: {
+    maxWidth: 320,
+    width: '100%',
     borderRadius: TOKENS.radius.pill,
     minHeight: TOKENS.control.height,
     justifyContent: 'center',
+  },
+  previewSection: {
+    maxWidth: 860,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

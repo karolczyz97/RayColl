@@ -9,6 +9,7 @@ import { createSeedModes } from './seed/seedModes';
 import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
 import type { StoreData } from './persistence/localPersistence';
+import { normalizeStoreData } from './storeDataNormalization';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -95,11 +96,11 @@ export function useStoreBootstrap({
         }
 
         if (active) {
-          const snapshot = {
+          const snapshot = normalizeStoreData({
             groups: loadedGroups,
             studyModes: loadedModes,
             activityHeatmap: loadedHeatmap,
-          };
+          });
           applySnapshot(snapshot);
           await persistNow({ uid: targetUid, ...snapshot });
         }

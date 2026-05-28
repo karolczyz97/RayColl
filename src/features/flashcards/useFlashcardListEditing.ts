@@ -1,18 +1,20 @@
 import { useCallback, useState } from 'react';
 import type { Flashcard } from '../../types/models';
 
+export const FLASHCARD_DRAFT_ID = '__draft_flashcard__';
+
 interface UseFlashcardListEditingOptions {
   pageCount: number;
   onSaveCard: (cardId: string, pages: string[]) => void;
+  onCreateCard?: (pages: string[]) => void;
   onDeleteCard: (cardId: string) => void;
-  deleteIfLessThanTwoPages?: boolean;
 }
 
 export function useFlashcardListEditing({
   pageCount,
   onSaveCard,
+  onCreateCard,
   onDeleteCard,
-  deleteIfLessThanTwoPages = false,
 }: UseFlashcardListEditingOptions) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPages, setEditPages] = useState<string[]>([]);
@@ -37,6 +39,11 @@ export function useFlashcardListEditing({
     setEditPages([]);
   }, []);
 
+  const startCreate = useCallback(() => {
+    setEditingId(FLASHCARD_DRAFT_ID);
+    setEditPages(Array(pageCount).fill(''));
+  }, [pageCount]);
+
   const saveEdit = useCallback(() => {
     if (!editingId) {
       return;
@@ -44,19 +51,15 @@ export function useFlashcardListEditing({
 
     const nextPages = [...editPages];
 
-    if (deleteIfLessThanTwoPages) {
-      const filledCount = nextPages.filter((page) => page.trim()).length;
-
-      if (filledCount < 2) {
-        onDeleteCard(editingId);
-        cancelEdit();
-        return;
-      }
+    if (editingId === FLASHCARD_DRAFT_ID) {
+      onCreateCard?.(nextPages);
+      cancelEdit();
+      return;
     }
 
     onSaveCard(editingId, nextPages);
     cancelEdit();
-  }, [cancelEdit, deleteIfLessThanTwoPages, editPages, editingId, onDeleteCard, onSaveCard]);
+  }, [cancelEdit, editPages, editingId, onCreateCard, onSaveCard]);
 
   const confirmDeleteCard = useCallback(() => {
     if (!deleteCardId) {
@@ -75,6 +78,7 @@ export function useFlashcardListEditing({
     deleteCardId,
     setDeleteCardId,
     startEdit,
+    startCreate,
     cancelEdit,
     saveEdit,
     confirmDeleteCard,

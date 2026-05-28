@@ -99,15 +99,13 @@ export function AppSettingsScreen() {
 
   return (
     <AppScreen title={t('app_settings.title')} onBack={() => router.back()} maxWidth={formMaxWidth}>
-      <AnimatedSection index={0}>
-        <SyncStatusBanner
-          syncStatus={store.syncStatus}
-          lastSyncError={store.lastSyncError}
-          lastPersistenceError={store.lastPersistenceError}
-          lastStoreError={store.lastStoreError}
-          t={t}
-        />
-      </AnimatedSection>
+      <SyncStatusBanner
+        syncStatus={store.syncStatus}
+        lastSyncError={store.lastSyncError}
+        lastPersistenceError={store.lastPersistenceError}
+        lastStoreError={store.lastStoreError}
+        t={t}
+      />
 
       <AnimatedSection index={1}>
         <SectionCard title={t('app_settings.lang')}>

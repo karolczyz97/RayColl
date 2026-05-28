@@ -1,5 +1,6 @@
 import { createNewSrsState } from '../../../srs/srsEngine';
 import { addFlashcardsBulkAction, updateFlashcardAction } from '../cardActions';
+import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
@@ -20,6 +21,7 @@ export async function runTests() {
     name: 'Deck',
     cards: [originalCard],
     activeModeId: 'classic',
+    studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,

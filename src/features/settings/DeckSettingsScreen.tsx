@@ -90,7 +90,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
       <AnimatedSection index={1}>
         <SectionCard>
           <StudyScopeSection
-            studyFilter={activeGroup.studyFilter || 'new+review'}
+            studyFilter={activeGroup.studyFilter}
             onFilterChange={onFilterChange}
             t={t}
           />

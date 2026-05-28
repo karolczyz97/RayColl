@@ -50,6 +50,7 @@ export const de: Record<string, string> = {
   'browse.add_card': 'Karte hinzufügen',
   'browse.edit_card': 'Karte bearbeiten',
   'browse.no_cards': 'Keine Karteikarten gefunden.',
+  'browse.min_filled_pages': 'Fülle mindestens 2 Felder aus, um diese Karte zu speichern.',
 
   // Import
   'import.title': 'Karteikarten importieren',
@@ -65,10 +66,10 @@ export const de: Record<string, string> = {
   'import.sep.semicolon': 'Semikolon (;)',
   'import.sep.comma': 'Komma (,)',
   'import.sep.pipe': 'Senkrechter Strich (|)',
+  'import.sep.custom': 'Benutzerdefiniert',
+  'import.err.too_many_lines': 'Eingabe auf 500 Zeilen beschränkt.',
   'import.pages_count': 'Seitenanzahl:',
   'import.page_label': 'Seite {index}',
-  'import.page_name_label': 'Seitenname {index}',
-  'import.lang_label': 'Sprache',
   'import.import_create_btn': 'Importieren & Deck erstellen',
   'import.preview_rows': 'Vorschau ({count} Zeilen)',
 
@@ -82,6 +83,7 @@ export const de: Record<string, string> = {
   'stats.active_days': 'Aktive Tage',
   'stats.due_cards': 'Fällig',
   'stats.deck_progress': 'Deck-Fortschritt',
+  'stats.overall_progress': 'Gesamtfortschritt',
   'stats.cards_count': '{count} Karten',
   'stats.day.mon': 'Mon',
   'stats.day.wed': 'Mit',

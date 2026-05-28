@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { FAB, Portal, Text, useTheme } from 'react-native-paper';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
+import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
 import { BrowseFilterChips } from '../../components/browse/BrowseFilterChips';
 import type { BrowseFilter } from '../../constants/browseFilters';
 import { BrowseSearchBar } from '../../components/browse/BrowseSearchBar';
@@ -28,6 +29,10 @@ export function BrowseScreen() {
   const activeGroup = group;
   const [search, setSearch] = useState('');
   const [browseFilter, setBrowseFilter] = useState<BrowseFilter>('all');
+  const minPagesMessage =
+    t('browse.min_filled_pages') === 'browse.min_filled_pages'
+      ? 'Fill at least 2 pages to save this flashcard.'
+      : t('browse.min_filled_pages');
 
   const stats = useMemo(() => {
     return activeGroup
@@ -71,18 +76,22 @@ export function BrowseScreen() {
 
   const {
     editingId,
-    setEditingId,
     editPages,
     setEditPages,
     deleteCardId,
     setDeleteCardId,
     startEdit,
+    startCreate,
     cancelEdit,
     saveEdit,
     confirmDeleteCard,
   } = useFlashcardListEditing({
-    pageCount: activeGroup?.pageNames.length ?? 0,
-    deleteIfLessThanTwoPages: true,
+    pageCount: activeGroup?.activePageCount ?? 0,
+    onCreateCard: (pages) => {
+      if (activeGroup) {
+        store.addFlashcard(activeGroup.id, pages);
+      }
+    },
     onSaveCard: (cardId, pages) => {
       if (!activeGroup) {
         return;
@@ -100,16 +109,14 @@ export function BrowseScreen() {
     },
   });
 
-  const addCard = () => {
-    if (!activeGroup) {
-      return;
-    }
+  const filledPageCount = useMemo(
+    () => editPages.filter((page) => page.trim().length > 0).length,
+    [editPages],
+  );
+  const canSaveEdit = filledPageCount >= 2;
 
-    const count = activeGroup.activePageCount ?? activeGroup.pageNames.length;
-    const pages = Array(count).fill('');
-    const id = store.addFlashcard(activeGroup.id, pages);
-    setEditingId(id);
-    setEditPages(pages);
+  const addCard = () => {
+    startCreate();
   };
 
   const handleBack = () => {
@@ -125,7 +132,12 @@ export function BrowseScreen() {
   }
 
   return (
-    <AppScreen title={activeGroup.name} onBack={handleBack} scroll={false}>
+    <AppScreen
+      title={activeGroup.name}
+      onBack={handleBack}
+      scroll={false}
+      contentStyle={styles.screenContent}
+    >
       <View style={styles.header}>
         <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>
           {t('dashboard.cards_count', { count: stats.total })}
@@ -148,14 +160,10 @@ export function BrowseScreen() {
       <FlashcardList
         cards={filtered}
         group={activeGroup}
-        editingId={editingId}
-        editPages={editPages}
-        setEditPages={setEditPages}
-        onSave={saveEdit}
-        onCancel={cancelEdit}
         onStartEdit={startEdit}
         onDelete={setDeleteCardId}
         t={t}
+        style={styles.list}
         contentContainerStyle={styles.listContainer}
       />
 
@@ -169,6 +177,22 @@ export function BrowseScreen() {
           t={t}
         />
       </Portal>
+
+      <EditFlashcardDialog
+        visible={!!editingId}
+        group={activeGroup}
+        editPages={editPages}
+        setEditPages={setEditPages}
+        onSave={() => {
+          if (canSaveEdit) {
+            saveEdit();
+          }
+        }}
+        onCancel={cancelEdit}
+        saveDisabled={!canSaveEdit}
+        validationMessage={!canSaveEdit && editingId ? minPagesMessage : undefined}
+        t={t}
+      />
     </AppScreen>
   );
 }
@@ -183,6 +207,13 @@ const styles = StyleSheet.create({
   },
   progressBarSection: {
     marginBottom: TOKENS.spacing.lg,
+  },
+  screenContent: {
+    flex: 1,
+    minHeight: 0,
+  },
+  list: {
+    flex: 1,
   },
   listContainer: {
     gap: TOKENS.spacing.lg,

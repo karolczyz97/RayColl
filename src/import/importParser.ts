@@ -79,8 +79,12 @@ export function detectLangFromHeader(header: string): string {
   return 'en-US'; // default fallback
 }
 
+function resolveSep(keyOrChar: string): string {
+  return SEPARATORS[keyOrChar] ?? keyOrChar;
+}
+
 export function parseCSV(text: string, sepKey: string, pageCount: number): string[][] {
-  const sep = SEPARATORS[sepKey] || ';';
+  const sep = resolveSep(sepKey);
   return text
     .split('\n')
     .filter((l) => l.trim())
@@ -93,8 +97,16 @@ export function parseCSV(text: string, sepKey: string, pageCount: number): strin
     });
 }
 
+export function parseCSVRaw(text: string, sepKey: string): string[][] {
+  const sep = resolveSep(sepKey);
+  return text
+    .split('\n')
+    .filter((l) => l.trim())
+    .map((line) => parseCSVLine(line, sep));
+}
+
 export function serializeCSV(rows: string[][], sepKey: string): string {
-  const sep = SEPARATORS[sepKey] || ';';
+  const sep = resolveSep(sepKey);
   return rows
     .map((row) =>
       row

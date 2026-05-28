@@ -1,0 +1,45 @@
+# Dependency and lockfile noise
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Local tooling caches and generated outputs
+.expo/
+.firebase/
+.npm-cache/
+.config-local/
+.appdata-local/
+dist/
+build/
+out/
+.next/
+.gradle/
+app/build/
+repomix-output.xml
+
+# Local editor / agent state
+.claude/settings.local.json
+.vscode/
+
+# Large or generated binaries
+*.png
+*.jpg
+*.jpeg
+*.ico
+*.woff
+*.woff2
+*.gguf
+
+# Low-signal content for coding context
+src/i18n/locales/**
+src/store/seed/**
+**/__tests__/**
+docs/**
+scripts/regression-checklist.md
+
+# Keep instruction and architecture docs available to the model
+!AGENTS.md
+!CLAUDE.md
+!GEMINI.md
+!README.md

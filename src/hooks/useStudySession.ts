@@ -44,7 +44,7 @@ export function useStudySession(
   const onCardReviewedRef = useRef(onCardReviewed);
   const lastExecutedCardIndexRef = useRef<number | null>(null);
   const dueCardsRef = useRef(dueCards);
-  const activePageCount = group?.activePageCount ?? group?.pageNames.length ?? 99;
+  const activePageCount = group?.activePageCount ?? 99;
 
   const dispatchIfMounted = useCallback((action: SessionAction) => {
     if (isMountedRef.current) {

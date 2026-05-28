@@ -5,11 +5,18 @@ import { TOKENS } from '../../theme/tokens';
 interface ScreenContentProps {
   children: React.ReactNode;
   maxWidth?: number;
+  fill?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export function ScreenContent({ children, maxWidth, style }: ScreenContentProps) {
-  return <View style={[styles.content, maxWidth ? { maxWidth } : undefined, style]}>{children}</View>;
+export function ScreenContent({ children, maxWidth, fill = false, style }: ScreenContentProps) {
+  return (
+    <View
+      style={[styles.content, fill && styles.fill, maxWidth ? { maxWidth } : undefined, style]}
+    >
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -17,6 +24,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     gap: TOKENS.spacing.lg,
-    padding: TOKENS.spacing.xxs,
+    padding: TOKENS.spacing.sm,
+  },
+  fill: {
+    flex: 1,
+    minHeight: 0,
   },
 });

@@ -62,6 +62,13 @@ Before every refactor step:
 - When Firebase is unconfigured, cloud calls must short-circuit gracefully and preserve local-only mode.
 - Sign-in merge logic lives in `store/selectors/merge.ts`. Do not duplicate merge rules elsewhere.
 - Firestore schema is now v2-backed. Prefer deck/card/study-mode/activity document updates over rewriting a monolithic root payload whenever action scope is known.
+- Normalize data at the boundary, not in screens. Local load, cloud load, backup import, and merge should return canonical runtime data before it reaches the store.
+- Do not spread `|| default` and `?? fallback` for domain fields across UI and selectors when the field is meant to be stable. Prefer one canonical source of truth in `store/storeDataNormalization.ts`.
+- For `FlashcardGroup`, treat deck configuration as canonical runtime state:
+  - `studyFilter` should always be present in runtime data.
+  - `activePageCount` should always be present in runtime data.
+  - `pageNames` and `pageLanguages` should be normalized to match `activePageCount`.
+- If a field is business-required in normal app flow, prefer normalizing it once over allowing `undefined` and patching callers individually.
 
 ## Testing rules
 

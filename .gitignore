@@ -29,6 +29,8 @@ yarn-error.*
 .npm-cache/
 .config-local/
 .appdata-local/
+repomix-output.xml
+.claude/settings.local.json
 
 # macOS
 .DS_Store
@@ -40,8 +42,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-example
 
 # generated native folders
 /ios

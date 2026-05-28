@@ -74,7 +74,7 @@ export function StudyCard({
         >
           {(() => {
             if (!currentCard) return null;
-            const activePageCount = activeGroup.activePageCount ?? activeGroup.pageNames.length;
+            const activePageCount = activeGroup.activePageCount;
             const visiblePages = getVisiblePages(currentCard, activeGroup);
 
             return activeGroup.pageNames.slice(0, activePageCount).map((pageName, pageIndex) => {

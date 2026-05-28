@@ -74,9 +74,7 @@ export function useStorePersistence({
 
       try {
         await saveLocalData(uid || undefined, payload);
-        if (!uid) {
-          setSyncStatus('idle');
-        }
+        setSyncStatus('idle');
       } catch (err) {
         console.error('Local persistence failed:', err);
         setLastPersistenceError(getErrorMessage(err));
@@ -112,15 +110,22 @@ export function useStorePersistence({
     [setLastSyncError, setSyncStatus],
   );
 
-  const { enqueue: enqueueCloudSnapshot, flush: flushCloudQueue } = usePersistenceQueue({
-    delayMs: 1200,
-    persistNow: persistCloudSnapshot,
-    onSaving: () => setSyncStatus('saving'),
-    onSynced: () => setSyncStatus('idle'),
-    onError: (err) => {
+  const handleQueueSaving = useCallback(() => setSyncStatus('saving'), [setSyncStatus]);
+  const handleQueueSynced = useCallback(() => setSyncStatus('idle'), [setSyncStatus]);
+  const handleQueueError = useCallback(
+    (err: unknown) => {
       setLastSyncError(getErrorMessage(err));
       setSyncStatus('error');
     },
+    [setLastSyncError, setSyncStatus],
+  );
+
+  const { enqueue: enqueueCloudSnapshot, flush: flushCloudQueue } = usePersistenceQueue({
+    delayMs: 1200,
+    persistNow: persistCloudSnapshot,
+    onSaving: handleQueueSaving,
+    onSynced: handleQueueSynced,
+    onError: handleQueueError,
   });
 
   const persistNow = useCallback(

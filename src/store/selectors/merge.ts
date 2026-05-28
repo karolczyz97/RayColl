@@ -1,4 +1,5 @@
 import { UserData } from '../../services/firebase';
+import { normalizeGroup, normalizeStoreData } from '../storeDataNormalization';
 
 /**
  * Merges local cached user data with cloud backup user data.
@@ -35,11 +36,9 @@ export function mergeUserData(local: UserData, cloud: UserData): UserData {
       }
 
       mergedGroups[cloudGroupIdx] = {
-        ...cloudGroup,
+        ...normalizeGroup(cloudGroup),
         cards: mergedCards,
         activeModeId: cloudGroup.activeModeId || localGroup.activeModeId,
-        studyFilter: cloudGroup.studyFilter || localGroup.studyFilter,
-        activePageCount: cloudGroup.activePageCount ?? localGroup.activePageCount,
       };
     }
   }
@@ -58,9 +57,9 @@ export function mergeUserData(local: UserData, cloud: UserData): UserData {
     mergedHeatmap[date] = Math.max(mergedHeatmap[date] || 0, count);
   }
 
-  return {
+  return normalizeStoreData({
     groups: mergedGroups,
     studyModes: mergedModes,
     activityHeatmap: mergedHeatmap,
-  };
+  });
 }

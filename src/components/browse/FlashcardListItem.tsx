@@ -11,19 +11,13 @@ import {
   getDaysUntilReview,
 } from '../../theme/srsTokens';
 import { TOKENS } from '../../theme/tokens';
-import { EditFlashcardForm } from './EditFlashcardForm';
-import { getVisiblePages, getVisiblePageNames } from '../../store/selectors/pages';
+import { getVisiblePages } from '../../store/selectors/pages';
 import { getReviewStatusColor } from '../../theme/semanticColors';
 import type { TranslationFn } from '../../i18n';
 
 interface Props {
   card: Flashcard;
   group: FlashcardGroup;
-  isEditing: boolean;
-  editPages: string[];
-  setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
-  onSave: () => void;
-  onCancel: () => void;
   onStartEdit: () => void;
   onDelete: () => void;
   t: TranslationFn;
@@ -54,11 +48,6 @@ function daysUntilReview(state: SrsState, t: (key: string) => string): string {
 export function FlashcardListItem({
   card,
   group,
-  isEditing,
-  editPages,
-  setEditPages,
-  onSave,
-  onCancel,
   onStartEdit,
   onDelete,
   t,
@@ -66,35 +55,17 @@ export function FlashcardListItem({
   const theme = useTheme();
   const [viewHidden, setViewHidden] = useState(false);
 
-  const activeCount = group.activePageCount ?? group.pageNames.length;
+  const activeCount = group.activePageCount;
   const totalCount = card.pages.length;
   const hasHiddenPages = totalCount > activeCount;
-
-  if (isEditing) {
-    return (
-      <AppCard style={styles.card} mode="outlined">
-        <EditFlashcardForm
-          card={card}
-          group={group}
-          editPages={editPages}
-          setEditPages={setEditPages}
-          onSave={onSave}
-          onCancel={onCancel}
-          t={t}
-        />
-      </AppCard>
-    );
-  }
 
   const srs = srsChip(card.srsState, theme, t);
   const mastery = getMasteryPercent(card.srsState);
   const reviewIn = daysUntilReview(card.srsState, t);
 
   const visiblePages = getVisiblePages(card, group);
-  const visiblePageNames = getVisiblePageNames(group);
 
-  const primaryPage = viewHidden ? card.pages[0] || '—' : visiblePages[0] || '—';
-  const otherPages = viewHidden ? card.pages.slice(1) : visiblePages.slice(1);
+  const displayPages = viewHidden ? card.pages : visiblePages;
 
   const toggleLabel =
     t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
@@ -104,34 +75,16 @@ export function FlashcardListItem({
   return (
     <AppCard style={styles.card} mode="outlined">
       <AppCard.Content style={styles.cardContent}>
-        {/* Primary page (front phrase) styled as a header */}
-        <Text variant="titleMedium" style={[styles.primaryText, { color: theme.colors.primary }]}>
-          {primaryPage}
-        </Text>
-
-        {/* Other pages listed with a cleaner layout */}
-        {otherPages.map((page, i) => {
-          const pageIdx = i + 1;
-          const isHidden = pageIdx >= activeCount;
-          const pageName = viewHidden
-            ? group.pageNames[pageIdx] || t('import.page_label', { index: pageIdx + 1 })
-            : visiblePageNames[pageIdx];
+        {displayPages.map((page, i) => {
+          const isHidden = i >= activeCount;
           return (
-            <View key={pageIdx} style={styles.pageContentRow}>
-              <Text
-                variant="labelMedium"
-                style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}
-              >
-                {pageName}
-                {isHidden ? ' (Hidden)' : ''}:{' '}
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={{ color: theme.colors.onSurface, flex: 1, flexWrap: 'wrap' }}
-              >
-                {page || '—'}
-              </Text>
-            </View>
+            <Text
+              key={i}
+              variant="bodyMedium"
+              style={[styles.pageLine, { color: isHidden ? theme.colors.onSurfaceVariant : theme.colors.onSurface }]}
+            >
+              {page || '—'}
+            </Text>
           );
         })}
 
@@ -208,18 +161,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardContent: {
+    paddingTop: TOKENS.spacing.md,
     paddingBottom: TOKENS.spacing.xs,
     gap: TOKENS.spacing.sm,
   },
-  primaryText: {
-    fontWeight: TOKENS.typography.weight.bold,
-    marginBottom: TOKENS.spacing.xs,
-  },
-  pageContentRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: TOKENS.spacing.xs,
-    marginTop: TOKENS.spacing.xxs,
+  pageLine: {
+    flexWrap: 'wrap',
   },
   toggleRow: {
     flexDirection: 'row',

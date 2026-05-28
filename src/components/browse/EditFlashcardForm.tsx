@@ -1,34 +1,37 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, Switch, Text } from 'react-native-paper';
-import type { Flashcard, FlashcardGroup } from '../../types/models';
+import { Button, Switch, Text, useTheme } from 'react-native-paper';
+import type { FlashcardGroup } from '../../types/models';
 import { getVisiblePageNames } from '../../store/selectors/pages';
 import type { TranslationFn } from '../../i18n';
 import { AppTextInput } from '../forms/AppTextInput';
 import { TOKENS } from '../../theme/tokens';
 
 interface Props {
-  card: Flashcard;
   group: FlashcardGroup;
   editPages: string[];
   setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
   onSave: () => void;
   onCancel: () => void;
+  saveDisabled?: boolean;
+  validationMessage?: string;
   t: TranslationFn;
 }
 
 export function EditFlashcardForm({
-  card,
   group,
   editPages,
   setEditPages,
   onSave,
   onCancel,
+  saveDisabled = false,
+  validationMessage,
   t,
 }: Props) {
+  const theme = useTheme();
   const [showHidden, setShowHidden] = useState(false);
 
-  const activeCount = group.activePageCount ?? group.pageNames.length;
+  const activeCount = group.activePageCount;
   const totalCount = editPages.length;
   const hasHiddenPages = totalCount > activeCount;
 
@@ -71,9 +74,15 @@ export function EditFlashcardForm({
         />
       ))}
 
+      {validationMessage ? (
+        <Text variant="bodySmall" style={[styles.validationText, { color: theme.colors.error }]}>
+          {validationMessage}
+        </Text>
+      ) : null}
+
       <View style={styles.editingActions}>
         <Button onPress={onCancel}>{t('btn.cancel')}</Button>
-        <Button mode="contained" onPress={onSave}>
+        <Button mode="contained" onPress={onSave} disabled={saveDisabled}>
           {t('btn.save')}
         </Button>
       </View>
@@ -99,5 +108,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: TOKENS.spacing.sm,
+  },
+  validationText: {
+    marginTop: -TOKENS.spacing.xs,
   },
 });

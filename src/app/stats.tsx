@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { router } from 'expo-router';
 import { useTheme } from 'react-native-paper';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
-import { SegmentedProgressBar } from '../components/SegmentedProgressBar';
 import { useI18n } from '../i18n';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import {
@@ -25,6 +24,8 @@ import { SectionCard } from '../components/layout/SectionCard';
 import { MetricGrid } from '../components/metrics/MetricGrid';
 import { HeatmapGrid } from '../features/stats/HeatmapGrid';
 import { DeckProgressList } from '../features/stats/DeckProgressList';
+
+const STATS_METRIC_COMPACT_BREAKPOINT = 720;
 
 export default function StatsPage() {
   const { t } = useI18n();
@@ -73,26 +74,31 @@ export default function StatsPage() {
   return (
     <AppScreen title={t('stats.title')} onBack={() => router.back()} maxWidth={formMaxWidth}>
       <AnimatedSection index={0}>
-        <MetricGrid items={statCards} />
+        <MetricGrid items={statCards} compactBreakpoint={STATS_METRIC_COMPACT_BREAKPOINT} />
       </AnimatedSection>
 
       <AnimatedSection index={1}>
-        <SectionCard title={t('stats.progress_title')}>
-          <SegmentedProgressBar stats={globalStats} showLegend />
+        <SectionCard title={t('stats.deck_progress')} titleAlign="center">
+          <DeckProgressList
+            groups={groups}
+            overallStats={globalStats}
+            totalCards={totalCards}
+            t={t}
+          />
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={2}>
-        <SectionCard title={t('stats.heatmap_title')}>
+      <AnimatedSection index={2} style={styles.raisedSection}>
+        <SectionCard title={t('stats.heatmap_title')} titleAlign="center">
           <HeatmapGrid heatmap={activityHeatmap} t={t} />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection index={3}>
-        <SectionCard title={t('stats.deck_progress')}>
-          <DeckProgressList groups={groups} t={t} />
         </SectionCard>
       </AnimatedSection>
     </AppScreen>
   );
 }
+
+const styles = {
+  raisedSection: {
+    marginTop: -8,
+  },
+};

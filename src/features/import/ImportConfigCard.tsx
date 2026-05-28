@@ -1,20 +1,19 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import type { TranslationFn } from '../../i18n';
-import { ImportSeparatorSelector } from '../../components/import/ImportSeparatorSelector';
 import { SectionCard } from '../../components/layout/SectionCard';
 import { PageConfigEditor } from '../../components/pageConfig/PageConfigEditor';
-import { TOKENS } from '../../theme/tokens';
 
 interface ImportConfigCardProps {
   sepKey: string;
-  onSepKeyChange: (value: string) => void;
+  onSepKeyChange: (key: string, customSep?: string) => void;
+  customSep: string;
   pageCount: number;
   pageNames: string[];
   pageLanguages: string[];
   onPageCountChange: (count: number) => void;
   onPageNameChange: (index: number, value: string) => void;
   onPageLanguageChange: (index: number, value: string) => void;
+  onMovePage: (index: number, direction: -1 | 1) => void;
   popularLangs: { code: string; label: string }[];
   t: TranslationFn;
 }
@@ -22,21 +21,19 @@ interface ImportConfigCardProps {
 export function ImportConfigCard({
   sepKey,
   onSepKeyChange,
+  customSep,
   pageCount,
   pageNames,
   pageLanguages,
   onPageCountChange,
   onPageNameChange,
   onPageLanguageChange,
+  onMovePage,
   popularLangs,
   t,
 }: ImportConfigCardProps) {
   return (
     <SectionCard title={t('settings.pages_config')}>
-      <View style={styles.headerRow}>
-        <View />
-        <ImportSeparatorSelector sepKey={sepKey} setSepKey={onSepKeyChange} t={t} />
-      </View>
       <PageConfigEditor
         mode="import"
         pageCount={pageCount}
@@ -47,16 +44,11 @@ export function ImportConfigCard({
         onPageCountChange={onPageCountChange}
         onPageNameChange={onPageNameChange}
         onPageLanguageChange={onPageLanguageChange}
+        onMovePage={onMovePage}
+        sepKey={sepKey}
+        onSepKeyChange={onSepKeyChange}
+        customSep={customSep}
       />
     </SectionCard>
   );
 }
-
-const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: TOKENS.spacing.xs,
-  },
-});

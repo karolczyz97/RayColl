@@ -1,4 +1,5 @@
 import { setVisiblePageCountAction } from '../groupActions';
+import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
@@ -14,6 +15,7 @@ export async function runTests() {
     name: 'Deck',
     cards: [],
     activeModeId: 'classic',
+    studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,

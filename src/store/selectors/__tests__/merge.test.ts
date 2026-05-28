@@ -1,5 +1,6 @@
 import { createNewSrsState } from '../../../srs/srsEngine';
 import { mergeUserData } from '../merge';
+import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
@@ -45,7 +46,7 @@ export async function runTests() {
           name: 'Cloud deck',
           cards: [cloudCard],
           activeModeId: '',
-          studyFilter: undefined,
+          studyFilter: DEFAULT_STUDY_FILTER,
           pageLanguages: ['en-US', 'pl-PL'],
           pageNames: ['Front', 'Back'],
           activePageCount: 2,

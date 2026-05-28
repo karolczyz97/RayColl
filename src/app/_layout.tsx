@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
     width: '100%',
+    minHeight: 0,
   },
   webOuter: {
     flex: 1,
@@ -111,11 +112,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 0,
   },
   webInner: {
     flex: 1,
     width: '100%',
     maxWidth: 1200,
+    minHeight: 0,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,

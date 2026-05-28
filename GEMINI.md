@@ -3,6 +3,7 @@
 
 
 Read and follow `./AGENTS.md` before making changes.
+Treat `AGENTS.md` as the source of truth for runtime data normalization and architectural guardrails.
 
 
 

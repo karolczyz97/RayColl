@@ -1,5 +1,6 @@
 import { FlashcardGroup, Flashcard } from '../../types/models';
 import { CardFilter } from '../../constants/cardFilters';
+import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
 import { uid } from '../../utils/id';
 import { createNewSrsState } from '../../srs/srsEngine';
 
@@ -15,6 +16,7 @@ export function addGroupAction(
     name: name.trim(),
     cards: [],
     activeModeId: 'classic',
+    studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: languages,
     pageNames,
     activePageCount: pageNames.length,
@@ -92,6 +94,7 @@ export function addGroupWithCardsAction(
     name: name.trim(),
     cards,
     activeModeId: 'classic',
+    studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: languages,
     pageNames,
     activePageCount: pageNames.length,

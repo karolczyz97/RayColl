@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from 'react-native-paper';
 import { useI18n } from '../../i18n';
 import { getWarningColor } from '../../theme/semanticColors';
-import { MetricGrid } from '../metrics/MetricGrid';
+import { METRIC_GRID_COMPACT_BREAKPOINT, MetricGrid } from '../metrics/MetricGrid';
 
 interface Props {
   decksCount: number;
@@ -43,6 +43,6 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
   ];
 
   return (
-    <MetricGrid items={stats} compactBreakpoint={480} />
+    <MetricGrid items={stats} compactBreakpoint={METRIC_GRID_COMPACT_BREAKPOINT} />
   );
 }

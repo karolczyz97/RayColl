@@ -5,6 +5,12 @@ import { GroupCard } from './GroupCard';
 import type { FlashcardGroup } from '../../types/models';
 import { TOKENS } from '../../theme/tokens';
 import { AnimatedSection } from '../layout/AnimatedSection';
+import {
+  getGridColumns,
+  getGridContainerWidth,
+  getGridGap,
+  getGridItemWidth,
+} from '../../utils/gridLayout';
 
 interface Props {
   groups: FlashcardGroup[];
@@ -15,31 +21,20 @@ export function DeckGrid({ groups, onModeChange }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | undefined>(undefined);
 
-  // Fallback that updates instantly during window resize
-  const fallbackWidth = Math.min(1164, windowWidth - 36);
-  // Use the smaller of measured layout width or instant window boundary to shrink cards immediately on resize
-  const currentWidth = measuredWidth !== undefined ? Math.min(measuredWidth, fallbackWidth) : fallbackWidth;
+  const currentWidth = getGridContainerWidth({
+    measuredWidth,
+    windowWidth,
+    clampMeasuredToFallback: true,
+  });
 
-  // Calculate gap dynamically to match the stats cards space-between gap (2.66% of container width)
-  const gap = useMemo(() => {
-    return Math.max(
-      TOKENS.layout.minGap,
-      Math.min(TOKENS.layout.maxGap, Math.floor(currentWidth * TOKENS.layout.gapRatio))
-    );
-  }, [currentWidth]);
+  const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
 
   const { cardWidth } = useMemo(() => {
     const minCardWidth = TOKENS.layout.minCardWidth;
     const maxCols = TOKENS.layout.maxCols;
 
-    const availableWidth = currentWidth;
-    const calculatedCols = Math.floor((availableWidth + gap) / (minCardWidth + gap));
-    const normalCols = Math.max(1, Math.min(maxCols, calculatedCols));
-    const numColsCalculated = Math.min(normalCols, groups.length || 1);
-
-    // Subtract 1px to absorb floating-point rounding errors and prevent layout wrapping glitches
-    const widthCalculated = ((availableWidth - gap * (numColsCalculated - 1)) / numColsCalculated) - 1;
-    return { cardWidth: widthCalculated };
+    const columns = getGridColumns(currentWidth, groups.length, minCardWidth, maxCols, gap);
+    return { cardWidth: getGridItemWidth(currentWidth, columns, gap) };
   }, [currentWidth, gap, groups.length]);
 
   const widthStyle = useMemo(() => {

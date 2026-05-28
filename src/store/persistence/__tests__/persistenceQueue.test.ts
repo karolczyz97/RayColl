@@ -1,5 +1,6 @@
 import { createPersistenceQueueController } from '../persistenceQueue';
 import type { FlashcardGroup } from '../../../types/models';
+import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
@@ -22,6 +23,7 @@ function createGroup(id: string): FlashcardGroup {
     name: id,
     cards: [],
     activeModeId: 'mode-1',
+    studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,

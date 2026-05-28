@@ -57,6 +57,10 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
       width: flatStyle?.width ?? '100%',
     };
 
+    if (Platform.OS === 'web') {
+      nextStyle.cursor = 'auto';
+    }
+
     return nextStyle;
   }, [style]);
 

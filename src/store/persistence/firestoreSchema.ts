@@ -1,4 +1,5 @@
 import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
+import { normalizeStudyFilter } from '../storeDataNormalization';
 import type { StoreData } from './localPersistence';
 
 export const FIRESTORE_SCHEMA_VERSION = 2;
@@ -43,7 +44,7 @@ export function serializeDeckDoc(group: FlashcardGroup): Omit<FirestoreDeckDoc, 
     pageLanguages: group.pageLanguages,
     pageNames: group.pageNames,
     activePageCount: group.activePageCount,
-    studyFilter: group.studyFilter,
+    studyFilter: normalizeStudyFilter(group.studyFilter),
   };
 }
 

@@ -9,8 +9,7 @@ export function uniquePageIndexes(pageIndexes: number[]): number[] {
 }
 
 export function getActivePageIndexes(group: FlashcardGroup): number[] {
-  const activePageCount = group.activePageCount ?? group.pageNames.length;
-  return group.pageNames.slice(0, activePageCount).map((_, index) => index);
+  return group.pageNames.slice(0, group.activePageCount).map((_, index) => index);
 }
 
 export function getNextHiddenPageIndex(

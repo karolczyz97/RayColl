@@ -75,7 +75,7 @@ export function useDeckSettingsController() {
 
   const activeMode = store.studyModes.find((mode) => mode.id === activeGroup?.activeModeId) ?? null;
   const isDefaultMode = DEFAULT_MODE_IDS.includes(activeMode?.id || '');
-  const pageCount = activeGroup?.activePageCount ?? activeGroup?.pageNames.length ?? 0;
+  const pageCount = activeGroup?.activePageCount ?? 0;
 
   const adjustPageCount = (count: number) => {
     if (!activeGroup) return;

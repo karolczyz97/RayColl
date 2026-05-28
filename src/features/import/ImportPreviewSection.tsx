@@ -1,8 +1,11 @@
 import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
-import { SectionCard } from '../../components/layout/SectionCard';
 import { FlashcardList } from '../flashcards/FlashcardList';
+import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
+import { TOKENS } from '../../theme/tokens';
 
 interface ImportPreviewSectionProps {
   cards: Flashcard[];
@@ -34,20 +37,36 @@ export function ImportPreviewSection({
   }
 
   return (
-    <SectionCard title={`${t('import.preview') || 'Preview'} (${cards.length})`}>
+    <View style={styles.container}>
+      <Text variant="titleMedium" style={styles.title}>
+        {`${t('import.preview') || 'Preview'} (${cards.length})`}
+      </Text>
       <FlashcardList
         cards={cards}
         group={group}
-        editingId={editingId}
-        editPages={editPages}
-        setEditPages={setEditPages}
-        onSave={onSave}
-        onCancel={onCancel}
         onStartEdit={onStartEdit}
         onDelete={onDelete}
         t={t}
         scrollEnabled={false}
       />
-    </SectionCard>
+      <EditFlashcardDialog
+        visible={!!editingId}
+        group={group}
+        editPages={editPages}
+        setEditPages={setEditPages}
+        onSave={onSave}
+        onCancel={onCancel}
+        t={t}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    gap: TOKENS.spacing.md,
+  },
+  title: {
+    fontWeight: '700',
+  },
+});

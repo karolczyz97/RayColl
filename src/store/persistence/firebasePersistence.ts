@@ -1,4 +1,5 @@
 import { saveUserData, loadUserData, UserData } from '../../services/firebase';
+import { normalizeStoreData } from '../storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
 import { cloneUserData } from './firestoreSchema';
 import {
@@ -97,8 +98,9 @@ export async function loadCloudData(userId: string): Promise<UserData | null> {
     const data = await loadUserData(userId);
     if (!data) return null;
     validateBackupData(data);
-    cloudSnapshotCache.set(userId, cloneUserData(data));
-    return data;
+    const normalized = normalizeStoreData(data);
+    cloudSnapshotCache.set(userId, cloneUserData(normalized));
+    return normalized;
   } catch (err) {
     console.error('Failed to load cloud data:', err);
     return null;

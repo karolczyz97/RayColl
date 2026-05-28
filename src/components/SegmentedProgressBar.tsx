@@ -17,9 +17,15 @@ interface Props {
   stats: CardStats;
   height?: number;
   showLegend?: boolean;
+  legendPosition?: 'top' | 'bottom';
 }
 
-export function SegmentedProgressBar({ stats, height = 12, showLegend = false }: Props) {
+export function SegmentedProgressBar({
+  stats,
+  height = 12,
+  showLegend = false,
+  legendPosition = 'bottom',
+}: Props) {
   const { total } = stats;
   const { t } = useI18n();
   const theme = useTheme();
@@ -45,6 +51,18 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
 
   return (
     <View style={styles.container}>
+      {showLegend && legendPosition === 'top' ? (
+        <View style={[styles.legendContainer, styles.legendTop]}>
+          {categoryData.map((item) => (
+            <View key={item.category} style={[styles.legendItem, { backgroundColor: item.bg }]}>
+              <View style={[styles.dot, { backgroundColor: item.color }]} />
+              <Text style={[styles.legendText, { color: item.color }]}>
+                {item.label} ({item.count})
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View
         style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: emptyColor }]}
       >
@@ -62,7 +80,7 @@ export function SegmentedProgressBar({ stats, height = 12, showLegend = false }:
           );
         })}
       </View>
-      {showLegend && (
+      {showLegend && legendPosition === 'bottom' && (
         <View style={styles.legendContainer}>
           {categoryData.map((item) => (
             <View key={item.category} style={[styles.legendItem, { backgroundColor: item.bg }]}>
@@ -93,6 +111,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     marginTop: 10,
+  },
+  legendTop: {
+    marginTop: 0,
+    marginBottom: 10,
   },
   legendItem: {
     flexDirection: 'row',
