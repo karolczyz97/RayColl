@@ -19,4 +19,7 @@ export const STORAGE_KEYS = {
   USER_GROUPS: (userId: string) => `fiszki-user-groups-${userId}`,
   USER_MODES: (userId: string) => `fiszki-user-modes-${userId}`,
   USER_HEATMAP: (userId: string) => `fiszki-user-heatmap-${userId}`,
+
+  // Update notification
+  LAST_SEEN_BUILD: 'td-last-seen-build',
 };

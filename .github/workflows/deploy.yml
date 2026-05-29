@@ -10,6 +10,8 @@ jobs:
   deploy-web:
     name: 🌐 Build & Deploy Web → Firebase Hosting
     runs-on: ubuntu-latest
+    outputs:
+      release_json: ${{ steps.release.outputs.release_json }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,6 +25,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate commit message format
+        run: |
+          TITLE=$(git log -1 --format=%s)
+          BODY=$(git log -1 --format=%b)
+          if [ -z "$TITLE" ]; then
+            echo "❌ Commit title is empty. First line of commit message is required for the changelog."
+            exit 1
+          fi
+          HAS_NOTES=$(echo "$BODY" | grep -E '^[-*] ' | wc -l)
+          if [ "$HAS_NOTES" -eq 0 ]; then
+            echo "❌ Commit body has no bullet points (lines starting with '- ' or '* ')."
+            echo "   Add at least one bullet point — it becomes the changelog for users."
+            exit 1
+          fi
+
+      - name: Generate release metadata
+        id: release
+        run: |
+          RELEASE_JSON=$(node scripts/release-metadata.mjs)
+          {
+            echo 'EXPO_PUBLIC_RELEASE_JSON<<EOF'
+            printf '%s\n' "$RELEASE_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+          {
+            echo 'release_json<<EOF'
+            printf '%s\n' "$RELEASE_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build Web App (Expo export)
         run: npx expo export --platform web
         env:
@@ -34,6 +66,9 @@ jobs:
           EXPO_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           EXPO_PUBLIC_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
 
+      - name: Write version.json to dist
+        run: printf '%s' "$EXPO_PUBLIC_RELEASE_JSON" > dist/version.json
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -43,7 +78,71 @@ jobs:
           channelId: live
 
   # ──────────────────────────────────────────────
-  # Job 2: Publish OTA update to Expo EAS Updates
+  # Job 2: Smoke test — verify cache headers (non-blocking)
+  # ──────────────────────────────────────────────
+  smoke-test-cache:
+    name: 🔍 Smoke test — Cache headers
+    runs-on: ubuntu-latest
+    needs: deploy-web
+    continue-on-error: true
+    steps:
+      - name: Wait for Firebase CDN propagation
+        run: sleep 10
+
+      - name: Check cache headers
+        run: |
+          BASE="https://raycoll-io.web.app"
+          PASS=true
+
+          check_no_cache() {
+            URL="$1"
+            HEADER=$(curl -sI "$URL" | grep -i 'cache-control' | tr -d '\r\n')
+            if echo "$HEADER" | grep -qi 'no-cache\|no-store'; then
+              echo "✅ no-cache  $URL  →  $HEADER"
+            else
+              echo "❌ EXPECTED no-cache  $URL  →  $HEADER"
+              PASS=false
+            fi
+          }
+
+          check_immutable() {
+            URL="$1"
+            HEADER=$(curl -sI "$URL" | grep -i 'cache-control' | tr -d '\r\n')
+            if echo "$HEADER" | grep -qi 'immutable'; then
+              echo "✅ immutable $URL  →  $HEADER"
+            else
+              echo "❌ EXPECTED immutable  $URL  →  $HEADER"
+              PASS=false
+            fi
+          }
+
+          # SPA shell — root and deep link must both be no-cache
+          check_no_cache "$BASE/"
+          check_no_cache "$BASE/study/test"
+
+          # version.json must be no-cache
+          check_no_cache "$BASE/version.json"
+
+          # One hashed JS asset must be immutable
+          # Find the entry JS from the built manifest
+          ASSET_URL=$(curl -s "$BASE/" | grep -oP '/_expo/static/js/[^"]+\.js' | head -1)
+          if [ -n "$ASSET_URL" ]; then
+            check_immutable "$BASE$ASSET_URL"
+          else
+            echo "⚠️  Could not find hashed JS asset in index.html — skipping immutable check"
+          fi
+
+          if [ "$PASS" = false ]; then
+            echo ""
+            echo "❌ Cache header smoke test FAILED — check firebase.json header rules."
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All cache header checks passed."
+
+  # ──────────────────────────────────────────────
+  # Job 3: Publish OTA update to Expo EAS Updates
   # ──────────────────────────────────────────────
   deploy-eas-update:
     name: 📱 Publish OTA Update → Expo EAS
@@ -61,6 +160,16 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Restore release metadata from job 1
+        env:
+          RELEASE_JSON: ${{ needs.deploy-web.outputs.release_json }}
+        run: |
+          {
+            echo 'EXPO_PUBLIC_RELEASE_JSON<<EOF'
+            printf '%s\n' "$RELEASE_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
 
       - name: Setup Expo EAS
         uses: expo/expo-github-action@v8

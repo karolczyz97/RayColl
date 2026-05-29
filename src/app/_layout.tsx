@@ -10,6 +10,7 @@ import { I18nProvider, useI18n } from '../i18n';
 import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
 import { FlashcardStoreProvider } from '../hooks/useFlashcardStore';
 import { createAppTheme } from '../theme/createAppTheme';
+import { UpdateNotification } from '../components/feedback/UpdateNotification';
 
 function logSplashScreenError(action: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -137,6 +138,7 @@ function InnerLayout() {
       ) : (
         content
       )}
+      <UpdateNotification />
     </PaperProvider>
   );
 }

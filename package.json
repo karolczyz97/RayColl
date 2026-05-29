@@ -8,6 +8,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-voice/voice": "^3.2.4",
     "expo": "~56.0.4",
+    "expo-application": "~56.0.3",
     "expo-audio": "~56.0.11",
     "expo-auth-session": "~56.0.11",
     "expo-build-properties": "~56.0.14",

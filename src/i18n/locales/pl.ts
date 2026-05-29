@@ -187,6 +187,11 @@ export const pl: Record<string, string> = {
   // Danger zone in App Settings
   'app_settings.danger_zone': 'Strefa zagrożenia',
 
+  // Update notification
+  'update.whats_new': 'Co nowego',
+  'update.show': 'Pokaż',
+  'update.ok': 'OK',
+
   // Language names
   'lang.pl-PL': 'Polski',
   'lang.en-US': 'Angielski',

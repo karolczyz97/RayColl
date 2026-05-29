@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Constants from 'expo-constants';
-import { Platform, StyleSheet, View } from 'react-native';
+import * as Application from 'expo-application';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
@@ -17,6 +17,8 @@ import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useI18n, type LanguageCode } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
+import { releaseInfo } from '../../config/releaseInfo';
+import { ChangelogDialog } from '../../components/feedback/ChangelogDialog';
 
 const LANGUAGE_OPTIONS = [
   { label: 'Polski', value: 'pl' },
@@ -27,9 +29,6 @@ const LANGUAGE_OPTIONS = [
 ] satisfies { label: string; value: LanguageCode }[];
 
 const THEME_OPTIONS = ['light', 'system', 'dark'] satisfies ThemePref[];
-
-const APP_VERSION = Constants.expoConfig?.version ?? 'dev';
-const ANDROID_BUILD_VERSION = Constants.expoConfig?.android?.versionCode;
 
 function isLanguageCode(value: string): value is LanguageCode {
   return LANGUAGE_OPTIONS.some((option) => option.value === value);
@@ -51,14 +50,12 @@ export function AppSettingsScreen() {
   const [resetVisible, setResetVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const isWeb = Platform.OS === 'web';
-  const versionLines = isWeb
-    ? [`Web version: ${APP_VERSION}`]
-    : [
-        `Web version: ${APP_VERSION}`,
-        typeof ANDROID_BUILD_VERSION === 'number'
-          ? `APK version: ${APP_VERSION} (${ANDROID_BUILD_VERSION})`
-          : `APK version: ${APP_VERSION}`,
-      ];
+  const apkBuild = Application.nativeBuildVersion;
+  const versionLines = [
+    `v${releaseInfo.appVersion} · build ${releaseInfo.webBuild}`,
+    ...(!isWeb && apkBuild !== null ? [`APK build ${apkBuild}`] : []),
+  ];
+  const [changelogVisible, setChangelogVisible] = useState(false);
 
   const getLabel = (key: string, fallback: string) => {
     const translated = t(key);
@@ -252,7 +249,13 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <View style={styles.versionFooter}>
+      <TouchableOpacity
+        style={styles.versionFooter}
+        onPress={() => setChangelogVisible(true)}
+        activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={t('update.whats_new')}
+      >
         {versionLines.map((line) => (
           <Text
             key={line}
@@ -262,7 +265,8 @@ export function AppSettingsScreen() {
             {line}
           </Text>
         ))}
-      </View>
+      </TouchableOpacity>
+      <ChangelogDialog visible={changelogVisible} onDismiss={() => setChangelogVisible(false)} />
 
       <TextEntryDialog
         visible={importVisible}

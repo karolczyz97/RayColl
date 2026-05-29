@@ -4,7 +4,7 @@ module.exports = {
   expo: {
     name: "RayColl",
     slug: "raycoll-io",
-    version: "1.0.0",
+    version: require('./package.json').version,
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "raycoll",
