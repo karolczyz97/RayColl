@@ -53,7 +53,7 @@ module.exports = {
         {
           "android": {
             "enableOnBackInvokedCallback": true,
-            ...(abiFilter ? { abiFilters: [abiFilter] } : {})
+            ...(abiFilter ? { buildArchs: [abiFilter] } : {})
           }
         }
       ]
