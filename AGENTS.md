@@ -22,14 +22,13 @@ Bad: `- refactor: extract useCardFlip hook`
 
 # Deploy process
 
-Deploy is **manual** — pushing to git does not trigger it automatically.
+Deploy is **automatic** — pushing to the `main` branch triggers the CI/CD deploy workflow automatically.
+For manual deploys or retries, the workflow can also be triggered via GitHub Actions.
 
 ## Steps every deploy
 
 1. Make sure all changes are committed with the correct commit message format (see above).
-2. `git push`
-3. Go to GitHub → Actions → "CI/CD – Deploy Web to Firebase & OTA Update to Expo EAS" → "Run workflow" → "Run workflow".
-4. This deploys web to Firebase Hosting AND publishes an OTA update to Expo EAS in one run.
+2. `git push` to `main`. This triggers the deployment to Firebase Hosting and publishes an OTA update to Expo EAS.
 
 ## One-time setup (before first EAS Android build after adding remote versioning)
 

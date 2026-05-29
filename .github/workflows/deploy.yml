@@ -1,6 +1,9 @@
 name: CI/CD – Deploy Web to Firebase & OTA Update to Expo EAS
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
