@@ -103,6 +103,7 @@ export const pl: Record<string, string> = {
   'settings.which_cards': 'Które fiszki uczyć',
   'settings.mode_steps': 'Kroki trybu „{name}"',
   'settings.add_step_btn': 'Dodaj krok',
+  'settings.reset_mode_btn': 'Przywróć domyślne',
   'settings.create_mode_btn': 'Stwórz nowy tryb',
   'settings.new_mode_name': 'Nazwa trybu',
   'settings.save_mode_btn': 'Zapisz tryb',
@@ -148,7 +149,8 @@ export const pl: Record<string, string> = {
   'step.dynamic_pause': 'Pauza dyn. (str. {index}, +{pause}ms)',
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
-  'step.rate_knowledge': 'Oceń znajomość',
+  'step.reveal_on_tap': 'Odkryj kolejną stronę po dotknięciu',
+  'step.rate': 'Oceń znajomość fiszki',
 
   // Step types (labels)
   'step.type.show_page': 'Pokaż stronę',
@@ -156,7 +158,8 @@ export const pl: Record<string, string> = {
   'step.type.dynamic_pause': 'Pauza dynamiczna',
   'step.type.wait': 'Odczekaj (ms)',
   'step.type.listen_and_branch': 'Weryfikuj wymowę (STT)',
-  'step.type.rate_knowledge': 'Oceń znajomość (wyświetl przyciski oceny)',
+  'step.type.reveal_on_tap': 'Odkryj po dotknięciu',
+  'step.type.rate': 'Oceń znajomość',
 
   // Study Filters
   'filter.new_review': 'Nowe + Powtórki',

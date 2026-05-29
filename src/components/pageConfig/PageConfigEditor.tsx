@@ -213,11 +213,12 @@ const styles = StyleSheet.create({
     width: 160,
   },
   pageRow: {
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   sortButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
   },
   sortButton: {
     margin: 0,

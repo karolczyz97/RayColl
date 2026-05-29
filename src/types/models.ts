@@ -50,11 +50,18 @@ export type ModeStep =
       incorrectTtsPageIndex?: number;
     }
   | {
-      type: 'rate_knowledge';
+      // Czeka, aż użytkownik dotknie karty, i dopiero wtedy odkrywa kolejną ukrytą stronę.
+      type: 'reveal_on_tap';
+    }
+  | {
+      // Pokazuje przyciski oceny znajomości fiszki i czeka na ocenę użytkownika.
+      type: 'rate';
     };
 
 export interface StudyMode {
   id: string;
   name: string;
   steps: ModeStep[];
+  isBuiltIn: boolean;
+  builtInSourceId?: string;
 }

@@ -61,6 +61,8 @@ export function serializeStudyModeDoc(mode: StudyMode): Omit<FirestoreStudyModeD
     id: mode.id,
     name: mode.name,
     steps: mode.steps,
+    isBuiltIn: mode.isBuiltIn,
+    ...(mode.builtInSourceId ? { builtInSourceId: mode.builtInSourceId } : {}),
   };
 }
 

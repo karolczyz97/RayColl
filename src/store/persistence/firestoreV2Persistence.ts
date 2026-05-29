@@ -125,6 +125,8 @@ export async function loadUserDataV2(uid: string): Promise<UserData | null> {
       id: modeData.id,
       name: modeData.name,
       steps: modeData.steps,
+      isBuiltIn: modeData.isBuiltIn ?? false,
+      builtInSourceId: modeData.builtInSourceId,
     };
     return mode;
   });

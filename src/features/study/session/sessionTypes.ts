@@ -34,6 +34,7 @@ export type SessionAction =
   | { type: 'UPDATE_PARTIAL_STT'; text: string }
   | { type: 'END_LISTENING'; text: string; matchPercent: number }
   | { type: 'REVEAL_PAGES'; revealedPages: number[]; waitingForTap?: boolean }
+  | { type: 'REVEAL_PAGE'; stepIndex: number; pageIndex: number }
   | { type: 'SHOW_RATINGS' }
   | { type: 'FINISH_SESSION' }
   | { type: 'ADVANCE_CARD'; nextCardIndex: number }

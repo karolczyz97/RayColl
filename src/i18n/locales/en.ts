@@ -103,6 +103,7 @@ export const en: Record<string, string> = {
   'settings.which_cards': 'Which cards to study',
   'settings.mode_steps': 'Steps of Mode "{name}"',
   'settings.add_step_btn': 'Add step',
+  'settings.reset_mode_btn': 'Reset to default',
   'settings.create_mode_btn': 'Create new mode',
   'settings.new_mode_name': 'Mode name',
   'settings.save_mode_btn': 'Save mode',
@@ -147,7 +148,8 @@ export const en: Record<string, string> = {
   'step.dynamic_pause': 'Dynamic pause (page {index}, +{pause}ms)',
   'step.wait': 'Wait {ms}ms',
   'step.listen_and_branch': 'STT page {index} (threshold {threshold}%)',
-  'step.rate_knowledge': 'Rate knowledge',
+  'step.reveal_on_tap': 'Reveal next page on tap',
+  'step.rate': 'Rate knowledge',
 
   // Step types (labels)
   'step.type.show_page': 'Show page',
@@ -155,7 +157,8 @@ export const en: Record<string, string> = {
   'step.type.dynamic_pause': 'Dynamic pause',
   'step.type.wait': 'Wait (ms)',
   'step.type.listen_and_branch': 'Verify speech (STT)',
-  'step.type.rate_knowledge': 'Rate knowledge (display rating buttons)',
+  'step.type.reveal_on_tap': 'Reveal on tap',
+  'step.type.rate': 'Rate knowledge',
 
   // Study Filters
   'filter.new_review': 'New + due for review',

@@ -38,13 +38,7 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
       uncheckedColor: theme.colors.onSurfaceVariant,
       style: [
         styles.segment,
-        {
-          backgroundColor: isSelected
-            ? theme.colors.secondaryContainer
-            : theme.colors.surfaceVariant,
-          borderColor: 'transparent',
-          borderWidth: 0,
-        },
+        isSelected && { backgroundColor: theme.colors.secondaryContainer },
       ],
       labelStyle: styles.segmentLabel,
     };
@@ -59,14 +53,7 @@ export function BrowseFilterChips({ browseFilter, setBrowseFilter, stats, t }: P
         }
       }}
       buttons={buttons}
-      style={[
-        styles.segmentedButtons,
-        {
-          backgroundColor: theme.colors.surfaceVariant,
-          borderRadius: TOKENS.radius.pill,
-          overflow: 'hidden',
-        },
-      ]}
+      style={styles.segmentedButtons}
     />
   );
 }

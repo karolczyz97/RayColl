@@ -92,6 +92,8 @@ export function EditFlashcardForm({
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: TOKENS.spacing.lg,
+    paddingHorizontal: TOKENS.spacing.lg,
     gap: TOKENS.spacing.md,
   },
   toggleRow: {

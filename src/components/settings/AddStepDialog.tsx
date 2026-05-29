@@ -54,16 +54,18 @@ export function AddStepDialog({
           accessibilityLabel="Select step type"
         />
 
-        {newStepType !== 'wait' && (
-          <AppNumberInput
-            label={t('settings.dialog.add_step.page_idx')}
-            value={newPageIdx}
-            onChange={setNewPageIdx}
-            min={0}
-            max={Math.max(0, pageCount - 1)}
-            accessibilityLabel="Page index input"
-          />
-        )}
+        {newStepType !== 'wait' &&
+          newStepType !== 'reveal_on_tap' &&
+          newStepType !== 'rate' && (
+            <AppNumberInput
+              label={t('settings.dialog.add_step.page_idx')}
+              value={newPageIdx}
+              onChange={setNewPageIdx}
+              min={0}
+              max={Math.max(0, pageCount - 1)}
+              accessibilityLabel="Page index input"
+            />
+          )}
 
         {(newStepType === 'speak_page' ||
           newStepType === 'dynamic_pause' ||

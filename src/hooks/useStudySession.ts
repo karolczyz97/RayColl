@@ -193,26 +193,24 @@ export function useStudySession(
 
       switch (step.type) {
         case 'show_page': {
-          const alreadyRevealed = currentState.revealedPages;
-          const nextRevealed = uniquePageIndexes([...alreadyRevealed, step.pageIndex]);
-
-          if (stepIndex === currentSteps.length - 1) {
-            dispatchIfMounted({
-              type: 'SET_CURRENT_STEP',
-              stepIndex,
-              revealedPages: alreadyRevealed,
-              waitingForTap: true,
-            });
-            return;
+          // Reveal additively in the reducer so back-to-back show_page steps
+          // can't clobber each other with a stale revealedPages snapshot.
+          dispatchIfMounted({ type: 'REVEAL_PAGE', stepIndex, pageIndex: step.pageIndex });
+          if (!abortRef.current) {
+            await executeStepRef.current?.(card, stepIndex + 1);
           }
+          break;
+        }
 
-          dispatchIfMounted({
-            type: 'SET_CURRENT_STEP',
-            stepIndex,
-            revealedPages: nextRevealed,
-          });
+        case 'reveal_on_tap': {
+          // Stop the sequence and wait for a tap; handleCardTap reveals the next
+          // hidden page(s) and resumes once everything active is shown.
+          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: true });
+          break;
+        }
 
-          await executeStepRef.current?.(card, stepIndex + 1);
+        case 'rate': {
+          dispatchIfMounted({ type: 'SHOW_RATINGS' });
           break;
         }
 
@@ -317,19 +315,6 @@ export function useStudySession(
               }
               return;
             }
-          break;
-        }
-        case 'rate_knowledge': {
-          const alreadyRevealed = currentState.revealedPages;
-          if (areAllActivePagesRevealed(currentGroup, alreadyRevealed)) {
-            dispatchIfMounted({ type: 'SHOW_RATINGS' });
-          } else {
-            dispatchIfMounted({
-              type: 'SET_CURRENT_STEP',
-              stepIndex,
-              revealedPages: alreadyRevealed,
-              waitingForTap: true,
-            });
           }
           break;
         }
@@ -342,27 +327,44 @@ export function useStudySession(
     executeStepRef.current = executeStep;
   }, [executeStep]);
 
+  const resumeAfterStep = useCallback((card: Flashcard, nextStepIndex: number) => {
+    // Defer so the reducer state (and stateRef) settle before the next step runs.
+    setTimeout(() => {
+      if (!abortRef.current) {
+        void executeStepRef.current?.(card, nextStepIndex);
+      }
+    }, 0);
+  }, []);
+
   const handleCardTap = useCallback(() => {
     const currentGroup = groupRef.current;
-    if (!stateRef.current.waitingForTap || !currentGroup) return;
-    const currentRevealedPages = stateRef.current.revealedPages;
-    const nextHiddenPageIndex = getNextHiddenPageIndex(currentGroup, currentRevealedPages);
+    const currentState = stateRef.current;
+    if (!currentState.waitingForTap || !currentGroup) return;
+    const card = dueCardsRef.current[currentState.currentCardIndex];
+    if (!card) return;
+
+    const stepIndex = currentState.currentStepIndex;
+    const nextHiddenPageIndex = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
+
     if (nextHiddenPageIndex === null) {
-      dispatchIfMounted({ type: 'SHOW_RATINGS' });
+      // Nothing left to reveal — treat the tap as "continue" past the gate.
+      dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
+      resumeAfterStep(card, stepIndex + 1);
       return;
     }
 
-    const nextRevealedPages = uniquePageIndexes([...currentRevealedPages, nextHiddenPageIndex]);
+    const nextRevealedPages = uniquePageIndexes([...currentState.revealedPages, nextHiddenPageIndex]);
+    const allRevealed = areAllActivePagesRevealed(currentGroup, nextRevealedPages);
     dispatchIfMounted({
       type: 'SET_CURRENT_STEP',
-      stepIndex: stateRef.current.currentStepIndex,
+      stepIndex,
       revealedPages: nextRevealedPages,
-      waitingForTap: !areAllActivePagesRevealed(currentGroup, nextRevealedPages),
+      waitingForTap: !allRevealed,
     });
-    if (areAllActivePagesRevealed(currentGroup, nextRevealedPages)) {
-      dispatchIfMounted({ type: 'SHOW_RATINGS' });
+    if (allRevealed) {
+      resumeAfterStep(card, stepIndex + 1);
     }
-  }, [dispatchIfMounted]);
+  }, [dispatchIfMounted, resumeAfterStep]);
 
   const setHolding = useCallback((holding: boolean) => {
     holdingRef.current = holding;

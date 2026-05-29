@@ -1,6 +1,7 @@
 import { CARD_FILTERS, type CardFilter } from '../constants/cardFilters';
-import type { FlashcardGroup } from '../types/models';
+import type { FlashcardGroup, StudyMode } from '../types/models';
 import type { StoreData } from './persistence/localPersistence';
+import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 
 export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
 const MIN_ACTIVE_PAGE_COUNT = 2;
@@ -46,10 +47,39 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
   };
 }
 
+export function normalizeStudyMode(mode: StudyMode): StudyMode {
+  const rawMode = mode as StudyMode & {
+    isBuiltIn?: unknown;
+    builtInSourceId?: unknown;
+  };
+  const rawSourceId =
+    typeof rawMode.builtInSourceId === 'string' && isBuiltInModeSourceId(rawMode.builtInSourceId)
+      ? rawMode.builtInSourceId
+      : undefined;
+  const sourceId = rawSourceId ?? (isBuiltInModeSourceId(mode.id) ? mode.id : undefined);
+  const isBuiltIn = sourceId ? true : rawMode.isBuiltIn === true;
+
+  return {
+    id: mode.id,
+    name: mode.name,
+    steps: mode.steps,
+    isBuiltIn,
+    ...(sourceId ? { builtInSourceId: sourceId } : {}),
+  };
+}
+
+export function normalizeStudyModes(modes: StudyMode[]): StudyMode[] {
+  const normalizedModes = modes.map(normalizeStudyMode);
+  const existingIds = new Set(normalizedModes.map((mode) => mode.id));
+  const missingBuiltIns = createSeedModes().filter((mode) => !existingIds.has(mode.id));
+
+  return [...normalizedModes, ...missingBuiltIns];
+}
+
 export function normalizeStoreData(data: StoreData): StoreData {
   return {
     groups: data.groups.map(normalizeGroup),
-    studyModes: data.studyModes,
+    studyModes: normalizeStudyModes(data.studyModes),
     activityHeatmap: data.activityHeatmap,
   };
 }

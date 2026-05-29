@@ -7,6 +7,7 @@ import {
   getNextHiddenPageIndex,
   uniquePageIndexes,
 } from '../sessionUtils';
+import { stepSummary } from '../../../settings/studyModeUtils';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
@@ -94,6 +95,19 @@ export async function runTests() {
   });
   assertArrayEqual(revealed.revealedPages, [0, 1, 2], 'REVEAL_PAGES sets revealedPages');
 
+  const revealedOne = reduce(
+    { ...INITIAL_STUDY_SESSION_STATE, revealedPages: [0, 2] },
+    { type: 'REVEAL_PAGE', stepIndex: 3, pageIndex: 1 },
+  );
+  assertArrayEqual(revealedOne.revealedPages, [0, 1, 2], 'REVEAL_PAGE adds page, dedupes and sorts');
+  assertEqual(revealedOne.currentStepIndex, 3, 'REVEAL_PAGE sets stepIndex');
+
+  const revealedDup = reduce(
+    { ...INITIAL_STUDY_SESSION_STATE, revealedPages: [0, 1] },
+    { type: 'REVEAL_PAGE', stepIndex: 1, pageIndex: 1 },
+  );
+  assertArrayEqual(revealedDup.revealedPages, [0, 1], 'REVEAL_PAGE is idempotent for revealed page');
+
   const ratings = reduce(
     { ...INITIAL_STUDY_SESSION_STATE, waitingForTap: true },
     { type: 'SHOW_RATINGS' },
@@ -148,6 +162,15 @@ export async function runTests() {
     areAllActivePagesRevealed(makeGroup(5, 1), []),
     true,
     'areAllActivePagesRevealed true for single active page (0 implicit)',
+  );
+
+  // --- stepSummary: new tap/rate step types ---
+  const fakeT = ((key: string) => key) as Parameters<typeof stepSummary>[1];
+  assertEqual(stepSummary({ type: 'rate' }, fakeT), 'step.rate', 'stepSummary maps rate step');
+  assertEqual(
+    stepSummary({ type: 'reveal_on_tap' }, fakeT),
+    'step.reveal_on_tap',
+    'stepSummary maps reveal_on_tap step',
   );
 
   console.log('Study session state tests passed');

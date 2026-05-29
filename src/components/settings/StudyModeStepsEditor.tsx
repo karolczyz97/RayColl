@@ -12,6 +12,7 @@ interface Props {
   moveStep: (mode: StudyMode, index: number, dir: -1 | 1) => void;
   deleteStep: (mode: StudyMode, index: number) => void;
   addStepToMode: (mode: StudyMode) => void;
+  onResetMode: (mode: StudyMode) => void;
   t: TranslationFn;
   stepSummary: (step: ModeStep, t: TranslationFn) => string;
 }
@@ -22,6 +23,7 @@ export function StudyModeStepsEditor({
   moveStep,
   deleteStep,
   addStepToMode,
+  onResetMode,
   t,
   stepSummary,
 }: Props) {
@@ -42,51 +44,58 @@ export function StudyModeStepsEditor({
               <List.Item
                 style={styles.listItem}
                 title={`${index + 1}. ${stepSummary(step, t)}`}
-                right={() =>
-                  !isDefaultMode ? (
-                    <View style={styles.stepControls}>
-                      <IconButton
-                        icon="arrow-up"
-                        size={16}
-                        style={styles.stepControlBtn}
-                        onPress={() => moveStep(activeMode, index, -1)}
-                        disabled={index === 0}
-                        accessibilityLabel={`Move step ${index + 1} up`}
-                      />
-                      <IconButton
-                        icon="arrow-down"
-                        size={16}
-                        style={styles.stepControlBtn}
-                        onPress={() => moveStep(activeMode, index, 1)}
-                        disabled={index === activeMode.steps.length - 1}
-                        accessibilityLabel={`Move step ${index + 1} down`}
-                      />
-                      <IconButton
-                        icon="delete"
-                        size={16}
-                        style={styles.stepControlBtn}
-                        iconColor={theme.colors.error}
-                        onPress={() => deleteStep(activeMode, index)}
-                        accessibilityLabel={`Delete step ${index + 1}`}
-                      />
-                    </View>
-                  ) : undefined
-                }
+                right={() => (
+                  <View style={styles.stepControls}>
+                    <IconButton
+                      icon="arrow-up"
+                      size={16}
+                      style={styles.stepControlBtn}
+                      onPress={() => moveStep(activeMode, index, -1)}
+                      disabled={index === 0}
+                      accessibilityLabel={`Move step ${index + 1} up`}
+                    />
+                    <IconButton
+                      icon="arrow-down"
+                      size={16}
+                      style={styles.stepControlBtn}
+                      onPress={() => moveStep(activeMode, index, 1)}
+                      disabled={index === activeMode.steps.length - 1}
+                      accessibilityLabel={`Move step ${index + 1} down`}
+                    />
+                    <IconButton
+                      icon="delete"
+                      size={16}
+                      style={styles.stepControlBtn}
+                      iconColor={theme.colors.error}
+                      onPress={() => deleteStep(activeMode, index)}
+                      accessibilityLabel={`Delete step ${index + 1}`}
+                    />
+                  </View>
+                )}
               />
             </View>
           ))}
         </View>
-        {!isDefaultMode && (
+        <View style={styles.footer}>
           <Button
             icon="plus"
             mode="text"
             onPress={() => addStepToMode(activeMode)}
-            style={styles.addStepButton}
             accessibilityLabel="Add step"
           >
             {t('settings.add_step_btn')}
           </Button>
-        )}
+          {isDefaultMode && (
+            <Button
+              icon="restore"
+              mode="text"
+              onPress={() => onResetMode(activeMode)}
+              accessibilityLabel="Reset mode to default"
+            >
+              {t('settings.reset_mode_btn')}
+            </Button>
+          )}
+        </View>
     </SectionCard>
   );
 }
@@ -109,8 +118,11 @@ const styles = StyleSheet.create({
   stepControlBtn: {
     margin: 0,
   },
-  addStepButton: {
-    alignSelf: 'flex-start',
+  footer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: TOKENS.spacing.sm,
   },
 });

@@ -67,6 +67,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     closeCreateModeDialog,
     deleteStep,
     addStepToMode,
+    resetMode,
     handleBack,
   } = controller;
 
@@ -88,6 +89,16 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
       </AnimatedSection>
 
       <AnimatedSection index={1}>
+        <SectionCard>
+          <StudyScopeSection
+            studyFilter={activeGroup.studyFilter}
+            onFilterChange={onFilterChange}
+            t={t}
+          />
+        </SectionCard>
+      </AnimatedSection>
+
+      <AnimatedSection index={2}>
         <SectionCard title={t('settings.pages_config')}>
           <PageConfigEditor
             mode="settings"
@@ -115,16 +126,6 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
 
   const rightColumnContent = (
     <>
-      <AnimatedSection index={2}>
-        <SectionCard>
-          <StudyScopeSection
-            studyFilter={activeGroup.studyFilter}
-            onFilterChange={onFilterChange}
-            t={t}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
       <AnimatedSection index={3}>
         <SectionCard>
           <StudyModeSelector
@@ -145,6 +146,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             moveStep={moveStep}
             deleteStep={deleteStep}
             addStepToMode={addStepToMode}
+            onResetMode={resetMode}
             t={t}
             stepSummary={stepSummary}
           />

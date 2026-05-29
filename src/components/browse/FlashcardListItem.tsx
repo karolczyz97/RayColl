@@ -73,7 +73,7 @@ export function FlashcardListItem({
       : t('browse.show_hidden_pages');
 
   return (
-    <AppCard style={styles.card}>
+    <AppCard style={styles.card} mode="elevated">
       <AppCard.Content style={styles.cardContent}>
         {displayPages.map((page, i) => {
           const isHidden = i >= activeCount;

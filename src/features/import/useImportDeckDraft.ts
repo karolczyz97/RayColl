@@ -235,11 +235,12 @@ export function useImportDeckDraft() {
 
         if (fileContent) {
           setImportError('');
-          if (asset.name) {
-            const lastDot = asset.name.lastIndexOf('.');
-            const nameWithoutExt = lastDot !== -1 ? asset.name.substring(0, lastDot) : asset.name;
-            setName(nameWithoutExt);
+
+          const baseName = asset.name?.replace(/\.[^/.]+$/, '').trim();
+          if (baseName) {
+            setName(baseName);
           }
+
           const fileLines = fileContent.split('\n');
           const fileLimited = fileLines.length > IMPORT_LINE_LIMIT;
           const safeFileContent = fileLimited

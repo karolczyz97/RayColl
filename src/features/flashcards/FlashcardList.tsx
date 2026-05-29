@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
@@ -8,6 +8,8 @@ import { FlashcardListItem } from '../../components/browse/FlashcardListItem';
 import { getVisiblePageNames } from '../../store/selectors/pages';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { TOKENS } from '../../theme/tokens';
+
+type FlashcardRow = Flashcard | { id: string; placeholder: true };
 
 interface FlashcardListProps {
   cards: Flashcard[];
@@ -46,6 +48,15 @@ export function FlashcardList({
   const { useTwoColumnLayout } = useResponsiveLayout();
   const numColumns = useTwoColumnLayout ? 2 : 1;
 
+  // Pad an odd card count with an invisible cell so the lone last card keeps
+  // the same width as paired cards instead of stretching toward the center.
+  const data = useMemo<FlashcardRow[]>(() => {
+    if (numColumns === 2 && cards.length % 2 === 1) {
+      return [...cards, { id: '__spacer__', placeholder: true }];
+    }
+    return cards;
+  }, [cards, numColumns]);
+
   const ItemSeparator = useCallback(
     () => <View style={styles.itemSeparator} />,
     [],
@@ -65,10 +76,6 @@ export function FlashcardList({
       </View>
     ) : null;
 
-  const data = numColumns > 1 && cards.length % 2 !== 0
-    ? [...cards, { id: 'empty-dummy-cell', pages: [], srsState: {} as any }]
-    : cards;
-
   return (
     <FlatList
       key={`flashcard-list-${numColumns}`}
@@ -78,8 +85,8 @@ export function FlashcardList({
       columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
       ItemSeparatorComponent={ItemSeparator}
       renderItem={({ item }) => {
-        if (item.id === 'empty-dummy-cell') {
-          return <View style={numColumns > 1 ? styles.columnCell : undefined} />;
+        if ('placeholder' in item) {
+          return <View style={styles.columnCell} />;
         }
         return (
           <View style={numColumns > 1 ? styles.columnCell : undefined}>

@@ -152,6 +152,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       addStudyMode: actions.addStudyMode,
       updateStudyMode: actions.updateStudyMode,
       deleteStudyMode: actions.deleteStudyMode,
+      resetStudyMode: actions.resetStudyMode,
       resetToDefault: actions.resetToDefault,
       recordActivity: actions.recordActivity,
       getDueCards: actions.getDueCards,

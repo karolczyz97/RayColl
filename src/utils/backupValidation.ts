@@ -65,6 +65,9 @@ function assertStudyModeStep(step: unknown, modeId: string, index: number): void
         );
       }
       return;
+    case 'reveal_on_tap':
+    case 'rate':
+      return;
     default:
       throw new Error(`Step ${index + 1} in study mode ${modeId} has an unsupported type.`);
   }
@@ -165,6 +168,12 @@ export function validateBackupData(data: unknown): data is BackupData {
     }
     if (!Array.isArray(mode.steps)) {
       throw new Error(`Study mode with ID ${modeId} must have a "steps" array.`);
+    }
+    if (mode.isBuiltIn !== undefined && typeof mode.isBuiltIn !== 'boolean') {
+      throw new Error(`Study mode with ID ${modeId} has an invalid isBuiltIn flag.`);
+    }
+    if (mode.builtInSourceId !== undefined && typeof mode.builtInSourceId !== 'string') {
+      throw new Error(`Study mode with ID ${modeId} has an invalid builtInSourceId.`);
     }
     mode.steps.forEach((step, index) => {
       assertStudyModeStep(step, modeId, index);

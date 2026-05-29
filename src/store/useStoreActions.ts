@@ -288,6 +288,25 @@ export function useStoreActionsCore({
     [commitStudyModes, studyModesRef],
   );
 
+  const resetStudyMode = useCallback(
+    (modeId: string) => {
+      const currentMode = studyModesRef.current.find((mode) => mode.id === modeId);
+      const sourceId = currentMode?.builtInSourceId;
+      if (!currentMode?.isBuiltIn || !sourceId) return;
+
+      const seed = createSeedModes().find((mode) => mode.id === sourceId);
+      if (!seed) return;
+
+      commitStudyModes(updateStudyModeAction(studyModesRef.current, {
+        ...seed,
+        id: currentMode.id,
+        isBuiltIn: true,
+        builtInSourceId: sourceId,
+      }));
+    },
+    [commitStudyModes, studyModesRef],
+  );
+
   const resetToDefault = useCallback(() => {
     const groupsSnapshot = createSeedGroups();
     const modesSnapshot = createSeedModes();
@@ -371,6 +390,7 @@ export function useStoreActionsCore({
     addStudyMode,
     updateStudyMode,
     deleteStudyMode,
+    resetStudyMode,
     resetToDefault,
     recordActivity,
     getDueCards,

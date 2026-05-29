@@ -30,7 +30,6 @@ export function ImportScreen() {
 
   const renderConfigCard = () => (
     <ImportConfigCard
-      style={styles.card}
       sepKey={draft.sepKey}
       onSepKeyChange={draft.handleSepKeyChange}
       customSep={draft.customSep}
@@ -59,7 +58,7 @@ export function ImportScreen() {
   );
 
   const topCards = (
-    <View style={styles.topCardsContainer}>
+    <>
       {isExpanded ? (
         <View style={styles.row}>
           <AnimatedSection index={0} style={styles.column}>
@@ -108,7 +107,7 @@ export function ImportScreen() {
           />
         </AnimatedSection>
       ) : null}
-    </View>
+    </>
   );
 
   return (
@@ -182,13 +181,6 @@ const styles = StyleSheet.create({
     gap: TOKENS.spacing.xl,
     width: '100%',
     alignItems: 'stretch',
-  },
-  card: {
-    flex: 1,
-  },
-  topCardsContainer: {
-    gap: TOKENS.spacing.lg,
-    width: '100%',
   },
   column: {
     flex: 1,

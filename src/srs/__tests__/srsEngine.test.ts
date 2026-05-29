@@ -287,6 +287,25 @@ const normalizedStoreData = normalizeStoreData(normalizableBackup);
 assertEqual(normalizedStoreData.groups[0].activePageCount, 5);
 assertEqual(normalizedStoreData.groups[0].pageNames.length, 5);
 assertEqual(normalizedStoreData.groups[0].pageLanguages.length, 5);
+const normalizedEditedDefaultMode = normalizeStoreData({
+  groups: [],
+  studyModes: [
+    {
+      id: 'classic',
+      name: 'Edited Classic',
+      steps: [{ type: 'wait', ms: 250 }],
+    },
+  ],
+  activityHeatmap: {},
+} as unknown as Parameters<typeof normalizeStoreData>[0]);
+assertEqual(normalizedEditedDefaultMode.studyModes[0].isBuiltIn, true);
+assertEqual(normalizedEditedDefaultMode.studyModes[0].builtInSourceId, 'classic');
+assertEqual(normalizedEditedDefaultMode.studyModes[0].name, 'Edited Classic');
+assertDeepEqual(normalizedEditedDefaultMode.studyModes[0].steps, [{ type: 'wait', ms: 250 }]);
+assertOk(
+  normalizedEditedDefaultMode.studyModes.some((mode) => mode.id === 'listen-speak'),
+  'Normalization should add missing built-in modes without replacing edited defaults',
+);
 console.log('✓ Page config and selector tests passed');
 
 // ==========================================

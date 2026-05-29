@@ -41,6 +41,7 @@ export interface FlashcardStore {
   addStudyMode: (mode: StudyMode) => void;
   updateStudyMode: (mode: StudyMode) => void;
   deleteStudyMode: (modeId: string) => void;
+  resetStudyMode: (modeId: string) => void;
   resetToDefault: () => void;
   recordActivity: () => void;
   getDueCards: (groupId: string) => Flashcard[];

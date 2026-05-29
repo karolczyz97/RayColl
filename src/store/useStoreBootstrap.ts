@@ -9,7 +9,7 @@ import { createSeedModes } from './seed/seedModes';
 import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
 import type { StoreData } from './persistence/localPersistence';
-import { normalizeStoreData } from './storeDataNormalization';
+import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -92,11 +92,7 @@ export function useStoreBootstrap({
             loadedGroups = createSeedGroups();
           }
 
-          const defaultModes = createSeedModes();
-          const customModes = loadedModes.filter(
-            (mode) => mode.id !== 'classic' && mode.id !== 'listen-speak',
-          );
-          loadedModes = [...defaultModes, ...customModes];
+          loadedModes = normalizeStudyModes(loadedModes);
 
           await setSeedVersion(SEED_VERSION).catch((err) => {
             setLastPersistenceError(getErrorMessage(err));

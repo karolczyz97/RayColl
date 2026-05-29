@@ -36,7 +36,7 @@ export async function runTests() {
           activePageCount: 2,
         },
       ],
-      studyModes: [{ id: 'custom-mode', name: 'Custom', steps: [] }],
+      studyModes: [{ id: 'custom-mode', name: 'Custom', steps: [], isBuiltIn: false }],
       activityHeatmap: { '2026-05-27': 3 },
     },
     {
@@ -52,7 +52,15 @@ export async function runTests() {
           activePageCount: 2,
         },
       ],
-      studyModes: [{ id: 'classic', name: 'Classic', steps: [] }],
+      studyModes: [
+        {
+          id: 'classic',
+          name: 'Classic',
+          steps: [],
+          isBuiltIn: true,
+          builtInSourceId: 'classic',
+        },
+      ],
       activityHeatmap: { '2026-05-27': 1 },
     },
   );

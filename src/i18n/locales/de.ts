@@ -104,6 +104,7 @@ export const de: Record<string, string> = {
   'settings.which_cards': 'Welche Karten lernen',
   'settings.mode_steps': 'Schritte des Modus "{name}"',
   'settings.add_step_btn': 'Schritt hinzufügen',
+  'settings.reset_mode_btn': 'Auf Standard zurücksetzen',
   'settings.create_mode_btn': 'Neuen Modus erstellen',
   'settings.new_mode_name': 'Modusname',
   'settings.save_mode_btn': 'Modus speichern',
@@ -149,7 +150,8 @@ export const de: Record<string, string> = {
   'step.dynamic_pause': 'Dynamische Pause (Seite {index}, +{pause}ms)',
   'step.wait': 'Warte {ms}ms',
   'step.listen_and_branch': 'STT Seite {index} (Schwellenwert {threshold}%)',
-  'step.rate_knowledge': 'Wissen bewerten',
+  'step.reveal_on_tap': 'Nächste Seite per Tippen aufdecken',
+  'step.rate': 'Wissen bewerten',
 
   // Step types (labels)
   'step.type.show_page': 'Seite zeigen',
@@ -157,7 +159,8 @@ export const de: Record<string, string> = {
   'step.type.dynamic_pause': 'Dynamische Pause',
   'step.type.wait': 'Warten (ms)',
   'step.type.listen_and_branch': 'Sprache überprüfen (STT)',
-  'step.type.rate_knowledge': 'Wissen bewerten (Bewertungsknöpfe anzeigen)',
+  'step.type.reveal_on_tap': 'Per Tippen aufdecken',
+  'step.type.rate': 'Wissen bewerten',
 
   // Study Filters
   'filter.new_review': 'Neue + Fällige zur Überprüfung',

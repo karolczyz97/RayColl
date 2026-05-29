@@ -12,7 +12,7 @@ import { TOKENS } from '../theme/tokens';
 
 type PaperCardProps = ComponentProps<typeof Card>;
 
-function AppCardBase({ style, mode = 'elevated', ...props }: PaperCardProps) {
+function AppCardBase({ style, ...props }: PaperCardProps) {
   const [hovered, setHovered] = useState(false);
   const theme = useTheme();
   const scale = useSharedValue(1);
@@ -87,7 +87,7 @@ function AppCardBase({ style, mode = 'elevated', ...props }: PaperCardProps) {
       style={layoutStyle}
     >
       <Animated.View style={[styles.hoverLayer, innerFlexStyle, animatedStyle]}>
-        <Card mode={mode} {...props} style={cardStyle} />
+        <Card {...props} style={cardStyle} />
       </Animated.View>
     </Pressable>
   );

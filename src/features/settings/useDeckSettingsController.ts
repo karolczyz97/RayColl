@@ -9,8 +9,6 @@ import { uid } from '../../utils/id';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { stepSummary } from './studyModeUtils';
 
-const DEFAULT_MODE_IDS = ['classic', 'listen-speak'];
-
 export function useDeckSettingsController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { t } = useI18n();
@@ -74,7 +72,7 @@ export function useDeckSettingsController() {
   };
 
   const activeMode = store.studyModes.find((mode) => mode.id === activeGroup?.activeModeId) ?? null;
-  const isDefaultMode = DEFAULT_MODE_IDS.includes(activeMode?.id || '');
+  const isDefaultMode = Boolean(activeMode?.isBuiltIn && activeMode.builtInSourceId);
   const pageCount = activeGroup?.activePageCount ?? 0;
 
   const adjustPageCount = (count: number) => {
@@ -130,6 +128,10 @@ export function useDeckSettingsController() {
     setStepDialogOpen(true);
   };
 
+  const resetMode = (mode: StudyMode) => {
+    store.resetStudyMode(mode.id);
+  };
+
   const confirmAddStep = () => {
     let step: ModeStep;
     const safePageIdx = Math.max(0, Math.min(pageCount - 1, Math.trunc(newPageIdx)));
@@ -149,8 +151,11 @@ export function useDeckSettingsController() {
       case 'listen_and_branch':
         step = { type: 'listen_and_branch', pageIndex: safePageIdx, successThreshold: newThreshold };
         break;
-      case 'rate_knowledge':
-        step = { type: 'rate_knowledge' };
+      case 'reveal_on_tap':
+        step = { type: 'reveal_on_tap' };
+        break;
+      case 'rate':
+        step = { type: 'rate' };
         break;
       default:
         return;
@@ -171,7 +176,12 @@ export function useDeckSettingsController() {
 
   const saveCustomMode = () => {
     if (!activeGroup || !newModeName.trim() || customSteps.length === 0) return;
-    const mode: StudyMode = { id: uid(), name: newModeName.trim(), steps: customSteps };
+    const mode: StudyMode = {
+      id: uid(),
+      name: newModeName.trim(),
+      steps: customSteps,
+      isBuiltIn: false,
+    };
     store.addStudyMode(mode);
     store.updateGroup({ ...activeGroup, activeModeId: mode.id });
     closeCreateModeDialog();
@@ -188,11 +198,12 @@ export function useDeckSettingsController() {
   const stepLabels = useMemo<Record<string, string>>(
     () => ({
       show_page: t('step.type.show_page'),
+      reveal_on_tap: t('step.type.reveal_on_tap'),
+      rate: t('step.type.rate'),
       speak_page: t('step.type.speak_page'),
       dynamic_pause: t('step.type.dynamic_pause'),
       wait: t('step.type.wait'),
       listen_and_branch: t('step.type.listen_and_branch'),
-      rate_knowledge: t('step.type.rate_knowledge'),
     }),
     [t],
   );
@@ -262,5 +273,6 @@ export function useDeckSettingsController() {
     closeCreateModeDialog,
     deleteStep,
     addStepToMode,
+    resetMode,
   };
 }

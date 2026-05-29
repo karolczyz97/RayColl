@@ -1,4 +1,5 @@
 import type { StudySessionState, SessionAction } from './sessionTypes';
+import { uniquePageIndexes } from './sessionUtils';
 
 export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
   status: 'idle',
@@ -63,6 +64,12 @@ export function sessionReducer(
         ...state,
         revealedPages: action.revealedPages,
         waitingForTap: action.waitingForTap ?? state.waitingForTap,
+      };
+    case 'REVEAL_PAGE':
+      return {
+        ...state,
+        currentStepIndex: action.stepIndex,
+        revealedPages: uniquePageIndexes([...state.revealedPages, action.pageIndex]),
       };
     case 'SHOW_RATINGS':
       return {
