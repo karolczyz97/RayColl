@@ -13,6 +13,15 @@
         "buildType": "apk"
       }
     },
+    "preview-pixel": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "ABI_FILTER": "arm64-v8a"
+      }
+    },
     "production": {}
   },
   "submit": {
