@@ -57,6 +57,7 @@ function InnerLayout() {
   const { isI18nLoading } = useI18n();
   const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
+  const [isIconFontReady, setIsIconFontReady] = React.useState(Platform.OS !== 'web');
 
   const theme = React.useMemo(() => {
     return createAppTheme({
@@ -71,23 +72,38 @@ function InnerLayout() {
       return;
     }
 
-    MaterialCommunityIcons.loadFont().catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn('MaterialCommunityIcons font preload failed:', message);
-    });
+    let cancelled = false;
+
+    MaterialCommunityIcons.loadFont()
+      .then(() => {
+        if (!cancelled) {
+          setIsIconFontReady(true);
+        }
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('MaterialCommunityIcons font preload failed:', message);
+        if (!cancelled) {
+          setIsIconFontReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Hide the splash screen only after settings, translations, and fonts are loaded.
   React.useEffect(() => {
-    const isReady = !isI18nLoading && !isThemeLoading;
+    const isReady = !isI18nLoading && !isThemeLoading && isIconFontReady;
     if (isReady) {
       SplashScreen.hideAsync().catch((err: unknown) => {
         logSplashScreenError('hide', err);
       });
     }
-  }, [isI18nLoading, isThemeLoading]);
+  }, [isI18nLoading, isThemeLoading, isIconFontReady]);
 
-  if (isI18nLoading || isThemeLoading) {
+  if (isI18nLoading || isThemeLoading || !isIconFontReady) {
     return null; // Let the splash screen stay visible
   }
 
