@@ -16,6 +16,7 @@ import { AnimatedSection } from '../components/layout/AnimatedSection';
 import { LoadingState } from '../components/layout/LoadingState';
 import { SyncStatusBanner } from '../components/feedback/SyncStatusBanner';
 import { ROUTES } from '../constants/routes';
+import { getEnterDelay } from '../theme/motion';
 
 export default function Dashboard() {
   const store = useFlashcardStore();
@@ -75,7 +76,7 @@ export default function Dashboard() {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {/* Quick Statistics Banner */}
           {decksCount > 0 && (
-            <AnimatedSection index={2}>
+            <AnimatedSection order={1}>
               <DashboardStats
                 decksCount={decksCount}
                 cardsCount={cardsCount}
@@ -86,22 +87,17 @@ export default function Dashboard() {
           )}
 
           {decksCount === 0 ? (
-            <AnimatedSection index={3}>
+            <AnimatedSection order={2}>
               <EmptyDashboardState />
             </AnimatedSection>
           ) : (
-            <AnimatedSection index={3}>
-              <DeckGrid
-                groups={groups}
-                onModeChange={handleModeChange}
-              />
-            </AnimatedSection>
+            <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} />
           )}
         </ScrollView>
       </View>
 
       {/* Import FAB */}
-      <Animated.View entering={ZoomIn.springify().delay(400)} style={styles.fabWrapper}>
+      <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(3))} style={styles.fabWrapper}>
         <FAB
           icon="plus"
           style={styles.fab}

@@ -75,9 +75,13 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     return null;
   }
 
+  const sectionOrder = isExpanded
+    ? { name: 0, pageConfig: 2, scope: 1, modeEditor: 1, modeSelector: 0 }
+    : { name: 0, pageConfig: 2, scope: 1, modeEditor: 4, modeSelector: 3 };
+
   const leftColumnContent = (
     <>
-      <AnimatedSection index={0}>
+      <AnimatedSection order={sectionOrder.name}>
         <SectionCard>
           <DeckNameSection
             deckName={deckName}
@@ -88,7 +92,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={1}>
+      <AnimatedSection order={sectionOrder.scope}>
         <SectionCard>
           <StudyScopeSection
             studyFilter={activeGroup.studyFilter}
@@ -98,7 +102,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={2}>
+      <AnimatedSection order={sectionOrder.pageConfig}>
         <SectionCard title={t('settings.pages_config')}>
           <PageConfigEditor
             mode="settings"
@@ -126,7 +130,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
 
   const rightColumnContent = (
     <>
-      <AnimatedSection index={3}>
+      <AnimatedSection order={sectionOrder.modeSelector}>
         <SectionCard>
           <StudyModeSelector
             activeModeId={activeGroup.activeModeId}
@@ -139,7 +143,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
       </AnimatedSection>
 
       {activeMode ? (
-        <AnimatedSection index={4}>
+        <AnimatedSection order={sectionOrder.modeEditor}>
           <StudyModeStepsEditor
             activeMode={activeMode}
             isDefaultMode={isDefaultMode}

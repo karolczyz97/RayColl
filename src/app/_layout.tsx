@@ -1,5 +1,6 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { ExperimentalStack as Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
@@ -13,6 +14,38 @@ import { createAppTheme } from '../theme/createAppTheme';
 function logSplashScreenError(action: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   console.warn(`Splash screen ${action} failed:`, message);
+}
+
+interface PaperIconRendererProps {
+  allowFontScaling?: boolean;
+  color?: string;
+  direction: 'ltr' | 'rtl';
+  name: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  size: number;
+  testID?: string;
+}
+
+function renderPaperIcon({
+  allowFontScaling,
+  color,
+  direction,
+  name,
+  size,
+  testID,
+}: PaperIconRendererProps) {
+  return (
+    <MaterialCommunityIcons
+      allowFontScaling={allowFontScaling}
+      color={color}
+      name={name}
+      size={size}
+      style={{
+        lineHeight: size,
+        transform: [{ scaleX: direction === 'rtl' ? -1 : 1 }],
+      }}
+      testID={testID}
+    />
+  );
 }
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -32,6 +65,17 @@ function InnerLayout() {
       materialColors,
     });
   }, [isDark, useSystemColors, materialColors]);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') {
+      return;
+    }
+
+    MaterialCommunityIcons.loadFont().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('MaterialCommunityIcons font preload failed:', message);
+    });
+  }, []);
 
   // Hide the splash screen only after settings, translations, and fonts are loaded.
   React.useEffect(() => {
@@ -62,7 +106,7 @@ function InnerLayout() {
   );
 
   return (
-    <PaperProvider theme={theme}>
+    <PaperProvider theme={theme} settings={{ icon: renderPaperIcon }}>
       {Platform.OS === 'web' ? (
         <View style={[styles.webOuter, { backgroundColor: theme.colors.surfaceVariant }]}>
           <View

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { FAB, Text, useTheme } from 'react-native-paper';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
@@ -8,6 +9,7 @@ import { BrowseFilterChips } from '../../components/browse/BrowseFilterChips';
 import type { BrowseFilter } from '../../constants/browseFilters';
 import { BrowseSearchBar } from '../../components/browse/BrowseSearchBar';
 import { GroupNotFound } from '../../components/GroupNotFound';
+import { AnimatedSection } from '../../components/layout/AnimatedSection';
 import { AppScreen } from '../../components/layout/AppScreen';
 import { LoadingState } from '../../components/layout/LoadingState';
 import { SegmentedProgressBar } from '../../components/SegmentedProgressBar';
@@ -15,6 +17,7 @@ import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
 import { getCardCategory } from '../../srs/srsEngine';
 import { computeCardStats } from '../../store/selectors/stats';
+import { getEnterDelay } from '../../theme/motion';
 import { TOKENS } from '../../theme/tokens';
 import type { Flashcard } from '../../types/models';
 import { FlashcardList } from '../flashcards/FlashcardList';
@@ -138,37 +141,49 @@ export function BrowseScreen() {
       scroll={false}
       contentStyle={styles.screenContent}
     >
-      <View style={styles.header}>
-        <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>
-          {t('dashboard.cards_count', { count: stats.total })}
-        </Text>
-      </View>
+      <AnimatedSection order={0}>
+        <View style={styles.header}>
+          <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>
+            {t('dashboard.cards_count', { count: stats.total })}
+          </Text>
+        </View>
+      </AnimatedSection>
 
-      <View style={styles.progressBarSection}>
-        <SegmentedProgressBar stats={stats} showLegend />
-      </View>
+      <AnimatedSection order={1}>
+        <View style={styles.progressBarSection}>
+          <SegmentedProgressBar stats={stats} showLegend />
+        </View>
+      </AnimatedSection>
 
-      <BrowseSearchBar search={search} setSearch={setSearch} t={t} />
+      <AnimatedSection order={2}>
+        <BrowseSearchBar search={search} setSearch={setSearch} t={t} />
+      </AnimatedSection>
 
-      <BrowseFilterChips
-        browseFilter={browseFilter}
-        setBrowseFilter={setBrowseFilter}
-        stats={stats}
-        t={t}
-      />
+      <AnimatedSection order={3}>
+        <BrowseFilterChips
+          browseFilter={browseFilter}
+          setBrowseFilter={setBrowseFilter}
+          stats={stats}
+          t={t}
+        />
+      </AnimatedSection>
 
-      <FlashcardList
-        cards={filtered}
-        group={activeGroup}
-        onStartEdit={startEdit}
-        onDelete={setDeleteCardId}
-        t={t}
-        style={styles.list}
-        contentContainerStyle={styles.listContainer}
-        emptyLabel={t('browse.no_cards')}
-      />
+      <AnimatedSection order={4} style={styles.listSection}>
+        <FlashcardList
+          cards={filtered}
+          group={activeGroup}
+          onStartEdit={startEdit}
+          onDelete={setDeleteCardId}
+          t={t}
+          style={styles.list}
+          contentContainerStyle={styles.listContainer}
+          emptyLabel={t('browse.no_cards')}
+        />
+      </AnimatedSection>
 
-      <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />
+      <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(5))}>
+        <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />
+      </Animated.View>
 
       <DeleteFlashcardDialog
         visible={!!deleteCardId}
@@ -213,6 +228,10 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  listSection: {
+    flex: 1,
+    minHeight: 0,
   },
   listContainer: {
     gap: TOKENS.spacing.lg,

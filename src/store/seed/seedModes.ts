@@ -1,13 +1,5 @@
 import { StudyMode } from '../../types/models';
 
-export const BUILT_IN_MODE_SOURCE_IDS = ['classic', 'listen-speak'] as const;
-
-export type BuiltInModeSourceId = (typeof BUILT_IN_MODE_SOURCE_IDS)[number];
-
-export function isBuiltInModeSourceId(value: string): value is BuiltInModeSourceId {
-  return BUILT_IN_MODE_SOURCE_IDS.includes(value as BuiltInModeSourceId);
-}
-
 export function createSeedModes(): StudyMode[] {
   return [
     {
@@ -36,4 +28,12 @@ export function createSeedModes(): StudyMode[] {
   ];
 }
 
-export const DEFAULT_MODE_IDS = BUILT_IN_MODE_SOURCE_IDS;
+export function getBuiltInModeSourceIds(): string[] {
+  return createSeedModes().map((mode) => mode.builtInSourceId ?? mode.id);
+}
+
+export function isBuiltInModeSourceId(value: string): boolean {
+  return getBuiltInModeSourceIds().includes(value);
+}
+
+export const DEFAULT_MODE_IDS = getBuiltInModeSourceIds();

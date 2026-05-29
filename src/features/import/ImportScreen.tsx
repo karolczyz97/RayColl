@@ -28,6 +28,10 @@ export function ImportScreen() {
     return <LoadingState />;
   }
 
+  const topCardsOrder = isExpanded
+    ? { config: 0, preview: 1, source: 0 }
+    : { config: 1, preview: 2, source: 0 };
+
   const renderConfigCard = () => (
     <ImportConfigCard
       sepKey={draft.sepKey}
@@ -61,7 +65,7 @@ export function ImportScreen() {
     <>
       {isExpanded ? (
         <View style={styles.row}>
-          <AnimatedSection index={0} style={styles.column}>
+          <AnimatedSection order={topCardsOrder.source} style={styles.column}>
             <ImportSourceCard
               name={draft.name}
               rawText={draft.rawText}
@@ -71,13 +75,13 @@ export function ImportScreen() {
               t={t}
             />
           </AnimatedSection>
-          <AnimatedSection index={1} style={styles.column}>
+          <AnimatedSection order={topCardsOrder.config} style={styles.column}>
             {renderConfigCard()}
           </AnimatedSection>
         </View>
       ) : (
         <View style={styles.singleColumn}>
-          <AnimatedSection index={0}>
+          <AnimatedSection order={topCardsOrder.source}>
             <ImportSourceCard
               name={draft.name}
               rawText={draft.rawText}
@@ -87,12 +91,12 @@ export function ImportScreen() {
               t={t}
             />
           </AnimatedSection>
-          <AnimatedSection index={1}>{renderConfigCard()}</AnimatedSection>
+          <AnimatedSection order={topCardsOrder.config}>{renderConfigCard()}</AnimatedSection>
         </View>
       )}
 
       {draft.cards.length > 0 ? (
-        <AnimatedSection index={2} style={styles.previewSection}>
+        <AnimatedSection order={topCardsOrder.preview} style={styles.previewSection}>
           <ImportPreviewSection
             cards={draft.cards}
             group={draft.previewGroup}

@@ -119,7 +119,7 @@ export function AppSettingsScreen() {
         t={t}
       />
 
-      <AnimatedSection index={1}>
+      <AnimatedSection order={0}>
         <SectionCard title={t('app_settings.lang')}>
           <AppSelect
             value={language}
@@ -134,7 +134,7 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={2}>
+      <AnimatedSection order={1}>
         <SectionCard title={t('app_settings.theme')}>
           <SegmentedButtons
             value={themePref}
@@ -157,7 +157,7 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={3}>
+      <AnimatedSection order={2}>
         <SectionCard title={t('app_settings.dynamic_colors.title')}>
           <Text variant="bodyMedium" style={styles.mutedText}>
             {t('app_settings.dynamic_colors.desc')}
@@ -186,7 +186,7 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={4}>
+      <AnimatedSection order={3}>
         <SectionCard title={t('app_settings.tts_rate')}>
           <Text variant="bodyLarge" style={styles.valueText}>
             {ttsRate.toFixed(1)}x
@@ -204,7 +204,7 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={5}>
+      <AnimatedSection order={4}>
         <SectionCard title={t('app_settings.export_import')}>
           <View style={styles.actionButtonsRow}>
             <Button
@@ -227,7 +227,7 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={6}>
+      <AnimatedSection order={5}>
         <SectionCard title={t('app_settings.danger_zone')} danger>
           <Text variant="bodySmall" style={styles.mutedText}>
             {t('app_settings.reset_confirm')}

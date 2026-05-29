@@ -1,6 +1,6 @@
 export const MOTION = {
-  enterDelayStep: 80,
-  enterDelayMax: 600,
+  enterDelayStep: 70,
+  enterDelayMax: 280,
   fadeDuration: 300,
   spring: {
     damping: 18,
@@ -8,3 +8,7 @@ export const MOTION = {
     mass: 0.8,
   },
 };
+
+export function getEnterDelay(order = 0) {
+  return Math.min(Math.max(0, order) * MOTION.enterDelayStep, MOTION.enterDelayMax);
+}
