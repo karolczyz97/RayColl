@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../../i18n';
 import type { Flashcard, FlashcardGroup } from '../../../types/models';
 import { StudyStatusBanner } from './StudyStatusBanner';
@@ -58,6 +59,8 @@ export function StudyScreen({
   setHolding,
   t,
 }: StudyScreenProps) {
+  const theme = useTheme();
+
   if (sessionState.isSessionFinished || dueCards.length === 0) {
     return (
       <StudyFinishedState
@@ -79,7 +82,10 @@ export function StudyScreen({
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <StudyStatusBanner
         title={activeGroup.name}
         progress={progressPct}

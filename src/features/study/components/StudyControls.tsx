@@ -20,6 +20,8 @@ import {
 } from '../../../theme/semanticColors';
 import { TOKENS } from '../../../theme/tokens';
 
+type RatingTone = 'danger' | 'warning' | 'primary' | 'success';
+
 interface StudyControlsProps {
   isNarrow: boolean;
   hasTts: boolean;
@@ -34,6 +36,14 @@ interface StudyControlsProps {
   recognizedLabel: string;
   matchPercentLabel: string;
   onRate: (rating: number) => void;
+}
+
+interface RatingButtonProps {
+  iconName: string;
+  isNarrow: boolean;
+  label: string;
+  onPress: () => void;
+  tone: RatingTone;
 }
 
 export function StudyControls({
@@ -95,66 +105,96 @@ export function StudyControls({
           ? getWarningColor(theme)
           : getDangerColor(theme);
 
+  const getRatingButtonColors = (tone: RatingTone) => {
+    switch (tone) {
+      case 'danger':
+        return {
+          buttonColor: getDangerBgColor(theme),
+          textColor: getDangerColor(theme),
+        };
+      case 'warning':
+        return {
+          buttonColor: getWarningBgColor(theme),
+          textColor: getWarningColor(theme),
+        };
+      case 'success':
+        return {
+          buttonColor: getSuccessColor(theme),
+          textColor: theme.colors.onTertiary,
+        };
+      case 'primary':
+      default:
+        return {
+          buttonColor: undefined,
+          textColor: theme.colors.onPrimary,
+        };
+    }
+  };
+
+  const renderRatingButton = ({
+    iconName,
+    isNarrow: compactButton,
+    label,
+    onPress,
+    tone,
+  }: RatingButtonProps) => {
+    const colors = getRatingButtonColors(tone);
+    const mode = tone === 'danger' || tone === 'warning' ? 'contained-tonal' : 'contained';
+    const iconColor = colors.textColor ?? theme.colors.onPrimary;
+
+    return (
+      <Button
+        mode={mode}
+        textColor={colors.textColor}
+        buttonColor={colors.buttonColor}
+        style={styles.rateButton}
+        compact={compactButton}
+        contentStyle={compactButton ? styles.compactContent : undefined}
+        icon={
+          compactButton
+            ? undefined
+            : ({ size, color }) => <AppIcon name={iconName} size={size} color={color} />
+        }
+        onPress={onPress}
+        accessibilityLabel={label}
+      >
+        {compactButton ? <AppIcon name={iconName} size={22} color={iconColor} /> : label}
+      </Button>
+    );
+  };
+
   return (
     <View style={[styles.bottomControlZone, { height: hasTts || hasStt ? 180 : 80 }]}>
       {showRatingButtons ? (
         <Animated.View entering={FadeIn.springify()} style={styles.ratingButtonsRow}>
-          <Button
-            mode="contained-tonal"
-            textColor={getDangerColor(theme)}
-            buttonColor={getDangerBgColor(theme)}
-            style={styles.rateButton}
-            compact={isNarrow}
-            contentStyle={isNarrow ? styles.compactContent : undefined}
-            icon={({ size, color }) => <AppIcon name="replay" size={size} color={color} />}
-            onPress={() => onRate(1)}
-            accessibilityLabel={ratingLabels[0]}
-          >
-            {getButtonText('study.rating.1')}
-          </Button>
-          <Button
-            mode="contained-tonal"
-            textColor={getWarningColor(theme)}
-            buttonColor={getWarningBgColor(theme)}
-            style={styles.rateButton}
-            compact={isNarrow}
-            contentStyle={isNarrow ? styles.compactContent : undefined}
-            icon={({ size, color }) => (
-              <AppIcon name="emoticon-sad-outline" size={size} color={color} />
-            )}
-            onPress={() => onRate(2)}
-            accessibilityLabel={ratingLabels[1]}
-          >
-            {getButtonText('study.rating.2')}
-          </Button>
-          <Button
-            mode="contained"
-            style={styles.rateButton}
-            compact={isNarrow}
-            contentStyle={isNarrow ? styles.compactContent : undefined}
-            icon={({ size, color }) => (
-              <AppIcon name="emoticon-happy-outline" size={size} color={color} />
-            )}
-            onPress={() => onRate(3)}
-            accessibilityLabel={ratingLabels[2]}
-          >
-            {getButtonText('study.rating.3')}
-          </Button>
-          <Button
-            mode="contained"
-            buttonColor={getSuccessColor(theme)}
-            textColor={theme.colors.onTertiary}
-            style={styles.rateButton}
-            compact={isNarrow}
-            contentStyle={isNarrow ? styles.compactContent : undefined}
-            icon={({ size, color }) => (
-              <AppIcon name="emoticon-excited-outline" size={size} color={color} />
-            )}
-            onPress={() => onRate(4)}
-            accessibilityLabel={ratingLabels[3]}
-          >
-            {getButtonText('study.rating.4')}
-          </Button>
+          {renderRatingButton({
+            iconName: 'replay',
+            isNarrow,
+            label: getButtonText('study.rating.1') || ratingLabels[0],
+            onPress: () => onRate(1),
+            tone: 'danger',
+          })}
+          {renderRatingButton({
+            iconName: 'emoticon-sad-outline',
+            isNarrow,
+            label: getButtonText('study.rating.2') || ratingLabels[1],
+            onPress: () => onRate(2),
+            tone: 'warning',
+          })}
+          {renderRatingButton({
+            iconName: 'emoticon-happy-outline',
+            isNarrow,
+            label: getButtonText('study.rating.3') || ratingLabels[2],
+            onPress: () => onRate(3),
+            tone: 'primary',
+          })}
+          {renderRatingButton({
+            iconName: 'emoticon-excited-outline',
+            isNarrow,
+            label: getButtonText('study.rating.4') || ratingLabels[3],
+            onPress: () => onRate(4),
+            tone: 'success',
+          })}
         </Animated.View>
       ) : hasTts || hasStt ? (
         <View style={styles.feedbackContainer}>

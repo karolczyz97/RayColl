@@ -11,12 +11,11 @@ export function getSuccessBgColor(theme: MD3Theme): string {
 }
 
 export function getWarningColor(theme: MD3Theme): string {
-  // Use a vibrant warning amber based on theme mode
-  return theme.dark ? '#ffb300' : '#b86800';
+  return theme.dark ? theme.colors.primary : '#b86800';
 }
 
 export function getWarningBgColor(theme: MD3Theme): string {
-  return theme.dark ? '#4a3700' : '#ffddb3';
+  return theme.dark ? theme.colors.primaryContainer : '#ffddb3';
 }
 
 export function getDueColor(theme: MD3Theme): string {
@@ -53,7 +52,7 @@ export function getSecondaryBgColor(theme: MD3Theme): string {
 
 export function getHeatmapColor(theme: MD3Theme, count: number): string {
   if (count === 0) {
-    return theme.dark ? '#2d2d3a' : '#eaeaf0';
+    return theme.colors.surfaceVariant;
   }
   const primary = theme.colors.primary;
   // If color is hex, we can apply opacities

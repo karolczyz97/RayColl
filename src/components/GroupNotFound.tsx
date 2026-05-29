@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button } from 'react-native-paper';
+import { Text, Button, useTheme } from 'react-native-paper';
 import { useI18n } from '../i18n';
 import { TOKENS } from '../theme/tokens';
 
@@ -10,9 +10,10 @@ interface GroupNotFoundProps {
 
 export function GroupNotFound({ onBack }: GroupNotFoundProps) {
   const { t } = useI18n();
+  const theme = useTheme();
   return (
-    <View style={styles.container}>
-      <Text variant="headlineSmall" style={styles.text}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Text variant="headlineSmall" style={[styles.text, { color: theme.colors.onSurface }]}>
         {t('study.group_not_found')}
       </Text>
       <Button mode="contained" onPress={onBack}>

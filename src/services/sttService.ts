@@ -62,6 +62,30 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function normalizeRecognizedText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function combineRecognizedText(finalText: string, interimText: string): string {
+  const normalizedFinal = normalizeRecognizedText(finalText);
+  const normalizedInterim = normalizeRecognizedText(interimText);
+
+  if (!normalizedFinal) return normalizedInterim;
+  if (!normalizedInterim) return normalizedFinal;
+
+  const finalLower = normalizedFinal.toLocaleLowerCase();
+  const interimLower = normalizedInterim.toLocaleLowerCase();
+
+  if (interimLower === finalLower || interimLower.startsWith(finalLower)) {
+    return normalizedInterim;
+  }
+  if (finalLower.endsWith(interimLower)) {
+    return normalizedFinal;
+  }
+
+  return `${normalizedFinal} ${normalizedInterim}`;
+}
+
 // Web browser STT using SpeechRecognition API
 class WebSttService implements SttService {
   private recognition: ISpeechRecognition | null = null;
@@ -84,7 +108,8 @@ class WebSttService implements SttService {
       this.recognition.maxAlternatives = 1;
       this.recognition.continuous = true;
 
-      let finalResult = '';
+      const finalResults = new Map<number, string>();
+      let lastInterimResult = '';
       let resolved = false;
       let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
       const INACTIVITY_MS = 1500; // 1.5s inactivity timeout
@@ -99,8 +124,14 @@ class WebSttService implements SttService {
         clearTimeout(hardTimeout);
         if (inactivityTimer) clearTimeout(inactivityTimer);
         options.onListeningStateChange?.(false);
-        resolve(finalResult);
+        resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));
       };
+
+      const getFinalResultText = () =>
+        Array.from(finalResults.entries())
+          .sort(([left], [right]) => left - right)
+          .map(([, text]) => text)
+          .join(' ');
 
       const resetInactivityTimer = () => {
         if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -112,17 +143,24 @@ class WebSttService implements SttService {
       this.recognition.onstart = () => options.onListeningStateChange?.(true);
 
       this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interim = '';
+        const interimParts: string[] = [];
         let hasFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = normalizeRecognizedText(event.results[i][0].transcript);
+          if (!transcript) {
+            continue;
+          }
+
           if (event.results[i].isFinal) {
-            finalResult += event.results[i][0].transcript;
+            finalResults.set(i, transcript);
             hasFinal = true;
           } else {
-            interim += event.results[i][0].transcript;
+            interimParts.push(transcript);
           }
         }
-        options.onPartialResult?.(finalResult || interim);
+
+        lastInterimResult = interimParts.join(' ');
+        options.onPartialResult?.(combineRecognizedText(getFinalResultText(), lastInterimResult));
 
         if (hasFinal) {
           resetInactivityTimer();
@@ -140,7 +178,7 @@ class WebSttService implements SttService {
         resolved = true;
         options.onListeningStateChange?.(false);
         if (event.error === 'no-speech' || event.error === 'aborted') {
-          resolve(finalResult || '');
+          resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));
         } else {
           reject(new Error(event.error));
         }
@@ -218,7 +256,7 @@ class ReactNativeVoiceSttService implements SttService {
 
       Voice.onSpeechResults = (e) => {
         if (e.value && e.value.length > 0) {
-          finalResult = e.value[0];
+          finalResult = normalizeRecognizedText(e.value[0]);
           options.onPartialResult?.(finalResult);
         }
         resetInactivityTimer();
@@ -226,7 +264,7 @@ class ReactNativeVoiceSttService implements SttService {
 
       Voice.onSpeechPartialResults = (e) => {
         if (e.value && e.value.length > 0) {
-          finalResult = e.value[0];
+          finalResult = normalizeRecognizedText(e.value[0]);
           options.onPartialResult?.(finalResult);
         }
         resetInactivityTimer();

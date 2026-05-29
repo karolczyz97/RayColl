@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import Constants from 'expo-constants';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Button, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 import { TextEntryDialog } from '../../components/dialogs/TextEntryDialog';
@@ -27,6 +28,9 @@ const LANGUAGE_OPTIONS = [
 
 const THEME_OPTIONS = ['light', 'system', 'dark'] satisfies ThemePref[];
 
+const APP_VERSION = Constants.expoConfig?.version ?? 'dev';
+const ANDROID_BUILD_VERSION = Constants.expoConfig?.android?.versionCode;
+
 function isLanguageCode(value: string): value is LanguageCode {
   return LANGUAGE_OPTIONS.some((option) => option.value === value);
 }
@@ -37,6 +41,7 @@ function isThemePref(value: string): value is ThemePref {
 
 export function AppSettingsScreen() {
   const { t, language, setLanguage } = useI18n();
+  const theme = useTheme();
   const store = useFlashcardStore();
   const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate } =
     useAppTheme();
@@ -45,6 +50,15 @@ export function AppSettingsScreen() {
   const [importJson, setImportJson] = useState('');
   const [resetVisible, setResetVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const isWeb = Platform.OS === 'web';
+  const versionLines = isWeb
+    ? [`Web version: ${APP_VERSION}`]
+    : [
+        `Web version: ${APP_VERSION}`,
+        typeof ANDROID_BUILD_VERSION === 'number'
+          ? `APK version: ${APP_VERSION} (${ANDROID_BUILD_VERSION})`
+          : `APK version: ${APP_VERSION}`,
+      ];
 
   const getLabel = (key: string, fallback: string) => {
     const translated = t(key);
@@ -238,6 +252,18 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
+      <View style={styles.versionFooter}>
+        {versionLines.map((line) => (
+          <Text
+            key={line}
+            variant="labelSmall"
+            style={[styles.versionLine, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {line}
+          </Text>
+        ))}
+      </View>
+
       <TextEntryDialog
         visible={importVisible}
         onDismiss={() => setImportVisible(false)}
@@ -290,5 +316,14 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  versionFooter: {
+    alignSelf: 'flex-end',
+    marginTop: TOKENS.spacing.md,
+    alignItems: 'flex-end',
+    opacity: 0.62,
+  },
+  versionLine: {
+    textAlign: 'right',
   },
 });
