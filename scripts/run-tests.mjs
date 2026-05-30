@@ -23,8 +23,11 @@ try {
   const testFiles = [
     '../src/srs/__tests__/srsEngine.test.ts',
     '../src/store/persistence/__tests__/persistenceQueue.test.ts',
+    '../src/store/persistence/__tests__/webLifecycle.test.ts',
+    '../src/store/persistence/__tests__/firestoreSchema.test.ts',
     '../src/store/selectors/__tests__/merge.test.ts',
     '../src/import/__tests__/importParser.test.ts',
+    '../src/features/import/__tests__/importDraftHelpers.test.ts',
     '../src/store/actions/__tests__/groupActions.test.ts',
     '../src/store/actions/__tests__/cardActions.test.ts',
     '../src/features/study/session/__tests__/sessionState.test.ts',

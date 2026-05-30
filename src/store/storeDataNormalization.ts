@@ -6,14 +6,23 @@ import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
 const MIN_ACTIVE_PAGE_COUNT = 2;
 const MAX_ACTIVE_PAGE_COUNT = 5;
+const VALID_STUDY_FILTERS = new Set<CardFilter>(Object.values(CARD_FILTERS));
 
-export function normalizeStudyFilter(filter: CardFilter | undefined): CardFilter {
-  return filter ?? DEFAULT_STUDY_FILTER;
+function coerceStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+export function normalizeStudyFilter(filter: unknown): CardFilter {
+  return VALID_STUDY_FILTERS.has(filter as CardFilter)
+    ? (filter as CardFilter)
+    : DEFAULT_STUDY_FILTER;
 }
 
 function getNormalizedActivePageCount(group: FlashcardGroup): number {
   const rawActivePageCount = (group as { activePageCount?: unknown }).activePageCount;
-  const fallback = Math.max(group.pageNames.length, group.pageLanguages.length, MIN_ACTIVE_PAGE_COUNT);
+  const rawPageNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
+  const rawPageLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
+  const fallback = Math.max(rawPageNames.length, rawPageLanguages.length, MIN_ACTIVE_PAGE_COUNT);
   const candidate =
     typeof rawActivePageCount === 'number' && Number.isFinite(rawActivePageCount)
       ? rawActivePageCount
@@ -26,9 +35,9 @@ function getNormalizedActivePageCount(group: FlashcardGroup): number {
 }
 
 export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
-  const pageNames = Array.isArray(group.pageNames) ? [...group.pageNames] : [];
-  const pageLanguages = Array.isArray(group.pageLanguages) ? [...group.pageLanguages] : [];
-  const activePageCount = getNormalizedActivePageCount({ ...group, pageNames, pageLanguages });
+  const activePageCount = getNormalizedActivePageCount(group);
+  const pageNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
+  const pageLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
 
   while (pageNames.length < activePageCount) {
     pageNames.push(`Page ${pageNames.length + 1}`);

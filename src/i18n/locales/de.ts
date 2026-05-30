@@ -67,12 +67,12 @@ export const de: Record<string, string> = {
   'import.sep.comma': 'Komma (,)',
   'import.sep.pipe': 'Senkrechter Strich (|)',
   'import.sep.custom': 'Benutzerdefiniert',
+  'import.first_row_header': 'Erste Zeile ist eine Kopfzeile',
   'import.err.too_many_lines': 'Eingabe auf 500 Zeilen beschränkt.',
   'import.pages_count': 'Seitenanzahl:',
   'import.page_label': 'Seite {index}',
   'import.import_create_btn': 'Importieren & Deck erstellen',
   'import.preview_rows': 'Vorschau ({count} Zeilen)',
-  'import.first_row_header': 'Erste Zeile ist Kopfzeile',
 
   // Stats
   'stats.title': 'Lernstatistiken',

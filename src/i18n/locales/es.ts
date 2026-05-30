@@ -67,12 +67,12 @@ export const es: Record<string, string> = {
   'import.sep.comma': 'Coma (,)',
   'import.sep.pipe': 'Barra (|)',
   'import.sep.custom': 'Personalizado',
+  'import.first_row_header': 'La primera fila es un encabezado',
   'import.err.too_many_lines': 'Entrada truncada a 500 líneas.',
   'import.pages_count': 'Número de páginas:',
   'import.page_label': 'Página {index}',
   'import.import_create_btn': 'Importar y crear baraja',
   'import.preview_rows': 'Vista previa ({count} filas)',
-  'import.first_row_header': 'La primera fila es encabezado',
 
   // Stats
   'stats.title': 'Estadísticas de estudio',

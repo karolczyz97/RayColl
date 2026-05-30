@@ -1,25 +1,25 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { SessionProgressItem } from '../../../components/SegmentedProgressBar';
-import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
 import { PageHeader } from '../../../components/PageHeader';
+import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
+import type { SessionProgressItem } from '../session/sessionProgress';
 import { TOKENS } from '../../../theme/tokens';
 
 interface StudyStatusBannerProps {
   title: string;
-  progressLabel: string;
-  onBack: () => void;
   sessionItems: SessionProgressItem[];
   currentIndex: number;
+  progressLabel: string;
+  onBack: () => void;
 }
 
 export function StudyStatusBanner({
   title,
-  progressLabel,
-  onBack,
   sessionItems,
   currentIndex,
+  progressLabel,
+  onBack,
 }: StudyStatusBannerProps) {
   const theme = useTheme();
 
@@ -48,10 +48,6 @@ const styles = StyleSheet.create({
   progressBarWrapper: {
     marginVertical: TOKENS.spacing.md,
     width: '100%',
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: TOKENS.radius.xs,
   },
   progressCounter: {
     fontSize: TOKENS.typography.size.xs,

@@ -1,4 +1,10 @@
-import { detectPageCount, detectSeparator, parseCSV, parseCSVLine } from '../importParser';
+import {
+  detectFirstRowHeader,
+  detectPageCount,
+  detectSeparator,
+  parseCSV,
+  parseCSVLine,
+} from '../importParser';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
@@ -59,6 +65,17 @@ export async function runTests() {
       ['foo', 'bar'],
     ],
     'Parser should handle separators inside quoted fields',
+  );
+  assertEqual(
+    detectFirstRowHeader('Phrase;Translation;Example\nhello;czesc;example', 'semicolon', 3)
+      .isLikelyHeader,
+    true,
+    'Header detection should recognize common header labels',
+  );
+  assertEqual(
+    detectFirstRowHeader('hello;czesc\nbye;pa', 'semicolon', 2).isLikelyHeader,
+    false,
+    'Header detection should keep normal data rows as flashcards',
   );
 
   console.log('Import parser tests passed');

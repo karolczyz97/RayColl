@@ -66,12 +66,12 @@ export const en: Record<string, string> = {
   'import.sep.comma': 'Comma (,)',
   'import.sep.pipe': 'Pipe (|)',
   'import.sep.custom': 'Custom',
+  'import.first_row_header': 'First row is header',
   'import.err.too_many_lines': 'Input truncated to 500 lines.',
   'import.pages_count': 'Page count:',
   'import.page_label': 'Page {index}',
   'import.import_create_btn': 'Import & Create Deck',
   'import.preview_rows': 'Preview ({count} rows)',
-  'import.first_row_header': 'First line is header',
 
   // Stats
   'stats.title': 'Study Statistics',

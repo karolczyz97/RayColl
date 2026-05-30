@@ -18,6 +18,10 @@ import {
   sleep,
   uniquePageIndexes,
 } from '../features/study/session/sessionUtils';
+import {
+  startReviewAttempt,
+  tryMarkCardReviewed,
+} from '../features/study/session/sessionReview';
 import type { SessionAction } from '../features/study/session/sessionTypes';
 
 export function useStudySession(
@@ -36,7 +40,8 @@ export function useStudySession(
   const holdingRef = useRef(false);
   const allCardsRef = useRef<Flashcard[]>([]);
   const failedCardsRef = useRef<Flashcard[]>([]);
-  const reviewedCardIdsRef = useRef<Set<string>>(new Set());
+  const reviewedAttemptKeysRef = useRef<Set<string>>(new Set());
+  const sessionAttemptRef = useRef(0);
   const groupRef = useRef(group);
   const activeStepsRef = useRef<ModeStep[]>([]);
   const stateRef = useRef(state);
@@ -92,15 +97,16 @@ export function useStudySession(
   }, [dueCards]);
 
   const startSession = useCallback(
-    (cards: Flashcard[], clearReviewed = true) => {
+    (cards: Flashcard[]) => {
       abortRef.current = false;
       allCardsRef.current = cards;
       failedCardsRef.current = [];
       setFailedCount(0);
       lastExecutedCardIndexRef.current = null;
-      if (clearReviewed) {
-        reviewedCardIdsRef.current.clear();
-      }
+      sessionAttemptRef.current = startReviewAttempt(
+        reviewedAttemptKeysRef.current,
+        sessionAttemptRef.current,
+      );
       setDueCards(cards);
       dispatchIfMounted({ type: 'START_SESSION', cards });
     },
@@ -110,12 +116,10 @@ export function useStudySession(
   const processCardReview = useCallback((card: Flashcard, rating: number) => {
     const currentGroup = groupRef.current;
     if (!currentGroup) return;
-    if (!reviewedCardIdsRef.current.has(card.id)) {
-      reviewedCardIdsRef.current.add(card.id);
-      const updated: Flashcard = {
-        ...card,
-        srsState: calculateFsrs(card.srsState, rating),
-      };
+    if (
+      tryMarkCardReviewed(reviewedAttemptKeysRef.current, sessionAttemptRef.current, card.id)
+    ) {
+      const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, rating) };
       onCardReviewedRef.current(currentGroup.id, updated);
     }
   }, []);
@@ -419,12 +423,12 @@ export function useStudySession(
   );
 
   const restartSession = useCallback(() => {
-    startSession(getFreshCards(allCardsRef.current), true);
+    startSession(getFreshCards(allCardsRef.current));
   }, [getFreshCards, startSession]);
 
   const restartFailed = useCallback(() => {
     if (failedCardsRef.current.length > 0) {
-      startSession(getFreshCards(failedCardsRef.current), true);
+      startSession(getFreshCards(failedCardsRef.current));
     }
   }, [getFreshCards, startSession]);
 

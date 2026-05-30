@@ -56,3 +56,35 @@ Normalize data at the boundary, not in screens.
 - Local storage load, Firebase load, backup import, and merge logic should return canonical runtime data before it reaches the store or UI.
 - Do not spread `|| default` and `?? fallback` for stable domain fields across screens and selectors when the value can be normalized once.
 - For deck runtime data, prefer a canonical model where config like `studyFilter`, `activePageCount`, `pageNames`, and `pageLanguages` is already normalized.
+
+# Implementation quality rules
+
+- For behavior changes, do not stop at making the UI show the new feature. Verify the full path: source data -> state/store -> UI -> persisted output, where applicable.
+- Prefer extracting pure helpers for parsing, normalization, and state transitions, then test those helpers instead of burying fragile logic inside screens.
+- When a task mentions tests or fixes a regression, add coverage for the real user flow or failure mode, not only for a tiny helper introduced during the change.
+- For import, storage, sync, and Firestore changes, normalize data at the boundary before it reaches screens or store state.
+- Avoid leaving untracked support files after a task. If changed code imports or depends on a file, that file must be included in the final diff/commit.
+- At the end of substantial tasks, state which requested points are fully covered, partially covered, or intentionally left out.
+
+# Required workflow for non-trivial changes
+
+Use this workflow for changes that affect behavior, data, persistence, sync, import/export, study sessions, navigation, or shared components. Keep it proportional: cover realistic risks and known regressions, not imaginary edge cases.
+
+Before editing:
+- Read the relevant existing code path end-to-end before deciding on the implementation.
+- Identify the user-visible behavior, the data flow, and any persistence/sync impact.
+- Look for existing normalization, selectors, reducers, helpers, and tests before adding new patterns.
+- Before creating new components, hooks, utilities, or patterns, check whether an existing one already fits. Use the existing piece when it fits cleanly; create a new one when reusing the old one would make the code more confusing or force a bad abstraction.
+
+During implementation:
+- Fix the root cause rather than patching symptoms with local fallbacks or UI-only workarounds.
+- Keep changes scoped to the requested behavior; do not bundle unrelated cleanup unless it directly reduces risk.
+- Prefer small, boring, maintainable logic over clever hacks. If a workaround is unavoidable, explain why in code or in the final response.
+- Add tests for realistic failure modes: the original bug, manual overrides, data migration/normalization boundaries, or state transitions that could regress.
+- Do not add tests for cases that cannot occur through supported app flows unless protecting against old persisted data or external input.
+
+Before final response:
+- Run the relevant verification commands: lint, typecheck, tests, or clearly explain why a command was skipped.
+- Do a logic review of the implemented flow: walk through the main user scenario, one realistic edge case, and the relevant state/data transitions to catch bugs that typecheck and lint cannot catch.
+- Review the final diff for unrelated changes, missing/untracked required files, accidental behavior changes, and duplicated fallback logic.
+- State what was verified and call out any remaining realistic risks or partially covered areas.

@@ -67,12 +67,12 @@ export const it: Record<string, string> = {
   'import.sep.comma': 'Virgola (,)',
   'import.sep.pipe': 'Barra verticale (|)',
   'import.sep.custom': 'Personalizzato',
+  'import.first_row_header': "La prima riga è un'intestazione",
   'import.err.too_many_lines': 'Input troncato a 500 righe.',
   'import.pages_count': 'Numero di pagine:',
   'import.page_label': 'Pagina {index}',
   'import.import_create_btn': 'Importa e crea mazzo',
   'import.preview_rows': 'Anteprima ({count} righe)',
-  'import.first_row_header': 'La prima riga è un\'intestazione',
 
   // Stats
   'stats.title': 'Statistiche di studio',

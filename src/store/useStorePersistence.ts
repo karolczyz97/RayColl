@@ -8,6 +8,7 @@ import { saveCloudData } from './persistence/firebasePersistence';
 import { usePersistenceQueue, type PersistenceSnapshot } from './persistence/persistenceQueue';
 import type { StoreData } from './persistence/localPersistence';
 import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
+import { createWebPersistenceHandlers } from './persistence/webLifecycle';
 
 interface UseStorePersistenceParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
@@ -215,27 +216,16 @@ export function useStorePersistence({
       return;
     }
 
-    const handleBeforeUnload = () => {
-      void flushPersistence();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        void flushPersistence();
-      }
-    };
-
-    const handlePageHide = () => {
-      void flushPersistence();
-    };
+    const { handleBeforeUnload, handlePageHide, handleVisibilityChange } =
+      createWebPersistenceHandlers(flushPersistence, () => document.visibilityState);
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [flushPersistence]);
 

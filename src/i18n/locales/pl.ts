@@ -66,12 +66,12 @@ export const pl: Record<string, string> = {
   'import.sep.comma': 'Przecinek (,)',
   'import.sep.pipe': 'Kreska (|)',
   'import.sep.custom': 'Własny',
+  'import.first_row_header': 'Pierwsza linia to nagłówki',
   'import.err.too_many_lines': 'Wejście ograniczone do 500 linii.',
   'import.pages_count': 'Liczba stron:',
   'import.page_label': 'Strona {index}',
   'import.import_create_btn': 'Importuj i utwórz grupę',
   'import.preview_rows': 'Podgląd ({count} wierszy)',
-  'import.first_row_header': 'Pierwsza linia to nagłówki',
 
   // Stats
   'stats.title': 'Statystyki nauki',

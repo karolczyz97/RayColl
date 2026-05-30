@@ -1,4 +1,4 @@
-import type { FlashcardGroup } from '../../../../types/models';
+import type { Flashcard, FlashcardGroup } from '../../../../types/models';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '../sessionReducer';
 import type { SessionAction, StudySessionState } from '../sessionTypes';
 import {
@@ -7,8 +7,18 @@ import {
   getNextHiddenPageIndex,
   uniquePageIndexes,
 } from '../sessionUtils';
+import {
+  buildSessionProgressItems,
+  getSessionProgressSegments,
+} from '../sessionProgress';
+import {
+  getReviewAttemptKey,
+  startReviewAttempt,
+  tryMarkCardReviewed,
+} from '../sessionReview';
 import { stepSummary } from '../../../settings/studyModeUtils';
-
+import { calculateFsrs, createNewSrsState } from '../../../../srs/srsEngine';
+import { recordActivityAction } from '../../../../store/actions/activityActions';
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
     throw new Error(`${message}: expected ${String(expected)}, got ${String(actual)}`);
@@ -19,6 +29,14 @@ function assertArrayEqual(actual: number[], expected: number[], message: string)
   const same = actual.length === expected.length && actual.every((v, i) => v === expected[i]);
   if (!same) {
     throw new Error(`${message}: expected [${expected.join(',')}], got [${actual.join(',')}]`);
+  }
+}
+
+function assertDeepEqual(actual: unknown, expected: unknown, message: string) {
+  const actualJson = JSON.stringify(actual);
+  const expectedJson = JSON.stringify(expected);
+  if (actualJson !== expectedJson) {
+    throw new Error(`${message}: expected ${expectedJson}, got ${actualJson}`);
   }
 }
 
@@ -37,6 +55,14 @@ function makeGroup(pageCount: number, activePageCount: number): FlashcardGroup {
 
 function reduce(state: StudySessionState, action: SessionAction): StudySessionState {
   return sessionReducer(state, action);
+}
+
+function makeCard(id: string, srsState = createNewSrsState()): Flashcard {
+  return {
+    id,
+    pages: [id],
+    srsState,
+  };
 }
 
 export async function runTests() {
@@ -171,6 +197,97 @@ export async function runTests() {
     stepSummary({ type: 'reveal_on_tap' }, fakeT),
     'step.reveal_on_tap',
     'stepSummary maps reveal_on_tap step',
+  );
+
+  // --- review attempts ---
+  const reviewedAttempts = new Set<string>();
+  assertEqual(getReviewAttemptKey(2, 'card-1'), '2:card-1', 'review attempt key includes attempt and id');
+  let reviewAttempt = startReviewAttempt(reviewedAttempts, 0);
+  assertEqual(reviewAttempt, 1, 'starting a session should create the first review attempt');
+  assertEqual(
+    tryMarkCardReviewed(reviewedAttempts, reviewAttempt, 'card-1'),
+    true,
+    'first review in a session attempt should be accepted',
+  );
+  assertEqual(
+    tryMarkCardReviewed(reviewedAttempts, reviewAttempt, 'card-1'),
+    false,
+    'duplicate review in the same session attempt should be rejected',
+  );
+  reviewAttempt = startReviewAttempt(reviewedAttempts, reviewAttempt);
+  assertEqual(
+    tryMarkCardReviewed(reviewedAttempts, reviewAttempt, 'card-1'),
+    true,
+    'same card should be reviewable again after restartFailed starts a new session attempt',
+  );
+
+  let reviewedCard = makeCard('card-2');
+  let reviewHeatmap: Record<string, number> = {};
+  const applyTrackedReview = (attempt: number) => {
+    if (!tryMarkCardReviewed(reviewedAttempts, attempt, reviewedCard.id)) {
+      return false;
+    }
+
+    reviewedCard = { ...reviewedCard, srsState: calculateFsrs(reviewedCard.srsState, 1) };
+    const activity = recordActivityAction(reviewHeatmap);
+    reviewHeatmap = activity.nextHeatmap;
+    return activity.todayKey;
+  };
+
+  reviewAttempt = startReviewAttempt(reviewedAttempts, reviewAttempt);
+  const firstReviewDay = applyTrackedReview(reviewAttempt);
+  assertEqual(typeof firstReviewDay, 'string', 'first failed-card review should update FSRS and heatmap');
+  assertEqual(reviewedCard.srsState.repetitions, 1, 'first failed-card review should update FSRS repetitions');
+  assertEqual(
+    applyTrackedReview(reviewAttempt),
+    false,
+    'duplicate failed-card review in one attempt should not update again',
+  );
+  reviewAttempt = startReviewAttempt(reviewedAttempts, reviewAttempt);
+  const secondReviewDay = applyTrackedReview(reviewAttempt);
+  assertEqual(secondReviewDay, firstReviewDay, 'restartFailed review should record activity on the same day');
+  assertEqual(reviewedCard.srsState.repetitions, 2, 'restartFailed review should update FSRS again');
+  assertEqual(
+    reviewHeatmap[firstReviewDay as string],
+    2,
+    'restartFailed review should increment heatmap again',
+  );
+
+  // --- session progress ---
+  const liveCards = [
+    makeCard('a', { ...createNewSrsState(), state: 2, repetitions: 1, stability: 1 }),
+    makeCard('b', { ...createNewSrsState(), state: 0 }),
+    makeCard('c', { ...createNewSrsState(), state: 2, repetitions: 5, stability: 1 }),
+  ];
+  const staleDueCards = [
+    makeCard('a', { ...createNewSrsState(), state: 0 }),
+    makeCard('b', { ...createNewSrsState(), state: 0 }),
+    makeCard('c', { ...createNewSrsState(), state: 0 }),
+  ];
+  assertDeepEqual(
+    buildSessionProgressItems(staleDueCards, liveCards),
+    [
+      { id: 'a', category: 'review' },
+      { id: 'b', category: 'new' },
+      { id: 'c', category: 'mastered' },
+    ],
+    'session progress should use live group card categories instead of stale due cards',
+  );
+  assertDeepEqual(
+    getSessionProgressSegments(
+      [
+        { id: 'a', category: 'review' },
+        { id: 'b', category: 'new' },
+        { id: 'c', category: 'mastered' },
+      ],
+      1,
+    ),
+    [
+      { id: 'a', category: 'review', state: 'past' },
+      { id: 'b', category: 'new', state: 'current' },
+      { id: 'c', category: 'mastered', state: 'future' },
+    ],
+    'session progress segments should mark past, current, and future cards correctly',
   );
 
   console.log('Study session state tests passed');

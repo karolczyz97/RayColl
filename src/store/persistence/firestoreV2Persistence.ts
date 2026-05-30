@@ -10,14 +10,14 @@ import {
 } from 'firebase/firestore';
 import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
 import { db } from '../../services/firebase';
-import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../storeDataNormalization';
+import { normalizeStoreData } from '../storeDataNormalization';
 import {
   FIRESTORE_SCHEMA_VERSION,
-  type FirestoreActivityDayDoc,
-  type FirestoreCardDoc,
-  type FirestoreDeckDoc,
-  type FirestoreStudyModeDoc,
   type UserData,
+  deserializeActivityDayCount,
+  deserializeCardDoc,
+  deserializeDeckDoc,
+  deserializeStudyModeDoc,
   serializeCardDoc,
   serializeDeckDoc,
   serializeStudyModeDoc,
@@ -90,55 +90,21 @@ export async function loadUserDataV2(uid: string): Promise<UserData | null> {
   const decksSnap = await getDocs(collection(db, 'users', uid, 'decks'));
   const groups = await Promise.all(
     decksSnap.docs.map(async (deckDoc) => {
-      const deckData = deckDoc.data() as FirestoreDeckDoc;
       const cardsSnap = await getDocs(collection(db!, 'users', uid, 'decks', deckDoc.id, 'cards'));
-      const cards = cardsSnap.docs.map((cardDoc) => {
-        const cardData = cardDoc.data() as FirestoreCardDoc;
-        return {
-          id: cardData.id,
-          pages: cardData.pages,
-          srsState: cardData.srsState,
-        };
-      });
-
-      const group: FlashcardGroup = {
-        id: deckData.id,
-        name: deckData.name,
-        cards,
-        activeModeId: deckData.activeModeId,
-        pageLanguages: deckData.pageLanguages,
-        pageNames: deckData.pageNames,
-        activePageCount:
-          deckData.activePageCount ??
-          Math.max(
-            Array.isArray(deckData.pageNames) ? deckData.pageNames.length : 0,
-            Array.isArray(deckData.pageLanguages) ? deckData.pageLanguages.length : 0,
-          ),
-        studyFilter: deckData.studyFilter ?? DEFAULT_STUDY_FILTER,
-      };
-
-      return group;
+      const cards = cardsSnap.docs.map((cardDoc) => deserializeCardDoc(cardDoc.id, cardDoc.data()));
+      return deserializeDeckDoc(deckDoc.id, deckDoc.data(), cards);
     }),
   );
 
   const studyModesSnap = await getDocs(collection(db, 'users', uid, 'studyModes'));
-  const studyModes = studyModesSnap.docs.map((modeDoc) => {
-    const modeData = modeDoc.data() as FirestoreStudyModeDoc;
-    const mode: StudyMode = {
-      id: modeData.id,
-      name: modeData.name,
-      steps: modeData.steps,
-      isBuiltIn: modeData.isBuiltIn ?? false,
-      builtInSourceId: modeData.builtInSourceId,
-    };
-    return mode;
-  });
+  const studyModes = studyModesSnap.docs.map((modeDoc) =>
+    deserializeStudyModeDoc(modeDoc.id, modeDoc.data()),
+  );
 
   const activitySnap = await getDocs(collection(db, 'users', uid, 'activity'));
   const activityHeatmap: Record<string, number> = {};
   activitySnap.docs.forEach((dayDoc) => {
-    const dayData = dayDoc.data() as FirestoreActivityDayDoc;
-    activityHeatmap[dayDoc.id] = dayData.count;
+    activityHeatmap[dayDoc.id] = deserializeActivityDayCount(dayDoc.id, dayDoc.data());
   });
 
   return normalizeStoreData({

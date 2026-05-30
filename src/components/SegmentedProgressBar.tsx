@@ -3,12 +3,15 @@ import { View, StyleSheet, Text } from 'react-native';
 import type { MD3Theme } from 'react-native-paper';
 import { useTheme } from 'react-native-paper';
 import type { CardStats } from '../store/selectors/stats';
-import type { SrsCardCategory } from '../srs/srsEngine';
 import type { TranslationFn } from '../i18n';
 import { useI18n } from '../i18n';
 import { getReviewStatusColor } from '../theme/semanticColors';
 import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
 import { TOKENS } from '../theme/tokens';
+import {
+  getSessionProgressSegments,
+  type SessionProgressItem,
+} from '../features/study/session/sessionProgress';
 
 const STATS_KEY: Record<string, keyof CardStats> = {
   new: 'newCount',
@@ -16,11 +19,6 @@ const STATS_KEY: Record<string, keyof CardStats> = {
   review: 'review',
   mastered: 'mastered',
 };
-
-export interface SessionProgressItem {
-  id: string;
-  category: SrsCardCategory;
-}
 
 interface StatsModeProps {
   mode?: 'stats';
@@ -137,35 +135,32 @@ function renderSessionMode(
     );
   }
 
+  const segments = getSessionProgressSegments(items, currentIndex);
+
   return (
     <View style={styles.container}>
       <View
         style={[
           styles.bar,
-          { height, borderRadius: height / 2, backgroundColor: emptyColor },
           styles.sessionBar,
+          { height, borderRadius: height / 2, backgroundColor: emptyColor },
         ]}
       >
-        {items.map((item, index) => {
-          let bgColor = emptyColor;
-          let isActive = false;
-
-          if (index < currentIndex) {
-            const { color } = getReviewStatusColor(theme, item.category);
-            bgColor = color;
-          } else if (index === currentIndex) {
-            const { color } = getReviewStatusColor(theme, item.category);
-            bgColor = color;
-            isActive = true;
-          }
+        {segments.map((segment) => {
+          const { color } = getReviewStatusColor(theme, segment.category);
+          const backgroundColor = segment.state === 'future' ? emptyColor : color;
+          const isCurrent = segment.state === 'current';
 
           return (
             <View
-              key={item.id}
+              key={segment.id}
               style={[
                 styles.sessionSegment,
-                { backgroundColor: bgColor },
-                isActive && { borderWidth: 1, borderColor: theme.colors.onSurface },
+                { backgroundColor },
+                isCurrent && {
+                  borderWidth: 1,
+                  borderColor: theme.colors.onSurface,
+                },
               ]}
             />
           );
@@ -213,11 +208,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sessionBar: {
-    gap: 0.5,
+    gap: 1,
   },
   sessionSegment: {
     flex: 1,
     height: '100%',
   },
-
 });

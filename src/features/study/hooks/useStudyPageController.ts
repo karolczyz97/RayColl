@@ -5,6 +5,7 @@ import type { Flashcard } from '../../../types/models';
 import { useFlashcardStore } from '../../../hooks/useFlashcardStore';
 import { useStudySession } from '../../../hooks/useStudySession';
 import { useI18n } from '../../../i18n';
+import { buildSessionProgressItems } from '../session/sessionProgress';
 
 export function useStudyPageController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -92,6 +93,11 @@ export function useStudyPageController() {
     }
   }, [sessionState.isSessionFinished, flushPersistence]);
 
+  const sessionProgressItems = useMemo(
+    () => buildSessionProgressItems(dueCards, activeGroup?.cards ?? []),
+    [activeGroup?.cards, dueCards],
+  );
+
   return {
     activeGroup,
     currentCard: dueCards[sessionState.currentCardIndex] || null,
@@ -108,6 +114,7 @@ export function useStudyPageController() {
     isNarrow,
     restartFailed,
     restartSession,
+    sessionProgressItems,
     sessionState,
     setHolding,
     t,

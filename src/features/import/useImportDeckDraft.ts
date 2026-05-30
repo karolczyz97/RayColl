@@ -10,14 +10,17 @@ import {
   detectLangFromHeader,
   detectPageCount,
   detectSeparator,
-  parseCSV,
-  parseCSVRaw,
-  serializeCSV,
 } from '../../import/importParser';
 import { createNewSrsState } from '../../srs/srsEngine';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { useFlashcardListEditing } from '../flashcards/useFlashcardListEditing';
 import { DEFAULT_STUDY_FILTER } from '../../store/storeDataNormalization';
+import {
+  getHeaderRowFromText,
+  getPreviewRows,
+  replaceHeaderRowInText,
+  serializeImportSourceText,
+} from './importDraftHelpers';
 
 function createCardId() {
   return `import-${Math.random().toString(36).slice(2, 9)}`;
@@ -32,15 +35,22 @@ export function useImportDeckDraft() {
   const [sepKey, setSepKey] = useState('semicolon');
   const [customSep, setCustomSep] = useState('');
   const [pageCount, setPageCount] = useState(2);
-  const [pageNames, setPageNames] = useState(['Phrase', 'Tłumaczenie', '', '', '']);
+  const [pageNames, setPageNames] = useState(['Phrase', 'Translation', '', '', '']);
   const [pageLangs, setPageLangs] = useState(['en-US', 'pl-PL', '', '', '']);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [firstRowIsHeader, setFirstRowIsHeader] = useState(false);
-  const lastDetectedFirstLine = useRef<string | null>(null);
+  const firstRowIsHeaderRef = useRef(firstRowIsHeader);
   const headerSettingTouchedRef = useRef(false);
+  const lastAppliedHeaderKeyRef = useRef<string | null>(null);
   const debouncedRawText = useDebounce(rawText, 300);
+
+  const getActiveSepValue = useCallback((key: string, custom: string): string => {
+    if (key === 'custom') return custom || ',';
+    return key;
+  }, []);
+
   const {
     editingId,
     editPages,
@@ -58,26 +68,34 @@ export function useImportDeckDraft() {
         const updatedCards = prevCards.map((card) =>
           card.id === cardId ? { ...card, pages: [...pages] } : card,
         );
-        setRawText(serializeCSV(updatedCards.map((card) => card.pages), getActiveSepValue(sepKey, customSep)));
+        setRawText(
+          serializeImportSourceText(
+            updatedCards.map((card) => card.pages),
+            getActiveSepValue(sepKey, customSep),
+            pageCount,
+            firstRowIsHeaderRef.current,
+            pageNames,
+          ),
+        );
         return updatedCards;
       });
     },
     onDeleteCard: (cardId) => {
       setCards((prevCards) => {
         const updatedCards = prevCards.filter((card) => card.id !== cardId);
-        setRawText(serializeCSV(updatedCards.map((card) => card.pages), getActiveSepValue(sepKey, customSep)));
+        setRawText(
+          serializeImportSourceText(
+            updatedCards.map((card) => card.pages),
+            getActiveSepValue(sepKey, customSep),
+            pageCount,
+            firstRowIsHeaderRef.current,
+            pageNames,
+          ),
+        );
         return updatedCards;
       });
     },
   });
-
-  const getActiveSepValue = useCallback(
-    (key: string, custom: string): string => {
-      if (key === 'custom') return custom || ',';
-      return key;
-    },
-    [],
-  );
 
   const rebuildPreviewFromText = useCallback(
     (text: string, currentSepKey: string, currentPageCount: number, skipHeader: boolean) => {
@@ -86,15 +104,7 @@ export function useImportDeckDraft() {
         return;
       }
 
-      let parsedRows = parseCSV(text, currentSepKey, currentPageCount);
-      if (skipHeader && parsedRows.length > 0) {
-        parsedRows = parsedRows.slice(1);
-      }
-      if (parsedRows.length === 0) {
-        setCards([]);
-        return;
-      }
-
+      const parsedRows = getPreviewRows(text, currentSepKey, currentPageCount, skipHeader);
       setCards((prevCards) => {
         const isSame =
           prevCards.length === parsedRows.length &&
@@ -120,91 +130,188 @@ export function useImportDeckDraft() {
     [],
   );
 
+  const syncHeaderConfigFromText = useCallback(
+    (text: string, currentSepKey: string, currentPageCount: number) => {
+      const headerRow = getHeaderRowFromText(text, currentSepKey, currentPageCount);
+      const headerKey = headerRow.join('\u0000');
+      if (headerKey === lastAppliedHeaderKeyRef.current) {
+        return;
+      }
+
+      lastAppliedHeaderKeyRef.current = headerKey;
+      setPageNames((prev) => {
+        const next = [...prev];
+        headerRow.forEach((part, index) => {
+          if (index < 5) {
+            next[index] = part;
+          }
+        });
+        return next;
+      });
+      setPageLangs((prev) => {
+        const next = [...prev];
+        headerRow.forEach((part, index) => {
+          if (index < 5) {
+            next[index] = detectLangFromHeader(part);
+          }
+        });
+        return next;
+      });
+    },
+    [],
+  );
+
+  const syncDraftFromText = useCallback(
+    (text: string, currentSepKey: string, currentPageCount: number) => {
+      if (!text.trim()) {
+        lastAppliedHeaderKeyRef.current = null;
+        setCards([]);
+        return;
+      }
+
+      const detection = detectFirstRowHeader(text, currentSepKey, currentPageCount);
+      const effectiveFirstRowIsHeader = headerSettingTouchedRef.current
+        ? firstRowIsHeaderRef.current
+        : detection.isLikelyHeader;
+
+      if (
+        !headerSettingTouchedRef.current &&
+        effectiveFirstRowIsHeader !== firstRowIsHeaderRef.current
+      ) {
+        firstRowIsHeaderRef.current = effectiveFirstRowIsHeader;
+        setFirstRowIsHeader(effectiveFirstRowIsHeader);
+      }
+
+      if (effectiveFirstRowIsHeader) {
+        syncHeaderConfigFromText(text, currentSepKey, currentPageCount);
+      } else {
+        lastAppliedHeaderKeyRef.current = null;
+      }
+
+      rebuildPreviewFromText(text, currentSepKey, currentPageCount, effectiveFirstRowIsHeader);
+    },
+    [rebuildPreviewFromText, syncHeaderConfigFromText],
+  );
+
+  const applyDetectedText = useCallback(
+    (text: string, nextName?: string) => {
+      const lines = text.split('\n');
+      const limited = lines.length > IMPORT_LINE_LIMIT;
+      const safeText = limited ? lines.slice(0, IMPORT_LINE_LIMIT).join('\n') : text;
+
+      if (nextName) {
+        setName(nextName);
+      }
+
+      setImportError(limited ? 'import.err.too_many_lines' : '');
+      setRawText(safeText);
+
+      if (!safeText.trim()) {
+        setCards([]);
+        return;
+      }
+
+      const detectedSep = detectSeparator(safeText);
+      const separator = SEPARATORS[detectedSep] || ';';
+      const detectedCount = detectPageCount(safeText, separator);
+
+      setSepKey(detectedSep);
+      setCustomSep('');
+      setPageCount(detectedCount);
+      syncDraftFromText(safeText, detectedSep, detectedCount);
+    },
+    [syncDraftFromText],
+  );
+
+  useEffect(() => {
+    firstRowIsHeaderRef.current = firstRowIsHeader;
+  }, [firstRowIsHeader]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced preview intentionally syncs local derived draft state
-    rebuildPreviewFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount, firstRowIsHeader);
-  }, [customSep, debouncedRawText, firstRowIsHeader, getActiveSepValue, pageCount, rebuildPreviewFromText, sepKey]);
+    syncDraftFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
+  }, [customSep, debouncedRawText, getActiveSepValue, pageCount, sepKey, syncDraftFromText]);
 
-  const handleTextChange = useCallback((text: string) => {
-    setImportError('');
-
-    const lines = text.split('\n');
-    const limited = lines.length > IMPORT_LINE_LIMIT;
-    const safeText = limited ? lines.slice(0, IMPORT_LINE_LIMIT).join('\n') : text;
-
-    if (limited) {
-      setImportError('import.err.too_many_lines');
-    }
-
-    setRawText(safeText);
-
-    if (!safeText.trim()) {
-      setCards([]);
-      return;
-    }
-
-    const detectedSep = detectSeparator(safeText);
-    setSepKey(detectedSep);
-    setCustomSep('');
-
-    const separator = SEPARATORS[detectedSep] || ';';
-    const detectedCount = detectPageCount(safeText, separator);
-    setPageCount(detectedCount);
-
-    const detection = detectFirstRowHeader(safeText, detectedSep);
-    if (!headerSettingTouchedRef.current && detection.isLikelyHeader !== firstRowIsHeader) {
-      setFirstRowIsHeader(detection.isLikelyHeader);
-    }
-
-    const parts = parseCSVRaw(safeText, separator)[0] ?? [];
-    const headerKey = parts.join('\u0000');
-    if (headerKey !== lastDetectedFirstLine.current) {
-      lastDetectedFirstLine.current = headerKey;
-      if (parts.length > 0) {
-        setPageNames((prev) => {
-          const next = [...prev];
-          parts.forEach((part, index) => {
-            if (index < 5) next[index] = part.replace(/"/g, '').trim();
-          });
-          return next;
-        });
-        setPageLangs((prev) => {
-          const next = [...prev];
-          parts.forEach((part, index) => {
-            if (index < 5) next[index] = detectLangFromHeader(part.replace(/"/g, '').trim());
-          });
-          return next;
-        });
-      }
-    }
-  }, [firstRowIsHeader]);
+  const handleTextChange = useCallback(
+    (text: string) => {
+      applyDetectedText(text);
+    },
+    [applyDetectedText],
+  );
 
   const handleSepKeyChange = useCallback(
     (newSep: string, newCustomSep?: string) => {
       setSepKey(newSep);
       if (newSep !== 'custom') {
         setCustomSep('');
-        rebuildPreviewFromText(rawText, newSep, pageCount, firstRowIsHeader);
+        syncDraftFromText(rawText, newSep, pageCount);
       } else if (newCustomSep !== undefined) {
         setCustomSep(newCustomSep);
-        rebuildPreviewFromText(rawText, newCustomSep || ',', pageCount, firstRowIsHeader);
+        syncDraftFromText(rawText, newCustomSep || ',', pageCount);
       }
     },
-    [firstRowIsHeader, pageCount, rawText, rebuildPreviewFromText],
+    [pageCount, rawText, syncDraftFromText],
   );
 
   const handlePageCountChange = useCallback(
     (count: number) => {
+      const activeSep = getActiveSepValue(sepKey, customSep);
+      const nextText =
+        firstRowIsHeaderRef.current && rawText.trim()
+          ? replaceHeaderRowInText(rawText, activeSep, count, pageNames)
+          : rawText;
+
       setPageCount(count);
-      rebuildPreviewFromText(rawText, getActiveSepValue(sepKey, customSep), count, firstRowIsHeader);
+      if (nextText !== rawText) {
+        setRawText(nextText);
+      }
+      syncDraftFromText(nextText, activeSep, count);
     },
-    [customSep, firstRowIsHeader, getActiveSepValue, rawText, rebuildPreviewFromText, sepKey],
+    [customSep, getActiveSepValue, pageNames, rawText, sepKey, syncDraftFromText],
   );
 
-  const handleHeaderToggle = useCallback(() => {
-    headerSettingTouchedRef.current = true;
-    setFirstRowIsHeader((prev) => !prev);
-  }, []);
+  const handleHeaderToggle = useCallback(
+    (value: boolean) => {
+      headerSettingTouchedRef.current = true;
+      firstRowIsHeaderRef.current = value;
+      setFirstRowIsHeader(value);
+
+      const activeSep = getActiveSepValue(sepKey, customSep);
+      if (value && rawText.trim()) {
+        syncHeaderConfigFromText(rawText, activeSep, pageCount);
+      } else if (!value) {
+        lastAppliedHeaderKeyRef.current = null;
+      }
+      syncDraftFromText(rawText, activeSep, pageCount);
+    },
+    [
+      customSep,
+      getActiveSepValue,
+      pageCount,
+      rawText,
+      sepKey,
+      syncDraftFromText,
+      syncHeaderConfigFromText,
+    ],
+  );
+
+  const handlePageNameChange = useCallback(
+    (index: number, value: string) => {
+      const nextNames = [...pageNames];
+      nextNames[index] = value;
+      setPageNames(nextNames);
+
+      if (!firstRowIsHeaderRef.current || !rawText.trim()) {
+        return;
+      }
+
+      const activeSep = getActiveSepValue(sepKey, customSep);
+      const nextText = replaceHeaderRowInText(rawText, activeSep, pageCount, nextNames);
+      setRawText(nextText);
+      syncDraftFromText(nextText, activeSep, pageCount);
+    },
+    [customSep, getActiveSepValue, pageCount, pageNames, rawText, sepKey, syncDraftFromText],
+  );
 
   const handleMovePage = useCallback(
     (index: number, direction: -1 | 1) => {
@@ -217,11 +324,13 @@ export function useImportDeckDraft() {
         return next;
       };
 
-      setPageNames((prev) => swap(prev));
-      setPageLangs((prev) => swap(prev));
+      const nextPageNames = swap(pageNames);
+      const nextPageLangs = swap(pageLangs);
+      setPageNames(nextPageNames);
+      setPageLangs(nextPageLangs);
 
       const activeSep = getActiveSepValue(sepKey, customSep);
-      const rawRows = parseCSVRaw(rawText, activeSep);
+      const rawRows = getPreviewRows(rawText, activeSep, pageCount, false);
       if (rawRows.length > 0) {
         const swappedRows = rawRows.map((row) => {
           const next = [...row];
@@ -230,12 +339,18 @@ export function useImportDeckDraft() {
           [next[index], next[target]] = [next[target], next[index]];
           return next;
         });
-        const nextText = serializeCSV(swappedRows, activeSep);
-        lastDetectedFirstLine.current = nextText.split('\n')[0] || '';
+        const nextText = serializeImportSourceText(
+          firstRowIsHeaderRef.current ? swappedRows.slice(1) : swappedRows,
+          activeSep,
+          pageCount,
+          firstRowIsHeaderRef.current,
+          nextPageNames,
+        );
         setRawText(nextText);
+        syncDraftFromText(nextText, activeSep, pageCount);
       }
     },
-    [customSep, getActiveSepValue, pageCount, rawText, sepKey],
+    [customSep, getActiveSepValue, pageCount, pageLangs, pageNames, rawText, sepKey, syncDraftFromText],
   );
 
   const handlePickFile = useCallback(async () => {
@@ -255,68 +370,14 @@ export function useImportDeckDraft() {
             : await (await fetch(asset.uri)).text();
 
         if (fileContent) {
-          setImportError('');
-
           const baseName = asset.name?.replace(/\.[^/.]+$/, '').trim();
-          if (baseName) {
-            setName(baseName);
-          }
-
-          const fileLines = fileContent.split('\n');
-          const fileLimited = fileLines.length > IMPORT_LINE_LIMIT;
-          const safeFileContent = fileLimited
-            ? fileLines.slice(0, IMPORT_LINE_LIMIT).join('\n')
-            : fileContent;
-          if (fileLimited) {
-            setImportError('import.err.too_many_lines');
-          }
-          setRawText(safeFileContent);
-
-          const detectedSep = detectSeparator(safeFileContent);
-          const separator = SEPARATORS[detectedSep] || ';';
-          const detectedCount = detectPageCount(safeFileContent, separator);
-
-          setSepKey(detectedSep);
-          setPageCount(detectedCount);
-
-          const detection = detectFirstRowHeader(safeFileContent, detectedSep);
-          const effectiveHeader = headerSettingTouchedRef.current
-            ? firstRowIsHeader
-            : detection.isLikelyHeader;
-          if (effectiveHeader !== firstRowIsHeader) {
-            setFirstRowIsHeader(effectiveHeader);
-          }
-
-          rebuildPreviewFromText(safeFileContent, detectedSep, detectedCount, effectiveHeader);
-
-          const parts = parseCSVRaw(safeFileContent, separator)[0] ?? [];
-          lastDetectedFirstLine.current = parts.join('\u0000');
-          if (parts.length > 0) {
-            setPageNames((prev) => {
-              const next = [...prev];
-              parts.forEach((part, index) => {
-                if (index < 5) {
-                  next[index] = part.replace(/"/g, '').trim();
-                }
-              });
-              return next;
-            });
-            setPageLangs((prev) => {
-              const next = [...prev];
-              parts.forEach((part, index) => {
-                if (index < 5) {
-                  next[index] = detectLangFromHeader(part.replace(/"/g, '').trim());
-                }
-              });
-              return next;
-            });
-          }
+          applyDetectedText(fileContent, baseName || undefined);
         }
       }
     } catch (err: unknown) {
       setImportError(err instanceof Error ? err.message : 'Failed to pick or read file');
     }
-  }, [firstRowIsHeader, rebuildPreviewFromText]);
+  }, [applyDetectedText]);
 
   const submitImport = useCallback(async () => {
     if (!name.trim()) return;
@@ -384,10 +445,11 @@ export function useImportDeckDraft() {
     setImportError,
     isImporting,
     firstRowIsHeader,
-    handleHeaderToggle,
     handleTextChange,
     handleSepKeyChange,
     handlePageCountChange,
+    handleHeaderToggle,
+    handlePageNameChange,
     handleMovePage,
     handlePickFile,
     startEdit,

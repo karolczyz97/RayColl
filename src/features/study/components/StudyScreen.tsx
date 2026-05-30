@@ -1,11 +1,10 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../../i18n';
 import type { Flashcard, FlashcardGroup } from '../../../types/models';
-import type { SessionProgressItem } from '../../../components/SegmentedProgressBar';
-import { getCardCategory } from '../../../srs/srsEngine';
+import type { SessionProgressItem } from '../session/sessionProgress';
 import { StudyStatusBanner } from './StudyStatusBanner';
 import { StudyCard } from './StudyCard';
 import { StudyControls } from './StudyControls';
@@ -26,6 +25,7 @@ interface StudyScreenProps {
   isNarrow: boolean;
   restartFailed: () => void;
   restartSession: () => void;
+  sessionProgressItems: SessionProgressItem[];
   sessionState: {
     currentCardIndex: number;
     revealedPages: number[];
@@ -55,26 +55,12 @@ export function StudyScreen({
   isNarrow,
   restartFailed,
   restartSession,
+  sessionProgressItems,
   sessionState,
   setHolding,
   t,
 }: StudyScreenProps) {
   const theme = useTheme();
-
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof getCardCategory>>();
-    for (const card of activeGroup.cards) {
-      map.set(card.id, getCardCategory(card.srsState));
-    }
-    return map;
-  }, [activeGroup.cards]);
-
-  const sessionItems = useMemo<SessionProgressItem[]>(() => {
-    return dueCards.map((card) => ({
-      id: card.id,
-      category: categoryMap.get(card.id) ?? getCardCategory(card.srsState),
-    }));
-  }, [dueCards, categoryMap]);
 
   if (sessionState.isSessionFinished || dueCards.length === 0) {
     return (
@@ -103,10 +89,10 @@ export function StudyScreen({
     >
       <StudyStatusBanner
         title={activeGroup.name}
+        sessionItems={sessionProgressItems}
+        currentIndex={sessionState.currentCardIndex}
         progressLabel={`${sessionState.currentCardIndex + 1}/${dueCards.length}`}
         onBack={handleBack}
-        sessionItems={sessionItems}
-        currentIndex={sessionState.currentCardIndex}
       />
       <StudyCard
         currentCard={currentCard}

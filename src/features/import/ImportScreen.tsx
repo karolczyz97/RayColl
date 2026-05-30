@@ -37,17 +37,13 @@ export function ImportScreen() {
       sepKey={draft.sepKey}
       onSepKeyChange={draft.handleSepKeyChange}
       customSep={draft.customSep}
+      firstRowIsHeader={draft.firstRowIsHeader}
       pageCount={draft.pageCount}
       pageNames={draft.pageNames}
       pageLanguages={draft.pageLangs}
+      onFirstRowIsHeaderChange={draft.handleHeaderToggle}
       onPageCountChange={draft.handlePageCountChange}
-      onPageNameChange={(index, value) => {
-        draft.setPageNames((prev) => {
-          const next = [...prev];
-          next[index] = value;
-          return next;
-        });
-      }}
+      onPageNameChange={draft.handlePageNameChange}
       onPageLanguageChange={(index, value) => {
         draft.setPageLangs((prev) => {
           const next = [...prev];
@@ -57,8 +53,6 @@ export function ImportScreen() {
       }}
       onMovePage={draft.handleMovePage}
       popularLangs={POPULAR_LANGS}
-      firstRowIsHeader={draft.firstRowIsHeader}
-      onHeaderToggle={draft.handleHeaderToggle}
       t={t}
     />
   );
