@@ -1,4 +1,5 @@
 import { useWindowDimensions } from 'react-native';
+import { TOKENS } from '../theme/tokens';
 
 export interface ResponsiveLayout {
   width: number;
@@ -23,9 +24,9 @@ export function useResponsiveLayout(): ResponsiveLayout {
   const isExpanded = width >= 904;
   const isDesktop = isExpanded;
 
-  const contentMaxWidth = 1200;
-  const formMaxWidth = 800;
-  const cardMaxWidth = 450;
+  const contentMaxWidth = TOKENS.layout.maxWidth;
+  const formMaxWidth = TOKENS.layout.formMaxWidth;
+  const cardMaxWidth = TOKENS.layout.cardMaxWidth;
 
   const gridGap = isCompact ? 12 : isMedium ? 16 : 24;
   const sectionGap = isCompact ? 16 : isMedium ? 20 : 28;

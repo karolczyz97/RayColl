@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import * as Application from 'expo-application';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
-import { router } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 import { TextEntryDialog } from '../../components/dialogs/TextEntryDialog';
 import { AppSnackbar } from '../../components/feedback/AppSnackbar';
@@ -52,7 +52,7 @@ export function AppSettingsScreen() {
   const isWeb = Platform.OS === 'web';
   const apkBuild = Application.nativeBuildVersion;
   const versionLines = [
-    `v${releaseInfo.appVersion} · build ${releaseInfo.webBuild}`,
+    `v${releaseInfo.appVersion} • build ${releaseInfo.webBuild}`,
     ...(!isWeb && apkBuild !== null ? [`APK build ${apkBuild}`] : []),
   ];
   const [changelogVisible, setChangelogVisible] = useState(false);
@@ -121,7 +121,7 @@ export function AppSettingsScreen() {
   }
 
   return (
-    <AppScreen title={t('app_settings.title')} onBack={() => router.back()} maxWidth={formMaxWidth}>
+    <AppScreen title={t('app_settings.title')} onBack={safeBack} maxWidth={formMaxWidth}>
       <SyncStatusBanner
         syncStatus={store.syncStatus}
         lastSyncError={store.lastSyncError}

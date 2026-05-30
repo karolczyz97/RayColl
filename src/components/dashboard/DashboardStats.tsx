@@ -1,8 +1,8 @@
-import React from 'react';
 import { useTheme } from 'react-native-paper';
 import { useI18n } from '../../i18n';
 import { getWarningColor } from '../../theme/semanticColors';
 import { METRIC_GRID_COMPACT_BREAKPOINT, MetricGrid } from '../metrics/MetricGrid';
+import { TOKENS } from '../../theme/tokens';
 
 interface Props {
   decksCount: number;
@@ -43,6 +43,11 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
   ];
 
   return (
-    <MetricGrid items={stats} compactBreakpoint={METRIC_GRID_COMPACT_BREAKPOINT} />
+    <MetricGrid
+      items={stats}
+      compactBreakpoint={METRIC_GRID_COMPACT_BREAKPOINT}
+      screenMaxWidth={TOKENS.layout.maxWidth}
+      hasScrollViewPadding={true}
+    />
   );
 }

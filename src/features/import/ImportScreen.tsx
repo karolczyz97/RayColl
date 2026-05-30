@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
-import { router } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { AppSnackbar } from '../../components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '../../components/feedback/SyncStatusBanner';
@@ -113,7 +113,7 @@ export function ImportScreen() {
   return (
     <AppScreen
       title={t('import.title')}
-      onBack={() => router.back()}
+      onBack={safeBack}
       maxWidth={contentMaxWidth}
       scroll={false}
       contentStyle={styles.screenContent}

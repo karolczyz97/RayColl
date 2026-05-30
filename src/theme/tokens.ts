@@ -64,6 +64,8 @@ export const TOKENS = {
   },
   layout: {
     maxWidth: 1200,
+    formMaxWidth: 800,
+    cardMaxWidth: 450,
     webWidth: '100%',
     minCardWidth: 280,
     maxCols: 4,

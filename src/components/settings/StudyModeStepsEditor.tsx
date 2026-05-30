@@ -9,6 +9,7 @@ import { SectionCard } from '../layout/SectionCard';
 interface Props {
   activeMode: StudyMode;
   isDefaultMode: boolean;
+  hasCustomSteps: boolean;
   moveStep: (mode: StudyMode, index: number, dir: -1 | 1) => void;
   deleteStep: (mode: StudyMode, index: number) => void;
   addStepToMode: (mode: StudyMode) => void;
@@ -20,6 +21,7 @@ interface Props {
 export function StudyModeStepsEditor({
   activeMode,
   isDefaultMode,
+  hasCustomSteps,
   moveStep,
   deleteStep,
   addStepToMode,
@@ -85,7 +87,7 @@ export function StudyModeStepsEditor({
           >
             {t('settings.add_step_btn')}
           </Button>
-          {isDefaultMode && (
+          {hasCustomSteps && (
             <Button
               icon="restore"
               mode="text"

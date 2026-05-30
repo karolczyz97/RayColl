@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TOKENS } from '../../theme/tokens';
@@ -43,7 +43,7 @@ export function AppScreen({
       {title && onBack ? <PageHeader title={title} onBack={onBack} action={action} /> : null}
 
       {scroll ? (
-        <ScrollView style={styles.flexFill} contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={[styles.flexFill, Platform.OS === 'web' && styles.webStableScrollbar]} contentContainerStyle={styles.scrollContent}>
           {content}
         </ScrollView>
       ) : (
@@ -64,5 +64,8 @@ const styles = StyleSheet.create({
   flexFill: {
     flex: 1,
     minHeight: 0,
+  },
+  webStableScrollbar: {
+    scrollbarWidth: 'thin',
   },
 });

@@ -30,6 +30,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     handleNameBlur,
     isCompact,
     isDefaultMode,
+    hasCustomSteps,
     isExpanded,
     movePageSetting,
     moveStep,
@@ -147,6 +148,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
           <StudyModeStepsEditor
             activeMode={activeMode}
             isDefaultMode={isDefaultMode}
+            hasCustomSteps={hasCustomSteps}
             moveStep={moveStep}
             deleteStep={deleteStep}
             addStepToMode={addStepToMode}

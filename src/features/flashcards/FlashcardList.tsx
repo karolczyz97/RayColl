@@ -26,6 +26,7 @@ interface FlashcardListProps {
   windowSize?: number;
   showHeader?: boolean;
   emptyLabel?: string;
+  listHeaderContent?: React.ReactNode;
 }
 
 export function FlashcardList({
@@ -43,6 +44,7 @@ export function FlashcardList({
   windowSize = 7,
   showHeader = true,
   emptyLabel,
+  listHeaderContent,
 }: FlashcardListProps) {
   const theme = useTheme();
   const { useTwoColumnLayout } = useResponsiveLayout();
@@ -64,15 +66,23 @@ export function FlashcardList({
 
   const pageNames = getVisiblePageNames(group);
 
-  const header =
+  const pageNamesHeader =
     showHeader && cards.length > 0 ? (
       <View style={styles.headerRow}>
         <Text
           variant="labelMedium"
           style={[styles.headerText, { color: theme.colors.onSurfaceVariant }]}
         >
-          {pageNames.filter(Boolean).join('  ·  ')}
+          {pageNames.filter(Boolean).join('  •  ')}
         </Text>
+      </View>
+    ) : null;
+
+  const listHeader =
+    listHeaderContent || pageNamesHeader ? (
+      <View>
+        {listHeaderContent}
+        {pageNamesHeader}
       </View>
     ) : null;
 
@@ -100,7 +110,7 @@ export function FlashcardList({
           </View>
         );
       }}
-      ListHeaderComponent={header}
+      ListHeaderComponent={listHeader}
       ListEmptyComponent={
         emptyLabel ? (
           <View style={styles.emptyState}>

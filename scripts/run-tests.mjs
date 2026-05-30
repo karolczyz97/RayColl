@@ -31,6 +31,8 @@ try {
     '../src/store/actions/__tests__/groupActions.test.ts',
     '../src/store/actions/__tests__/cardActions.test.ts',
     '../src/features/study/session/__tests__/sessionState.test.ts',
+    '../src/features/browse/__tests__/browseFilter.test.ts',
+    '../src/utils/__tests__/gridLayout.test.ts',
   ];
 
   for (const file of testFiles) {

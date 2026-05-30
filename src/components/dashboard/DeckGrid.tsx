@@ -1,13 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, { Layout } from 'react-native-reanimated';
+import React, { useMemo } from 'react';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { GroupCard } from './GroupCard';
 import type { FlashcardGroup } from '../../types/models';
 import { TOKENS } from '../../theme/tokens';
 import { AnimatedSection } from '../layout/AnimatedSection';
 import {
   getGridColumns,
-  getGridContainerWidth,
+  getDeterministicContainerWidth,
   getGridGap,
   getGridItemWidth,
 } from '../../utils/gridLayout';
@@ -20,13 +19,15 @@ interface Props {
 
 export function DeckGrid({ baseOrder = 0, groups, onModeChange }: Props) {
   const { width: windowWidth } = useWindowDimensions();
-  const [measuredWidth, setMeasuredWidth] = useState<number | undefined>(undefined);
 
-  const currentWidth = getGridContainerWidth({
-    measuredWidth,
-    windowWidth,
-    clampMeasuredToFallback: true,
-  });
+  const currentWidth = useMemo(() => {
+    return getDeterministicContainerWidth(
+      windowWidth,
+      TOKENS.layout.maxWidth,
+      true, // Dashboard has ScrollView padding (16px on each side)
+      Platform.OS === 'web',
+    );
+  }, [windowWidth]);
 
   const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
 
@@ -47,19 +48,16 @@ export function DeckGrid({ baseOrder = 0, groups, onModeChange }: Props) {
   }, [cardWidth]);
 
   return (
-    <View
-      style={[styles.grid, { gap }]}
-      onLayout={(event) => setMeasuredWidth(event.nativeEvent.layout.width)}
-    >
+    <View style={[styles.grid, { gap }]}>
       {groups.map((group, index) => (
-        <Animated.View key={group.id} layout={Layout.springify()} style={[styles.gridItem, widthStyle]}>
+        <View key={group.id} style={[styles.gridItem, widthStyle]}>
           <AnimatedSection order={baseOrder + Math.floor(index / columns)}>
             <GroupCard
               group={group}
               onModeChange={(modeId) => onModeChange(group.id, modeId)}
             />
           </AnimatedSection>
-        </Animated.View>
+        </View>
       ))}
     </View>
   );

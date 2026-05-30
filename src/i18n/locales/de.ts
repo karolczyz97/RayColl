@@ -190,8 +190,8 @@ export const de: Record<string, string> = {
   'app_settings.danger_zone': 'Gefahrenzone',
 
   // Update notification
-  'update.whats_new': 'Was ist neu',
-  'update.show': 'Anzeigen',
+  'update.updated': 'App aktualisiert',
+  'update.show_changes': 'Änderungen anzeigen',
   'update.ok': 'OK',
 
   // Language names

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Fragment } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
@@ -35,18 +35,25 @@ export function GroupCard({ group, onModeChange }: Props) {
         <Text variant="titleMedium" style={styles.cardTitle}>
           {group.name}
         </Text>
-        <Text
-          variant="bodyMedium"
-          style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          {t('dashboard.cards_count', { count: group.cards.length })}
-        </Text>
-        <SegmentedProgressBar stats={cardStats} />
-        {dueCount > 0 && (
-          <Text variant="bodyMedium" style={[styles.dueText, { color: theme.colors.error }]}>
-            {t('dashboard.due_count', { count: dueCount })}
+        <View style={styles.subtitleRow}>
+          <Text
+            variant="bodyMedium"
+            style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {t('dashboard.cards_count', { count: group.cards.length })}
           </Text>
-        )}
+          {dueCount > 0 && (
+            <Fragment>
+              <Text variant="bodyMedium" style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                {' • '}
+              </Text>
+              <Text variant="bodyMedium" style={[styles.cardSubtitle, { color: theme.colors.error }]}>
+                {t('dashboard.due_count', { count: dueCount })}
+              </Text>
+            </Fragment>
+          )}
+        </View>
+        <SegmentedProgressBar stats={cardStats} />
       </AppCard.Content>
       <AppCard.Actions style={styles.cardActions}>
         <View style={styles.cardActionsRow}>
@@ -86,12 +93,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: TOKENS.spacing.xs,
   },
-  cardSubtitle: {
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: TOKENS.spacing.md,
   },
-  dueText: {
+  cardSubtitle: {
     fontWeight: '500',
-    marginTop: TOKENS.spacing.sm,
   },
   cardActions: {
     paddingHorizontal: TOKENS.spacing.sm,

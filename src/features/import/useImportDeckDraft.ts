@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { router } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
@@ -394,7 +394,7 @@ export function useImportDeckDraft() {
       });
 
       if (result.ok) {
-        router.back();
+        safeBack();
         return;
       }
 

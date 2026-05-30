@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import type { ModeStep, StudyMode } from '../../types/models';
 import type { CardFilter } from '../../constants/cardFilters';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
 import { POPULAR_LANGS } from '../../constants/languages';
 import { uid } from '../../utils/id';
+import { createSeedModes } from '../../store/seed/seedModes';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { stepSummary } from './studyModeUtils';
 
@@ -73,6 +75,12 @@ export function useDeckSettingsController() {
 
   const activeMode = store.studyModes.find((mode) => mode.id === activeGroup?.activeModeId) ?? null;
   const isDefaultMode = Boolean(activeMode?.isBuiltIn && activeMode.builtInSourceId);
+  const hasCustomSteps = useMemo(() => {
+    if (!activeMode?.isBuiltIn || !activeMode.builtInSourceId) return false;
+    const seed = createSeedModes().find((mode) => mode.id === activeMode.builtInSourceId);
+    if (!seed) return false;
+    return JSON.stringify(seed.steps) !== JSON.stringify(activeMode.steps);
+  }, [activeMode]);
   const pageCount = activeGroup?.activePageCount ?? 0;
 
   const adjustPageCount = (count: number) => {
@@ -191,7 +199,7 @@ export function useDeckSettingsController() {
     if (activeGroup && deleteConfirmText === 'DELETE') {
       store.deleteGroup(activeGroup.id);
       setDeleteDialogOpen(false);
-      router.back();
+      safeBack();
     }
   };
 
@@ -219,12 +227,13 @@ export function useDeckSettingsController() {
     deleteConfirmText,
     deleteDialogOpen,
     editingModeId,
-    handleBack: () => router.back(),
+    handleBack: safeBack,
     handleColBlur,
     handleDeleteGroup,
     handleNameBlur,
     isCompact: responsiveLayout.isCompact,
     isDefaultMode,
+    hasCustomSteps,
     isExpanded: responsiveLayout.isExpanded,
     isLoading: store.isLoading,
     movePageSetting,

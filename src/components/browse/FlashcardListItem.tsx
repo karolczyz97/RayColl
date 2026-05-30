@@ -106,8 +106,7 @@ export function FlashcardListItem({
         <View style={styles.cardActionsLeft}>
           <Chip
             style={{ backgroundColor: srs.bg }}
-            selectedColor={srs.color}
-            textStyle={{ color: srs.color }}
+            textStyle={{ color: theme.colors.onSurface }}
           >
             {srs.text}
           </Chip>

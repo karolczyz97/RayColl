@@ -1,27 +1,32 @@
 import { TOKENS } from '../theme/tokens';
 
-interface GridContainerWidthParams {
-  measuredWidth?: number;
-  windowWidth: number;
-  maxContainerWidth?: number;
-  horizontalInset?: number;
-  clampMeasuredToFallback?: boolean;
-}
+export function getDeterministicContainerWidth(
+  windowWidth: number,
+  screenMaxWidth: number,
+  hasScrollViewPadding: boolean,
+  isWeb: boolean,
+): number {
+  // 1. Outermost container constraint (only on Web)
+  const outerWidth =
+    isWeb
+      ? Math.min(TOKENS.layout.maxWidth, windowWidth)
+      : windowWidth;
 
-export function getGridContainerWidth({
-  measuredWidth,
-  windowWidth,
-  maxContainerWidth = TOKENS.layout.maxWidth - TOKENS.spacing.lg * 2 - TOKENS.spacing.xxs * 2,
-  horizontalInset = TOKENS.spacing.lg * 2 + TOKENS.spacing.xxs * 2,
-  clampMeasuredToFallback = false,
-}: GridContainerWidthParams): number {
-  const fallbackWidth = Math.min(maxContainerWidth, Math.max(0, windowWidth - horizontalInset));
+  // 2. SafeAreaView padding (TOKENS.spacing.sm on each side = 16px total)
+  const safeAreaContentWidth = outerWidth - TOKENS.spacing.sm * 2;
 
-  if (measuredWidth === undefined) {
-    return fallbackWidth;
+  // 3. ScreenContent maxWidth constraint
+  const screenContentWidth = Math.min(screenMaxWidth, safeAreaContentWidth);
+
+  // 4. ScreenContent padding (TOKENS.spacing.sm on each side = 16px total)
+  let contentWidth = screenContentWidth - TOKENS.spacing.sm * 2;
+
+  // 5. ScrollView padding (TOKENS.spacing.lg on each side = 32px total)
+  if (hasScrollViewPadding) {
+    contentWidth -= TOKENS.spacing.lg * 2;
   }
 
-  return clampMeasuredToFallback ? Math.min(measuredWidth, fallbackWidth) : measuredWidth;
+  return Math.max(0, contentWidth);
 }
 
 export function getGridGap(containerWidth: number): number {

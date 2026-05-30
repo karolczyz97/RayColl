@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { router } from 'expo-router';
+import { safeBack } from '../utils/navigation';
 import { useTheme } from 'react-native-paper';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { useI18n } from '../i18n';
@@ -72,9 +72,14 @@ export default function StatsPage() {
   ];
 
   return (
-    <AppScreen title={t('stats.title')} onBack={() => router.back()} maxWidth={formMaxWidth}>
+    <AppScreen title={t('stats.title')} onBack={safeBack} maxWidth={formMaxWidth}>
       <AnimatedSection index={0}>
-        <MetricGrid items={statCards} compactBreakpoint={STATS_METRIC_COMPACT_BREAKPOINT} />
+        <MetricGrid
+          items={statCards}
+          compactBreakpoint={STATS_METRIC_COMPACT_BREAKPOINT}
+          screenMaxWidth={formMaxWidth}
+          hasScrollViewPadding={false}
+        />
       </AnimatedSection>
 
       <AnimatedSection index={1}>

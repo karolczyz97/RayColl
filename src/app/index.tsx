@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { FAB } from 'react-native-paper';
 import { router } from 'expo-router';
@@ -73,7 +73,10 @@ export default function Dashboard() {
         </AnimatedSection>
 
         {/* Decks Scroll Container */}
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          style={[styles.scrollView, Platform.OS === 'web' && styles.webStableScrollbar]}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Quick Statistics Banner */}
           {decksCount > 0 && (
             <AnimatedSection order={1}>
@@ -115,6 +118,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  webStableScrollbar: {
+    scrollbarWidth: 'thin',
   },
   scrollContent: {
     padding: TOKENS.spacing.lg,

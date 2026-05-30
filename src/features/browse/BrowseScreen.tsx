@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { FAB, Text, useTheme } from 'react-native-paper';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
-import { BrowseFilterChips } from '../../components/browse/BrowseFilterChips';
-import type { BrowseFilter } from '../../constants/browseFilters';
 import { BrowseSearchBar } from '../../components/browse/BrowseSearchBar';
 import { GroupNotFound } from '../../components/GroupNotFound';
 import { AnimatedSection } from '../../components/layout/AnimatedSection';
@@ -15,10 +14,13 @@ import { LoadingState } from '../../components/layout/LoadingState';
 import { SegmentedProgressBar } from '../../components/SegmentedProgressBar';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useI18n } from '../../i18n';
+import type { SrsCardCategory } from '../../srs/srsEngine';
 import { getCardCategory } from '../../srs/srsEngine';
 import { computeCardStats } from '../../store/selectors/stats';
 import { getEnterDelay } from '../../theme/motion';
+import { SRS_CATEGORY_ORDER } from '../../theme/srsTokens';
 import { TOKENS } from '../../theme/tokens';
+import { shouldShowCard, toggleCategoryReducer } from './browseFilter';
 import type { Flashcard } from '../../types/models';
 import { FlashcardList } from '../flashcards/FlashcardList';
 import { useFlashcardListEditing } from '../flashcards/useFlashcardListEditing';
@@ -31,7 +33,7 @@ export function BrowseScreen() {
   const group = store.groups.find((item) => item.id === groupId);
   const activeGroup = group;
   const [search, setSearch] = useState('');
-  const [browseFilter, setBrowseFilter] = useState<BrowseFilter>('all');
+  const [activeCategories, setActiveCategories] = useState<SrsCardCategory[]>([]);
   const minPagesMessage =
     t('browse.min_filled_pages') === 'browse.min_filled_pages'
       ? 'Fill at least 2 pages to save this flashcard.'
@@ -43,6 +45,20 @@ export function BrowseScreen() {
       : { total: 0, newCount: 0, learning: 0, review: 0, mastered: 0 };
   }, [activeGroup]);
 
+  const nonEmptyCategories = useMemo(() => {
+    const keyMap: Record<SrsCardCategory, keyof typeof stats> = {
+      new: 'newCount',
+      learning: 'learning',
+      review: 'review',
+      mastered: 'mastered',
+    };
+    return SRS_CATEGORY_ORDER.filter((cat) => (stats[keyMap[cat]] as number) > 0);
+  }, [stats]);
+
+  const toggleCategory = useCallback((category: SrsCardCategory) => {
+    setActiveCategories((prev) => toggleCategoryReducer(prev, category, nonEmptyCategories));
+  }, [nonEmptyCategories]);
+
   const filtered = useMemo(() => {
     if (!activeGroup) {
       return [];
@@ -50,24 +66,9 @@ export function BrowseScreen() {
 
     let cards: Flashcard[];
 
-    switch (browseFilter) {
-      case 'new':
-        cards = activeGroup.cards.filter((card) => getCardCategory(card.srsState) === 'new');
-        break;
-      case 'learning':
-        cards = activeGroup.cards.filter((card) => getCardCategory(card.srsState) === 'learning');
-        break;
-      case 'review':
-        cards = activeGroup.cards.filter((card) => getCardCategory(card.srsState) === 'review');
-        break;
-      case 'mastered':
-        cards = activeGroup.cards.filter((card) => getCardCategory(card.srsState) === 'mastered');
-        break;
-      case 'all':
-      default:
-        cards = [...activeGroup.cards];
-        break;
-    }
+    cards = activeGroup.cards.filter((card) =>
+      shouldShowCard(activeCategories, getCardCategory(card.srsState))
+    );
 
     const query = search.toLowerCase();
     if (query) {
@@ -75,7 +76,7 @@ export function BrowseScreen() {
     }
 
     return cards;
-  }, [activeGroup, browseFilter, search]);
+  }, [activeGroup, activeCategories, search]);
 
   const {
     editingId,
@@ -122,9 +123,7 @@ export function BrowseScreen() {
     startCreate();
   };
 
-  const handleBack = () => {
-    router.back();
-  };
+  const handleBack = safeBack;
 
   if (store.isLoading) {
     return <LoadingState />;
@@ -134,13 +133,8 @@ export function BrowseScreen() {
     return <GroupNotFound onBack={handleBack} />;
   }
 
-  return (
-    <AppScreen
-      title={activeGroup.name}
-      onBack={handleBack}
-      scroll={false}
-      contentStyle={styles.screenContent}
-    >
+  const listHeaderContent = (
+    <View style={styles.listHeader}>
       <AnimatedSection order={0}>
         <View style={styles.header}>
           <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>
@@ -150,24 +144,29 @@ export function BrowseScreen() {
       </AnimatedSection>
 
       <AnimatedSection order={1}>
-        <View style={styles.progressBarSection}>
-          <SegmentedProgressBar stats={stats} showLegend />
-        </View>
-      </AnimatedSection>
-
-      <AnimatedSection order={2}>
         <BrowseSearchBar search={search} setSearch={setSearch} t={t} />
       </AnimatedSection>
 
-      <AnimatedSection order={3}>
-        <BrowseFilterChips
-          browseFilter={browseFilter}
-          setBrowseFilter={setBrowseFilter}
-          stats={stats}
-          t={t}
-        />
+      <AnimatedSection order={2}>
+        <View style={styles.progressBarSection}>
+          <SegmentedProgressBar
+            stats={stats}
+            showLegend
+            selectedCategories={activeCategories}
+            onCategoryToggle={toggleCategory}
+          />
+        </View>
       </AnimatedSection>
+    </View>
+  );
 
+  return (
+    <AppScreen
+      title={activeGroup.name}
+      onBack={handleBack}
+      scroll={false}
+      contentStyle={styles.screenContent}
+    >
       <AnimatedSection order={4} style={styles.listSection}>
         <FlashcardList
           cards={filtered}
@@ -178,6 +177,7 @@ export function BrowseScreen() {
           style={styles.list}
           contentContainerStyle={styles.listContainer}
           emptyLabel={t('browse.no_cards')}
+          listHeaderContent={listHeaderContent}
         />
       </AnimatedSection>
 
@@ -212,22 +212,24 @@ export function BrowseScreen() {
 }
 
 const styles = StyleSheet.create({
+  listHeader: {
+    gap: TOKENS.spacing.lg,
+    marginBottom: TOKENS.spacing.sm,
+  },
   header: {
     alignItems: 'flex-end',
-    marginBottom: TOKENS.spacing.sm,
   },
   cardCountText: {
     fontSize: TOKENS.typography.size.xs,
   },
-  progressBarSection: {
-    marginBottom: TOKENS.spacing.lg,
-  },
+  progressBarSection: {},
   screenContent: {
     flex: 1,
     minHeight: 0,
   },
   list: {
     flex: 1,
+    marginHorizontal: -(TOKENS.spacing.sm + TOKENS.spacing.sm),
   },
   listSection: {
     flex: 1,
@@ -236,6 +238,7 @@ const styles = StyleSheet.create({
   listContainer: {
     gap: TOKENS.spacing.lg,
     paddingBottom: 100,
+    paddingHorizontal: TOKENS.spacing.sm + TOKENS.spacing.sm,
   },
   fab: {
     position: 'absolute',

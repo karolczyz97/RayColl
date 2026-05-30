@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../../utils/navigation';
 import type { Flashcard } from '../../../types/models';
 import { useFlashcardStore } from '../../../hooks/useFlashcardStore';
 import { useStudySession } from '../../../hooks/useStudySession';
@@ -77,7 +78,7 @@ export function useStudyPageController() {
   const handleBack = useCallback(() => {
     stopSession();
     void flushPersistence();
-    router.back();
+    safeBack();
   }, [stopSession, flushPersistence]);
 
   useEffect(() => {

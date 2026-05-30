@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import React, { useMemo } from 'react';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { MetricItem } from './MetricCard';
 import { MetricCard } from './MetricCard';
+import { TOKENS } from '../../theme/tokens';
 import {
-  getGridContainerWidth,
+  getDeterministicContainerWidth,
   getGridGap,
   getGridItemWidth,
 } from '../../utils/gridLayout';
@@ -11,6 +12,8 @@ import {
 interface MetricGridProps {
   items: MetricItem[];
   compactBreakpoint?: number;
+  screenMaxWidth?: number;
+  hasScrollViewPadding?: boolean;
 }
 
 export const METRIC_GRID_COMPACT_BREAKPOINT = 900;
@@ -18,10 +21,20 @@ export const METRIC_GRID_COMPACT_BREAKPOINT = 900;
 export function MetricGrid({
   items,
   compactBreakpoint = METRIC_GRID_COMPACT_BREAKPOINT,
+  screenMaxWidth = TOKENS.layout.maxWidth,
+  hasScrollViewPadding = false,
 }: MetricGridProps) {
   const { width: windowWidth } = useWindowDimensions();
-  const [measuredWidth, setMeasuredWidth] = useState<number | undefined>(undefined);
-  const currentWidth = getGridContainerWidth({ measuredWidth, windowWidth });
+
+  const currentWidth = useMemo(() => {
+    return getDeterministicContainerWidth(
+      windowWidth,
+      screenMaxWidth,
+      hasScrollViewPadding,
+      Platform.OS === 'web',
+    );
+  }, [windowWidth, screenMaxWidth, hasScrollViewPadding]);
+
   const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
   const isCompact = currentWidth < compactBreakpoint;
   const columns = Math.min(items.length, isCompact ? 2 : 4);
@@ -31,7 +44,7 @@ export function MetricGrid({
   );
 
   return (
-    <View style={[styles.grid, { gap }]} onLayout={(event) => setMeasuredWidth(event.nativeEvent.layout.width)}>
+    <View style={[styles.grid, { gap }]}>
       {items.map((item) => (
         <View
           key={`${item.label}-${item.value}`}
