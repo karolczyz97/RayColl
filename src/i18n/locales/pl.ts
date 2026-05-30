@@ -71,6 +71,7 @@ export const pl: Record<string, string> = {
   'import.page_label': 'Strona {index}',
   'import.import_create_btn': 'Importuj i utwórz grupę',
   'import.preview_rows': 'Podgląd ({count} wierszy)',
+  'import.first_row_header': 'Pierwsza linia to nagłówki',
 
   // Stats
   'stats.title': 'Statystyki nauki',

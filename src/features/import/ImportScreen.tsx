@@ -57,6 +57,8 @@ export function ImportScreen() {
       }}
       onMovePage={draft.handleMovePage}
       popularLangs={POPULAR_LANGS}
+      firstRowIsHeader={draft.firstRowIsHeader}
+      onHeaderToggle={draft.handleHeaderToggle}
       t={t}
     />
   );

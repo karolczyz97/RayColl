@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
+import type { MD3Theme } from 'react-native-paper';
 import { useTheme } from 'react-native-paper';
 import type { CardStats } from '../store/selectors/stats';
+import type { SrsCardCategory } from '../srs/srsEngine';
+import type { TranslationFn } from '../i18n';
 import { useI18n } from '../i18n';
 import { getReviewStatusColor } from '../theme/semanticColors';
 import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
@@ -14,23 +17,47 @@ const STATS_KEY: Record<string, keyof CardStats> = {
   mastered: 'mastered',
 };
 
-interface Props {
+export interface SessionProgressItem {
+  id: string;
+  category: SrsCardCategory;
+}
+
+interface StatsModeProps {
+  mode?: 'stats';
   stats: CardStats;
   height?: number;
   showLegend?: boolean;
   legendPosition?: 'top' | 'bottom';
 }
 
-export function SegmentedProgressBar({
-  stats,
-  height = 12,
-  showLegend = false,
-  legendPosition = 'bottom',
-}: Props) {
-  const { total } = stats;
-  const { t } = useI18n();
+interface SessionModeProps {
+  mode: 'session';
+  items: SessionProgressItem[];
+  currentIndex: number;
+  height?: number;
+}
+
+type Props = StatsModeProps | SessionModeProps;
+
+export function SegmentedProgressBar(props: Props) {
   const theme = useTheme();
+  const { t } = useI18n();
   const emptyColor = theme.colors.outlineVariant;
+
+  if ('mode' in props && props.mode === 'session') {
+    return renderSessionMode(props, theme, emptyColor);
+  }
+
+  return renderStatsMode(props, theme, emptyColor, t);
+}
+
+function renderStatsMode(
+  { stats, height = 12, showLegend = false, legendPosition = 'bottom' }: StatsModeProps,
+  theme: MD3Theme,
+  emptyColor: string,
+  t: TranslationFn,
+) {
+  const { total } = stats;
 
   const categoryData = SRS_CATEGORY_ORDER.map((category) => {
     const statsKey = STATS_KEY[category];
@@ -97,6 +124,57 @@ export function SegmentedProgressBar({
   );
 }
 
+function renderSessionMode(
+  { items, currentIndex, height = 8 }: SessionModeProps,
+  theme: MD3Theme,
+  emptyColor: string,
+) {
+  if (items.length === 0) {
+    return (
+      <View
+        style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: emptyColor }]}
+      />
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View
+        style={[
+          styles.bar,
+          { height, borderRadius: height / 2, backgroundColor: emptyColor },
+          styles.sessionBar,
+        ]}
+      >
+        {items.map((item, index) => {
+          let bgColor = emptyColor;
+          let isActive = false;
+
+          if (index < currentIndex) {
+            const { color } = getReviewStatusColor(theme, item.category);
+            bgColor = color;
+          } else if (index === currentIndex) {
+            const { color } = getReviewStatusColor(theme, item.category);
+            bgColor = color;
+            isActive = true;
+          }
+
+          return (
+            <View
+              key={item.id}
+              style={[
+                styles.sessionSegment,
+                { backgroundColor: bgColor },
+                isActive && { borderWidth: 1, borderColor: theme.colors.onSurface },
+              ]}
+            />
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     width: '100%',
@@ -134,4 +212,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  sessionBar: {
+    gap: 0.5,
+  },
+  sessionSegment: {
+    flex: 1,
+    height: '100%',
+  },
+
 });

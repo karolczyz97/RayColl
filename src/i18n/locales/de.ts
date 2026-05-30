@@ -72,6 +72,7 @@ export const de: Record<string, string> = {
   'import.page_label': 'Seite {index}',
   'import.import_create_btn': 'Importieren & Deck erstellen',
   'import.preview_rows': 'Vorschau ({count} Zeilen)',
+  'import.first_row_header': 'Erste Zeile ist Kopfzeile',
 
   // Stats
   'stats.title': 'Lernstatistiken',

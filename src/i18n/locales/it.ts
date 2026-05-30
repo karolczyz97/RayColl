@@ -72,6 +72,7 @@ export const it: Record<string, string> = {
   'import.page_label': 'Pagina {index}',
   'import.import_create_btn': 'Importa e crea mazzo',
   'import.preview_rows': 'Anteprima ({count} righe)',
+  'import.first_row_header': 'La prima riga è un\'intestazione',
 
   // Stats
   'stats.title': 'Statistiche di studio',

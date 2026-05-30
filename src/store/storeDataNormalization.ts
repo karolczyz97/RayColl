@@ -26,9 +26,9 @@ function getNormalizedActivePageCount(group: FlashcardGroup): number {
 }
 
 export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
-  const activePageCount = getNormalizedActivePageCount(group);
-  const pageNames = [...group.pageNames];
-  const pageLanguages = [...group.pageLanguages];
+  const pageNames = Array.isArray(group.pageNames) ? [...group.pageNames] : [];
+  const pageLanguages = Array.isArray(group.pageLanguages) ? [...group.pageLanguages] : [];
+  const activePageCount = getNormalizedActivePageCount({ ...group, pageNames, pageLanguages });
 
   while (pageNames.length < activePageCount) {
     pageNames.push(`Page ${pageNames.length + 1}`);

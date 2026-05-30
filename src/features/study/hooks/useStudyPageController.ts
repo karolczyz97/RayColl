@@ -106,7 +106,6 @@ export function useStudyPageController() {
     hasTts: steps.some((step) => step.type === 'speak_page'),
     isLoading,
     isNarrow,
-    progressPct: dueCards.length > 0 ? sessionState.currentCardIndex / dueCards.length : 0,
     restartFailed,
     restartSession,
     sessionState,

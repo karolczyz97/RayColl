@@ -424,7 +424,7 @@ export function useStudySession(
 
   const restartFailed = useCallback(() => {
     if (failedCardsRef.current.length > 0) {
-      startSession(getFreshCards(failedCardsRef.current), false);
+      startSession(getFreshCards(failedCardsRef.current), true);
     }
   }, [getFreshCards, startSession]);
 

@@ -6,6 +6,7 @@ import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
   SEPARATORS,
+  detectFirstRowHeader,
   detectLangFromHeader,
   detectPageCount,
   detectSeparator,
@@ -31,12 +32,14 @@ export function useImportDeckDraft() {
   const [sepKey, setSepKey] = useState('semicolon');
   const [customSep, setCustomSep] = useState('');
   const [pageCount, setPageCount] = useState(2);
-  const [pageNames, setPageNames] = useState(['Phrase', 'Tlumaczenie', '', '', '']);
+  const [pageNames, setPageNames] = useState(['Phrase', 'Tłumaczenie', '', '', '']);
   const [pageLangs, setPageLangs] = useState(['en-US', 'pl-PL', '', '', '']);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [firstRowIsHeader, setFirstRowIsHeader] = useState(false);
   const lastDetectedFirstLine = useRef<string | null>(null);
+  const headerSettingTouchedRef = useRef(false);
   const debouncedRawText = useDebounce(rawText, 300);
   const {
     editingId,
@@ -77,13 +80,21 @@ export function useImportDeckDraft() {
   );
 
   const rebuildPreviewFromText = useCallback(
-    (text: string, currentSepKey: string, currentPageCount: number) => {
+    (text: string, currentSepKey: string, currentPageCount: number, skipHeader: boolean) => {
       if (!text.trim()) {
         setCards([]);
         return;
       }
 
-      const parsedRows = parseCSV(text, currentSepKey, currentPageCount);
+      let parsedRows = parseCSV(text, currentSepKey, currentPageCount);
+      if (skipHeader && parsedRows.length > 0) {
+        parsedRows = parsedRows.slice(1);
+      }
+      if (parsedRows.length === 0) {
+        setCards([]);
+        return;
+      }
+
       setCards((prevCards) => {
         const isSame =
           prevCards.length === parsedRows.length &&
@@ -111,8 +122,8 @@ export function useImportDeckDraft() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced preview intentionally syncs local derived draft state
-    rebuildPreviewFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
-  }, [customSep, debouncedRawText, getActiveSepValue, pageCount, rebuildPreviewFromText, sepKey]);
+    rebuildPreviewFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount, firstRowIsHeader);
+  }, [customSep, debouncedRawText, firstRowIsHeader, getActiveSepValue, pageCount, rebuildPreviewFromText, sepKey]);
 
   const handleTextChange = useCallback((text: string) => {
     setImportError('');
@@ -140,6 +151,11 @@ export function useImportDeckDraft() {
     const detectedCount = detectPageCount(safeText, separator);
     setPageCount(detectedCount);
 
+    const detection = detectFirstRowHeader(safeText, detectedSep);
+    if (!headerSettingTouchedRef.current && detection.isLikelyHeader !== firstRowIsHeader) {
+      setFirstRowIsHeader(detection.isLikelyHeader);
+    }
+
     const parts = parseCSVRaw(safeText, separator)[0] ?? [];
     const headerKey = parts.join('\u0000');
     if (headerKey !== lastDetectedFirstLine.current) {
@@ -161,29 +177,34 @@ export function useImportDeckDraft() {
         });
       }
     }
-  }, []);
+  }, [firstRowIsHeader]);
 
   const handleSepKeyChange = useCallback(
     (newSep: string, newCustomSep?: string) => {
       setSepKey(newSep);
       if (newSep !== 'custom') {
         setCustomSep('');
-        rebuildPreviewFromText(rawText, newSep, pageCount);
+        rebuildPreviewFromText(rawText, newSep, pageCount, firstRowIsHeader);
       } else if (newCustomSep !== undefined) {
         setCustomSep(newCustomSep);
-        rebuildPreviewFromText(rawText, newCustomSep || ',', pageCount);
+        rebuildPreviewFromText(rawText, newCustomSep || ',', pageCount, firstRowIsHeader);
       }
     },
-    [pageCount, rawText, rebuildPreviewFromText],
+    [firstRowIsHeader, pageCount, rawText, rebuildPreviewFromText],
   );
 
   const handlePageCountChange = useCallback(
     (count: number) => {
       setPageCount(count);
-      rebuildPreviewFromText(rawText, getActiveSepValue(sepKey, customSep), count);
+      rebuildPreviewFromText(rawText, getActiveSepValue(sepKey, customSep), count, firstRowIsHeader);
     },
-    [customSep, getActiveSepValue, rawText, rebuildPreviewFromText, sepKey],
+    [customSep, firstRowIsHeader, getActiveSepValue, rawText, rebuildPreviewFromText, sepKey],
   );
+
+  const handleHeaderToggle = useCallback(() => {
+    headerSettingTouchedRef.current = true;
+    setFirstRowIsHeader((prev) => !prev);
+  }, []);
 
   const handleMovePage = useCallback(
     (index: number, direction: -1 | 1) => {
@@ -257,7 +278,16 @@ export function useImportDeckDraft() {
 
           setSepKey(detectedSep);
           setPageCount(detectedCount);
-          rebuildPreviewFromText(safeFileContent, detectedSep, detectedCount);
+
+          const detection = detectFirstRowHeader(safeFileContent, detectedSep);
+          const effectiveHeader = headerSettingTouchedRef.current
+            ? firstRowIsHeader
+            : detection.isLikelyHeader;
+          if (effectiveHeader !== firstRowIsHeader) {
+            setFirstRowIsHeader(effectiveHeader);
+          }
+
+          rebuildPreviewFromText(safeFileContent, detectedSep, detectedCount, effectiveHeader);
 
           const parts = parseCSVRaw(safeFileContent, separator)[0] ?? [];
           lastDetectedFirstLine.current = parts.join('\u0000');
@@ -286,7 +316,7 @@ export function useImportDeckDraft() {
     } catch (err: unknown) {
       setImportError(err instanceof Error ? err.message : 'Failed to pick or read file');
     }
-  }, [rebuildPreviewFromText]);
+  }, [firstRowIsHeader, rebuildPreviewFromText]);
 
   const submitImport = useCallback(async () => {
     if (!name.trim()) return;
@@ -353,6 +383,8 @@ export function useImportDeckDraft() {
     importError,
     setImportError,
     isImporting,
+    firstRowIsHeader,
+    handleHeaderToggle,
     handleTextChange,
     handleSepKeyChange,
     handlePageCountChange,

@@ -71,6 +71,7 @@ export const en: Record<string, string> = {
   'import.page_label': 'Page {index}',
   'import.import_create_btn': 'Import & Create Deck',
   'import.preview_rows': 'Preview ({count} rows)',
+  'import.first_row_header': 'First line is header',
 
   // Stats
   'stats.title': 'Study Statistics',

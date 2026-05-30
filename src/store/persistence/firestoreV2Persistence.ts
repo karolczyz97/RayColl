@@ -110,7 +110,10 @@ export async function loadUserDataV2(uid: string): Promise<UserData | null> {
         pageNames: deckData.pageNames,
         activePageCount:
           deckData.activePageCount ??
-          Math.max(deckData.pageNames.length, deckData.pageLanguages.length),
+          Math.max(
+            Array.isArray(deckData.pageNames) ? deckData.pageNames.length : 0,
+            Array.isArray(deckData.pageLanguages) ? deckData.pageLanguages.length : 0,
+          ),
         studyFilter: deckData.studyFilter ?? DEFAULT_STUDY_FILTER,
       };
 

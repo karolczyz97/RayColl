@@ -72,6 +72,7 @@ export const es: Record<string, string> = {
   'import.page_label': 'Página {index}',
   'import.import_create_btn': 'Importar y crear baraja',
   'import.preview_rows': 'Vista previa ({count} filas)',
+  'import.first_row_header': 'La primera fila es encabezado',
 
   // Stats
   'stats.title': 'Estadísticas de estudio',
