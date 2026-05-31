@@ -27,6 +27,7 @@ interface FlashcardListProps {
   showHeader?: boolean;
   emptyLabel?: string;
   listHeaderContent?: React.ReactNode;
+  className?: string;
 }
 
 export function FlashcardList({
@@ -45,6 +46,7 @@ export function FlashcardList({
   showHeader = true,
   emptyLabel,
   listHeaderContent,
+  className,
 }: FlashcardListProps) {
   const theme = useTheme();
   const { useTwoColumnLayout } = useResponsiveLayout();
@@ -89,6 +91,7 @@ export function FlashcardList({
   return (
     <FlatList
       key={`flashcard-list-${numColumns}`}
+      className={className}
       data={data}
       keyExtractor={(item) => item.id}
       numColumns={numColumns}

@@ -64,7 +64,8 @@ export function AppScreen({
     // Full-width ScrollView → scrollbar at the window edge. Card centered inside.
     body = (
       <ScrollView
-        style={[styles.flexFill, styles.webStableScrollbar]}
+        style={styles.flexFill}
+        className="raycoll-stable-scrollbar"
         contentContainerStyle={styles.webScrollContent}
       >
         <View
@@ -149,8 +150,5 @@ const styles = StyleSheet.create({
   flexFill: {
     flex: 1,
     minHeight: 0,
-  },
-  webStableScrollbar: {
-    scrollbarGutter: 'stable both-edges',
   },
 });

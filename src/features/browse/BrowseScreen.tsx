@@ -175,6 +175,7 @@ export function BrowseScreen() {
           onDelete={setDeleteCardId}
           t={t}
           style={styles.list}
+          className={Platform.OS === 'web' ? 'raycoll-stable-scrollbar' : undefined}
           contentContainerStyle={styles.listContainer}
           emptyLabel={t('browse.no_cards')}
           listHeaderContent={listHeaderContent}

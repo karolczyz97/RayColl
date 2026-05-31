@@ -76,6 +76,9 @@ function InnerLayout() {
         scrollbar-width: thin;
         scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
       }
+      .raycoll-stable-scrollbar {
+        scrollbar-gutter: stable both-edges;
+      }
       *::-webkit-scrollbar {
         width: 8px;
         height: 8px;

@@ -17,4 +17,17 @@ declare module 'react-native' {
       | 'bottom left'
       | 'bottom right';
   }
+
+  interface ViewProps {
+    className?: string;
+  }
+
+  interface ScrollViewProps {
+    className?: string;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface FlatListProps<ItemT> {
+    className?: string;
+  }
 }

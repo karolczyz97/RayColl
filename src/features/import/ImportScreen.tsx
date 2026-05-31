@@ -130,6 +130,7 @@ export function ImportScreen() {
         data={[]}
         keyExtractor={(item: { key: string }) => item.key}
         style={styles.list}
+        className={Platform.OS === 'web' ? 'raycoll-stable-scrollbar' : undefined}
         renderItem={null}
         ListHeaderComponent={topCards}
         contentContainerStyle={styles.listContent}
