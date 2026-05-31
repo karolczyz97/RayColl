@@ -60,6 +60,44 @@ function InnerLayout() {
   const { theme: materialColors } = useMaterial3Theme();
   const [isIconFontReady, setIsIconFontReady] = React.useState(Platform.OS !== 'web');
 
+  // Inject global scrollbar styles on web.
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+    const styleId = 'raycoll-global-scrollbar';
+    if (document.getElementById(styleId)) {
+      return;
+    }
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      html {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
+      }
+      *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        background: transparent;
+      }
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      *::-webkit-scrollbar-thumb {
+        background-color: rgba(128, 128, 128, 0.4);
+        border-radius: 4px;
+      }
+      *::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(128, 128, 128, 0.6);
+      }
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const theme = React.useMemo(() => {
     return createAppTheme({
       isDark,
@@ -125,15 +163,8 @@ function InnerLayout() {
   return (
     <PaperProvider theme={theme} settings={{ icon: renderPaperIcon }}>
       {Platform.OS === 'web' ? (
-        <View style={[styles.webOuter, { backgroundColor: theme.colors.surfaceVariant }]}>
-          <View
-            style={[
-              styles.webInner,
-              { backgroundColor: theme.colors.background, shadowColor: theme.colors.shadow },
-            ]}
-          >
-            {content}
-          </View>
+        <View style={[styles.webOuter, { backgroundColor: theme.colors.background }]}>
+          {content}
         </View>
       ) : (
         content
@@ -172,18 +203,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
     minHeight: 0,
-  },
-  webInner: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 1200,
-    minHeight: 0,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
   },
 });

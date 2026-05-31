@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
 import { safeBack } from '../../utils/navigation';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
@@ -175,6 +175,11 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    ...Platform.select({
+      web: {
+        scrollbarGutter: 'stable both-edges',
+      },
+    }),
   },
   row: {
     flexDirection: 'row',

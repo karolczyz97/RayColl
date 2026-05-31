@@ -6,6 +6,8 @@ declare module 'react-native' {
     overflowX?: 'auto' | 'hidden' | 'scroll' | 'visible';
     overflowY?: 'auto' | 'hidden' | 'scroll' | 'visible';
     scrollbarWidth?: 'auto' | 'thin' | 'none';
+    scrollbarGutter?: 'auto' | 'stable' | 'stable both-edges';
+    scrollbarColor?: string;
     transformOrigin?:
       | 'center'
       | 'top'

@@ -50,6 +50,12 @@ export function getSecondaryBgColor(theme: MD3Theme): string {
   return theme.colors.secondaryContainer;
 }
 
+// Top app bar: strong, leading color. Single source of truth so the whole
+// shell can be re-toned (e.g. to primaryContainer/onPrimaryContainer) in one place.
+export function getTopBarColors(theme: MD3Theme): { bg: string; fg: string } {
+  return { bg: theme.colors.primaryContainer, fg: theme.colors.onPrimaryContainer };
+}
+
 export function getHeatmapColor(theme: MD3Theme, count: number): string {
   if (count === 0) {
     return theme.colors.surfaceVariant;

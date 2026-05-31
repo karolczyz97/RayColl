@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 import type { FlashcardGroup } from '../../../types/models';
@@ -44,10 +43,7 @@ export function StudyFinishedState({
   const theme = useTheme();
 
   return (
-    <SafeAreaView
-      edges={['top', 'left', 'right', 'bottom']}
-      style={[styles.finishedContainer, { backgroundColor: theme.colors.background }]}
-    >
+    <View style={styles.finishedContainer}>
       <Animated.View entering={ZoomIn.springify().damping(12)}>
         <AppIcon name="check-circle" size={96} color={getSuccessColor(theme)} />
       </Animated.View>
@@ -82,7 +78,7 @@ export function StudyFinishedState({
           {backToPanelLabel}
         </Button>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -91,7 +87,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: TOKENS.spacing.xl,
+    paddingVertical: TOKENS.spacing.xl,
   },
   bravoTitle: {
     fontWeight: 'bold',

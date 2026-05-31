@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { PageHeader } from '../../../components/PageHeader';
+import { AppTopBar } from '../../../components/layout/AppTopBar';
 import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
 import type { SessionProgressItem } from '../session/sessionProgress';
 import { TOKENS } from '../../../theme/tokens';
@@ -25,7 +25,7 @@ export function StudyStatusBanner({
 
   return (
     <View style={styles.header}>
-      <PageHeader title={title} onBack={onBack} />
+      <AppTopBar title={title} onBack={onBack} />
       <View style={styles.progressBarWrapper}>
         <SegmentedProgressBar
           mode="session"
@@ -47,12 +47,13 @@ const styles = StyleSheet.create({
   },
   progressBarWrapper: {
     marginVertical: TOKENS.spacing.md,
-    width: '100%',
+    paddingHorizontal: TOKENS.spacing.lg,
   },
   progressCounter: {
     fontSize: TOKENS.typography.size.xs,
     textAlign: 'right',
     fontWeight: '600',
     letterSpacing: 0.5,
+    paddingHorizontal: TOKENS.spacing.lg,
   },
 });

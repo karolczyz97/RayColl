@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { IconButton, Portal } from 'react-native-paper';
+import { IconButton, Portal, useTheme } from 'react-native-paper';
+import { getTopBarColors } from '../../theme/semanticColors';
 import { DeckNameSection } from '../../components/settings/DeckNameSection';
 import { StudyScopeSection } from '../../components/settings/StudyScopeSection';
 import { StudyModeSelector } from '../../components/settings/StudyModeSelector';
@@ -15,6 +16,7 @@ import { SectionCard } from '../../components/layout/SectionCard';
 import { PageConfigEditor } from '../../components/pageConfig/PageConfigEditor';
 
 export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDeckSettingsController').useDeckSettingsController>) {
+  const { fg: topBarFg } = getTopBarColors(useTheme());
   const {
     activeGroup,
     activeMode,
@@ -165,9 +167,10 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     <AppScreen
       title={t('settings.title', { name: activeGroup.name })}
       onBack={handleBack}
-      action={
+      right={
         <IconButton
           icon="delete-outline"
+          iconColor={topBarFg}
           onPress={() => setDeleteDialogOpen(true)}
           accessibilityLabel="Delete deck button"
         />

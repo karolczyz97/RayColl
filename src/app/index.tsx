@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
-import { Platform, StyleSheet, ScrollView, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { FAB } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
-import { DashboardHeader } from '../components/dashboard/DashboardHeader';
+import { DashboardBrand, DashboardActions } from '../components/dashboard/DashboardHeader';
 import { DashboardStats } from '../components/dashboard/DashboardStats';
 import { EmptyDashboardState } from '../components/dashboard/EmptyDashboardState';
 import { DeckGrid } from '../components/dashboard/DeckGrid';
@@ -58,75 +58,60 @@ export default function Dashboard() {
   }
 
   return (
-    <AppScreen scroll={false} maxWidth={contentMaxWidth}>
-      <View style={styles.mainContainer}>
-        <SyncStatusBanner
-          syncStatus={store.syncStatus}
-          lastSyncError={store.lastSyncError}
-          lastPersistenceError={store.lastPersistenceError}
-          lastStoreError={store.lastStoreError}
+    <AppScreen
+      maxWidth={contentMaxWidth}
+      brand={<DashboardBrand />}
+      right={
+        <DashboardActions
+          user={user}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
         />
-
-        {/* Top Header */}
-        <AnimatedSection index={0}>
-          <DashboardHeader user={user} onLogin={handleLogin} onLogout={handleLogout} />
-        </AnimatedSection>
-
-        {/* Decks Scroll Container */}
-        <ScrollView
-          style={[styles.scrollView, Platform.OS === 'web' && styles.webStableScrollbar]}
-          contentContainerStyle={styles.scrollContent}
+      }
+      overlay={
+        <Animated.View
+          entering={ZoomIn.springify().delay(getEnterDelay(3))}
+          style={styles.fabWrapper}
         >
-          {/* Quick Statistics Banner */}
-          {decksCount > 0 && (
-            <AnimatedSection order={1}>
-              <DashboardStats
-                decksCount={decksCount}
-                cardsCount={cardsCount}
-                dueCount={dueCount}
-                streak={streak}
-              />
-            </AnimatedSection>
-          )}
+          <FAB
+            icon="plus"
+            style={styles.fab}
+            onPress={() => router.push(ROUTES.IMPORT)}
+            accessibilityLabel="Create new flashcard deck"
+          />
+        </Animated.View>
+      }
+    >
+      <SyncStatusBanner
+        syncStatus={store.syncStatus}
+        lastSyncError={store.lastSyncError}
+        lastPersistenceError={store.lastPersistenceError}
+        lastStoreError={store.lastStoreError}
+      />
 
-          {decksCount === 0 ? (
-            <AnimatedSection order={2}>
-              <EmptyDashboardState />
-            </AnimatedSection>
-          ) : (
-            <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} />
-          )}
-        </ScrollView>
-      </View>
+      {decksCount > 0 && (
+        <AnimatedSection order={1}>
+          <DashboardStats
+            decksCount={decksCount}
+            cardsCount={cardsCount}
+            dueCount={dueCount}
+            streak={streak}
+          />
+        </AnimatedSection>
+      )}
 
-      {/* Import FAB */}
-      <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(3))} style={styles.fabWrapper}>
-        <FAB
-          icon="plus"
-          style={styles.fab}
-          onPress={() => router.push(ROUTES.IMPORT)}
-          accessibilityLabel="Create new flashcard deck"
-        />
-      </Animated.View>
+      {decksCount === 0 ? (
+        <AnimatedSection order={2}>
+          <EmptyDashboardState />
+        </AnimatedSection>
+      ) : (
+        <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} />
+      )}
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  webStableScrollbar: {
-    scrollbarWidth: 'thin',
-  },
-  scrollContent: {
-    padding: TOKENS.spacing.lg,
-    paddingBottom: 100,
-    gap: TOKENS.spacing.lg,
-  },
   fabWrapper: {
     position: 'absolute',
     right: TOKENS.spacing.sm,

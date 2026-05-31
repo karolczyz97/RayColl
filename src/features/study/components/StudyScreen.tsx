@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../../i18n';
@@ -61,26 +61,9 @@ export function StudyScreen({
   t,
 }: StudyScreenProps) {
   const theme = useTheme();
-
-  if (sessionState.isSessionFinished || dueCards.length === 0) {
-    return (
-      <StudyFinishedState
-        activeGroup={activeGroup}
-        failedCount={failedCount}
-        dueCardsCount={dueCards.length}
-        bravoLabel={t('study.bravo')}
-        noDueLabel={t('study.no_due')}
-        finishedDescription={t('study.finished_desc')}
-        deckProgressLabel={t('stats.deck_progress')}
-        restartFailedLabel={t('study.restart_failed')}
-        restartSessionLabel={t('study.restart_session')}
-        backToPanelLabel={t('study.back_to_panel')}
-        onRestartFailed={restartFailed}
-        onRestartSession={restartSession}
-        onBack={handleBack}
-      />
-    );
-  }
+  const isFinished = sessionState.isSessionFinished || dueCards.length === 0;
+  const total = dueCards.length;
+  const progressLabel = total > 0 ? `${sessionState.currentCardIndex + 1}/${total}` : '0/0';
 
   return (
     <SafeAreaView
@@ -91,40 +74,63 @@ export function StudyScreen({
         title={activeGroup.name}
         sessionItems={sessionProgressItems}
         currentIndex={sessionState.currentCardIndex}
-        progressLabel={`${sessionState.currentCardIndex + 1}/${dueCards.length}`}
+        progressLabel={progressLabel}
         onBack={handleBack}
       />
-      <StudyCard
-        currentCard={currentCard}
-        activeGroup={activeGroup}
-        currentCardIndex={sessionState.currentCardIndex}
-        revealedPages={sessionState.revealedPages}
-        showRatingButtons={sessionState.showRatingButtons}
-        waitingForTap={sessionState.waitingForTap}
-        onCardTap={handleCardTap}
-        onHoldingChange={setHolding}
-        tapToRevealLabel={t('study.tap_to_reveal')}
-      />
-      <StudyControls
-        isNarrow={isNarrow}
-        hasTts={hasTts}
-        hasStt={hasStt}
-        isTtsPlaying={sessionState.isTtsPlaying}
-        isSttListening={sessionState.isSttListening}
-        showRatingButtons={sessionState.showRatingButtons}
-        sttResultText={sessionState.sttResultText}
-        sttMatchPercent={sessionState.sttMatchPercent}
-        getButtonText={getButtonText}
-        ratingLabels={[
-          t('study.rating.1'),
-          t('study.rating.2'),
-          t('study.rating.3'),
-          t('study.rating.4'),
-        ]}
-        recognizedLabel={t('study.recognized')}
-        matchPercentLabel={t('study.match_percent', { percent: sessionState.sttMatchPercent })}
-        onRate={handleRating}
-      />
+
+      <View style={styles.content}>
+        {isFinished ? (
+          <StudyFinishedState
+            activeGroup={activeGroup}
+            failedCount={failedCount}
+            dueCardsCount={dueCards.length}
+            bravoLabel={t('study.bravo')}
+            noDueLabel={t('study.no_due')}
+            finishedDescription={t('study.finished_desc')}
+            deckProgressLabel={t('stats.deck_progress')}
+            restartFailedLabel={t('study.restart_failed')}
+            restartSessionLabel={t('study.restart_session')}
+            backToPanelLabel={t('study.back_to_panel')}
+            onRestartFailed={restartFailed}
+            onRestartSession={restartSession}
+            onBack={handleBack}
+          />
+        ) : (
+          <>
+            <StudyCard
+              currentCard={currentCard}
+              activeGroup={activeGroup}
+              currentCardIndex={sessionState.currentCardIndex}
+              revealedPages={sessionState.revealedPages}
+              showRatingButtons={sessionState.showRatingButtons}
+              waitingForTap={sessionState.waitingForTap}
+              onCardTap={handleCardTap}
+              onHoldingChange={setHolding}
+              tapToRevealLabel={t('study.tap_to_reveal')}
+            />
+            <StudyControls
+              isNarrow={isNarrow}
+              hasTts={hasTts}
+              hasStt={hasStt}
+              isTtsPlaying={sessionState.isTtsPlaying}
+              isSttListening={sessionState.isSttListening}
+              showRatingButtons={sessionState.showRatingButtons}
+              sttResultText={sessionState.sttResultText}
+              sttMatchPercent={sessionState.sttMatchPercent}
+              getButtonText={getButtonText}
+              ratingLabels={[
+                t('study.rating.1'),
+                t('study.rating.2'),
+                t('study.rating.3'),
+                t('study.rating.4'),
+              ]}
+              recognizedLabel={t('study.recognized')}
+              matchPercentLabel={t('study.match_percent', { percent: sessionState.sttMatchPercent })}
+              onRate={handleRating}
+            />
+          </>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -132,8 +138,10 @@ export function StudyScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: TOKENS.spacing.lg,
-    paddingTop: 48,
     paddingBottom: TOKENS.spacing.xl,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: TOKENS.spacing.lg,
   },
 });

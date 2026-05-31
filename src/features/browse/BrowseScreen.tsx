@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import Animated, { ZoomIn } from 'react-native-reanimated';
@@ -229,16 +229,24 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-    marginHorizontal: -(TOKENS.spacing.sm + TOKENS.spacing.sm),
+    width: '100%',
+    ...Platform.select({
+      web: {
+        scrollbarGutter: 'stable both-edges',
+      },
+    }),
   },
   listSection: {
     flex: 1,
     minHeight: 0,
   },
   listContainer: {
+    width: '100%',
+    maxWidth: TOKENS.layout.maxWidth,
+    alignSelf: 'center',
     gap: TOKENS.spacing.lg,
     paddingBottom: 100,
-    paddingHorizontal: TOKENS.spacing.sm + TOKENS.spacing.sm,
+    paddingHorizontal: TOKENS.spacing.lg,
   },
   fab: {
     position: 'absolute',

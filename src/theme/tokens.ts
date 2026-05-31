@@ -72,6 +72,7 @@ export const TOKENS = {
     minGap: 8,
     maxGap: 32,
     gapRatio: 0.0266,
+    topBarHeight: 64,
   },
   motion: {
     duration: {
