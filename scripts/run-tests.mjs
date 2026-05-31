@@ -28,6 +28,7 @@ try {
     '../src/store/selectors/__tests__/merge.test.ts',
     '../src/store/selectors/__tests__/tombstones.test.ts',
     '../src/import/__tests__/importParser.test.ts',
+    '../src/import/__tests__/importDeck.test.ts',
     '../src/features/import/__tests__/importDraftHelpers.test.ts',
     '../src/store/actions/__tests__/groupActions.test.ts',
     '../src/store/actions/__tests__/cardActions.test.ts',

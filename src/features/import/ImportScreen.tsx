@@ -15,6 +15,7 @@ import { ImportConfigCard } from './ImportConfigCard';
 import { ImportPreviewSection } from './ImportPreviewSection';
 import { ImportSourceCard } from './ImportSourceCard';
 import { useImportDeckDraft } from './useImportDeckDraft';
+import { MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
 
 export function ImportScreen() {
   const { t } = useI18n();
@@ -47,6 +48,8 @@ export function ImportScreen() {
       onMovePage={draft.handleMovePage}
       popularLangs={POPULAR_LANGS}
       t={t}
+      minPageCount={draft.rawColumnCount}
+      activePageCount={Math.min(draft.pageCount, MAX_VISIBLE_PAGE_COUNT)}
     />
   );
 
@@ -125,7 +128,7 @@ export function ImportScreen() {
 
       <AppSnackbar
         visible={!!draft.importError}
-        message={draft.importError ? t(draft.importError) : ''}
+        message={draft.importError ? t(draft.importError, { max: MAX_STORED_PAGE_COUNT }) : ''}
         onDismiss={() => draft.setImportError('')}
       />
     </AppScreen>

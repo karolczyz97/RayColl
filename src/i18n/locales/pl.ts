@@ -76,10 +76,12 @@ export const pl: Record<string, string> = {
   'import.sep.set_custom': 'Ustaw własny',
   'import.first_row_header': 'Pierwsza linia to nagłówki',
   'import.err.too_many_lines': 'Wejście ograniczone do 500 linii.',
+  'import.err.too_many_columns': 'Dane wejściowe przekraczają maksymalną liczbę {max} kolumn.',
   'import.pages_count': 'Strony:',
   'import.page_label': 'Strona {index}',
   'import.import_create_btn': 'Importuj i utwórz grupę',
   'import.preview_rows': 'Podgląd ({count} wierszy)',
+  'import.page_hidden': ' (ukryta)',
 
   // Stats
   'stats.title': 'Statystyki nauki',

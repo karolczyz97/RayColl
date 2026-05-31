@@ -498,7 +498,7 @@ assertThrows(
       pageNames: ['Front', 'Back'],
       cards: [{ pages: ['hello', 'czesc'] }],
     }),
-  'Invalid language code',
+  'Missing language for page 1',
 );
 assertThrows(
   () =>

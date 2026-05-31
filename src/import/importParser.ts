@@ -1,4 +1,4 @@
-import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../constants/pages';
+import { MIN_PAGE_COUNT } from '../constants/pages';
 
 export const SEPARATORS: Record<string, string> = {
   tab: '\t',
@@ -43,6 +43,10 @@ const HEADER_TOKENS = [
   'hiszpanski',
 ];
 
+export function normalizeImportCell(value: string): string {
+  return value.trim();
+}
+
 function normalizeCsvText(text: string): string {
   return text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 }
@@ -55,13 +59,14 @@ function normalizeHeaderToken(text: string): string {
     .trim();
 }
 
-function looksLikeHeaderLabel(value: string): boolean {
+export function looksLikeHeaderLabel(value: string): boolean {
   const normalized = normalizeHeaderToken(value);
   if (!normalized) {
     return false;
   }
 
-  return HEADER_TOKENS.some((token) => normalized.includes(token));
+  const words = normalized.split(/\s+/);
+  return words.some((word) => HEADER_TOKENS.includes(word));
 }
 
 function looksLikeShortLabel(value: string): boolean {
@@ -100,39 +105,58 @@ export function parseCSVLine(line: string, sep: string): string[] {
         inQuotes = !inQuotes;
       }
     } else if (char === sep && !inQuotes) {
-      result.push(currentField.trim());
+      result.push(normalizeImportCell(currentField));
       currentField = '';
     } else {
       currentField += char;
     }
   }
-  result.push(currentField.trim());
+  result.push(normalizeImportCell(currentField));
   return result;
 }
 
 export function detectSeparator(text: string): string {
-  const firstLine = normalizeCsvText(text)
-    .split('\n')
-    .find((l) => l.trim()) || '';
-  const counts: Record<string, number> = {};
-  for (const [key, sep] of Object.entries(SEPARATORS)) {
-    counts[key] = parseCSVLine(firstLine, sep).length - 1;
-  }
-  let best = 'semicolon';
-  for (const [key, count] of Object.entries(counts)) {
-    if (count > (counts[best] || 0)) best = key;
-  }
-  return counts[best] > 0 ? best : 'semicolon';
-}
-
-export function detectPageCount(text: string, sep: string): number {
   const lines = normalizeCsvText(text)
     .split('\n')
+    .filter((l) => l.trim())
+    .slice(0, 5);
+
+  if (lines.length === 0) return 'semicolon';
+
+  let bestKey = 'semicolon';
+  let bestScore = 0;
+
+  for (const [key, sep] of Object.entries(SEPARATORS)) {
+    let totalCount = 0;
+    let consistentLines = 0;
+
+    for (const line of lines) {
+      const count = parseCSVLine(line, sep).length - 1;
+      if (count > 0) {
+        totalCount += count;
+        consistentLines++;
+      }
+    }
+
+    const score = totalCount * (consistentLines / lines.length);
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = key;
+    }
+  }
+
+  return bestScore > 0 ? bestKey : 'semicolon';
+}
+
+export function detectPageCount(text: string, sep: string, skipFirstRow?: boolean): number {
+  const allLines = normalizeCsvText(text)
+    .split('\n')
     .filter((l) => l.trim());
-  if (lines.length === 0) return MIN_PAGE_COUNT;
-  const counts = lines.map((l) => parseCSVLine(l, sep).length);
+  const dataLines = skipFirstRow && allLines.length > 1 ? allLines.slice(1) : allLines;
+  if (dataLines.length === 0) return MIN_PAGE_COUNT;
+  const counts = dataLines.map((l) => parseCSVLine(l, sep).length);
   const maxCols = Math.max(...counts);
-  return Math.max(MIN_PAGE_COUNT, Math.min(MAX_STORED_PAGE_COUNT, maxCols));
+  return Math.max(MIN_PAGE_COUNT, maxCols);
 }
 
 export function detectFirstRowHeader(
@@ -181,32 +205,35 @@ export function detectFirstRowHeader(
 }
 
 export function detectLangFromHeader(header: string): string {
-  const h = header.toLowerCase().trim();
-  if (
-    h.includes('word') ||
-    h.includes('phrase') ||
-    h.includes('english') ||
-    h.includes('angiel') ||
-    h === 'en'
-  ) {
-    return 'en-US';
-  }
-  if (h.includes('słowo') || h.includes('fraz') || h.includes('polsk') || h === 'pl') {
-    return 'pl-PL';
-  }
-  if (h.includes('palabra') || h.includes('español') || h.includes('hiszpań') || h === 'es') {
-    return 'es-ES';
-  }
-  if (h.includes('wort') || h.includes('deutsch') || h.includes('niemiec') || h === 'de') {
-    return 'de-DE';
-  }
-  if (h.includes('french') || h.includes('franc') || h === 'fr') {
-    return 'fr-FR';
-  }
-  if (h.includes('ital') || h.includes('włos') || h === 'it') {
-    return 'it-IT';
-  }
-  return 'en-US'; // default fallback
+  const h = normalizeHeaderToken(header);
+  const words = h.split(/\s+/);
+
+  const EN_EXACT = ['word', 'phrase', 'english', 'translation', 'example', 'front', 'back', 'meaning', 'definition', 'en'];
+  const EN_PREFIX = ['angiel'];
+
+  const PL_EXACT = ['słowo', 'polish', 'pl', 'tłumaczenie', 'przykład'];
+  const PL_PREFIX = ['polsk', 'fraz'];
+
+  const ES_EXACT = ['palabra', 'es', 'spanish', 'espanol', 'traduccion', 'ejemplo'];
+  const ES_PREFIX = ['hiszpań'];
+
+  const DE_EXACT = ['wort', 'deutsch', 'de', 'ubersetzung', 'beispiel'];
+  const DE_PREFIX = ['niemiec'];
+
+  const FR_EXACT = ['french', 'francais', 'fr'];
+  const FR_PREFIX = ['franc'];
+
+  const IT_EXACT = ['italiano', 'italian', 'it'];
+  const IT_PREFIX = ['włos'];
+
+  if (words.some((w) => EN_EXACT.includes(w) || EN_PREFIX.some((p) => w.startsWith(p)))) return 'en-US';
+  if (words.some((w) => PL_EXACT.includes(w) || PL_PREFIX.some((p) => w.startsWith(p)))) return 'pl-PL';
+  if (words.some((w) => ES_EXACT.includes(w) || ES_PREFIX.some((p) => w.startsWith(p)))) return 'es-ES';
+  if (words.some((w) => DE_EXACT.includes(w) || DE_PREFIX.some((p) => w.startsWith(p)))) return 'de-DE';
+  if (words.some((w) => FR_EXACT.includes(w) || FR_PREFIX.some((p) => w.startsWith(p)))) return 'fr-FR';
+  if (words.some((w) => IT_EXACT.includes(w) || IT_PREFIX.some((p) => w.startsWith(p)))) return 'it-IT';
+
+  return 'en-US';
 }
 
 function resolveSep(keyOrChar: string): string {
@@ -229,10 +256,10 @@ function parseFullText(text: string, sep: string): string[][] {
         inQuotes = !inQuotes;
       }
     } else if (char === sep && !inQuotes) {
-      currentRow.push(currentField.trim());
+      currentRow.push(normalizeImportCell(currentField));
       currentField = '';
     } else if (char === '\n' && !inQuotes) {
-      currentRow.push(currentField.trim());
+      currentRow.push(normalizeImportCell(currentField));
       if (currentRow.some((f) => f.trim())) {
         rows.push(currentRow);
       }
@@ -243,7 +270,7 @@ function parseFullText(text: string, sep: string): string[][] {
     }
   }
 
-  currentRow.push(currentField.trim());
+  currentRow.push(normalizeImportCell(currentField));
   if (currentRow.some((f) => f.trim())) {
     rows.push(currentRow);
   }
@@ -257,7 +284,7 @@ export function parseCSV(text: string, sepKey: string, pageCount: number): strin
     while (parts.length < pageCount) {
       parts.push('');
     }
-    return parts.slice(0, pageCount);
+    return parts;
   });
 }
 

@@ -24,7 +24,8 @@ export function getPreviewRows(
   firstRowIsHeader: boolean,
 ): string[][] {
   const rows = parseCSV(text, sepKey, pageCount);
-  return firstRowIsHeader ? rows.slice(1) : rows;
+  const normalizedRows = rows.map((row) => normalizeRow(row, pageCount));
+  return firstRowIsHeader ? normalizedRows.slice(1) : normalizedRows;
 }
 
 export function serializeImportSourceText(

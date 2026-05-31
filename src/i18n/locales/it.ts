@@ -77,10 +77,12 @@ export const it: Record<string, string> = {
   'import.sep.set_custom': 'Imposta personalizzato',
   'import.first_row_header': "La prima riga è un'intestazione",
   'import.err.too_many_lines': 'Input troncato a 500 righe.',
+  'import.err.too_many_columns': 'I dati superano il massimo di {max} colonne consentite.',
   'import.pages_count': 'Pagine:',
   'import.page_label': 'Pagina {index}',
   'import.import_create_btn': 'Importa e crea mazzo',
   'import.preview_rows': 'Anteprima ({count} righe)',
+  'import.page_hidden': ' (nascosta)',
 
   // Stats
   'stats.title': 'Statistiche di studio',

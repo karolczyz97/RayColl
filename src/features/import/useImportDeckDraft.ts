@@ -15,7 +15,7 @@ import { createNewSrsState } from '../../srs/srsEngine';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { useFlashcardListEditing } from '../flashcards/useFlashcardListEditing';
 import { DEFAULT_STUDY_FILTER } from '../../store/storeDataNormalization';
-import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '../../constants/pages';
+import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MIN_PAGE_COUNT } from '../../constants/pages';
 import {
   getHeaderRowFromText,
   getPreviewRows,
@@ -49,6 +49,9 @@ export function useImportDeckDraft() {
   const preHeaderPageNamesRef = useRef<string[] | null>(null);
   const isPasteRef = useRef(false);
   const rawTextRef = useRef(rawText);
+  const [rawColumnCount, setRawColumnCount] = useState(MIN_PAGE_COUNT);
+  const rawColumnCountRef = useRef(rawColumnCount);
+  const sepTouchedRef = useRef(false);
   const debouncedRawText = useDebounce(rawText, 300);
 
   const getActiveSepValue = useCallback((key: string, custom: string): string => {
@@ -212,24 +215,46 @@ export function useImportDeckDraft() {
       }
 
       preHeaderPageNamesRef.current = null;
+      headerSettingTouchedRef.current = false;
+      lastAppliedHeaderKeyRef.current = null;
       setImportError(limited ? 'import.err.too_many_lines' : '');
       setRawText(safeText);
 
       if (!safeText.trim()) {
+        rawColumnCountRef.current = MIN_PAGE_COUNT;
+        setRawColumnCount(MIN_PAGE_COUNT);
         setCards([]);
         return;
       }
 
+      setPageNames(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
+      setPageLangs(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
+
       const detectedSep = detectSeparator(safeText);
       const separator = SEPARATORS[detectedSep] || ';';
-      const detectedCount = detectPageCount(safeText, separator);
+      const headerDetection = detectFirstRowHeader(safeText, detectedSep);
+      const detectedCount = detectPageCount(safeText, separator, headerDetection.isLikelyHeader);
 
-      setSepKey(detectedSep);
-      setCustomSep('');
-      setPageCount(detectedCount);
-      syncDraftFromText(safeText, detectedSep, detectedCount);
+      if (detectedCount > MAX_STORED_PAGE_COUNT) {
+        setImportError('import.err.too_many_columns');
+        return;
+      }
+
+      rawColumnCountRef.current = detectedCount;
+      setRawColumnCount(detectedCount);
+
+      const effectiveSep = sepTouchedRef.current ? sepKey : detectedSep;
+
+      if (!sepTouchedRef.current) {
+        setSepKey(detectedSep);
+        setCustomSep('');
+      }
+
+      const nextPageCount = Math.max(pageCount, detectedCount);
+      setPageCount(nextPageCount);
+      syncDraftFromText(safeText, effectiveSep, nextPageCount);
     },
-    [syncDraftFromText],
+    [pageCount, sepKey, syncDraftFromText],
   );
 
   useEffect(() => {
@@ -241,7 +266,13 @@ export function useImportDeckDraft() {
   }, [pageNames]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced preview intentionally syncs local derived draft state
+    if (debouncedRawText.trim()) {
+      const activeSep = getActiveSepValue(sepKey, customSep);
+      const separator = SEPARATORS[activeSep] || activeSep;
+      const detectedCount = detectPageCount(debouncedRawText, separator, firstRowIsHeaderRef.current);
+      rawColumnCountRef.current = detectedCount;
+      setRawColumnCount(detectedCount);
+    }
     syncDraftFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
   }, [customSep, debouncedRawText, getActiveSepValue, pageCount, sepKey, syncDraftFromText]);
 
@@ -259,11 +290,15 @@ export function useImportDeckDraft() {
         setRawText('');
         setCards([]);
         isPasteRef.current = false;
+        sepTouchedRef.current = false;
         return;
       }
 
-      // Detect paste using explicit paste event flag or significant text length jump
-      const isPaste = isPasteRef.current || text.length - rawTextRef.current.length > 10;
+      // Detect paste using explicit paste event flag or significant line count jump
+      const deltaLines = Math.abs(
+        text.split('\n').length - rawTextRef.current.split('\n').length,
+      );
+      const isPaste = isPasteRef.current || deltaLines >= 2;
       isPasteRef.current = false;
 
       if (isPaste) {
@@ -277,6 +312,7 @@ export function useImportDeckDraft() {
 
   const handleSepKeyChange = useCallback(
     (newSep: string, newCustomSep?: string) => {
+      sepTouchedRef.current = true;
       setSepKey(newSep);
       if (newSep !== 'custom') {
         setCustomSep('');
@@ -291,17 +327,21 @@ export function useImportDeckDraft() {
 
   const handlePageCountChange = useCallback(
     (count: number) => {
+      const minCount = Math.max(MIN_PAGE_COUNT, rawColumnCountRef.current);
+      const clampedCount = Math.max(minCount, Math.min(MAX_STORED_PAGE_COUNT, count));
+
       const activeSep = getActiveSepValue(sepKey, customSep);
+      const headerPageCount = Math.min(clampedCount, rawColumnCountRef.current);
       const nextText =
         firstRowIsHeaderRef.current && rawText.trim()
-          ? replaceHeaderRowInText(rawText, activeSep, count, pageNames)
+          ? replaceHeaderRowInText(rawText, activeSep, headerPageCount, pageNames)
           : rawText;
 
-      setPageCount(count);
+      setPageCount(clampedCount);
       if (nextText !== rawText) {
         setRawText(nextText);
       }
-      syncDraftFromText(nextText, activeSep, count);
+      syncDraftFromText(nextText, activeSep, clampedCount);
     },
     [customSep, getActiveSepValue, pageNames, rawText, sepKey, syncDraftFromText],
   );
@@ -398,6 +438,7 @@ export function useImportDeckDraft() {
 
   const handlePickFile = useCallback(async () => {
     setImportError('');
+    sepTouchedRef.current = false;
 
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -502,5 +543,6 @@ export function useImportDeckDraft() {
     confirmDeleteCard,
     submitImport,
     previewGroup,
+    rawColumnCount,
   };
 }

@@ -21,6 +21,8 @@ interface ImportConfigCardProps {
   onMovePage: (index: number, direction: -1 | 1) => void;
   popularLangs: { code: string; label: string }[];
   t: TranslationFn;
+  minPageCount?: number;
+  activePageCount?: number;
 }
 
 export function ImportConfigCard({
@@ -38,6 +40,8 @@ export function ImportConfigCard({
   onMovePage,
   popularLangs,
   t,
+  minPageCount,
+  activePageCount,
 }: ImportConfigCardProps) {
   const theme = useTheme();
 
@@ -65,6 +69,8 @@ export function ImportConfigCard({
         sepKey={sepKey}
         onSepKeyChange={onSepKeyChange}
         customSep={customSep}
+        minPageCount={minPageCount}
+        activePageCount={activePageCount}
       />
     </SectionCard>
   );

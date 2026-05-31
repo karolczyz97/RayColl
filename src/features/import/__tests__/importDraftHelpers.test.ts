@@ -70,5 +70,16 @@ export async function runTests() {
     'Serializing import text should prepend the header row in header mode',
   );
 
+  assertEqual(
+    replaceHeaderRowInText(
+      'Phrase;Translation\nhello;"czesc, world"',
+      'semicolon',
+      2,
+      ['Word', 'Example'],
+    ),
+    'Word;Example\nhello;czesc, world',
+    'Replacing the header row should preserve body fields (semicolon separator needs no quotes)',
+  );
+
   console.log('Import draft helper tests passed');
 }

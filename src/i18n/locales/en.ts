@@ -76,10 +76,12 @@ export const en: Record<string, string> = {
   'import.sep.set_custom': 'Set custom',
   'import.first_row_header': 'First row is header',
   'import.err.too_many_lines': 'Input truncated to 500 lines.',
+  'import.err.too_many_columns': 'Input exceeds max allowed {max} columns.',
   'import.pages_count': 'Pages:',
   'import.page_label': 'Page {index}',
   'import.import_create_btn': 'Import & Create Deck',
   'import.preview_rows': 'Preview ({count} rows)',
+  'import.page_hidden': ' (hidden)',
 
   // Stats
   'stats.title': 'Study Statistics',

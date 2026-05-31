@@ -52,9 +52,9 @@ export function validateImportDeckPayload(payload: ImportDeckPayload): Normalize
     throw new Error('Every page must have a language entry.');
   }
 
-  for (const language of languages) {
-    if (language && !LANGUAGE_CODE_PATTERN.test(language)) {
-      throw new Error(`Invalid language code: ${language}`);
+  for (let i = 0; i < languages.length; i++) {
+    if (!LANGUAGE_CODE_PATTERN.test(languages[i])) {
+      throw new Error(`Missing language for page ${i + 1}`);
     }
   }
 

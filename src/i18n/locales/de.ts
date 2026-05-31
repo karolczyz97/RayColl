@@ -77,10 +77,12 @@ export const de: Record<string, string> = {
   'import.sep.set_custom': 'Eigenes festlegen',
   'import.first_row_header': 'Erste Zeile ist eine Kopfzeile',
   'import.err.too_many_lines': 'Eingabe auf 500 Zeilen beschränkt.',
+  'import.err.too_many_columns': 'Eingabe überschreitet maximal erlaubte {max} Spalten.',
   'import.pages_count': 'Seiten:',
   'import.page_label': 'Seite {index}',
   'import.import_create_btn': 'Importieren & Deck erstellen',
   'import.preview_rows': 'Vorschau ({count} Zeilen)',
+  'import.page_hidden': ' (ausgeblendet)',
 
   // Stats
   'stats.title': 'Lernstatistiken',

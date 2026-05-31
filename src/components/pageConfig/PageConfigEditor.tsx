@@ -34,6 +34,8 @@ interface PageConfigEditorProps {
   onSepKeyChange?: (key: string, customSep?: string) => void;
   customSep?: string;
   showCounter?: boolean;
+  minPageCount?: number;
+  activePageCount?: number;
 }
 
 export function PageConfigEditor({
@@ -52,6 +54,8 @@ export function PageConfigEditor({
   onSepKeyChange,
   customSep = '',
   showCounter = true,
+  minPageCount,
+  activePageCount,
 }: PageConfigEditorProps) {
   const [customDialogVisible, setCustomDialogVisible] = useState(false);
   const [customDraftValue, setCustomDraftValue] = useState('');
@@ -71,6 +75,7 @@ export function PageConfigEditor({
   ];
 
   const hasSeparator = sepKey !== undefined && onSepKeyChange !== undefined;
+  const effectiveMin = mode === 'import' ? Math.max(MIN_PAGE_COUNT, minPageCount ?? MIN_PAGE_COUNT) : MIN_PAGE_COUNT;
   const maxPageCount = mode === 'import' ? MAX_STORED_PAGE_COUNT : MAX_VISIBLE_PAGE_COUNT;
 
   return (
@@ -84,8 +89,8 @@ export function PageConfigEditor({
                 icon="minus-box"
                 size={28}
                 style={styles.counterButton}
-                onPress={() => onPageCountChange(Math.max(MIN_PAGE_COUNT, pageCount - 1))}
-                disabled={pageCount <= MIN_PAGE_COUNT}
+                onPress={() => onPageCountChange(Math.max(effectiveMin, pageCount - 1))}
+                disabled={pageCount <= effectiveMin}
                 accessibilityLabel={`${mode} decrease page count`}
               />
               <Text style={styles.counterText}>{pageCount}</Text>
@@ -120,8 +125,10 @@ export function PageConfigEditor({
         </View>
       ) : null}
 
-      {Array.from({ length: pageCount }).map((_, index) => (
-        <AppFormRow key={index} style={styles.pageRow}>
+      {Array.from({ length: pageCount }).map((_, index) => {
+        const isHidden = activePageCount !== undefined && index >= activePageCount;
+        return (
+        <AppFormRow key={index} style={[styles.pageRow, isHidden && { opacity: 0.4 }]}>
           {onMovePage ? (
             <View style={styles.sortButtons}>
               <IconButton
@@ -144,7 +151,7 @@ export function PageConfigEditor({
           ) : null}
 
           <AppTextInput
-            label={t('import.page_label', { index: index + 1 })}
+            label={`${t('import.page_label', { index: index + 1 })}${isHidden ? t('import.page_hidden') : ''}`}
             value={pageNames[index] ?? ''}
             onChangeText={(value) => onPageNameChange(index, value)}
             onBlur={onPageNameBlur ? () => onPageNameBlur(index) : undefined}
@@ -161,7 +168,8 @@ export function PageConfigEditor({
             />
           </View>
         </AppFormRow>
-      ))}
+        );
+      })}
 
       {hasSeparator ? (
         <TextEntryDialog
