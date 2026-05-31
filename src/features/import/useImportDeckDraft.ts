@@ -15,6 +15,7 @@ import { createNewSrsState } from '../../srs/srsEngine';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { useFlashcardListEditing } from '../flashcards/useFlashcardListEditing';
 import { DEFAULT_STUDY_FILTER } from '../../store/storeDataNormalization';
+import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '../../constants/pages';
 import {
   getHeaderRowFromText,
   getPreviewRows,
@@ -35,8 +36,8 @@ export function useImportDeckDraft() {
   const [sepKey, setSepKey] = useState('semicolon');
   const [customSep, setCustomSep] = useState('');
   const [pageCount, setPageCount] = useState(2);
-  const [pageNames, setPageNames] = useState(['', '', '', '', '']);
-  const [pageLangs, setPageLangs] = useState(['en-US', 'pl-PL', '', '', '']);
+  const [pageNames, setPageNames] = useState<string[]>(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
+  const [pageLangs, setPageLangs] = useState<string[]>(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -146,7 +147,7 @@ export function useImportDeckDraft() {
       setPageNames((prev) => {
         const next = [...prev];
         headerRow.forEach((part, index) => {
-          if (index < 5) {
+          if (index < MAX_STORED_PAGE_COUNT) {
             next[index] = part;
           }
         });
@@ -155,7 +156,7 @@ export function useImportDeckDraft() {
       setPageLangs((prev) => {
         const next = [...prev];
         headerRow.forEach((part, index) => {
-          if (index < 5) {
+          if (index < MAX_STORED_PAGE_COUNT) {
             next[index] = detectLangFromHeader(part);
           }
         });
@@ -457,7 +458,7 @@ export function useImportDeckDraft() {
       studyFilter: DEFAULT_STUDY_FILTER,
       pageLanguages: pageLangs.slice(0, pageCount),
       pageNames: pageNames.slice(0, pageCount),
-      activePageCount: pageCount,
+      activePageCount: Math.min(pageCount, MAX_VISIBLE_PAGE_COUNT),
     }),
     [name, pageCount, pageLangs, pageNames],
   );

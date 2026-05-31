@@ -10,8 +10,14 @@ export const it: Record<string, string> = {
   'btn.logout': 'Disconnetti',
   'auth.local': 'Modalità locale',
   'auth.welcome': 'Benvenuto, {name}',
+  'auth.migration.title': 'Dati locali trovati',
+  'auth.migration.desc':
+    'Hai mazzi locali da una sessione precedente. Vuoi trasferirli sul tuo account o ricominciare da zero?',
+  'auth.migration.migrate_btn': 'Trasferisci sull\'account',
+  'auth.migration.fresh_btn': 'Ricominciare da zero',
   'dialog.delete.title': 'Sei sicuro?',
   'dialog.delete.desc': 'Questa azione non può essere annullata.',
+  'dialog.delete.token': 'ELIMINA',
 
   // Dashboard
   'dashboard.no_groups': 'Nessun mazzo trovato. Clicca su + per aggiungerne uno.',
@@ -102,6 +108,7 @@ export const it: Record<string, string> = {
     'Sei sicuro di voler eliminare questo mazzo? Questo rimuoverà tutte le sue carte in modo permanente.',
   'settings.rename_label': 'Nome del mazzo',
   'settings.pages_config': 'Configurazione delle pagine',
+  'settings.reorder_columns': 'Riordina colonne',
   'settings.active_mode': 'Modalità di studio attiva',
   'settings.study_scope': 'Ambito di studio',
   'settings.which_cards': 'Quali carte studiare',
@@ -117,7 +124,7 @@ export const it: Record<string, string> = {
   'settings.dialog.add_step.time': 'Tempo (ms)',
   'settings.dialog.add_step.threshold': 'Soglia (%)',
   'settings.dialog.delete.confirm_text':
-    'Per confermare l\'eliminazione del mazzo "{name}", digita DELETE qui sotto:',
+    'Per confermare l\'eliminazione del mazzo "{name}", digita {token} qui sotto:',
 
   // App Settings
   'app_settings.title': 'Impostazioni app',

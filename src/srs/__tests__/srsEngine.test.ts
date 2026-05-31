@@ -25,6 +25,7 @@ import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../../store/storeDataN
 import { validateBackupData } from '../../utils/backupValidation';
 import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
+import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
 
 console.log('Running RayColl Spaced Repetition Engine and Parser tests...');
 
@@ -285,8 +286,8 @@ const normalizableBackup = {
 assertOk(validateBackupData(normalizableBackup), 'Backup validation should accept normalizable page config');
 const normalizedStoreData = normalizeStoreData(normalizableBackup);
 assertEqual(normalizedStoreData.groups[0].activePageCount, 5);
-assertEqual(normalizedStoreData.groups[0].pageNames.length, 5);
-assertEqual(normalizedStoreData.groups[0].pageLanguages.length, 5);
+assertEqual(normalizedStoreData.groups[0].pageNames.length, 6);
+assertEqual(normalizedStoreData.groups[0].pageLanguages.length, 6);
 const normalizedEditedDefaultMode = normalizeStoreData({
   groups: [],
   studyModes: [
@@ -510,6 +511,52 @@ assertThrows(
   'missing one or more pages',
 );
 console.log('Import deck validation tests passed');
+
+// Import edge cases: page limit boundaries
+console.log('\n--- Running Import Page Limit Boundary Tests ---');
+
+// Import with < MIN_PAGE_COUNT pages
+assertThrows(
+  () =>
+    validateImportDeckPayload({
+      name: 'TooFew',
+      languages: ['en-US'],
+      pageNames: ['Only'],
+      cards: [{ pages: ['one'] }],
+    }),
+  'must contain at least',
+  `Import with < ${MIN_PAGE_COUNT} pages should throw`,
+);
+
+// Import with excessive pages > MAX_STORED_PAGE_COUNT
+const manyNames = Array.from({ length: MAX_STORED_PAGE_COUNT + 1 }, (_, i) => `Page ${i + 1}`);
+const manyLangs = Array.from({ length: MAX_STORED_PAGE_COUNT + 1 }, () => 'en-US');
+const manyCardPages = Array.from({ length: MAX_STORED_PAGE_COUNT + 1 }, (_, i) => `data${i + 1}`);
+assertThrows(
+  () =>
+    validateImportDeckPayload({
+      name: 'TooMany',
+      languages: manyLangs,
+      pageNames: manyNames,
+      cards: [{ pages: manyCardPages }],
+    }),
+  'can contain at most',
+  `Import with > ${MAX_STORED_PAGE_COUNT} pages should throw`,
+);
+
+// Import with > MIN_PAGE_COUNT and <= MAX_STORED is allowed (6 pages, > visible=5)
+const sixNames = ['A', 'B', 'C', 'D', 'E', 'F'];
+const sixLangs = ['en-US', 'en-US', 'en-US', 'en-US', 'en-US', 'en-US'];
+const sixCardPages = ['1', '2', '3', '4', '5', '6'];
+const multiPageImport = validateImportDeckPayload({
+  name: 'Six Pages',
+  languages: sixLangs,
+  pageNames: sixNames,
+  cards: [{ pages: sixCardPages }],
+});
+assertEqual(multiPageImport.pageNames.length, 6, 'Import should preserve all 6 page names');
+assertEqual(multiPageImport.cards[0].pages.length, 6, 'Import should preserve all 6 card pages');
+console.log('Import page limit boundary tests passed');
 
 console.log('\n==========================================');
 console.log('All tests completed successfully! 🎉');

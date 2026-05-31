@@ -10,8 +10,14 @@ export const de: Record<string, string> = {
   'btn.logout': 'Abmelden',
   'auth.local': 'Lokaler Modus',
   'auth.welcome': 'Willkommen, {name}',
+  'auth.migration.title': 'Lokale Daten gefunden',
+  'auth.migration.desc':
+    'Du hast lokale Decks aus einer früheren Sitzung. Möchtest du sie auf dein Konto übertragen oder neu beginnen?',
+  'auth.migration.migrate_btn': 'Auf Konto übertragen',
+  'auth.migration.fresh_btn': 'Neu beginnen',
   'dialog.delete.title': 'Sind Sie sicher?',
   'dialog.delete.desc': 'Diese Aktion kann nicht rückgängig gemacht werden.',
+  'dialog.delete.token': 'LÖSCHEN',
 
   // Dashboard
   'dashboard.no_groups': 'Keine Decks gefunden. Klicken Sie auf +, um eines hinzuzufügen.',
@@ -102,6 +108,7 @@ export const de: Record<string, string> = {
     'Sind Sie sicher, dass Sie dieses Deck löschen möchten? Dadurch werden alle seine Karten dauerhaft entfernt.',
   'settings.rename_label': 'Deckname',
   'settings.pages_config': 'Seitenkonfiguration',
+  'settings.reorder_columns': 'Spalten neu ordnen',
   'settings.active_mode': 'Aktiver Lernmodus',
   'settings.study_scope': 'Lernumfang',
   'settings.which_cards': 'Welche Karten lernen',
@@ -117,7 +124,7 @@ export const de: Record<string, string> = {
   'settings.dialog.add_step.time': 'Zeit (ms)',
   'settings.dialog.add_step.threshold': 'Schwellenwert (%)',
   'settings.dialog.delete.confirm_text':
-    'Um das Löschen des Decks "{name}" zu bestätigen, geben Sie unten DELETE ein:',
+    'Um das Löschen des Decks "{name}" zu bestätigen, geben Sie unten {token} ein:',
 
   // App Settings
   'app_settings.title': 'App-Einstellungen',

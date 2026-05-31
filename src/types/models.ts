@@ -11,6 +11,9 @@ export interface Flashcard {
   id: string;
   pages: string[];
   srsState: SrsState;
+  contentUpdatedAt?: number;
+  srsUpdatedAt?: number;
+  deletedAt?: number | null;
 }
 
 export interface FlashcardGroup {
@@ -22,6 +25,8 @@ export interface FlashcardGroup {
   pageLanguages: string[]; // tagi BCP-47 dla stron
   pageNames: string[]; // np. ['Słowo', 'Tłumaczenie', 'Przykład']
   activePageCount: number; // liczba widocznych/aktywnych stron
+  updatedAt?: number;
+  deletedAt?: number | null;
 }
 
 export type ModeStep =
@@ -64,4 +69,6 @@ export interface StudyMode {
   steps: ModeStep[];
   isBuiltIn: boolean;
   builtInSourceId?: string;
+  updatedAt?: number;
+  deletedAt?: number | null;
 }

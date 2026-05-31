@@ -2,17 +2,18 @@ import { Flashcard } from '../../types/models';
 import { CardFilter } from '../../constants/cardFilters';
 
 export function filterCards(cards: Flashcard[], filter: CardFilter): Flashcard[] {
+  const liveCards = cards.filter((c) => c.deletedAt == null);
   const now = Date.now();
   switch (filter) {
     case 'all':
-      return [...cards];
+      return [...liveCards];
     case 'new':
-      return cards.filter((c) => c.srsState.state === 0);
+      return liveCards.filter((c) => c.srsState.state === 0);
     case 'review':
-      return cards.filter((c) => c.srsState.state > 0 && c.srsState.nextReviewTimestamp <= now);
+      return liveCards.filter((c) => c.srsState.state > 0 && c.srsState.nextReviewTimestamp <= now);
     case 'new+review':
     default:
-      return cards.filter((c) => c.srsState.state === 0 || c.srsState.nextReviewTimestamp <= now);
+      return liveCards.filter((c) => c.srsState.state === 0 || c.srsState.nextReviewTimestamp <= now);
   }
 }
 

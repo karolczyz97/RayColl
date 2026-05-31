@@ -8,6 +8,8 @@ export interface StoreData {
   groups: FlashcardGroup[];
   studyModes: StudyMode[];
   activityHeatmap: Record<string, number>;
+  schemaVersion?: number;
+  lastSyncedAt?: number;
 }
 
 export async function loadLocalData(userId?: string): Promise<StoreData | null> {

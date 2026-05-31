@@ -10,8 +10,14 @@ export const pl: Record<string, string> = {
   'btn.logout': 'Wyloguj się',
   'auth.local': 'Tryb lokalny',
   'auth.welcome': 'Witaj, {name}',
+  'auth.migration.title': 'Dane lokalne',
+  'auth.migration.desc':
+    'Masz lokalne talie z poprzedniej sesji. Czy chcesz przenieść je na konto, czy zacząć od nowa?',
+  'auth.migration.migrate_btn': 'Przenieś na konto',
+  'auth.migration.fresh_btn': 'Zacznij od nowa',
   'dialog.delete.title': 'Czy na pewno?',
   'dialog.delete.desc': 'Tej operacji nie można cofnąć.',
+  'dialog.delete.token': 'USUŃ',
 
   // Dashboard
   'dashboard.no_groups': 'Brak zestawów. Kliknij +, aby dodać.',
@@ -101,6 +107,7 @@ export const pl: Record<string, string> = {
     'Czy na pewno chcesz usunąć ten zestaw? Spowoduje to trwałe usunięcie wszystkich jego fiszek.',
   'settings.rename_label': 'Nazwa zestawu',
   'settings.pages_config': 'Konfiguracja stron',
+  'settings.reorder_columns': 'Zmień kolejność kolumn',
   'settings.active_mode': 'Aktywny tryb nauki',
   'settings.study_scope': 'Zakres nauki',
   'settings.which_cards': 'Które fiszki uczyć',
@@ -116,7 +123,7 @@ export const pl: Record<string, string> = {
   'settings.dialog.add_step.time': 'Czas (ms)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
   'settings.dialog.delete.confirm_text':
-    'Aby potwierdzić usunięcie zestawu „{name}", wpisz DELETE poniżej:',
+    'Aby potwierdzić usunięcie zestawu „{name}", wpisz {token} poniżej:',
 
   // App Settings
   'app_settings.title': 'Ustawienia aplikacji',

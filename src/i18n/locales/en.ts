@@ -10,8 +10,14 @@ export const en: Record<string, string> = {
   'btn.logout': 'Sign out',
   'auth.local': 'Local Mode',
   'auth.welcome': 'Welcome, {name}',
+  'auth.migration.title': 'Local data found',
+  'auth.migration.desc':
+    'You have local decks from a previous session. Would you like to transfer them to your account or start fresh?',
+  'auth.migration.migrate_btn': 'Transfer to account',
+  'auth.migration.fresh_btn': 'Start fresh',
   'dialog.delete.title': 'Are you sure?',
   'dialog.delete.desc': 'This action cannot be undone.',
+  'dialog.delete.token': 'DELETE',
 
   // Dashboard
   'dashboard.no_groups': 'No decks found. Click + to add one.',
@@ -101,6 +107,7 @@ export const en: Record<string, string> = {
     'Are you sure you want to delete this deck? This will remove all its cards permanently.',
   'settings.rename_label': 'Deck Name',
   'settings.pages_config': 'Pages Configuration',
+  'settings.reorder_columns': 'Reorder Columns',
   'settings.active_mode': 'Active Study Mode',
   'settings.study_scope': 'Study Scope',
   'settings.which_cards': 'Which cards to study',
@@ -115,7 +122,7 @@ export const en: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Page index (starts from 0)',
   'settings.dialog.add_step.time': 'Time (ms)',
   'settings.dialog.add_step.threshold': 'Threshold (%)',
-  'settings.dialog.delete.confirm_text': 'To confirm deletion of deck "{name}", type DELETE below:',
+  'settings.dialog.delete.confirm_text': 'To confirm deletion of deck "{name}", type {token} below:',
 
   // App Settings
   'app_settings.title': 'App Settings',

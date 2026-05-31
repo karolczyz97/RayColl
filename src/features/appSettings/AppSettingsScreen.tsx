@@ -70,13 +70,17 @@ export function AppSettingsScreen() {
   const handleExport = async () => {
     try {
       const data = store.exportState();
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}`;
+      const filename = `raycoll-backup-${timestamp}.json`;
 
       if (Platform.OS === 'web') {
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = 'fiszki-backup.json';
+        anchor.download = filename;
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
@@ -84,11 +88,11 @@ export function AppSettingsScreen() {
         return;
       }
 
-      const { Share } = await import('react-native');
-      await Share.share({
-        message: data,
-        title: 'RayColl Backup',
-      });
+      const { Paths, File } = await import('expo-file-system');
+      const { shareAsync } = await import('expo-sharing');
+      const file = new File(Paths.cache, filename);
+      file.write(data, { encoding: 'utf8' });
+      await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'RayColl Backup' });
     } catch (error) {
       console.warn('Export failed:', error);
       setSnackbarMessage(getLabel('app_settings.export_error', 'Export failed.'));

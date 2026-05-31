@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { IconButton, Portal, useTheme } from 'react-native-paper';
+import { Button, Dialog, IconButton, Portal, useTheme } from 'react-native-paper';
 import { getTopBarColors } from '../../theme/semanticColors';
 import { DeckNameSection } from '../../components/settings/DeckNameSection';
 import { StudyScopeSection } from '../../components/settings/StudyScopeSection';
@@ -74,9 +74,14 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     handleBack,
   } = controller;
 
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
+
   if (!activeGroup) {
     return null;
   }
+
+  const storedPageCount = activeGroup.pageNames.length;
+  const hasHiddenColumns = storedPageCount > (activeGroup.activePageCount ?? 0);
 
   const sectionOrder = isExpanded
     ? { name: 0, pageConfig: 2, scope: 1, modeEditor: 1, modeSelector: 0 }
@@ -126,6 +131,16 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             onPageLanguageChange={updatePageLangValue}
             onMovePage={movePageSetting}
           />
+          {hasHiddenColumns ? (
+            <Button
+              mode="text"
+              compact
+              onPress={() => setShowReorderDialog(true)}
+              style={styles.reorderButton}
+            >
+              {t('settings.reorder_columns')}
+            </Button>
+          ) : null}
         </SectionCard>
       </AnimatedSection>
     </>
@@ -223,6 +238,38 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
 
       </Portal>
 
+      <Portal>
+        <Dialog visible={showReorderDialog} onDismiss={() => setShowReorderDialog(false)} style={styles.reorderDialog}>
+          <Dialog.Title>{t('settings.reorder_columns')}</Dialog.Title>
+          <Dialog.ScrollArea>
+            <View style={styles.reorderContent}>
+              <PageConfigEditor
+                mode="settings"
+                showCounter={false}
+                pageCount={storedPageCount}
+                pageNames={activeGroup.pageNames}
+                pageLanguages={activeGroup.pageLanguages}
+                popularLangs={popularLangs}
+                t={t}
+                onPageCountChange={() => {}}
+                onPageNameChange={(index, value) => {
+                  setColNames((prev) => {
+                    const next = [...prev];
+                    next[index] = value;
+                    return next;
+                  });
+                }}
+                onPageLanguageChange={updatePageLangValue}
+                onMovePage={movePageSetting}
+              />
+            </View>
+          </Dialog.ScrollArea>
+          <Dialog.Actions>
+            <Button onPress={() => setShowReorderDialog(false)}>{t('btn.cancel')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
       <DeleteDeckDialog
         visible={deleteDialogOpen}
         onDismiss={() => setDeleteDialogOpen(false)}
@@ -254,5 +301,15 @@ const styles = StyleSheet.create({
   singleColumnWide: {
     maxWidth: 600,
     alignSelf: 'center',
+  },
+  reorderButton: {
+    alignSelf: 'flex-start',
+    marginTop: TOKENS.spacing.sm,
+  },
+  reorderDialog: {
+    maxHeight: '90%',
+  },
+  reorderContent: {
+    minWidth: 320,
   },
 });

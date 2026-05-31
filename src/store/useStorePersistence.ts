@@ -21,6 +21,7 @@ interface UseStorePersistenceParams {
   setSyncStatus: Dispatch<SetStateAction<SyncStatus>>;
   setLastSyncError: Dispatch<SetStateAction<string | null>>;
   setLastPersistenceError: Dispatch<SetStateAction<string | null>>;
+  setLastStoreError: Dispatch<SetStateAction<string | null>>;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -38,6 +39,7 @@ export function useStorePersistence({
   setSyncStatus,
   setLastSyncError,
   setLastPersistenceError,
+  setLastStoreError,
 }: UseStorePersistenceParams) {
   const studyReviewCountRef = useRef(0);
   const pendingStudySnapshotRef = useRef<PersistenceSnapshot | null>(null);
@@ -100,6 +102,7 @@ export function useStorePersistence({
       try {
         setSyncStatus('syncing');
         await saveCloudData(uid, payload);
+        setLastStoreError(null);
         setSyncStatus('idle');
       } catch (err) {
         console.error('Cloud sync failed:', err);
@@ -108,7 +111,7 @@ export function useStorePersistence({
         throw err;
       }
     },
-    [setLastSyncError, setSyncStatus],
+    [setLastSyncError, setLastStoreError, setSyncStatus],
   );
 
   const handleQueueSaving = useCallback(() => setSyncStatus('saving'), [setSyncStatus]);

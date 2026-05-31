@@ -48,6 +48,7 @@ module.exports = {
         }
       ],
       "@react-native-voice/voice",
+      "expo-sharing",
       [
         "expo-build-properties",
         {

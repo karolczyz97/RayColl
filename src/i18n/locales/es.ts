@@ -10,8 +10,14 @@ export const es: Record<string, string> = {
   'btn.logout': 'Cerrar sesión',
   'auth.local': 'Modo local',
   'auth.welcome': 'Bienvenido, {name}',
+  'auth.migration.title': 'Datos locales encontrados',
+  'auth.migration.desc':
+    'Tienes barajas locales de una sesión anterior. ¿Quieres transferirlas a tu cuenta o empezar desde cero?',
+  'auth.migration.migrate_btn': 'Transferir a la cuenta',
+  'auth.migration.fresh_btn': 'Empezar desde cero',
   'dialog.delete.title': '¿Estás seguro?',
   'dialog.delete.desc': 'Esta acción no se puede deshacer.',
+  'dialog.delete.token': 'BORRAR',
 
   // Dashboard
   'dashboard.no_groups': 'No se encontraron barajas. Haz clic en + para añadir una.',
@@ -102,6 +108,7 @@ export const es: Record<string, string> = {
     '¿Estás seguro de que quieres eliminar esta baraja? Esto eliminará todas sus tarjetas de forma permanente.',
   'settings.rename_label': 'Nombre de la baraja',
   'settings.pages_config': 'Configuración de páginas',
+  'settings.reorder_columns': 'Reordenar columnas',
   'settings.active_mode': 'Modo de estudio activo',
   'settings.study_scope': 'Alcance del estudio',
   'settings.which_cards': 'Qué tarjetas estudiar',
@@ -117,7 +124,7 @@ export const es: Record<string, string> = {
   'settings.dialog.add_step.time': 'Tiempo (ms)',
   'settings.dialog.add_step.threshold': 'Umbral (%)',
   'settings.dialog.delete.confirm_text':
-    'Para confirmar la eliminación de la baraja "{name}", escriba DELETE abajo:',
+    'Para confirmar la eliminación de la baraja "{name}", escriba {token} abajo:',
 
   // App Settings
   'app_settings.title': 'Ajustes de la aplicación',

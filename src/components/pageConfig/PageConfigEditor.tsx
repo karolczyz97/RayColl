@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { IconButton, Text } from 'react-native-paper';
 import type { TranslationFn } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
 import { AppSelect } from '../AppSelect';
 import { AppFormRow } from '../forms/AppFormRow';
 import { AppTextInput } from '../forms/AppTextInput';
@@ -32,6 +33,7 @@ interface PageConfigEditorProps {
   sepKey?: string;
   onSepKeyChange?: (key: string, customSep?: string) => void;
   customSep?: string;
+  showCounter?: boolean;
 }
 
 export function PageConfigEditor({
@@ -49,6 +51,7 @@ export function PageConfigEditor({
   sepKey,
   onSepKeyChange,
   customSep = '',
+  showCounter = true,
 }: PageConfigEditorProps) {
   const [customDialogVisible, setCustomDialogVisible] = useState(false);
   const [customDraftValue, setCustomDraftValue] = useState('');
@@ -68,51 +71,54 @@ export function PageConfigEditor({
   ];
 
   const hasSeparator = sepKey !== undefined && onSepKeyChange !== undefined;
+  const maxPageCount = mode === 'import' ? MAX_STORED_PAGE_COUNT : MAX_VISIBLE_PAGE_COUNT;
 
   return (
     <View style={styles.container}>
-      <View style={styles.counterRow}>
-        <View style={styles.counterLeft}>
-          <Text>{t('import.pages_count')}</Text>
-          <View style={styles.counterButtons}>
-            <IconButton
-              icon="minus-box"
-              size={28}
-              style={styles.counterButton}
-              onPress={() => onPageCountChange(Math.max(2, pageCount - 1))}
-              disabled={pageCount <= 2}
-              accessibilityLabel={`${mode} decrease page count`}
-            />
-            <Text style={styles.counterText}>{pageCount}</Text>
-            <IconButton
-              icon="plus-box"
-              size={28}
-              style={styles.counterButton}
-              onPress={() => onPageCountChange(Math.min(5, pageCount + 1))}
-              disabled={pageCount >= 5}
-              accessibilityLabel={`${mode} increase page count`}
-            />
+      {showCounter ? (
+        <View style={styles.counterRow}>
+          <View style={styles.counterLeft}>
+            <Text>{t('import.pages_count')}</Text>
+            <View style={styles.counterButtons}>
+              <IconButton
+                icon="minus-box"
+                size={28}
+                style={styles.counterButton}
+                onPress={() => onPageCountChange(Math.max(MIN_PAGE_COUNT, pageCount - 1))}
+                disabled={pageCount <= MIN_PAGE_COUNT}
+                accessibilityLabel={`${mode} decrease page count`}
+              />
+              <Text style={styles.counterText}>{pageCount}</Text>
+              <IconButton
+                icon="plus-box"
+                size={28}
+                style={styles.counterButton}
+                onPress={() => onPageCountChange(Math.min(maxPageCount, pageCount + 1))}
+                disabled={pageCount >= maxPageCount}
+                accessibilityLabel={`${mode} increase page count`}
+              />
+            </View>
           </View>
-        </View>
 
-        {hasSeparator ? (
-          <View style={styles.separatorSelect}>
-            <AppSelect
-              value={sepKey ?? null}
-              options={separatorOptions}
-              onChange={(key) => {
-                if (key === '__new_custom__') {
-                  setCustomDraftValue('');
-                  setCustomDialogVisible(true);
-                } else {
-                  onSepKeyChange!(key);
-                }
-              }}
-              accessibilityLabel="Select CSV separator"
-            />
-          </View>
-        ) : null}
-      </View>
+          {hasSeparator ? (
+            <View style={styles.separatorSelect}>
+              <AppSelect
+                value={sepKey ?? null}
+                options={separatorOptions}
+                onChange={(key) => {
+                  if (key === '__new_custom__') {
+                    setCustomDraftValue('');
+                    setCustomDialogVisible(true);
+                  } else {
+                    onSepKeyChange!(key);
+                  }
+                }}
+                accessibilityLabel="Select CSV separator"
+              />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       {Array.from({ length: pageCount }).map((_, index) => (
         <AppFormRow key={index} style={styles.pageRow}>

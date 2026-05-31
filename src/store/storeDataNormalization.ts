@@ -1,11 +1,10 @@
 import { CARD_FILTERS, type CardFilter } from '../constants/cardFilters';
-import type { FlashcardGroup, StudyMode } from '../types/models';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../constants/pages';
+import type { Flashcard, FlashcardGroup, StudyMode } from '../types/models';
 import type { StoreData } from './persistence/localPersistence';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 
 export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
-const MIN_ACTIVE_PAGE_COUNT = 2;
-const MAX_ACTIVE_PAGE_COUNT = 5;
 const VALID_STUDY_FILTERS = new Set<CardFilter>(Object.values(CARD_FILTERS));
 
 function coerceStringArray(value: unknown): string[] {
@@ -18,41 +17,54 @@ export function normalizeStudyFilter(filter: unknown): CardFilter {
     : DEFAULT_STUDY_FILTER;
 }
 
-function getNormalizedActivePageCount(group: FlashcardGroup): number {
+function getStoredPageCount(group: FlashcardGroup, pageNames: string[], pageLanguages: string[]): number {
+  const maxCardPages = Math.max(0, ...group.cards.map((c) => c.pages.length));
+  const rawStored = Math.max(pageNames.length, pageLanguages.length, maxCardPages, MIN_PAGE_COUNT);
+  return Math.min(rawStored, MAX_STORED_PAGE_COUNT);
+}
+
+function normalizeCard(card: Flashcard): Flashcard {
+  return {
+    ...card,
+    contentUpdatedAt: card.contentUpdatedAt ?? 0,
+    srsUpdatedAt: card.srsUpdatedAt ?? 0,
+    deletedAt: card.deletedAt ?? undefined,
+  };
+}
+
+export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
+  const pageNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
+  const pageLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
+  const storedPageCount = getStoredPageCount(group, pageNames, pageLanguages);
+
+  while (pageNames.length < storedPageCount) {
+    pageNames.push(`Page ${pageNames.length + 1}`);
+  }
+  while (pageLanguages.length < storedPageCount) {
+    pageLanguages.push('en-US');
+  }
+
   const rawActivePageCount = (group as { activePageCount?: unknown }).activePageCount;
-  const rawPageNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
-  const rawPageLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
-  const fallback = Math.max(rawPageNames.length, rawPageLanguages.length, MIN_ACTIVE_PAGE_COUNT);
+  const fallback = storedPageCount;
   const candidate =
     typeof rawActivePageCount === 'number' && Number.isFinite(rawActivePageCount)
       ? rawActivePageCount
       : fallback;
-
-  return Math.max(
-    MIN_ACTIVE_PAGE_COUNT,
-    Math.min(MAX_ACTIVE_PAGE_COUNT, Math.floor(candidate)),
+  const maxVisible = Math.min(MAX_VISIBLE_PAGE_COUNT, storedPageCount);
+  const activePageCount = Math.max(
+    MIN_PAGE_COUNT,
+    Math.min(maxVisible, Math.floor(candidate)),
   );
-}
-
-export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
-  const activePageCount = getNormalizedActivePageCount(group);
-  const pageNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
-  const pageLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
-
-  while (pageNames.length < activePageCount) {
-    pageNames.push(`Page ${pageNames.length + 1}`);
-  }
-
-  while (pageLanguages.length < activePageCount) {
-    pageLanguages.push('en-US');
-  }
 
   return {
     ...group,
     activePageCount,
-    pageNames: pageNames.slice(0, activePageCount),
-    pageLanguages: pageLanguages.slice(0, activePageCount),
+    pageNames,
+    pageLanguages,
+    cards: group.cards.map(normalizeCard),
     studyFilter: normalizeStudyFilter(group.studyFilter),
+    updatedAt: (group as { updatedAt?: number }).updatedAt ?? 0,
+    deletedAt: (group as { deletedAt?: number | null }).deletedAt ?? undefined,
   };
 }
 
@@ -74,6 +86,8 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     steps: mode.steps,
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
+    updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,
+    deletedAt: (mode as { deletedAt?: number | null }).deletedAt ?? undefined,
   };
 }
 
@@ -90,5 +104,7 @@ export function normalizeStoreData(data: StoreData): StoreData {
     groups: data.groups.map(normalizeGroup),
     studyModes: normalizeStudyModes(data.studyModes),
     activityHeatmap: data.activityHeatmap,
+    schemaVersion: data.schemaVersion,
+    lastSyncedAt: data.lastSyncedAt,
   };
 }

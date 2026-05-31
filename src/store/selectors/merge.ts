@@ -1,61 +1,228 @@
-import { UserData } from '../../services/firebase';
-import { normalizeGroup, normalizeStoreData } from '../storeDataNormalization';
+import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
+import type { UserData } from '../../services/firebase';
+import { normalizeStoreData } from '../storeDataNormalization';
+import { isBuiltInModeSourceId } from '../seed/seedModes';
 
-/**
- * Merges local cached user data with cloud backup user data.
- * Merges groups, merges flashcards within groups based on SRS repetition counts,
- * combines custom study modes, and takes the maximum of activity counts per day.
- */
-export function mergeUserData(local: UserData, cloud: UserData): UserData {
-  const mergedGroups = [...cloud.groups];
+function latestDelete(aDeletedAt: number | null | undefined, bDeletedAt: number | null | undefined): number {
+  return Math.max(aDeletedAt ?? 0, bDeletedAt ?? 0);
+}
 
-  for (const localGroup of local.groups) {
-    const cloudGroupIdx = mergedGroups.findIndex((g) => g.id === localGroup.id);
-    if (cloudGroupIdx === -1) {
-      // Group only exists locally, add it
-      mergedGroups.push(localGroup);
-    } else {
-      // Group exists in both, merge cards
-      const cloudGroup = mergedGroups[cloudGroupIdx];
-      const mergedCards = [...cloudGroup.cards];
+function isAlive(latestEdit: number, deletedAt: number): boolean {
+  return deletedAt <= 0 || latestEdit > deletedAt;
+}
 
-      for (const localCard of localGroup.cards) {
-        const cloudCardIdx = mergedCards.findIndex((c) => c.id === localCard.id);
-        if (cloudCardIdx === -1) {
-          // Card only exists locally, add it
-          mergedCards.push(localCard);
-        } else {
-          // Card exists in both, keep the one with more SRS reviews/repetitions
-          const cloudCard = mergedCards[cloudCardIdx];
-          const localReps = localCard.srsState.repetitions ?? 0;
-          const cloudReps = cloudCard.srsState.repetitions ?? 0;
-          if (localReps > cloudReps) {
-            mergedCards[cloudCardIdx] = localCard;
-          }
-        }
+export function getLatestEdit(card: Flashcard): number {
+  return Math.max(card.contentUpdatedAt ?? 0, card.srsUpdatedAt ?? 0);
+}
+
+export function isDeleted(entity: { deletedAt?: number | null }): boolean {
+  return !!(entity.deletedAt && entity.deletedAt > 0);
+}
+
+export function mergeSrsStateNeverRegress(
+  localReps: number,
+  localSrsAt: number,
+  cloudReps: number,
+  cloudSrsAt: number,
+): 'local' | 'cloud' {
+  if (localReps > cloudReps) return 'local';
+  if (cloudReps > localReps) return 'cloud';
+  return localSrsAt > cloudSrsAt ? 'local' : 'cloud';
+}
+
+export function mergeActivityHeatmap(
+  local: Record<string, number>,
+  cloud: Record<string, number>,
+): Record<string, number> {
+  const merged = { ...cloud };
+  for (const [date, count] of Object.entries(local)) {
+    merged[date] = Math.max(merged[date] || 0, count);
+  }
+  return merged;
+}
+
+export function mergeCards(localCards: Flashcard[], cloudCards: Flashcard[]): Flashcard[] {
+  const allIds = new Set([
+    ...localCards.map((c) => c.id),
+    ...cloudCards.map((c) => c.id),
+  ]);
+  const localMap = new Map(localCards.map((c) => [c.id, c]));
+  const cloudMap = new Map(cloudCards.map((c) => [c.id, c]));
+
+  const merged: Flashcard[] = [];
+
+  for (const id of allIds) {
+    const local = localMap.get(id);
+    const cloud = cloudMap.get(id);
+
+    if (!local && cloud) {
+      const latestEdit = getLatestEdit(cloud);
+      const delAt = cloud.deletedAt ?? 0;
+      if (delAt > 0 && latestEdit > delAt) {
+        merged.push({ ...cloud, deletedAt: undefined });
+      } else {
+        merged.push(cloud);
       }
-
-      mergedGroups[cloudGroupIdx] = {
-        ...normalizeGroup(cloudGroup),
-        cards: mergedCards,
-        activeModeId: cloudGroup.activeModeId || localGroup.activeModeId,
-      };
+      continue;
     }
-  }
-
-  // Merge custom study modes
-  const mergedModes = [...cloud.studyModes];
-  for (const localMode of local.studyModes) {
-    if (!mergedModes.some((m) => m.id === localMode.id)) {
-      mergedModes.push(localMode);
+    if (!cloud && local) {
+      const latestEdit = getLatestEdit(local);
+      const delAt = local.deletedAt ?? 0;
+      if (delAt > 0 && latestEdit > delAt) {
+        merged.push({ ...local, deletedAt: undefined });
+      } else {
+        merged.push(local);
+      }
+      continue;
     }
+    const l = local!;
+    const c = cloud!;
+
+    const localContentAt = l.contentUpdatedAt ?? 0;
+    const cloudContentAt = c.contentUpdatedAt ?? 0;
+    const localSrsAt = l.srsUpdatedAt ?? 0;
+    const cloudSrsAt = c.srsUpdatedAt ?? 0;
+    const localReps = l.srsState.repetitions ?? 0;
+    const cloudReps = c.srsState.repetitions ?? 0;
+
+    const deletedAt = latestDelete(l.deletedAt, c.deletedAt);
+    const latestEdit = Math.max(getLatestEdit(l), getLatestEdit(c));
+
+    if (!isAlive(latestEdit, deletedAt)) {
+      merged.push({ ...c, deletedAt });
+      continue;
+    }
+
+    const contentSide = localContentAt > cloudContentAt ? l : c;
+    const srsSide = mergeSrsStateNeverRegress(localReps, localSrsAt, cloudReps, cloudSrsAt);
+
+    merged.push({
+      id,
+      pages: contentSide.pages,
+      srsState: srsSide === 'local' ? l.srsState : c.srsState,
+      contentUpdatedAt: contentSide.contentUpdatedAt ?? 0,
+      srsUpdatedAt: srsSide === 'local' ? (l.srsUpdatedAt ?? 0) : (c.srsUpdatedAt ?? 0),
+      deletedAt: deletedAt || undefined,
+    });
   }
 
-  // Merge activity heatmap
-  const mergedHeatmap = { ...cloud.activityHeatmap };
-  for (const [date, count] of Object.entries(local.activityHeatmap)) {
-    mergedHeatmap[date] = Math.max(mergedHeatmap[date] || 0, count);
+  return merged;
+}
+
+export function mergeGroups(localGroups: FlashcardGroup[], cloudGroups: FlashcardGroup[]): FlashcardGroup[] {
+  const allIds = new Set([
+    ...localGroups.map((g) => g.id),
+    ...cloudGroups.map((g) => g.id),
+  ]);
+  const localMap = new Map(localGroups.map((g) => [g.id, g]));
+  const cloudMap = new Map(cloudGroups.map((g) => [g.id, g]));
+
+  const merged: FlashcardGroup[] = [];
+
+  for (const id of allIds) {
+    const local = localMap.get(id);
+    const cloud = cloudMap.get(id);
+
+    if (!local) {
+      merged.push({
+        ...cloud!,
+        cards: mergeCards([], cloud!.cards),
+      });
+      continue;
+    }
+    if (!cloud) {
+      merged.push({
+        ...local,
+        cards: mergeCards(local.cards, []),
+      });
+      continue;
+    }
+
+    const localUpdatedAt = local.updatedAt ?? 0;
+    const cloudUpdatedAt = cloud.updatedAt ?? 0;
+    const deletedAt = latestDelete(local.deletedAt, cloud.deletedAt);
+    const latestEdit = Math.max(localUpdatedAt, cloudUpdatedAt);
+
+    if (!isAlive(latestEdit, deletedAt)) {
+      merged.push({
+        ...cloud,
+        cards: [],
+        deletedAt,
+      });
+      continue;
+    }
+
+    const winner = localUpdatedAt > cloudUpdatedAt ? local : cloud;
+    const mergedCards = mergeCards(local.cards, cloud.cards);
+
+    merged.push({
+      ...winner,
+      cards: mergedCards,
+      updatedAt: latestEdit,
+      deletedAt: deletedAt || undefined,
+    });
   }
+
+  return merged;
+}
+
+export function mergeStudyModes(
+  localModes: StudyMode[],
+  cloudModes: StudyMode[],
+): StudyMode[] {
+  const allIds = new Set([
+    ...localModes.map((m) => m.id),
+    ...cloudModes.map((m) => m.id),
+  ]);
+  const localMap = new Map(localModes.map((m) => [m.id, m]));
+  const cloudMap = new Map(cloudModes.map((m) => [m.id, m]));
+
+  const merged: StudyMode[] = [];
+
+  for (const id of allIds) {
+    const local = localMap.get(id);
+    const cloud = cloudMap.get(id);
+
+    if (!local) {
+      merged.push(cloud!);
+      continue;
+    }
+    if (!cloud) {
+      merged.push(local);
+      continue;
+    }
+
+    const localUpdatedAt = local.updatedAt ?? 0;
+    const cloudUpdatedAt = cloud.updatedAt ?? 0;
+    const deletedAt = latestDelete(local.deletedAt, cloud.deletedAt);
+    const latestEdit = Math.max(localUpdatedAt, cloudUpdatedAt);
+
+    if (!isAlive(latestEdit, deletedAt)) {
+      if (isBuiltInModeSourceId(id)) {
+        const winner = localUpdatedAt > cloudUpdatedAt ? local : cloud;
+        merged.push({ ...winner, updatedAt: latestEdit, deletedAt: undefined });
+        continue;
+      }
+      merged.push({ ...cloud, deletedAt });
+      continue;
+    }
+
+    const winner = localUpdatedAt > cloudUpdatedAt ? local : cloud;
+
+    merged.push({
+      ...winner,
+      updatedAt: latestEdit,
+      deletedAt: deletedAt || undefined,
+    });
+  }
+
+  return merged;
+}
+
+export function mergeUserData(local: UserData, cloud: UserData): UserData {
+  const mergedGroups = mergeGroups(local.groups, cloud.groups);
+  const mergedModes = mergeStudyModes(local.studyModes, cloud.studyModes);
+  const mergedHeatmap = mergeActivityHeatmap(local.activityHeatmap, cloud.activityHeatmap);
 
   return normalizeStoreData({
     groups: mergedGroups,

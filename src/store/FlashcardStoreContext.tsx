@@ -14,6 +14,12 @@ import { StoreStateContext } from './StoreStateContext';
 import { useStorePersistence } from './useStorePersistence';
 import { useStoreBootstrap } from './useStoreBootstrap';
 import { useStoreActionsCore } from './useStoreActions';
+import { selectLiveGroups, selectLiveStudyModes } from './selectors/tombstones';
+import { createSeedGroups } from './seed/seedGroups';
+import { createSeedModes } from './seed/seedModes';
+import { normalizeStoreData } from './storeDataNormalization';
+import type { StoreData } from './persistence/localPersistence';
+import { MigrationDialog } from '../components/dialogs/MigrationDialog';
 
 const FlashcardStoreContext = createContext<FlashcardStore | undefined>(undefined);
 
@@ -37,6 +43,9 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [lastPersistenceError, setLastPersistenceError] = useState<string | null>(null);
   const [lastStoreError, setLastStoreError] = useState<string | null>(null);
+
+  const [migrationPending, setMigrationPending] = useState(false);
+  const [pendingGuestSnapshot, setPendingGuestSnapshot] = useState<StoreData | null>(null);
 
   const groupsRef = useRef(groups);
   const studyModesRef = useRef(studyModes);
@@ -67,6 +76,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     setSyncStatus,
     setLastSyncError,
     setLastPersistenceError,
+    setLastStoreError,
   });
   const { flushPersistence } = persistence;
 
@@ -77,6 +87,8 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     setLastSyncError,
     setLastPersistenceError,
     setLastStoreError,
+    setMigrationPending,
+    setPendingGuestSnapshot,
     applySnapshot: persistence.applySnapshot,
     persistLocalSnapshot: persistence.persistLocalSnapshot,
     persistNow: persistence.persistNow,
@@ -110,10 +122,40 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     await signOutUser();
   }, [flushPersistence]);
 
+  const migrateGuestToAccount = React.useCallback(async () => {
+    if (!pendingGuestSnapshot || !user?.uid) return;
+    const snapshot = normalizeStoreData(pendingGuestSnapshot);
+    persistence.applySnapshot(snapshot);
+    await persistence.persistNow({ uid: user.uid, ...snapshot });
+    setMigrationPending(false);
+    setPendingGuestSnapshot(null);
+  }, [pendingGuestSnapshot, user, persistence]);
+
+  const startFreshOnAccount = React.useCallback(async () => {
+    if (!user?.uid) return;
+    const seedGroups = createSeedGroups();
+    const seedModes = createSeedModes();
+    const snapshot = normalizeStoreData({
+      groups: seedGroups,
+      studyModes: seedModes,
+      activityHeatmap: {},
+    });
+    persistence.applySnapshot(snapshot);
+    await persistence.persistNow({ uid: user.uid, ...snapshot });
+    setMigrationPending(false);
+    setPendingGuestSnapshot(null);
+  }, [user, persistence]);
+
+  const dismissMigration = React.useCallback(async () => {
+    setMigrationPending(false);
+    setPendingGuestSnapshot(null);
+    await signOutUser();
+  }, []);
+
   const stateValue = useMemo<FlashcardStoreState>(
     () => ({
-      groups,
-      studyModes,
+      groups: selectLiveGroups(groups),
+      studyModes: selectLiveStudyModes(studyModes),
       activityHeatmap: heatmap,
       isLoading,
       user,
@@ -183,7 +225,15 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   return (
     <StoreStateContext.Provider value={stateValue}>
       <StoreActionsContext.Provider value={actionsValue}>
-        <FlashcardStoreContext.Provider value={value}>{children}</FlashcardStoreContext.Provider>
+        <FlashcardStoreContext.Provider value={value}>
+          {children}
+          <MigrationDialog
+            visible={migrationPending}
+            onMigrate={migrateGuestToAccount}
+            onStartFresh={startFreshOnAccount}
+            onDismiss={dismissMigration}
+          />
+        </FlashcardStoreContext.Provider>
       </StoreActionsContext.Provider>
     </StoreStateContext.Provider>
   );

@@ -1,3 +1,5 @@
+import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../constants/pages';
+
 export const SEPARATORS: Record<string, string> = {
   tab: '\t',
   semicolon: ';',
@@ -127,10 +129,10 @@ export function detectPageCount(text: string, sep: string): number {
   const lines = normalizeCsvText(text)
     .split('\n')
     .filter((l) => l.trim());
-  if (lines.length === 0) return 2;
+  if (lines.length === 0) return MIN_PAGE_COUNT;
   const counts = lines.map((l) => parseCSVLine(l, sep).length);
   const maxCols = Math.max(...counts);
-  return Math.max(2, Math.min(5, maxCols));
+  return Math.max(MIN_PAGE_COUNT, Math.min(MAX_STORED_PAGE_COUNT, maxCols));
 }
 
 export function detectFirstRowHeader(

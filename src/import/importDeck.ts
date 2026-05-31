@@ -1,4 +1,5 @@
 import type { Flashcard } from '../types/models';
+import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../constants/pages';
 
 export interface ImportDeckCardInput {
   pages: string[];
@@ -30,8 +31,6 @@ export type ImportDeckResult =
     };
 
 const LANGUAGE_CODE_PATTERN = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/;
-const MIN_PAGE_COUNT = 2;
-const MAX_PAGE_COUNT = 5;
 
 export function validateImportDeckPayload(payload: ImportDeckPayload): NormalizedImportDeckPayload {
   const name = payload.name.trim();
@@ -39,10 +38,13 @@ export function validateImportDeckPayload(payload: ImportDeckPayload): Normalize
     throw new Error('Deck name is required.');
   }
 
-  const pageNames = payload.pageNames.slice(0, MAX_PAGE_COUNT);
+  const pageNames = payload.pageNames;
   const pageCount = pageNames.length;
-  if (pageCount < MIN_PAGE_COUNT || pageCount > MAX_PAGE_COUNT) {
-    throw new Error(`Decks must contain between ${MIN_PAGE_COUNT} and ${MAX_PAGE_COUNT} pages.`);
+  if (pageCount < MIN_PAGE_COUNT) {
+    throw new Error(`Decks must contain at least ${MIN_PAGE_COUNT} pages.`);
+  }
+  if (pageCount > MAX_STORED_PAGE_COUNT) {
+    throw new Error(`Decks can contain at most ${MAX_STORED_PAGE_COUNT} pages.`);
   }
 
   const languages = payload.languages.slice(0, pageCount);

@@ -20,15 +20,22 @@ export interface FirestoreDeckDoc {
   pageNames: string[];
   activePageCount?: number;
   studyFilter?: FlashcardGroup['studyFilter'];
-  updatedAt?: unknown;
+  updatedAt?: number;
+  deletedAt?: number | null;
 }
 
 export interface FirestoreCardDoc extends Flashcard {
   updatedAt?: unknown;
 }
 
-export interface FirestoreStudyModeDoc extends StudyMode {
+export interface FirestoreStudyModeDoc {
+  id: string;
+  name: string;
+  steps: StudyMode['steps'];
+  isBuiltIn: boolean;
+  builtInSourceId?: string;
   updatedAt?: unknown;
+  deletedAt?: number | null;
 }
 
 export interface FirestoreActivityDayDoc {
@@ -81,7 +88,7 @@ function deserializeSrsState(docId: string, value: unknown): Flashcard['srsState
   };
 }
 
-export function serializeDeckDoc(group: FlashcardGroup): Omit<FirestoreDeckDoc, 'updatedAt'> {
+export function serializeDeckDoc(group: FlashcardGroup): FirestoreDeckDoc {
   return {
     id: group.id,
     name: group.name,
@@ -90,24 +97,31 @@ export function serializeDeckDoc(group: FlashcardGroup): Omit<FirestoreDeckDoc, 
     pageNames: group.pageNames,
     activePageCount: group.activePageCount,
     studyFilter: normalizeStudyFilter(group.studyFilter),
+    updatedAt: group.updatedAt,
+    ...(group.deletedAt != null ? { deletedAt: group.deletedAt } : {}),
   };
 }
 
-export function serializeCardDoc(card: Flashcard): Omit<FirestoreCardDoc, 'updatedAt'> {
+export function serializeCardDoc(card: Flashcard): FirestoreCardDoc {
   return {
     id: card.id,
     pages: card.pages,
     srsState: card.srsState,
+    contentUpdatedAt: card.contentUpdatedAt,
+    srsUpdatedAt: card.srsUpdatedAt,
+    ...(card.deletedAt != null ? { deletedAt: card.deletedAt } : {}),
   };
 }
 
-export function serializeStudyModeDoc(mode: StudyMode): Omit<FirestoreStudyModeDoc, 'updatedAt'> {
+export function serializeStudyModeDoc(mode: StudyMode): FirestoreStudyModeDoc {
   return {
     id: mode.id,
     name: mode.name,
     steps: mode.steps,
     isBuiltIn: mode.isBuiltIn,
     ...(mode.builtInSourceId ? { builtInSourceId: mode.builtInSourceId } : {}),
+    updatedAt: mode.updatedAt,
+    ...(mode.deletedAt != null ? { deletedAt: mode.deletedAt } : {}),
   };
 }
 
@@ -127,6 +141,13 @@ export function deserializeCardDoc(docId: string, rawData: unknown): Flashcard {
     id: typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId,
     pages: rawData.pages.filter((page): page is string => typeof page === 'string'),
     srsState: deserializeSrsState(docId, rawData.srsState),
+    contentUpdatedAt:
+      typeof rawData.contentUpdatedAt === 'number' ? rawData.contentUpdatedAt : undefined,
+    srsUpdatedAt: typeof rawData.srsUpdatedAt === 'number' ? rawData.srsUpdatedAt : undefined,
+    deletedAt:
+      rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
+        ? rawData.deletedAt
+        : undefined,
   };
 }
 
@@ -157,6 +178,11 @@ export function deserializeDeckDoc(
     pageNames,
     activePageCount,
     studyFilter: normalizeStudyFilter(rawData.studyFilter),
+    updatedAt: typeof rawData.updatedAt === 'number' ? rawData.updatedAt : undefined,
+    deletedAt:
+      rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
+        ? rawData.deletedAt
+        : undefined,
   };
 }
 
@@ -174,6 +200,11 @@ export function deserializeStudyModeDoc(docId: string, rawData: unknown): StudyM
     steps: rawData.steps as StudyMode['steps'],
     isBuiltIn: rawData.isBuiltIn === true,
     ...(typeof rawData.builtInSourceId === 'string' ? { builtInSourceId: rawData.builtInSourceId } : {}),
+    updatedAt: typeof rawData.updatedAt === 'number' ? rawData.updatedAt : undefined,
+    deletedAt:
+      rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
+        ? rawData.deletedAt
+        : undefined,
   };
 }
 

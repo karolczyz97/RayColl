@@ -122,7 +122,6 @@ export async function saveDeck(uid: string, group: FlashcardGroup): Promise<void
   await touchUserRoot(uid);
   await setDoc(getDeckRef(uid, group.id), {
     ...serializeDeckDoc(group),
-    updatedAt: serverTimestamp(),
   });
 }
 
@@ -150,7 +149,6 @@ export async function saveCard(uid: string, groupId: string, card: Flashcard): P
   await touchUserRoot(uid);
   await setDoc(getCardRef(uid, groupId, card.id), {
     ...serializeCardDoc(card),
-    updatedAt: serverTimestamp(),
   });
 }
 
@@ -171,7 +169,6 @@ export async function saveStudyMode(uid: string, mode: StudyMode): Promise<void>
   await touchUserRoot(uid);
   await setDoc(getStudyModeRef(uid, mode.id), {
     ...serializeStudyModeDoc(mode),
-    updatedAt: serverTimestamp(),
   });
 }
 
@@ -235,7 +232,6 @@ export async function saveUserDataV2(
     operations.push((batch) =>
       batch.set(getDeckRef(uid, group.id), {
         ...serializeDeckDoc(group),
-        updatedAt: serverTimestamp(),
       }),
     );
 
@@ -245,7 +241,6 @@ export async function saveUserDataV2(
       operations.push((batch) =>
         batch.set(getCardRef(uid, group.id, card.id), {
           ...serializeCardDoc(card),
-          updatedAt: serverTimestamp(),
         }),
       );
     });
@@ -270,7 +265,6 @@ export async function saveUserDataV2(
     operations.push((batch) =>
       batch.set(getStudyModeRef(uid, mode.id), {
         ...serializeStudyModeDoc(mode),
-        updatedAt: serverTimestamp(),
       }),
     );
   });

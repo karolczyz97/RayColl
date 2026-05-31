@@ -9,6 +9,7 @@ import { createSeedModes } from './seed/seedModes';
 import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
 import type { StoreData } from './persistence/localPersistence';
+import { FIRESTORE_SCHEMA_VERSION } from './persistence/firestoreSchema';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 
 function getErrorMessage(error: unknown): string {
@@ -22,6 +23,8 @@ interface UseStoreBootstrapParams {
   setLastSyncError: Dispatch<SetStateAction<string | null>>;
   setLastPersistenceError: Dispatch<SetStateAction<string | null>>;
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
+  setMigrationPending: Dispatch<SetStateAction<boolean>>;
+  setPendingGuestSnapshot: Dispatch<SetStateAction<StoreData | null>>;
   applySnapshot: (snapshot: StoreData) => void;
   persistLocalSnapshot: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
   persistNow: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
@@ -34,6 +37,8 @@ export function useStoreBootstrap({
   setLastSyncError,
   setLastPersistenceError,
   setLastStoreError,
+  setMigrationPending,
+  setPendingGuestSnapshot,
   applySnapshot,
   persistLocalSnapshot,
   persistNow,
@@ -47,6 +52,52 @@ export function useStoreBootstrap({
   useEffect(() => {
     let active = true;
     const targetUid = user ? user.uid : null;
+
+    async function finishBootstrap(
+      groups: FlashcardGroup[],
+      modes: StudyMode[],
+      heatmap: Record<string, number>,
+      seedVer: number,
+      uid: string | null,
+      cloudSynced: boolean,
+      cloudLoadFailed: boolean,
+    ) {
+      if (seedVer < SEED_VERSION) {
+        if (seedVer === 0 && groups.length === 0) {
+          groups = createSeedGroups();
+        }
+
+        modes = normalizeStudyModes(modes);
+
+        await setSeedVersion(SEED_VERSION).catch((err) => {
+          setLastPersistenceError(getErrorMessage(err));
+        });
+      }
+
+      if (groups.length === 0) {
+        groups = createSeedGroups();
+      }
+      if (modes.length === 0) {
+        modes = createSeedModes();
+      }
+
+      if (active) {
+        const snapshot = normalizeStoreData({
+          groups,
+          studyModes: modes,
+          activityHeatmap: heatmap,
+          schemaVersion: FIRESTORE_SCHEMA_VERSION,
+          ...(cloudSynced ? { lastSyncedAt: Date.now() } : {}),
+        });
+        applySnapshot(snapshot);
+        if (cloudLoadFailed) {
+          await persistLocalSnapshot({ uid, ...snapshot });
+          setLastStoreError(null);
+        } else {
+          await persistNow({ uid, ...snapshot });
+        }
+      }
+    }
 
     async function loadData() {
       setIsLoading(true);
@@ -63,62 +114,57 @@ export function useStoreBootstrap({
           loadedHeatmap = localCache.activityHeatmap;
         }
 
+        if (!targetUid) {
+          await finishBootstrap(loadedGroups, loadedModes, loadedHeatmap, seedVer, null, false, false);
+          return;
+        }
+
         let cloudLoadFailed = false;
-        if (targetUid) {
-          let cloudData: StoreData | null = null;
-          try {
-            cloudData = await loadCloudData(targetUid);
-            setLastSyncError(null);
-          } catch (err) {
-            cloudLoadFailed = true;
-            const message = getErrorMessage(err);
-            setLastSyncError(message);
-            setLastStoreError(message);
-          }
-
-          if (cloudData) {
-            const merged = mergeUserData(
-              { groups: loadedGroups, studyModes: loadedModes, activityHeatmap: loadedHeatmap },
-              cloudData,
-            );
-            loadedGroups = merged.groups;
-            loadedModes = merged.studyModes;
-            loadedHeatmap = merged.activityHeatmap;
-          }
+        let cloudSynced = false;
+        let cloudData: StoreData | null = null;
+        try {
+          cloudData = await loadCloudData(targetUid);
+          setLastSyncError(null);
+        } catch (err) {
+          cloudLoadFailed = true;
+          const message = getErrorMessage(err);
+          setLastSyncError(message);
+          setLastStoreError(message);
         }
 
-        if (seedVer < SEED_VERSION) {
-          if (seedVer === 0 && loadedGroups.length === 0) {
-            loadedGroups = createSeedGroups();
-          }
+        if (cloudData) {
+          const merged = mergeUserData(
+            { groups: loadedGroups, studyModes: loadedModes, activityHeatmap: loadedHeatmap },
+            cloudData,
+          );
+          loadedGroups = merged.groups;
+          loadedModes = merged.studyModes;
+          loadedHeatmap = merged.activityHeatmap;
+          cloudSynced = true;
+        } else if (cloudLoadFailed) {
+          // network error — use user-local cache (already in loaded vars)
+        } else {
+          // cloudData == null — NEW ACCOUNT
+          if (loadedGroups.length === 0) {
+            const guestData = await loadLocalData();
 
-          loadedModes = normalizeStudyModes(loadedModes);
-
-          await setSeedVersion(SEED_VERSION).catch((err) => {
-            setLastPersistenceError(getErrorMessage(err));
-          });
-        }
-
-        if (loadedGroups.length === 0) {
-          loadedGroups = createSeedGroups();
-        }
-        if (loadedModes.length === 0) {
-          loadedModes = createSeedModes();
-        }
-
-        if (active) {
-          const snapshot = normalizeStoreData({
-            groups: loadedGroups,
-            studyModes: loadedModes,
-            activityHeatmap: loadedHeatmap,
-          });
-          applySnapshot(snapshot);
-          if (cloudLoadFailed) {
-            await persistLocalSnapshot({ uid: targetUid, ...snapshot });
-          } else {
-            await persistNow({ uid: targetUid, ...snapshot });
+            if (guestData && guestData.groups.length > 0) {
+              setMigrationPending(true);
+              setPendingGuestSnapshot(guestData);
+              return;
+            }
           }
         }
+
+        await finishBootstrap(
+          loadedGroups,
+          loadedModes,
+          loadedHeatmap,
+          seedVer,
+          targetUid,
+          cloudSynced,
+          cloudLoadFailed,
+        );
       } catch (err) {
         console.error('Failed to initialize flashcard store:', err);
         setLastStoreError(getErrorMessage(err));
@@ -142,6 +188,8 @@ export function useStoreBootstrap({
     setLastPersistenceError,
     setLastStoreError,
     setLastSyncError,
+    setMigrationPending,
+    setPendingGuestSnapshot,
     user,
   ]);
 }

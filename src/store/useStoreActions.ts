@@ -18,6 +18,7 @@ import {
   addFlashcardAction,
   addFlashcardsBulkAction,
   deleteFlashcardAction,
+  reviewFlashcardAction,
   updateFlashcardAction,
 } from './actions/cardActions';
 import {
@@ -30,6 +31,7 @@ import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { getDueCards as selectDueCards } from './selectors/dueCards';
 import { getGroupProgress as selectGroupProgress } from './selectors/progress';
+import { selectLiveGroups, selectLiveStudyModes } from './selectors/tombstones';
 import { setSeedVersion, type StoreData } from './persistence/localPersistence';
 import type { PersistOptions } from './FlashcardStoreTypes';
 import { normalizeStoreData } from './storeDataNormalization';
@@ -246,7 +248,7 @@ export function useStoreActionsCore({
 
   const reviewFlashcard = useCallback(
     (groupId: string, card: Flashcard) => {
-      const nextGroups = updateFlashcardAction(groupsRef.current, groupId, card);
+      const nextGroups = reviewFlashcardAction(groupsRef.current, groupId, card);
       const { nextHeatmap } = recordActivityAction(heatmapRef.current);
 
       groupsRef.current = nextGroups;
@@ -351,8 +353,8 @@ export function useStoreActionsCore({
   const exportState = useCallback(() => {
     return JSON.stringify(
       {
-        groups: groupsRef.current,
-        studyModes: studyModesRef.current,
+        groups: selectLiveGroups(groupsRef.current),
+        studyModes: selectLiveStudyModes(studyModesRef.current),
         activityHeatmap: heatmapRef.current,
       },
       null,

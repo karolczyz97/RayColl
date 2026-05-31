@@ -1,5 +1,6 @@
 import { FlashcardGroup, Flashcard } from '../../types/models';
 import { CardFilter } from '../../constants/cardFilters';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '../../constants/pages';
 import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
 import { uid } from '../../utils/id';
 import { createNewSrsState } from '../../srs/srsEngine';
@@ -10,6 +11,7 @@ export function addGroupAction(
   languages: string[],
   pageNames: string[],
 ): { nextGroups: FlashcardGroup[]; newGroupId: string } {
+  const now = Date.now();
   const newGroupId = uid();
   const g: FlashcardGroup = {
     id: newGroupId,
@@ -19,7 +21,8 @@ export function addGroupAction(
     studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: languages,
     pageNames,
-    activePageCount: pageNames.length,
+    activePageCount: Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, pageNames.length)),
+    updatedAt: now,
   };
   return { nextGroups: [...groups, g], newGroupId };
 }
@@ -28,11 +31,24 @@ export function updateGroupAction(
   groups: FlashcardGroup[],
   group: FlashcardGroup,
 ): FlashcardGroup[] {
-  return groups.map((g) => (g.id === group.id ? group : g));
+  const now = Date.now();
+  return groups.map((g) => {
+    if (g.id !== group.id) return g;
+    const incomingCardIds = new Set(group.cards.map((c) => c.id));
+    const tombstonedCards = g.cards.filter(
+      (c) => c.deletedAt != null && !incomingCardIds.has(c.id),
+    );
+    return {
+      ...group,
+      updatedAt: now,
+      cards: [...group.cards, ...tombstonedCards],
+    };
+  });
 }
 
 export function deleteGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
-  return groups.filter((g) => g.id !== groupId);
+  const now = Date.now();
+  return groups.map((g) => (g.id === groupId ? { ...g, deletedAt: now } : g));
 }
 
 export function setVisiblePageCountAction(
@@ -40,21 +56,24 @@ export function setVisiblePageCountAction(
   groupId: string,
   count: number,
 ): FlashcardGroup[] {
+  const now = Date.now();
+  const clampedCount = Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, count));
   return groups.map((g) => {
     if (g.id !== groupId) return g;
     const names = [...g.pageNames];
     const langs = [...g.pageLanguages];
-    while (names.length < count) {
+    while (names.length < clampedCount) {
       names.push(`Page ${names.length + 1}`);
     }
-    while (langs.length < count) {
+    while (langs.length < clampedCount) {
       langs.push('en-US');
     }
     return {
       ...g,
-      activePageCount: count,
+      activePageCount: clampedCount,
       pageNames: names,
       pageLanguages: langs,
+      updatedAt: now,
     };
   });
 }
@@ -64,7 +83,8 @@ export function setStudyFilterAction(
   groupId: string,
   filter: CardFilter,
 ): FlashcardGroup[] {
-  return groups.map((g) => (g.id === groupId ? { ...g, studyFilter: filter } : g));
+  const now = Date.now();
+  return groups.map((g) => (g.id === groupId ? { ...g, studyFilter: filter, updatedAt: now } : g));
 }
 
 export function setActiveStudyModeAction(
@@ -72,7 +92,8 @@ export function setActiveStudyModeAction(
   groupId: string,
   modeId: string,
 ): FlashcardGroup[] {
-  return groups.map((g) => (g.id === groupId ? { ...g, activeModeId: modeId } : g));
+  const now = Date.now();
+  return groups.map((g) => (g.id === groupId ? { ...g, activeModeId: modeId, updatedAt: now } : g));
 }
 
 export function addGroupWithCardsAction(
@@ -82,11 +103,14 @@ export function addGroupWithCardsAction(
   pageNames: string[],
   cardsData: Omit<Flashcard, 'id' | 'srsState'>[],
 ): { nextGroups: FlashcardGroup[]; newGroupId: string } {
+  const now = Date.now();
   const newGroupId = uid();
   const cards: Flashcard[] = cardsData.map((c) => ({
     id: uid(),
     pages: c.pages,
     srsState: createNewSrsState(),
+    contentUpdatedAt: now,
+    srsUpdatedAt: 0,
   }));
 
   const g: FlashcardGroup = {
@@ -97,7 +121,8 @@ export function addGroupWithCardsAction(
     studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: languages,
     pageNames,
-    activePageCount: pageNames.length,
+    activePageCount: Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, pageNames.length)),
+    updatedAt: now,
   };
   return { nextGroups: [...groups, g], newGroupId };
 }

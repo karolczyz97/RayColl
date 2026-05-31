@@ -25,10 +25,10 @@ export function DeleteDeckDialog({
     <DangerDialog
       visible={visible}
       title={t('settings.delete_btn')}
-      message={t('settings.dialog.delete.confirm_text', { name: deckName })}
+      message={t('settings.dialog.delete.confirm_text', { name: deckName, token: t('dialog.delete.token') })}
       confirmLabel={t('btn.delete')}
       cancelLabel={t('btn.cancel')}
-      requiredText="DELETE"
+      requiredText={t('dialog.delete.token')}
       typedText={deleteConfirmText}
       onTypedTextChange={setDeleteConfirmText}
       onConfirm={onDelete}
