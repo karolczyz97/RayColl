@@ -21,7 +21,7 @@ export async function runTests() {
 
   assertEqual(
     getDeterministicContainerWidth(1600, TOKENS.layout.maxWidth, true, true),
-    1136,
+    1168,
     'Dashboard width calculation should account for all padding layers',
   );
 

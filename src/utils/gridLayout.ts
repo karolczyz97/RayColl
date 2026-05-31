@@ -6,27 +6,19 @@ export function getDeterministicContainerWidth(
   hasScrollViewPadding: boolean,
   isWeb: boolean,
 ): number {
-  // 1. Outermost container constraint (only on Web)
-  const outerWidth =
-    isWeb
-      ? Math.min(TOKENS.layout.maxWidth, windowWidth)
-      : windowWidth;
-
-  // 2. SafeAreaView padding (TOKENS.spacing.sm on each side = 16px total)
-  const safeAreaContentWidth = outerWidth - TOKENS.spacing.sm * 2;
-
-  // 3. ScreenContent maxWidth constraint
-  const screenContentWidth = Math.min(screenMaxWidth, safeAreaContentWidth);
-
-  // 4. ScreenContent padding (TOKENS.spacing.sm on each side = 16px total)
-  let contentWidth = screenContentWidth - TOKENS.spacing.sm * 2;
-
-  // 5. ScrollView padding (TOKENS.spacing.lg on each side = 32px total)
-  if (hasScrollViewPadding) {
-    contentWidth -= TOKENS.spacing.lg * 2;
+  if (isWeb) {
+    // Web: Card has paddingHorizontal: TOKENS.spacing.lg (16px on each side = 32px total).
+    // The ScrollView has scrollbarGutter: 'stable both-edges' (8px scrollbar width on each side = 16px total).
+    const scrollbarGutterWidth = 16;
+    const availableWidth = windowWidth - scrollbarGutterWidth;
+    const cardMaxWidth = Math.min(TOKENS.layout.maxWidth, screenMaxWidth);
+    const cardWidth = Math.min(cardMaxWidth, availableWidth);
+    return Math.max(0, cardWidth - TOKENS.spacing.lg * 2);
+  } else {
+    // Native: contentRegion has nativePadding (TOKENS.spacing.lg on each side = 32px total).
+    const availableWidth = windowWidth - TOKENS.spacing.lg * 2;
+    return Math.max(0, Math.min(screenMaxWidth, availableWidth));
   }
-
-  return Math.max(0, contentWidth);
 }
 
 export function getGridGap(containerWidth: number): number {
