@@ -13,9 +13,10 @@ interface StudyCardProps {
   activeGroup: FlashcardGroup;
   currentCardIndex: number;
   revealedPages: number[];
+  peekedPages: number[];
   showRatingButtons: boolean;
   waitingForTap: boolean;
-  onCardTap: () => void;
+  onCardPress: () => void;
   onHoldingChange: (holding: boolean) => void;
   tapToRevealLabel: string;
 }
@@ -25,9 +26,10 @@ export function StudyCard({
   activeGroup,
   currentCardIndex,
   revealedPages,
+  peekedPages,
   showRatingButtons,
   waitingForTap,
-  onCardTap,
+  onCardPress,
   onHoldingChange,
   tapToRevealLabel,
 }: StudyCardProps) {
@@ -60,7 +62,7 @@ export function StudyCard({
         style={styles.cardPressable}
         onPressIn={pressIn}
         onPressOut={pressOut}
-        onPress={waitingForTap ? onCardTap : undefined}
+        onPress={onCardPress}
         accessibilityRole={waitingForTap ? 'button' : undefined}
         accessibilityLabel={waitingForTap ? tapToRevealLabel : undefined}
       >
@@ -82,7 +84,7 @@ export function StudyCard({
 
             return activeGroup.pageNames.slice(0, activePageCount).map((pageName, pageIndex) => {
               const isRevealed =
-                pageIndex === 0 || revealedPages.includes(pageIndex) || showRatingButtons;
+                pageIndex === 0 || revealedPages.includes(pageIndex) || peekedPages.includes(pageIndex) || showRatingButtons;
 
               return (
                 <CardPageSection

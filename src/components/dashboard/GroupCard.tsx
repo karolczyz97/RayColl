@@ -113,5 +113,7 @@ const styles = StyleSheet.create({
   },
   studyModeAction: {
     flex: 1,
+    maxWidth: 210,
+    marginLeft: 'auto',
   },
 });

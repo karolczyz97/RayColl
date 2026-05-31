@@ -5,22 +5,19 @@ import { MetricCard } from './MetricCard';
 import { TOKENS } from '../../theme/tokens';
 import {
   getDeterministicContainerWidth,
+  getGridColumns,
   getGridGap,
   getGridItemWidth,
 } from '../../utils/gridLayout';
 
 interface MetricGridProps {
   items: MetricItem[];
-  compactBreakpoint?: number;
   screenMaxWidth?: number;
   hasScrollViewPadding?: boolean;
 }
 
-export const METRIC_GRID_COMPACT_BREAKPOINT = 900;
-
 export function MetricGrid({
   items,
-  compactBreakpoint = METRIC_GRID_COMPACT_BREAKPOINT,
   screenMaxWidth = TOKENS.layout.maxWidth,
   hasScrollViewPadding = false,
 }: MetricGridProps) {
@@ -36,8 +33,9 @@ export function MetricGrid({
   }, [windowWidth, screenMaxWidth, hasScrollViewPadding]);
 
   const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
-  const isCompact = currentWidth < compactBreakpoint;
-  const columns = Math.min(items.length, isCompact ? 2 : 4);
+  // Use same threshold as DeckGrid: expand to 4 cols when 2 deck-sized cards fit side by side.
+  const deckCols = getGridColumns(currentWidth, 4, TOKENS.layout.minCardWidth, 2, gap);
+  const columns = Math.min(items.length, deckCols >= 2 ? 4 : 2);
   const itemWidth = useMemo(
     () => getGridItemWidth(currentWidth, columns, gap),
     [columns, currentWidth, gap],

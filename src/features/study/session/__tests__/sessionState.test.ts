@@ -165,6 +165,37 @@ export async function runTests() {
   assertEqual(cleared.status, 'idle', 'CLEAR_ERROR returns to idle');
   assertEqual(cleared.errorMsg, undefined, 'CLEAR_ERROR clears message');
 
+  // --- peek ---
+  const peeked = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'PEEK_SET', pageIndex: 2 });
+  assertArrayEqual(peeked.peekedPages, [2], 'PEEK_SET sets peekedPages to single index');
+
+  const peekedReplace = reduce(peeked, { type: 'PEEK_SET', pageIndex: 3 });
+  assertArrayEqual(peekedReplace.peekedPages, [3], 'PEEK_SET replaces peekedPages (no accumulation)');
+
+  const peekCleared = reduce(peeked, { type: 'PEEK_CLEAR' });
+  assertArrayEqual(peekCleared.peekedPages, [], 'PEEK_CLEAR empties peekedPages');
+
+  const peekClearedOnStep = reduce(peeked, { type: 'SET_CURRENT_STEP', stepIndex: 5 });
+  assertArrayEqual(peekClearedOnStep.peekedPages, [], 'SET_CURRENT_STEP clears peekedPages');
+
+  const peekSurvivesReveal = reduce(peeked, { type: 'REVEAL_PAGE', stepIndex: 1, pageIndex: 1 });
+  assertArrayEqual(peekSurvivesReveal.peekedPages, [2], 'REVEAL_PAGE does not change peekedPages for unrelated page');
+
+  const peekClearedOnReveal = reduce(peeked, { type: 'REVEAL_PAGE', stepIndex: 1, pageIndex: 2 });
+  assertArrayEqual(peekClearedOnReveal.peekedPages, [], 'REVEAL_PAGE clears peekedPages when peeked page is revealed');
+
+  const peekClearedOnRevealPages = reduce(peeked, { type: 'REVEAL_PAGES', revealedPages: [0, 1, 2] });
+  assertArrayEqual(peekClearedOnRevealPages.peekedPages, [], 'REVEAL_PAGES clears peekedPages when peeked page is included');
+
+  const peekResetOnAdvance = reduce(peeked, { type: 'ADVANCE_CARD', nextCardIndex: 1 });
+  assertArrayEqual(peekResetOnAdvance.peekedPages, [], 'ADVANCE_CARD resets peekedPages');
+
+  const peekClearedOnRatings = reduce(peeked, { type: 'SHOW_RATINGS' });
+  assertArrayEqual(peekClearedOnRatings.peekedPages, [], 'SHOW_RATINGS clears peekedPages');
+
+  const peekClearedOnFinish = reduce(peeked, { type: 'FINISH_SESSION' });
+  assertArrayEqual(peekClearedOnFinish.peekedPages, [], 'FINISH_SESSION clears peekedPages');
+
   // reducer immutability: input state must not be mutated
   const original = { ...INITIAL_STUDY_SESSION_STATE, revealedPages: [0] };
   reduce(original, { type: 'REVEAL_PAGES', revealedPages: [0, 1] });

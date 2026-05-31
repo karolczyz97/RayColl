@@ -12,6 +12,7 @@ interface ImportSourceCardProps {
   onNameChange: (value: string) => void;
   onRawTextChange: (value: string) => void;
   onPickFile: () => void;
+  onPaste?: () => void;
   t: TranslationFn;
 }
 
@@ -21,10 +22,11 @@ export function ImportSourceCard({
   onNameChange,
   onRawTextChange,
   onPickFile,
+  onPaste,
   t,
 }: ImportSourceCardProps) {
   return (
-    <SectionCard style={styles.card} contentStyle={styles.cardContent}>
+    <SectionCard>
       <AppTextInput
         label={t('dashboard.name_label')}
         value={name}
@@ -36,6 +38,7 @@ export function ImportSourceCard({
         label={t('import.csv_label')}
         value={rawText}
         onChangeText={onRawTextChange}
+        onPaste={onPaste}
         placeholder={t('import.name_placeholder')}
         style={styles.csvInput}
         accessibilityLabel="CSV TSV raw text input"
@@ -56,14 +59,7 @@ export function ImportSourceCard({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-  },
-  cardContent: {
-    flex: 1,
-  },
   csvInput: {
-    flex: 1,
-    minHeight: 80,
+    minHeight: 120,
   },
 });

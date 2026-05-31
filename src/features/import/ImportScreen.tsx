@@ -4,13 +4,11 @@ import { Button } from 'react-native-paper';
 import { safeBack } from '../../utils/navigation';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { AppSnackbar } from '../../components/feedback/AppSnackbar';
-import { SyncStatusBanner } from '../../components/feedback/SyncStatusBanner';
 import { AnimatedSection } from '../../components/layout/AnimatedSection';
 import { AppScreen } from '../../components/layout/AppScreen';
 import { LoadingState } from '../../components/layout/LoadingState';
 import { POPULAR_LANGS } from '../../constants/languages';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useI18n } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { ImportConfigCard } from './ImportConfigCard';
@@ -21,16 +19,11 @@ import { useImportDeckDraft } from './useImportDeckDraft';
 export function ImportScreen() {
   const { t } = useI18n();
   const store = useFlashcardStore();
-  const { isExpanded, contentMaxWidth } = useResponsiveLayout();
   const draft = useImportDeckDraft();
 
   if (store.isLoading) {
     return <LoadingState />;
   }
-
-  const topCardsOrder = isExpanded
-    ? { config: 0, preview: 1, source: 0 }
-    : { config: 1, preview: 2, source: 0 };
 
   const renderConfigCard = () => (
     <ImportConfigCard
@@ -59,40 +52,23 @@ export function ImportScreen() {
 
   const topCards = (
     <>
-      {isExpanded ? (
-        <View style={styles.row}>
-          <AnimatedSection order={topCardsOrder.source} style={styles.column}>
-            <ImportSourceCard
-              name={draft.name}
-              rawText={draft.rawText}
-              onNameChange={draft.setName}
-              onRawTextChange={draft.handleTextChange}
-              onPickFile={draft.handlePickFile}
-              t={t}
-            />
-          </AnimatedSection>
-          <AnimatedSection order={topCardsOrder.config} style={styles.column}>
-            {renderConfigCard()}
-          </AnimatedSection>
-        </View>
-      ) : (
-        <View style={styles.singleColumn}>
-          <AnimatedSection order={topCardsOrder.source}>
-            <ImportSourceCard
-              name={draft.name}
-              rawText={draft.rawText}
-              onNameChange={draft.setName}
-              onRawTextChange={draft.handleTextChange}
-              onPickFile={draft.handlePickFile}
-              t={t}
-            />
-          </AnimatedSection>
-          <AnimatedSection order={topCardsOrder.config}>{renderConfigCard()}</AnimatedSection>
-        </View>
-      )}
+      <View style={styles.singleColumn}>
+        <AnimatedSection order={0}>
+          <ImportSourceCard
+            name={draft.name}
+            rawText={draft.rawText}
+            onNameChange={draft.setName}
+            onRawTextChange={draft.handleTextChange}
+            onPickFile={draft.handlePickFile}
+            onPaste={draft.handlePaste}
+            t={t}
+          />
+        </AnimatedSection>
+        <AnimatedSection order={1}>{renderConfigCard()}</AnimatedSection>
+      </View>
 
       {draft.cards.length > 0 ? (
-        <AnimatedSection order={topCardsOrder.preview} style={styles.previewSection}>
+        <AnimatedSection order={2} style={styles.singleColumn}>
           <ImportPreviewSection
             cards={draft.cards}
             group={draft.previewGroup}
@@ -114,18 +90,9 @@ export function ImportScreen() {
     <AppScreen
       title={t('import.title')}
       onBack={safeBack}
-      maxWidth={contentMaxWidth}
       scroll={false}
       contentStyle={styles.screenContent}
     >
-      <SyncStatusBanner
-        syncStatus={store.syncStatus}
-        lastSyncError={store.lastSyncError}
-        lastPersistenceError={store.lastPersistenceError}
-        lastStoreError={store.lastStoreError}
-        t={t}
-      />
-
       <FlatList
         data={[]}
         keyExtractor={(item: { key: string }) => item.key}
@@ -168,6 +135,7 @@ export function ImportScreen() {
 const styles = StyleSheet.create({
   listContent: {
     gap: TOKENS.spacing.lg,
+    paddingHorizontal: TOKENS.spacing.lg,
     paddingBottom: TOKENS.control.height + TOKENS.spacing.xl * 2 + TOKENS.spacing.xxl,
   },
   screenContent: {
@@ -182,17 +150,10 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  row: {
-    flexDirection: 'row',
-    gap: TOKENS.spacing.xl,
-    width: '100%',
-    alignItems: 'stretch',
-  },
-  column: {
-    flex: 1,
-  },
   singleColumn: {
     width: '100%',
+    maxWidth: TOKENS.layout.formMaxWidth,
+    alignSelf: 'center',
     gap: TOKENS.spacing.lg,
   },
   floatingButtonContainer: {
@@ -208,10 +169,5 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.pill,
     minHeight: TOKENS.control.height,
     justifyContent: 'center',
-  },
-  previewSection: {
-    maxWidth: 860,
-    alignSelf: 'center',
-    width: '100%',
   },
 });

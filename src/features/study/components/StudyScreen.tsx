@@ -18,7 +18,7 @@ interface StudyScreenProps {
   failedCount: number;
   getButtonText: (key: string) => string;
   handleBack: () => void;
-  handleCardTap: () => void;
+  handleCardPress: () => void;
   handleRating: (rating: number) => void;
   hasStt: boolean;
   hasTts: boolean;
@@ -29,6 +29,7 @@ interface StudyScreenProps {
   sessionState: {
     currentCardIndex: number;
     revealedPages: number[];
+    peekedPages: number[];
     waitingForTap: boolean;
     showRatingButtons: boolean;
     isTtsPlaying: boolean;
@@ -48,7 +49,7 @@ export function StudyScreen({
   failedCount,
   getButtonText,
   handleBack,
-  handleCardTap,
+  handleCardPress,
   handleRating,
   hasStt,
   hasTts,
@@ -102,9 +103,10 @@ export function StudyScreen({
               activeGroup={activeGroup}
               currentCardIndex={sessionState.currentCardIndex}
               revealedPages={sessionState.revealedPages}
+              peekedPages={sessionState.peekedPages}
               showRatingButtons={sessionState.showRatingButtons}
               waitingForTap={sessionState.waitingForTap}
-              onCardTap={handleCardTap}
+              onCardPress={handleCardPress}
               onHoldingChange={setHolding}
               tapToRevealLabel={t('study.tap_to_reveal')}
             />

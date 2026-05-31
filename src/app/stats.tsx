@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { StyleSheet } from 'react-native';
 import { safeBack } from '../utils/navigation';
 import { useTheme } from 'react-native-paper';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
@@ -25,7 +26,6 @@ import { MetricGrid } from '../components/metrics/MetricGrid';
 import { HeatmapGrid } from '../features/stats/HeatmapGrid';
 import { DeckProgressList } from '../features/stats/DeckProgressList';
 
-const STATS_METRIC_COMPACT_BREAKPOINT = 720;
 
 export default function StatsPage() {
   const { t } = useI18n();
@@ -76,7 +76,6 @@ export default function StatsPage() {
       <AnimatedSection index={0}>
         <MetricGrid
           items={statCards}
-          compactBreakpoint={STATS_METRIC_COMPACT_BREAKPOINT}
           screenMaxWidth={formMaxWidth}
           hasScrollViewPadding={false}
         />
@@ -102,8 +101,8 @@ export default function StatsPage() {
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
   raisedSection: {
     marginTop: -8,
   },
-};
+});

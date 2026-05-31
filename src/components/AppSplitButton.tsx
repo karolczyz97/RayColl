@@ -146,11 +146,11 @@ const styles = StyleSheet.create({
   primaryContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: TOKENS.spacing.sm,
     minHeight: TOKENS.splitButton.height,
-    paddingLeft: TOKENS.spacing.lg,
-    paddingRight: TOKENS.spacing.md,
+    paddingLeft: TOKENS.spacing.md,
+    paddingRight: TOKENS.spacing.sm,
   },
   label: {
     flexShrink: 1,

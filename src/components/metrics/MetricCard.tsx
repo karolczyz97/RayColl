@@ -24,11 +24,11 @@ export function MetricCard({ item }: MetricCardProps) {
     <SectionCard>
       <View style={styles.content}>
         <AppIcon name={item.icon} size={20} color={color} style={styles.icon} />
-        <Text variant="labelSmall" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
-          {item.label}
-        </Text>
         <Text variant="titleMedium" style={[styles.value, { color }]}>
           {item.value}
+        </Text>
+        <Text variant="labelSmall" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          {item.label}
         </Text>
       </View>
     </SectionCard>

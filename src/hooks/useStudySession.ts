@@ -15,6 +15,7 @@ import {
   areAllActivePagesRevealed,
   getActivePageIndexes,
   getNextHiddenPageIndex,
+  PEEK_HOLD_THRESHOLD_MS,
   sleep,
   uniquePageIndexes,
 } from '../features/study/session/sessionUtils';
@@ -49,6 +50,8 @@ export function useStudySession(
   const onCardReviewedRef = useRef(onCardReviewed);
   const lastExecutedCardIndexRef = useRef<number | null>(null);
   const dueCardsRef = useRef(dueCards);
+  const skipRef = useRef({ requested: false, armed: false, signalResolve: (() => {}) as () => void });
+  const gestureRef = useRef({ pressTime: 0, hasPeeked: false, blockPress: false, peekTimer: null as ReturnType<typeof setTimeout> | null });
   const activePageCount = group?.activePageCount ?? Infinity;
 
   const dispatchIfMounted = useCallback((action: SessionAction) => {
@@ -63,7 +66,7 @@ export function useStudySession(
       isMountedRef.current = false;
       abortRef.current = true;
       ttsService.cancel();
-      void currentSttService.stopListening();
+      void currentSttService.stopListening().catch(() => {});
     };
   }, []);
 
@@ -180,6 +183,23 @@ export function useStudySession(
     [dispatchIfMounted],
   );
 
+  const requestSkip = useCallback(() => {
+    const skip = skipRef.current;
+    if (!skip.armed) return;
+    skip.requested = true;
+    ttsService.cancel();
+    void sttService.current.stopListening().catch(() => {});
+    skip.signalResolve();
+  }, []);
+
+  const guardedAwait = useCallback(async <T>(promise: Promise<T>): Promise<T | undefined> => {
+    const skip = skipRef.current;
+    const skipSignal = new Promise<void>((resolve) => {
+      skip.signalResolve = resolve;
+    });
+    return (await Promise.race([promise, skipSignal]).catch(() => undefined)) as T | undefined;
+  }, []);
+
   const executeStepRef = useRef<(card: Flashcard, stepIndex: number) => Promise<void>>(undefined);
 
   const executeStep = useCallback(
@@ -187,6 +207,9 @@ export function useStudySession(
       const currentGroup = groupRef.current;
       const currentSteps = activeStepsRef.current;
       const currentState = stateRef.current;
+
+      skipRef.current.requested = false;
+      skipRef.current.armed = false;
 
       if (abortRef.current || !currentGroup || stepIndex >= currentSteps.length) {
         dispatchIfMounted({ type: 'SHOW_RATINGS' });
@@ -197,8 +220,6 @@ export function useStudySession(
 
       switch (step.type) {
         case 'show_page': {
-          // Reveal additively in the reducer so back-to-back show_page steps
-          // can't clobber each other with a stale revealedPages snapshot.
           dispatchIfMounted({ type: 'REVEAL_PAGE', stepIndex, pageIndex: step.pageIndex });
           if (!abortRef.current) {
             await executeStepRef.current?.(card, stepIndex + 1);
@@ -207,8 +228,6 @@ export function useStudySession(
         }
 
         case 'reveal_on_tap': {
-          // Stop the sequence and wait for a tap; handleCardTap reveals the next
-          // hidden page(s) and resumes once everything active is shown.
           dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: true });
           break;
         }
@@ -219,10 +238,11 @@ export function useStudySession(
         }
 
         case 'speak_page': {
+          skipRef.current.armed = true;
           dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
-          await playTts(card.pages[step.pageIndex] || '', currentGroup.pageLanguages[step.pageIndex] || 'en-US');
-          if (step.extraPauseMs > 0) {
-            await sleep(step.extraPauseMs);
+          await guardedAwait(playTts(card.pages[step.pageIndex] || '', currentGroup.pageLanguages[step.pageIndex] || 'en-US'));
+          if (!skipRef.current.requested && step.extraPauseMs > 0) {
+            await guardedAwait(sleep(step.extraPauseMs));
           }
           dispatchIfMounted({ type: 'END_SPEAKING' });
 
@@ -233,9 +253,10 @@ export function useStudySession(
         }
 
         case 'dynamic_pause': {
+          skipRef.current.armed = true;
           const text = card.pages[step.nextPageIndex] || '';
           dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
-          await sleep(text.length * 60 + (step.extraPauseMs || 0));
+          await guardedAwait(sleep(text.length * 60 + (step.extraPauseMs || 0)));
 
           if (!abortRef.current) {
             await executeStepRef.current?.(card, stepIndex + 1);
@@ -244,8 +265,9 @@ export function useStudySession(
         }
 
         case 'wait': {
+          skipRef.current.armed = true;
           dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
-          await sleep(step.ms);
+          await guardedAwait(sleep(step.ms));
 
           if (!abortRef.current) {
             await executeStepRef.current?.(card, stepIndex + 1);
@@ -254,10 +276,25 @@ export function useStudySession(
         }
 
         case 'listen_and_branch': {
+          skipRef.current.armed = true;
           dispatchIfMounted({ type: 'START_LISTENING', stepIndex });
           const lang = currentGroup.pageLanguages[step.pageIndex] || 'en-US';
           const softTimeout = Math.max(5000, lastTtsDurationRef.current * 3);
-          const recognized = await runSpeechRecognition(lang, softTimeout + 10000);
+          const recognized = (await guardedAwait(runSpeechRecognition(lang, softTimeout + 10000))) || '';
+          skipRef.current.armed = false;
+
+          if (skipRef.current.requested) {
+            dispatchIfMounted({
+              type: 'END_LISTENING',
+              text: '',
+              matchPercent: 0,
+            });
+            if (!abortRef.current) {
+              await executeStepRef.current?.(card, stepIndex + 1);
+            }
+            break;
+          }
+
           const original = card.pages[step.pageIndex] || '';
           const percent = matchSpeech(recognized, original);
 
@@ -294,18 +331,32 @@ export function useStudySession(
               revealedPages: getActivePageIndexes(currentGroup),
             });
 
+            skipRef.current.armed = true;
             if (step.incorrectTtsPageIndex !== undefined) {
               dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
               const correctionStart = Date.now();
-              await playTts(
+              await guardedAwait(playTts(
                 card.pages[step.incorrectTtsPageIndex] || '',
                 currentGroup.pageLanguages[step.incorrectTtsPageIndex] || 'en-US',
-              );
+              ));
               const correctionDuration = Date.now() - correctionStart;
               dispatchIfMounted({ type: 'END_SPEAKING' });
-              await sleep(correctionDuration * 2);
+              if (!skipRef.current.requested) {
+                await guardedAwait(sleep(correctionDuration * 2));
+              }
             } else {
-              await sleep(2000);
+              await guardedAwait(sleep(2000));
+            }
+            skipRef.current.armed = false;
+            if (skipRef.current.requested) {
+              failedCardsRef.current = failedCardsRef.current.filter((c) => c.id !== card.id);
+              if (isMountedRef.current) {
+                setFailedCount(failedCardsRef.current.length);
+              }
+              if (!abortRef.current) {
+                await executeStepRef.current?.(card, stepIndex + 1);
+              }
+              break;
             }
 
             if (!abortRef.current) {
@@ -324,7 +375,7 @@ export function useStudySession(
         }
       }
     },
-    [advanceToNextCard, dispatchIfMounted, playTts, processCardReview, runSpeechRecognition, waitUntilReleased],
+    [advanceToNextCard, dispatchIfMounted, guardedAwait, playTts, processCardReview, runSpeechRecognition, waitUntilReleased],
   );
 
   useEffect(() => {
@@ -340,39 +391,99 @@ export function useStudySession(
     }, 0);
   }, []);
 
-  const handleCardTap = useCallback(() => {
+  const handleCardPress = useCallback(() => {
+    const gesture = gestureRef.current;
+    if (gesture.blockPress) {
+      gesture.blockPress = false;
+      return;
+    }
     const currentGroup = groupRef.current;
     const currentState = stateRef.current;
-    if (!currentState.waitingForTap || !currentGroup) return;
-    const card = dueCardsRef.current[currentState.currentCardIndex];
-    if (!card) return;
+    if (!currentGroup) return;
 
-    const stepIndex = currentState.currentStepIndex;
-    const nextHiddenPageIndex = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
+    if (currentState.waitingForTap) {
+      const card = dueCardsRef.current[currentState.currentCardIndex];
+      if (!card) return;
+      const stepIndex = currentState.currentStepIndex;
+      const nextHiddenPageIndex = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
 
-    if (nextHiddenPageIndex === null) {
-      // Nothing left to reveal — treat the tap as "continue" past the gate.
-      dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
-      resumeAfterStep(card, stepIndex + 1);
+      if (nextHiddenPageIndex === null) {
+        dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
+        resumeAfterStep(card, stepIndex + 1);
+        return;
+      }
+
+      const nextRevealedPages = uniquePageIndexes([...currentState.revealedPages, nextHiddenPageIndex]);
+      const allRevealed = areAllActivePagesRevealed(currentGroup, nextRevealedPages);
+      dispatchIfMounted({
+        type: 'SET_CURRENT_STEP',
+        stepIndex,
+        revealedPages: nextRevealedPages,
+        waitingForTap: !allRevealed,
+      });
+      if (allRevealed) {
+        resumeAfterStep(card, stepIndex + 1);
+      }
       return;
     }
 
-    const nextRevealedPages = uniquePageIndexes([...currentState.revealedPages, nextHiddenPageIndex]);
-    const allRevealed = areAllActivePagesRevealed(currentGroup, nextRevealedPages);
-    dispatchIfMounted({
-      type: 'SET_CURRENT_STEP',
-      stepIndex,
-      revealedPages: nextRevealedPages,
-      waitingForTap: !allRevealed,
-    });
-    if (allRevealed) {
-      resumeAfterStep(card, stepIndex + 1);
+    if (currentState.status === 'revealed' || currentState.status === 'finished') return;
+
+    if (skipRef.current.armed) {
+      dispatchIfMounted({ type: 'PEEK_CLEAR' });
+      requestSkip();
     }
-  }, [dispatchIfMounted, resumeAfterStep]);
+  }, [dispatchIfMounted, resumeAfterStep, requestSkip]);
 
   const setHolding = useCallback((holding: boolean) => {
     holdingRef.current = holding;
-  }, []);
+    const gesture = gestureRef.current;
+    const currentGroup = groupRef.current;
+    const currentState = stateRef.current;
+
+    if (holding) {
+      gesture.pressTime = Date.now();
+      gesture.hasPeeked = false;
+      gesture.blockPress = false;
+      gesture.peekTimer = null;
+
+      if (currentGroup && currentState.status !== 'revealed' && currentState.status !== 'finished') {
+        const nextHidden = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
+        if (nextHidden !== null) {
+          gesture.peekTimer = setTimeout(() => {
+            gesture.hasPeeked = true;
+            dispatchIfMounted({ type: 'PEEK_SET', pageIndex: nextHidden });
+          }, PEEK_HOLD_THRESHOLD_MS);
+        }
+      }
+    } else {
+      clearTimeout(gesture.peekTimer!);
+      gesture.peekTimer = null;
+      const holdDuration = Date.now() - gesture.pressTime;
+
+      if (holdDuration < PEEK_HOLD_THRESHOLD_MS) {
+        // Short hold: permanently reveal the page
+        if (currentGroup && currentState.status !== 'revealed' && currentState.status !== 'finished') {
+          const nextHidden = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
+          if (nextHidden !== null) {
+            const nextRevealedPages = uniquePageIndexes([...currentState.revealedPages, nextHidden]);
+            dispatchIfMounted({
+              type: 'SET_CURRENT_STEP',
+              stepIndex: currentState.currentStepIndex,
+              revealedPages: nextRevealedPages,
+            });
+          }
+        }
+        gesture.blockPress = false;
+      } else {
+        gesture.blockPress = true;
+        if (gesture.hasPeeked) {
+          dispatchIfMounted({ type: 'PEEK_CLEAR' });
+        }
+      }
+      gesture.hasPeeked = false;
+    }
+  }, [dispatchIfMounted]);
 
   const getFreshCards = useCallback((cards: Flashcard[]) => {
     const currentGroup = groupRef.current;
@@ -435,7 +546,7 @@ export function useStudySession(
   const stopSession = useCallback(() => {
     abortRef.current = true;
     ttsService.cancel();
-    void sttService.current.stopListening();
+    void sttService.current.stopListening().catch(() => {});
   }, []);
 
   const compatibilityState = useMemo(
@@ -443,6 +554,7 @@ export function useStudySession(
       currentCardIndex: state.currentCardIndex,
       currentStepIndex: state.currentStepIndex,
       revealedPages: state.revealedPages,
+      peekedPages: state.peekedPages,
       sttResultText: state.sttResultText,
       sttMatchPercent: state.sttMatchPercent,
       waitingForTap: state.waitingForTap,
@@ -460,7 +572,7 @@ export function useStudySession(
     dueCards,
     sessionState: compatibilityState,
     handleRating,
-    handleCardTap,
+    handleCardPress,
     startSession,
     stopSession,
     setHolding,

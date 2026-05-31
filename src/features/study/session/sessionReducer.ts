@@ -6,6 +6,7 @@ export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
   currentCardIndex: 0,
   currentStepIndex: 0,
   revealedPages: [],
+  peekedPages: [],
   sttResultText: '',
   sttMatchPercent: 0,
   waitingForTap: false,
@@ -27,6 +28,7 @@ export function sessionReducer(
         currentStepIndex: action.stepIndex,
         revealedPages: action.revealedPages ?? state.revealedPages,
         waitingForTap: action.waitingForTap ?? state.waitingForTap,
+        peekedPages: [],
       };
     case 'START_SPEAKING':
       return {
@@ -59,29 +61,37 @@ export function sessionReducer(
         sttResultText: action.text,
         sttMatchPercent: action.matchPercent,
       };
-    case 'REVEAL_PAGES':
+    case 'REVEAL_PAGES': {
+      const newRevealed = action.revealedPages;
       return {
         ...state,
-        revealedPages: action.revealedPages,
+        revealedPages: newRevealed,
+        peekedPages: state.peekedPages.filter((p) => !newRevealed.includes(p)),
         waitingForTap: action.waitingForTap ?? state.waitingForTap,
       };
-    case 'REVEAL_PAGE':
+    }
+    case 'REVEAL_PAGE': {
+      const newRevealed = uniquePageIndexes([...state.revealedPages, action.pageIndex]);
       return {
         ...state,
         currentStepIndex: action.stepIndex,
-        revealedPages: uniquePageIndexes([...state.revealedPages, action.pageIndex]),
+        revealedPages: newRevealed,
+        peekedPages: state.peekedPages.filter((p) => !newRevealed.includes(p)),
       };
+    }
     case 'SHOW_RATINGS':
       return {
         ...state,
         status: 'revealed',
         waitingForTap: false,
+        peekedPages: [],
       };
     case 'FINISH_SESSION':
       return {
         ...state,
         status: 'finished',
         waitingForTap: false,
+        peekedPages: [],
       };
     case 'ADVANCE_CARD':
       return {
@@ -93,6 +103,16 @@ export function sessionReducer(
         ...state,
         status: 'error',
         errorMsg: action.errorMsg,
+      };
+    case 'PEEK_SET':
+      return {
+        ...state,
+        peekedPages: [action.pageIndex],
+      };
+    case 'PEEK_CLEAR':
+      return {
+        ...state,
+        peekedPages: [],
       };
     case 'CLEAR_ERROR':
       return {

@@ -1,6 +1,6 @@
 export const MOTION = {
   enterDelayStep: 70,
-  enterDelayMax: 280,
+  enterDelayMax: 490,
   fadeDuration: 300,
   spring: {
     damping: 18,

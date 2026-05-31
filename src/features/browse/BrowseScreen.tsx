@@ -167,7 +167,7 @@ export function BrowseScreen() {
       scroll={false}
       contentStyle={styles.screenContent}
     >
-      <AnimatedSection order={4} style={styles.listSection}>
+      <View style={styles.listSection}>
         <FlashcardList
           cards={filtered}
           group={activeGroup}
@@ -179,8 +179,9 @@ export function BrowseScreen() {
           contentContainerStyle={styles.listContainer}
           emptyLabel={t('browse.no_cards')}
           listHeaderContent={listHeaderContent}
+          itemAnimationOffset={3}
         />
-      </AnimatedSection>
+      </View>
 
       <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(5))}>
         <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />

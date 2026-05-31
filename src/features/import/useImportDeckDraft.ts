@@ -35,7 +35,7 @@ export function useImportDeckDraft() {
   const [sepKey, setSepKey] = useState('semicolon');
   const [customSep, setCustomSep] = useState('');
   const [pageCount, setPageCount] = useState(2);
-  const [pageNames, setPageNames] = useState(['Phrase', 'Translation', '', '', '']);
+  const [pageNames, setPageNames] = useState(['', '', '', '', '']);
   const [pageLangs, setPageLangs] = useState(['en-US', 'pl-PL', '', '', '']);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [importError, setImportError] = useState('');
@@ -44,6 +44,10 @@ export function useImportDeckDraft() {
   const firstRowIsHeaderRef = useRef(firstRowIsHeader);
   const headerSettingTouchedRef = useRef(false);
   const lastAppliedHeaderKeyRef = useRef<string | null>(null);
+  const pageNamesRef = useRef(pageNames);
+  const preHeaderPageNamesRef = useRef<string[] | null>(null);
+  const isPasteRef = useRef(false);
+  const rawTextRef = useRef(rawText);
   const debouncedRawText = useDebounce(rawText, 300);
 
   const getActiveSepValue = useCallback((key: string, custom: string): string => {
@@ -183,6 +187,9 @@ export function useImportDeckDraft() {
       }
 
       if (effectiveFirstRowIsHeader) {
+        if (preHeaderPageNamesRef.current === null) {
+          preHeaderPageNamesRef.current = [...pageNamesRef.current];
+        }
         syncHeaderConfigFromText(text, currentSepKey, currentPageCount);
       } else {
         lastAppliedHeaderKeyRef.current = null;
@@ -203,6 +210,7 @@ export function useImportDeckDraft() {
         setName(nextName);
       }
 
+      preHeaderPageNamesRef.current = null;
       setImportError(limited ? 'import.err.too_many_lines' : '');
       setRawText(safeText);
 
@@ -228,13 +236,40 @@ export function useImportDeckDraft() {
   }, [firstRowIsHeader]);
 
   useEffect(() => {
+    pageNamesRef.current = pageNames;
+  }, [pageNames]);
+
+  useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced preview intentionally syncs local derived draft state
     syncDraftFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
   }, [customSep, debouncedRawText, getActiveSepValue, pageCount, sepKey, syncDraftFromText]);
 
+  useEffect(() => {
+    rawTextRef.current = rawText;
+  }, [rawText]);
+
+  const handlePaste = useCallback(() => {
+    isPasteRef.current = true;
+  }, []);
+
   const handleTextChange = useCallback(
     (text: string) => {
-      applyDetectedText(text);
+      if (!text.trim()) {
+        setRawText('');
+        setCards([]);
+        isPasteRef.current = false;
+        return;
+      }
+
+      // Detect paste using explicit paste event flag or significant text length jump
+      const isPaste = isPasteRef.current || text.length - rawTextRef.current.length > 10;
+      isPasteRef.current = false;
+
+      if (isPaste) {
+        applyDetectedText(text);
+      } else {
+        setRawText(text);
+      }
     },
     [applyDetectedText],
   );
@@ -278,9 +313,16 @@ export function useImportDeckDraft() {
 
       const activeSep = getActiveSepValue(sepKey, customSep);
       if (value && rawText.trim()) {
+        if (preHeaderPageNamesRef.current === null) {
+          preHeaderPageNamesRef.current = [...pageNamesRef.current];
+        }
         syncHeaderConfigFromText(rawText, activeSep, pageCount);
       } else if (!value) {
         lastAppliedHeaderKeyRef.current = null;
+        if (preHeaderPageNamesRef.current !== null) {
+          setPageNames([...preHeaderPageNamesRef.current]);
+          preHeaderPageNamesRef.current = null;
+        }
       }
       syncDraftFromText(rawText, activeSep, pageCount);
     },
@@ -452,6 +494,7 @@ export function useImportDeckDraft() {
     handlePageNameChange,
     handleMovePage,
     handlePickFile,
+    handlePaste,
     startEdit,
     cancelEdit,
     saveEdit,

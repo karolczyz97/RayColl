@@ -5,6 +5,7 @@ import { Text, useTheme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
 import { FlashcardListItem } from '../../components/browse/FlashcardListItem';
+import { AnimatedSection } from '../../components/layout/AnimatedSection';
 import { getVisiblePageNames } from '../../store/selectors/pages';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { TOKENS } from '../../theme/tokens';
@@ -27,6 +28,7 @@ interface FlashcardListProps {
   showHeader?: boolean;
   emptyLabel?: string;
   listHeaderContent?: React.ReactNode;
+  itemAnimationOffset?: number;
   className?: string;
 }
 
@@ -46,6 +48,7 @@ export function FlashcardList({
   showHeader = true,
   emptyLabel,
   listHeaderContent,
+  itemAnimationOffset = 0,
   className,
 }: FlashcardListProps) {
   const theme = useTheme();
@@ -97,19 +100,22 @@ export function FlashcardList({
       numColumns={numColumns}
       columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
       ItemSeparatorComponent={ItemSeparator}
-      renderItem={({ item }) => {
+      renderItem={({ item, index }) => {
         if ('placeholder' in item) {
           return <View style={styles.columnCell} />;
         }
+        const row = Math.floor(index / numColumns);
         return (
           <View style={numColumns > 1 ? styles.columnCell : undefined}>
-            <FlashcardListItem
-              card={item}
-              group={group}
-              onStartEdit={() => onStartEdit(item)}
-              onDelete={() => onDelete(item.id)}
-              t={t}
-            />
+            <AnimatedSection order={itemAnimationOffset + row}>
+              <FlashcardListItem
+                card={item}
+                group={group}
+                onStartEdit={() => onStartEdit(item)}
+                onDelete={() => onDelete(item.id)}
+                t={t}
+              />
+            </AnimatedSection>
           </View>
         );
       }}

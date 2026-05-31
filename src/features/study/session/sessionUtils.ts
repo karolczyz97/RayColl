@@ -1,5 +1,7 @@
 import type { FlashcardGroup } from '../../../types/models';
 
+export const PEEK_HOLD_THRESHOLD_MS = 500;
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

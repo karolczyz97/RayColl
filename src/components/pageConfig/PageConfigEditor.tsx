@@ -63,10 +63,8 @@ export function PageConfigEditor({
     { label: t('import.sep.semicolon'), value: 'semicolon' },
     { label: t('import.sep.comma'), value: 'comma' },
     { label: t('import.sep.pipe'), value: 'pipe' },
-    {
-      label: sepKey === 'custom' && customSep ? `"${customSep}"` : t('import.sep.custom'),
-      value: 'custom',
-    },
+    ...(customSep ? [{ label: `${t('import.sep.current_custom')} (${customSep})`, value: 'custom' }] : []),
+    { label: `${t('import.sep.set_custom')}…`, value: '__new_custom__' },
   ];
 
   const hasSeparator = sepKey !== undefined && onSepKeyChange !== undefined;
@@ -103,8 +101,8 @@ export function PageConfigEditor({
               value={sepKey ?? null}
               options={separatorOptions}
               onChange={(key) => {
-                if (key === 'custom') {
-                  setCustomDraftValue(customSep ?? '');
+                if (key === '__new_custom__') {
+                  setCustomDraftValue('');
                   setCustomDialogVisible(true);
                 } else {
                   onSepKeyChange!(key);

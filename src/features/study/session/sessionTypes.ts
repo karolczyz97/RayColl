@@ -14,6 +14,7 @@ export interface StudySessionState {
   currentCardIndex: number;
   currentStepIndex: number;
   revealedPages: number[];
+  peekedPages: number[];
   sttResultText: string;
   sttMatchPercent: number;
   waitingForTap: boolean;
@@ -39,4 +40,6 @@ export type SessionAction =
   | { type: 'FINISH_SESSION' }
   | { type: 'ADVANCE_CARD'; nextCardIndex: number }
   | { type: 'SET_ERROR'; errorMsg: string }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'PEEK_SET'; pageIndex: number }
+  | { type: 'PEEK_CLEAR' };

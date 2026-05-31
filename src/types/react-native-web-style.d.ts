@@ -30,4 +30,8 @@ declare module 'react-native' {
   interface FlatListProps<ItemT> {
     className?: string;
   }
+
+  interface TextInputProps {
+    onPaste?: (event: { nativeEvent: { clipboardData?: { getData: (type: string) => string } } }) => void;
+  }
 }

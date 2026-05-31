@@ -92,6 +92,12 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] `listen_and_branch` < threshold → karta na `failed`, ewentualne korekcyjne TTS (jeśli `incorrectTtsPageIndex` ustawione).
 - [ ] Press-and-hold na karcie blokuje przejście do następnej (`waitUntilReleased`).
 - [ ] **TTS/STT no crash:** bez mikrofonu / bez głosów systemowych sesja nie wywala aplikacji (`SET_ERROR` reducer + komunikat).
+- [ ] **Dotyk pomija TTS/pauzę:** kliknięcie karty podczas odtwarzania TTS lub pauzy przerywa krok i przechodzi dalej; głos TTS milknie natychmiast.
+- [ ] **Dotyk pomija nasłuch:** kliknięcie podczas nasłuchu STT zatrzymuje mikrofon (ikonka przestaje pulsować), pojawia się ręczna ocena, karta nie jest oznaczona jako „nie umiem".
+- [ ] **Dotyk na ekranie oceny:** kliknięcie nie robi nic (oceny nie pomijamy).
+- [ ] **Przytrzymanie podgląda stronę:** naciśnięcie i przytrzymanie 500ms odsłania podgląd strony; puszczenie po <500ms trwale odsłania stronę; puszczenie po >=500ms cofa podgląd (strona znów ukryta).
+- [ ] **Podgląd w trakcie nasłuchu:** przytrzymanie w trakcie STT odsłania stronę, mikrofon dalej słucha; po puszczeniu (>=1s) strona się chowa, logika nie ruszyła.
+- [ ] **Stres — szybkie dotknięcia:** wielokrotne szybkie kliknięcia w trakcie odsłaniania — brak migotania układu i brak podwójnego pominięcia kroku.
 
 ### Stats
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Dialog, Portal } from 'react-native-paper';
+import { dialogStyles } from '../../theme/dialogStyles';
 import { AppTextInput } from '../forms/AppTextInput';
 
 interface TextEntryDialogProps {
@@ -33,7 +34,7 @@ export function TextEntryDialog({
 }: TextEntryDialogProps) {
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss}>
+      <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
         <Dialog.Title>{title}</Dialog.Title>
         <Dialog.Content>
           <AppTextInput
