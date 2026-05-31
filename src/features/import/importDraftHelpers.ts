@@ -1,11 +1,8 @@
-import { parseCSV, parseCSVRaw, serializeCSV } from '../../import/importParser';
+import { parseCSVRaw, serializeCSV } from '../../import/importParser';
+import { padArray } from '../../utils/array';
 
 function normalizeRow(row: string[], pageCount: number): string[] {
-  const nextRow = row.slice(0, pageCount);
-  while (nextRow.length < pageCount) {
-    nextRow.push('');
-  }
-  return nextRow;
+  return padArray(row.slice(0, pageCount), pageCount, '');
 }
 
 export function getHeaderRowFromText(text: string, sepKey: string, pageCount: number): string[] {
@@ -23,7 +20,7 @@ export function getPreviewRows(
   pageCount: number,
   firstRowIsHeader: boolean,
 ): string[][] {
-  const rows = parseCSV(text, sepKey, pageCount);
+  const rows = parseCSVRaw(text, sepKey);
   const normalizedRows = rows.map((row) => normalizeRow(row, pageCount));
   return firstRowIsHeader ? normalizedRows.slice(1) : normalizedRows;
 }

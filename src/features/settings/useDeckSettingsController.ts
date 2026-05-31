@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
+import { swapElements } from '../../utils/array';
 import type { ModeStep, StudyMode } from '../../types/models';
 import type { CardFilter } from '../../constants/cardFilters';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
@@ -100,14 +101,11 @@ export function useDeckSettingsController() {
     const target = index + direction;
     if (target < 0 || target >= pageCount) return;
 
-    const nextNames = [...activeGroup.pageNames];
-    const nextLanguages = [...activeGroup.pageLanguages];
-    [nextNames[index], nextNames[target]] = [nextNames[target], nextNames[index]];
-    [nextLanguages[index], nextLanguages[target]] = [nextLanguages[target], nextLanguages[index]];
+    const nextNames = swapElements(activeGroup.pageNames, index, target);
+    const nextLanguages = swapElements(activeGroup.pageLanguages, index, target);
 
     const updatedCards = activeGroup.cards.map((card) => {
-      const pages = [...card.pages];
-      [pages[index], pages[target]] = [pages[target], pages[index]];
+      const pages = swapElements(card.pages, index, target);
       return { ...card, pages };
     });
 
@@ -122,9 +120,7 @@ export function useDeckSettingsController() {
   const moveStep = (mode: StudyMode, index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= mode.steps.length) return;
-    const steps = [...mode.steps];
-    [steps[index], steps[target]] = [steps[target], steps[index]];
-    store.updateStudyMode({ ...mode, steps });
+    store.updateStudyMode({ ...mode, steps: swapElements(mode.steps, index, target) });
   };
 
   const deleteStep = (mode: StudyMode, index: number) => {

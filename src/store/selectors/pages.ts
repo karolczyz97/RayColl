@@ -1,12 +1,9 @@
 import { Flashcard, FlashcardGroup } from '../../types/models';
+import { padArray } from '../../utils/array';
 
 export function getVisiblePages(card: Flashcard, group: FlashcardGroup): string[] {
   const count = group.activePageCount;
-  const pages = [...card.pages];
-  while (pages.length < count) {
-    pages.push('');
-  }
-  return pages.slice(0, count);
+  return padArray([...card.pages], count, '').slice(0, count);
 }
 
 export function getVisiblePageNames(group: FlashcardGroup): string[] {
@@ -18,10 +15,7 @@ export function getVisiblePageLanguages(group: FlashcardGroup): string[] {
 }
 
 export function ensureCardHasPageSlots(card: Flashcard, minPageCount: number): Flashcard {
-  const pages = [...card.pages];
-  while (pages.length < minPageCount) {
-    pages.push('');
-  }
+  const pages = padArray([...card.pages], minPageCount, '');
   return { ...card, pages };
 }
 

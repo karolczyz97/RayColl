@@ -1,4 +1,5 @@
 import { MIN_PAGE_COUNT } from '../constants/pages';
+import { padArray } from '../utils/array';
 
 export const SEPARATORS: Record<string, string> = {
   tab: '\t',
@@ -42,6 +43,19 @@ const HEADER_TOKENS = [
   'wloski',
   'hiszpanski',
 ];
+
+const LANG_TOKENS_EN_EXACT = ['word', 'phrase', 'english', 'translation', 'example', 'front', 'back', 'meaning', 'definition', 'en'];
+const LANG_TOKENS_EN_PREFIX = ['angiel'];
+const LANG_TOKENS_PL_EXACT = ['słowo', 'polish', 'pl', 'tłumaczenie', 'przykład'];
+const LANG_TOKENS_PL_PREFIX = ['polsk', 'fraz'];
+const LANG_TOKENS_ES_EXACT = ['palabra', 'es', 'spanish', 'espanol', 'traduccion', 'ejemplo'];
+const LANG_TOKENS_ES_PREFIX = ['hiszpan'];
+const LANG_TOKENS_DE_EXACT = ['wort', 'deutsch', 'de', 'ubersetzung', 'beispiel'];
+const LANG_TOKENS_DE_PREFIX = ['niemiec'];
+const LANG_TOKENS_FR_EXACT = ['french', 'francais', 'fr'];
+const LANG_TOKENS_FR_PREFIX = ['franc'];
+const LANG_TOKENS_IT_EXACT = ['italiano', 'italian', 'it'];
+const LANG_TOKENS_IT_PREFIX = ['włos'];
 
 export function normalizeImportCell(value: string): string {
   return value.trim();
@@ -208,30 +222,12 @@ export function detectLangFromHeader(header: string): string {
   const h = normalizeHeaderToken(header);
   const words = h.split(/\s+/);
 
-  const EN_EXACT = ['word', 'phrase', 'english', 'translation', 'example', 'front', 'back', 'meaning', 'definition', 'en'];
-  const EN_PREFIX = ['angiel'];
-
-  const PL_EXACT = ['słowo', 'polish', 'pl', 'tłumaczenie', 'przykład'];
-  const PL_PREFIX = ['polsk', 'fraz'];
-
-  const ES_EXACT = ['palabra', 'es', 'spanish', 'espanol', 'traduccion', 'ejemplo'];
-  const ES_PREFIX = ['hiszpań'];
-
-  const DE_EXACT = ['wort', 'deutsch', 'de', 'ubersetzung', 'beispiel'];
-  const DE_PREFIX = ['niemiec'];
-
-  const FR_EXACT = ['french', 'francais', 'fr'];
-  const FR_PREFIX = ['franc'];
-
-  const IT_EXACT = ['italiano', 'italian', 'it'];
-  const IT_PREFIX = ['włos'];
-
-  if (words.some((w) => EN_EXACT.includes(w) || EN_PREFIX.some((p) => w.startsWith(p)))) return 'en-US';
-  if (words.some((w) => PL_EXACT.includes(w) || PL_PREFIX.some((p) => w.startsWith(p)))) return 'pl-PL';
-  if (words.some((w) => ES_EXACT.includes(w) || ES_PREFIX.some((p) => w.startsWith(p)))) return 'es-ES';
-  if (words.some((w) => DE_EXACT.includes(w) || DE_PREFIX.some((p) => w.startsWith(p)))) return 'de-DE';
-  if (words.some((w) => FR_EXACT.includes(w) || FR_PREFIX.some((p) => w.startsWith(p)))) return 'fr-FR';
-  if (words.some((w) => IT_EXACT.includes(w) || IT_PREFIX.some((p) => w.startsWith(p)))) return 'it-IT';
+  if (words.some((w) => LANG_TOKENS_EN_EXACT.includes(w) || LANG_TOKENS_EN_PREFIX.some((p) => w.startsWith(p)))) return 'en-US';
+  if (words.some((w) => LANG_TOKENS_PL_EXACT.includes(w) || LANG_TOKENS_PL_PREFIX.some((p) => w.startsWith(p)))) return 'pl-PL';
+  if (words.some((w) => LANG_TOKENS_ES_EXACT.includes(w) || LANG_TOKENS_ES_PREFIX.some((p) => w.startsWith(p)))) return 'es-ES';
+  if (words.some((w) => LANG_TOKENS_DE_EXACT.includes(w) || LANG_TOKENS_DE_PREFIX.some((p) => w.startsWith(p)))) return 'de-DE';
+  if (words.some((w) => LANG_TOKENS_FR_EXACT.includes(w) || LANG_TOKENS_FR_PREFIX.some((p) => w.startsWith(p)))) return 'fr-FR';
+  if (words.some((w) => LANG_TOKENS_IT_EXACT.includes(w) || LANG_TOKENS_IT_PREFIX.some((p) => w.startsWith(p)))) return 'it-IT';
 
   return 'en-US';
 }
@@ -280,12 +276,7 @@ function parseFullText(text: string, sep: string): string[][] {
 
 export function parseCSV(text: string, sepKey: string, pageCount: number): string[][] {
   const sep = resolveSep(sepKey);
-  return parseFullText(normalizeCsvText(text), sep).map((parts) => {
-    while (parts.length < pageCount) {
-      parts.push('');
-    }
-    return parts;
-  });
+  return parseFullText(normalizeCsvText(text), sep).map((parts) => padArray(parts, pageCount, ''));
 }
 
 export function parseCSVRaw(text: string, sepKey: string): string[][] {

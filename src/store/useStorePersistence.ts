@@ -9,6 +9,7 @@ import { usePersistenceQueue, type PersistenceSnapshot } from './persistence/per
 import type { StoreData } from './persistence/localPersistence';
 import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
 import { createWebPersistenceHandlers } from './persistence/webLifecycle';
+import { getErrorMessage } from '../utils/errors';
 
 interface UseStorePersistenceParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
@@ -22,10 +23,6 @@ interface UseStorePersistenceParams {
   setLastSyncError: Dispatch<SetStateAction<string | null>>;
   setLastPersistenceError: Dispatch<SetStateAction<string | null>>;
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export function useStorePersistence({

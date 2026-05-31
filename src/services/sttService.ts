@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
+import { getErrorMessage } from '../utils/errors';
 
 export interface SttOptions {
   language: string;
@@ -56,10 +57,6 @@ function getWebSpeechRecognition(): SpeechRecognitionConstructor | undefined {
   if (typeof window === 'undefined') return undefined;
   const speechWindow = window as BrowserWindowWithSpeechRecognition;
   return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 function normalizeRecognizedText(text: string): string {

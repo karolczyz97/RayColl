@@ -1,15 +1,12 @@
 import { Platform } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 import type { AudioSource } from 'expo-audio';
+import { getErrorMessage } from '../utils/errors';
 
 type BrowserWindowWithAudioContext = Window &
   typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
   };
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 const getAudioCtx = (() => {
   let ctx: AudioContext | null = null;

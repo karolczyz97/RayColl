@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { safeBack } from '../../utils/navigation';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useSyncedRef } from '../../hooks/useSyncedRef';
 import {
   SEPARATORS,
   detectFirstRowHeader,
@@ -42,13 +43,13 @@ export function useImportDeckDraft() {
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [firstRowIsHeader, setFirstRowIsHeader] = useState(false);
-  const firstRowIsHeaderRef = useRef(firstRowIsHeader);
+  const firstRowIsHeaderRef = useSyncedRef(firstRowIsHeader);
   const headerSettingTouchedRef = useRef(false);
   const lastAppliedHeaderKeyRef = useRef<string | null>(null);
-  const pageNamesRef = useRef(pageNames);
+  const pageNamesRef = useSyncedRef(pageNames);
   const preHeaderPageNamesRef = useRef<string[] | null>(null);
   const isPasteRef = useRef(false);
-  const rawTextRef = useRef(rawText);
+  const rawTextRef = useSyncedRef(rawText);
   const [rawColumnCount, setRawColumnCount] = useState(MIN_PAGE_COUNT);
   const rawColumnCountRef = useRef(rawColumnCount);
   const sepTouchedRef = useRef(false);
@@ -58,6 +59,21 @@ export function useImportDeckDraft() {
     if (key === 'custom') return custom || ',';
     return key;
   }, []);
+
+  const syncRawTextFromCards = useCallback(
+    (updatedCards: Flashcard[]) => {
+      setRawText(
+        serializeImportSourceText(
+          updatedCards.map((card) => card.pages),
+          getActiveSepValue(sepKey, customSep),
+          pageCount,
+          firstRowIsHeaderRef.current,
+          pageNames,
+        ),
+      );
+    },
+    [customSep, getActiveSepValue, pageCount, pageNames, sepKey],
+  );
 
   const {
     editingId,
@@ -76,30 +92,14 @@ export function useImportDeckDraft() {
         const updatedCards = prevCards.map((card) =>
           card.id === cardId ? { ...card, pages: [...pages] } : card,
         );
-        setRawText(
-          serializeImportSourceText(
-            updatedCards.map((card) => card.pages),
-            getActiveSepValue(sepKey, customSep),
-            pageCount,
-            firstRowIsHeaderRef.current,
-            pageNames,
-          ),
-        );
+        syncRawTextFromCards(updatedCards);
         return updatedCards;
       });
     },
     onDeleteCard: (cardId) => {
       setCards((prevCards) => {
         const updatedCards = prevCards.filter((card) => card.id !== cardId);
-        setRawText(
-          serializeImportSourceText(
-            updatedCards.map((card) => card.pages),
-            getActiveSepValue(sepKey, customSep),
-            pageCount,
-            firstRowIsHeaderRef.current,
-            pageNames,
-          ),
-        );
+        syncRawTextFromCards(updatedCards);
         return updatedCards;
       });
     },
@@ -258,14 +258,6 @@ export function useImportDeckDraft() {
   );
 
   useEffect(() => {
-    firstRowIsHeaderRef.current = firstRowIsHeader;
-  }, [firstRowIsHeader]);
-
-  useEffect(() => {
-    pageNamesRef.current = pageNames;
-  }, [pageNames]);
-
-  useEffect(() => {
     if (debouncedRawText.trim()) {
       const activeSep = getActiveSepValue(sepKey, customSep);
       const separator = SEPARATORS[activeSep] || activeSep;
@@ -275,10 +267,6 @@ export function useImportDeckDraft() {
     }
     syncDraftFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
   }, [customSep, debouncedRawText, getActiveSepValue, pageCount, sepKey, syncDraftFromText]);
-
-  useEffect(() => {
-    rawTextRef.current = rawText;
-  }, [rawText]);
 
   const handlePaste = useCallback(() => {
     isPasteRef.current = true;

@@ -35,10 +35,7 @@ import { selectLiveGroups, selectLiveStudyModes } from './selectors/tombstones';
 import { setSeedVersion, type StoreData } from './persistence/localPersistence';
 import type { PersistOptions } from './FlashcardStoreTypes';
 import { normalizeStoreData } from './storeDataNormalization';
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+import { getErrorMessage } from '../utils/errors';
 
 interface UseStoreActionsParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;

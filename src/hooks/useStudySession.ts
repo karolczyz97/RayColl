@@ -11,6 +11,7 @@ import {
 } from '../services/audioFeedback';
 import { useAppTheme } from '../contexts/ThemeContext';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '../features/study/session/sessionReducer';
+import { useSyncedRef } from './useSyncedRef';
 import {
   areAllActivePagesRevealed,
   getActivePageIndexes,
@@ -43,13 +44,13 @@ export function useStudySession(
   const failedCardsRef = useRef<Flashcard[]>([]);
   const reviewedAttemptKeysRef = useRef<Set<string>>(new Set());
   const sessionAttemptRef = useRef(0);
-  const groupRef = useRef(group);
+  const groupRef = useSyncedRef(group);
   const activeStepsRef = useRef<ModeStep[]>([]);
-  const stateRef = useRef(state);
-  const ttsRateRef = useRef(ttsRate);
-  const onCardReviewedRef = useRef(onCardReviewed);
+  const stateRef = useSyncedRef(state);
+  const ttsRateRef = useSyncedRef(ttsRate);
+  const onCardReviewedRef = useSyncedRef(onCardReviewed);
+  const dueCardsRef = useSyncedRef(dueCards);
   const lastExecutedCardIndexRef = useRef<number | null>(null);
-  const dueCardsRef = useRef(dueCards);
   const skipRef = useRef({ requested: false, armed: false, signalResolve: (() => {}) as () => void });
   const gestureRef = useRef({ pressTime: 0, hasPeeked: false, blockPress: false, peekTimer: null as ReturnType<typeof setTimeout> | null });
   const activePageCount = group?.activePageCount ?? Infinity;
@@ -81,23 +82,8 @@ export function useStudySession(
   );
 
   useEffect(() => {
-    groupRef.current = group;
-  }, [group]);
-  useEffect(() => {
     activeStepsRef.current = activeSteps;
   }, [activeSteps]);
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-  useEffect(() => {
-    ttsRateRef.current = ttsRate;
-  }, [ttsRate]);
-  useEffect(() => {
-    onCardReviewedRef.current = onCardReviewed;
-  }, [onCardReviewed]);
-  useEffect(() => {
-    dueCardsRef.current = dueCards;
-  }, [dueCards]);
 
   const startSession = useCallback(
     (cards: Flashcard[]) => {

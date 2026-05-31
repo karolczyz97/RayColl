@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { Flashcard } from '../../types/models';
+import { padArray } from '../../utils/array';
 
 export const FLASHCARD_DRAFT_ID = '__draft_flashcard__';
 
@@ -23,11 +24,7 @@ export function useFlashcardListEditing({
   const startEdit = useCallback(
     (card: Flashcard) => {
       setEditingId(card.id);
-      const pages = [...card.pages];
-
-      while (pages.length < pageCount) {
-        pages.push('');
-      }
+      const pages = padArray([...card.pages], pageCount, '');
 
       setEditPages(pages);
     },

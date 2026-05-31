@@ -11,10 +11,7 @@ import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/loc
 import type { StoreData } from './persistence/localPersistence';
 import { FIRESTORE_SCHEMA_VERSION } from './persistence/firestoreSchema';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+import { getErrorMessage } from '../utils/errors';
 
 interface UseStoreBootstrapParams {
   user: User | null;

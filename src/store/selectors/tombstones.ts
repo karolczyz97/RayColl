@@ -1,14 +1,13 @@
 import { FlashcardGroup, StudyMode } from '../../types/models';
+import { filterLive } from '../../utils/array';
 
 export function selectLiveGroups(groups: FlashcardGroup[]): FlashcardGroup[] {
-  return groups
-    .filter((g) => g.deletedAt == null)
-    .map((g) => ({
-      ...g,
-      cards: g.cards.filter((c) => c.deletedAt == null),
-    }));
+  return filterLive(groups).map((g) => ({
+    ...g,
+    cards: filterLive(g.cards),
+  }));
 }
 
 export function selectLiveStudyModes(modes: StudyMode[]): StudyMode[] {
-  return modes.filter((m) => m.deletedAt == null);
+  return filterLive(modes);
 }
