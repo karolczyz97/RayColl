@@ -139,6 +139,12 @@ export const de: Record<string, string> = {
   'app_settings.export_btn': 'Zustand nach JSON exportieren',
   'app_settings.import_placeholder': 'Fügen Sie exportiertes JSON hier ein...',
   'app_settings.import_btn': 'Zustand importieren',
+  'app_settings.import_file_btn': 'Aus Datei importieren',
+  'app_settings.export_error': 'Export fehlgeschlagen.',
+  'app_settings.import_success': 'Import erfolgreich!',
+  'app_settings.import_error': 'Import fehlgeschlagen.',
+  'app_settings.reset_success': 'Daten zurückgesetzt.',
+  'app_settings.sharing_unavailable': 'Teilen auf diesem Gerät nicht verfügbar.',
   'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
   'app_settings.reset_confirm':
     'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',

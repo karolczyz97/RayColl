@@ -139,6 +139,12 @@ export const es: Record<string, string> = {
   'app_settings.export_btn': 'Exportar estado a JSON',
   'app_settings.import_placeholder': 'Pegue el JSON exportado aquí...',
   'app_settings.import_btn': 'Importar estado',
+  'app_settings.import_file_btn': 'Importar desde archivo',
+  'app_settings.export_error': 'Export fallido.',
+  'app_settings.import_success': '¡Import completado!',
+  'app_settings.import_error': 'Import fallido.',
+  'app_settings.reset_success': 'Datos restablecidos.',
+  'app_settings.sharing_unavailable': 'Compartir no disponible en este dispositivo.',
   'app_settings.reset_btn': 'Restablecer aplicación',
   'app_settings.reset_confirm':
     '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',

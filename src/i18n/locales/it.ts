@@ -139,6 +139,12 @@ export const it: Record<string, string> = {
   'app_settings.export_btn': 'Esporta stato in JSON',
   'app_settings.import_placeholder': 'Incolla il JSON esportato qui...',
   'app_settings.import_btn': 'Importa stato',
+  'app_settings.import_file_btn': 'Importa da file',
+  'app_settings.export_error': 'Esportazione non riuscita.',
+  'app_settings.import_success': 'Import completato!',
+  'app_settings.import_error': 'Import non riuscito.',
+  'app_settings.reset_success': 'Dati ripristinati.',
+  'app_settings.sharing_unavailable': 'Condivisione non disponibile su questo dispositivo.',
   'app_settings.reset_btn': 'Ripristina app',
   'app_settings.reset_confirm':
     "Sei sicuro di voler ripristinare l'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.",

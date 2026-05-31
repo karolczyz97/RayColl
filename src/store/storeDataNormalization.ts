@@ -4,6 +4,7 @@ import type { Flashcard, FlashcardGroup, StudyMode } from '../types/models';
 import type { StoreData } from './persistence/localPersistence';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 
+export const CURRENT_SCHEMA_VERSION = 1;
 export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
 const VALID_STUDY_FILTERS = new Set<CardFilter>(Object.values(CARD_FILTERS));
 
@@ -104,7 +105,7 @@ export function normalizeStoreData(data: StoreData): StoreData {
     groups: data.groups.map(normalizeGroup),
     studyModes: normalizeStudyModes(data.studyModes),
     activityHeatmap: data.activityHeatmap,
-    schemaVersion: data.schemaVersion,
+    schemaVersion: data.schemaVersion ?? CURRENT_SCHEMA_VERSION,
     lastSyncedAt: data.lastSyncedAt,
   };
 }

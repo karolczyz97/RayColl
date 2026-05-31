@@ -46,7 +46,7 @@ export interface FlashcardStore {
   recordActivity: () => void;
   getDueCards: (groupId: string) => Flashcard[];
   getGroupProgress: (groupId: string) => number;
-  importState: (json: string) => void;
+  importState: (json: string) => Promise<void>;
   exportState: () => string;
   setVisiblePageCount: (groupId: string, count: number) => void;
   setStudyFilter: (groupId: string, filter: CardFilter) => void;

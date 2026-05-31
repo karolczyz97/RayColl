@@ -4,6 +4,8 @@ export interface BackupData {
   groups: FlashcardGroup[];
   studyModes: StudyMode[];
   activityHeatmap: Record<string, number>;
+  schemaVersion?: number;
+  exportedAt?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

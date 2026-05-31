@@ -34,7 +34,7 @@ import { getGroupProgress as selectGroupProgress } from './selectors/progress';
 import { selectLiveGroups, selectLiveStudyModes } from './selectors/tombstones';
 import { setSeedVersion, type StoreData } from './persistence/localPersistence';
 import type { PersistOptions } from './FlashcardStoreTypes';
-import { normalizeStoreData } from './storeDataNormalization';
+import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from './storeDataNormalization';
 import { getErrorMessage } from '../utils/errors';
 
 interface UseStoreActionsParams {
@@ -353,6 +353,7 @@ export function useStoreActionsCore({
         groups: selectLiveGroups(groupsRef.current),
         studyModes: selectLiveStudyModes(studyModesRef.current),
         activityHeatmap: heatmapRef.current,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
       },
       null,
       2,
@@ -360,19 +361,33 @@ export function useStoreActionsCore({
   }, [groupsRef, heatmapRef, studyModesRef]);
 
   const importState = useCallback(
-    (json: string) => {
+    async (json: string) => {
+      const previousSnapshot: StoreData = {
+        groups: groupsRef.current,
+        studyModes: studyModesRef.current,
+        activityHeatmap: heatmapRef.current,
+      };
+
       const data = JSON.parse(json);
       validateBackupData(data);
 
-      applySnapshot(normalizeStoreData({
+      const normalized = normalizeStoreData({
         groups: data.groups,
         studyModes: data.studyModes,
         activityHeatmap: data.activityHeatmap,
-      }));
+        schemaVersion: data.schemaVersion,
+      });
 
-      persistCurrentSnapshot({ immediate: true });
+      applySnapshot(normalized);
+
+      try {
+        await persistNow({ uid: getCurrentUid(), ...normalized });
+      } catch (err) {
+        applySnapshot(previousSnapshot);
+        throw err;
+      }
     },
-    [applySnapshot, persistCurrentSnapshot],
+    [applySnapshot, getCurrentUid, groupsRef, heatmapRef, persistNow, studyModesRef],
   );
 
   return {

@@ -4,7 +4,6 @@ import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { safeBack } from '../../utils/navigation';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
-import { TextEntryDialog } from '../../components/dialogs/TextEntryDialog';
 import { AppSnackbar } from '../../components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '../../components/feedback/SyncStatusBanner';
 import { AppSelect } from '../../components/AppSelect';
@@ -45,8 +44,7 @@ export function AppSettingsScreen() {
   const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate } =
     useAppTheme();
   const { formMaxWidth } = useResponsiveLayout();
-  const [importVisible, setImportVisible] = useState(false);
-  const [importJson, setImportJson] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
   const [resetVisible, setResetVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const isWeb = Platform.OS === 'web';
@@ -57,11 +55,6 @@ export function AppSettingsScreen() {
   ];
   const [changelogVisible, setChangelogVisible] = useState(false);
 
-  const getLabel = (key: string, fallback: string) => {
-    const translated = t(key);
-    return translated !== key ? translated : fallback;
-  };
-
   const handleTtsRateChange = async (rate: number) => {
     const clampedRate = Math.max(0.5, Math.min(2.0, rate));
     await setTtsRate(clampedRate);
@@ -69,7 +62,11 @@ export function AppSettingsScreen() {
 
   const handleExport = async () => {
     try {
-      const data = store.exportState();
+      const raw = store.exportState();
+      const parsed = JSON.parse(raw);
+      parsed.exportedAt = new Date().toISOString();
+      const data = JSON.stringify(parsed, null, 2);
+
       const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, '0');
       const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}`;
@@ -88,36 +85,59 @@ export function AppSettingsScreen() {
         return;
       }
 
-      const { Paths, File } = await import('expo-file-system');
-      const { shareAsync } = await import('expo-sharing');
+      const { File, Paths } = await import('expo-file-system');
+      const { shareAsync, isAvailableAsync } = await import('expo-sharing');
+
       const file = new File(Paths.cache, filename);
-      file.write(data, { encoding: 'utf8' });
+      file.create({ overwrite: true });
+      file.write(data);
+
+      const sharingAvailable = await isAvailableAsync();
+      if (!sharingAvailable) {
+        setSnackbarMessage(t('app_settings.sharing_unavailable'));
+        return;
+      }
       await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'RayColl Backup' });
     } catch (error) {
       console.warn('Export failed:', error);
-      setSnackbarMessage(getLabel('app_settings.export_error', 'Export failed.'));
+      setSnackbarMessage(t('app_settings.export_error'));
     }
   };
 
-  const handleImport = () => {
-    if (!importJson.trim()) {
-      return;
-    }
-
+  const handleImportFromFile = async () => {
+    if (isImporting) return;
+    setIsImporting(true);
     try {
-      store.importState(importJson);
-      setImportJson('');
-      setImportVisible(false);
-      setSnackbarMessage(getLabel('app_settings.import_success', 'Import completed!'));
-    } catch (error: unknown) {
-      setSnackbarMessage(error instanceof Error ? error.message : 'Invalid backup JSON!');
+      const { getDocumentAsync } = await import('expo-document-picker');
+      const result = await getDocumentAsync({
+        type: ['application/json', 'text/plain'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const content =
+        Platform.OS === 'web' && asset.file
+          ? await asset.file.text()
+          : await (await fetch(asset.uri)).text();
+
+      await store.importState(content);
+      setSnackbarMessage(t('app_settings.import_success'));
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        setSnackbarMessage(t('app_settings.import_error'));
+      } else {
+        setSnackbarMessage(error instanceof Error ? error.message : t('app_settings.import_error'));
+      }
+    } finally {
+      setIsImporting(false);
     }
   };
 
   const handleResetConfirm = () => {
     store.resetToDefault();
     setResetVisible(false);
-    setSnackbarMessage(getLabel('app_settings.reset_success', 'All data reset to defaults.'));
+    setSnackbarMessage(t('app_settings.reset_success'));
   };
 
   if (store.isLoading) {
@@ -232,11 +252,12 @@ export function AppSettingsScreen() {
             </Button>
             <Button
               mode="contained-tonal"
-              icon="import"
-              onPress={() => setImportVisible(true)}
+              icon="file-upload"
+              onPress={() => void handleImportFromFile()}
+              disabled={isImporting}
               style={styles.actionButton}
             >
-              {t('app_settings.import_btn')}
+              {t('app_settings.import_file_btn')}
             </Button>
           </View>
         </SectionCard>
@@ -271,21 +292,6 @@ export function AppSettingsScreen() {
         ))}
       </TouchableOpacity>
       <ChangelogDialog visible={changelogVisible} onDismiss={() => setChangelogVisible(false)} />
-
-      <TextEntryDialog
-        visible={importVisible}
-        onDismiss={() => setImportVisible(false)}
-        onConfirm={handleImport}
-        title={t('app_settings.import_btn')}
-        value={importJson}
-        onChangeText={setImportJson}
-        placeholder="Paste backup JSON string here..."
-        multiline
-        numberOfLines={6}
-        confirmLabel={t('btn.save')}
-        cancelLabel={t('btn.cancel')}
-        disabled={!importJson.trim()}
-      />
 
       <ConfirmDialog
         visible={resetVisible}

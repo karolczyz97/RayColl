@@ -35,6 +35,7 @@ try {
     '../src/features/study/session/__tests__/sessionState.test.ts',
     '../src/features/browse/__tests__/browseFilter.test.ts',
     '../src/utils/__tests__/gridLayout.test.ts',
+    '../src/utils/__tests__/backupValidation.test.ts',
   ];
 
   for (const file of testFiles) {

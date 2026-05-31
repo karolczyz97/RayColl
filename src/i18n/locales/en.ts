@@ -137,6 +137,12 @@ export const en: Record<string, string> = {
   'app_settings.export_btn': 'Export State to JSON',
   'app_settings.import_placeholder': 'Paste exported JSON here...',
   'app_settings.import_btn': 'Import State',
+  'app_settings.import_file_btn': 'Import from file',
+  'app_settings.export_error': 'Export failed.',
+  'app_settings.import_success': 'Import completed!',
+  'app_settings.import_error': 'Import failed.',
+  'app_settings.reset_success': 'Data reset to defaults.',
+  'app_settings.sharing_unavailable': 'Sharing not available on this device.',
   'app_settings.reset_btn': 'Reset App to Defaults',
   'app_settings.reset_confirm':
     'Are you sure you want to reset the app? All custom decks and statistics will be wiped.',

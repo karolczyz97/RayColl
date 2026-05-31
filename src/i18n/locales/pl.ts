@@ -138,6 +138,12 @@ export const pl: Record<string, string> = {
   'app_settings.export_btn': 'Eksportuj stan do JSON',
   'app_settings.import_placeholder': 'Wklej wyeksportowany JSON tutaj...',
   'app_settings.import_btn': 'Importuj stan',
+  'app_settings.import_file_btn': 'Importuj z pliku',
+  'app_settings.export_error': 'Eksport nie powiódł się.',
+  'app_settings.import_success': 'Import zakończony!',
+  'app_settings.import_error': 'Import nie powiódł się.',
+  'app_settings.reset_success': 'Dane zresetowane.',
+  'app_settings.sharing_unavailable': 'Udostępnianie niedostępne na tym urządzeniu.',
   'app_settings.reset_btn': 'Resetuj aplikację',
   'app_settings.reset_confirm':
     'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
