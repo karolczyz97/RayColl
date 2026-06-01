@@ -159,6 +159,7 @@ function InnerLayout() {
         <Stack.Screen name="settings/[groupId]" />
         <Stack.Screen name="stats" />
         <Stack.Screen name="app-settings" />
+        <Stack.Screen name="archive" />
       </Stack>
     </View>
   );

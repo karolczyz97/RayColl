@@ -7,7 +7,7 @@ import { StudyScopeSection } from '../../components/settings/StudyScopeSection';
 import { StudyModeSelector } from '../../components/settings/StudyModeSelector';
 import { StudyModeStepsEditor } from '../../components/settings/StudyModeStepsEditor';
 import { CreateStudyModeSection } from '../../components/settings/CreateStudyModeSection';
-import { DeleteDeckDialog } from '../../components/settings/DeleteDeckDialog';
+import { ArchiveDeckDialog } from '../../components/settings/ArchiveDeckDialog';
 import { AddStepDialog } from '../../components/settings/AddStepDialog';
 import { TOKENS } from '../../theme/tokens';
 import { AppScreen } from '../../components/layout/AppScreen';
@@ -25,10 +25,9 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     creatingMode,
     customSteps,
     deckName,
-    deleteConfirmText,
-    deleteDialogOpen,
+    archiveDialogOpen,
     handleColBlur,
-    handleDeleteGroup,
+    handleArchiveGroup,
     handleNameBlur,
     isCompact,
     isDefaultMode,
@@ -51,8 +50,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     setColNames,
     setCustomSteps,
     setDeckName,
-    setDeleteConfirmText,
-    setDeleteDialogOpen,
+    setArchiveDialogOpen,
     setEditingModeId,
     setNewModeName,
     setNewMs,
@@ -184,10 +182,10 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
       onBack={handleBack}
       right={
         <IconButton
-          icon="delete-outline"
+          icon="archive-arrow-down-outline"
           iconColor={topBarFg}
-          onPress={() => setDeleteDialogOpen(true)}
-          accessibilityLabel="Delete deck button"
+          onPress={() => setArchiveDialogOpen(true)}
+          accessibilityLabel="Archive deck"
         />
       }
       maxWidth={responsiveLayout.contentMaxWidth}
@@ -270,13 +268,10 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         </Dialog>
       </Portal>
 
-      <DeleteDeckDialog
-        visible={deleteDialogOpen}
-        onDismiss={() => setDeleteDialogOpen(false)}
-        deckName={activeGroup.name}
-        deleteConfirmText={deleteConfirmText}
-        setDeleteConfirmText={setDeleteConfirmText}
-        onDelete={handleDeleteGroup}
+      <ArchiveDeckDialog
+        visible={archiveDialogOpen}
+        onDismiss={() => setArchiveDialogOpen(false)}
+        onConfirm={handleArchiveGroup}
         t={t}
       />
     </AppScreen>

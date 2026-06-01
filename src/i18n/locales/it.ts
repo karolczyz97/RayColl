@@ -15,9 +15,21 @@ export const it: Record<string, string> = {
     'Hai mazzi locali da una sessione precedente. Vuoi trasferirli sul tuo account o ricominciare da zero?',
   'auth.migration.migrate_btn': 'Trasferisci sull\'account',
   'auth.migration.fresh_btn': 'Ricominciare da zero',
+  'auth.error.not_configured': 'Accesso non configurato. L\'app funziona in modalità locale.',
+  'auth.error.state_mismatch': 'Errore di sicurezza. Riprova.',
+  'auth.error.no_token': 'Nessun token di accesso ricevuto. Riprova.',
+  'auth.error.invalid_token': 'Token di accesso non valido. Riprova.',
+  'auth.error.login_failed': 'Accesso fallito. Riprova.',
   'dialog.delete.title': 'Sei sicuro?',
   'dialog.delete.desc': 'Questa azione non può essere annullata.',
-  'dialog.delete.token': 'ELIMINA',
+  'dialog.delete_permanent.title': 'Eliminare permanentemente?',
+  'dialog.delete_permanent.desc': 'Il mazzo "{name}" sarà eliminato permanentemente. Non può essere annullato.',
+  'dialog.archive.title': 'Archiviare questo mazzo?',
+  'dialog.archive.confirm': 'Il mazzo sarà spostato in Archivio ed eliminato permanentemente dopo {days} giorni. Puoi ripristinarlo prima.',
+  'dialog.restore.title': 'Ripristinare "{name}"?',
+  'dialog.restore.desc': 'Il mazzo "{name}" tornerà alla lista principale.',
+  'btn.archive': 'Archivia',
+  'btn.restore': 'Ripristina',
 
   // Dashboard
   'dashboard.no_groups': 'Nessun mazzo trovato. Clicca su + per aggiungerne uno.',
@@ -105,9 +117,7 @@ export const it: Record<string, string> = {
   'settings.title': 'Impostazioni mazzo: {name}',
   'settings.modes_title': 'Modalità di studio',
   'settings.steps_title': 'Sequenza di passaggi',
-  'settings.delete_btn': 'Elimina mazzo',
-  'settings.delete_desc':
-    'Sei sicuro di voler eliminare questo mazzo? Questo rimuoverà tutte le sue carte in modo permanente.',
+  'settings.archive_btn': 'Archivia mazzo',
   'settings.rename_label': 'Nome del mazzo',
   'settings.pages_config': 'Configurazione delle pagine',
   'settings.reorder_columns': 'Riordina colonne',
@@ -125,9 +135,6 @@ export const it: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Indice pagina (inizia da 0)',
   'settings.dialog.add_step.time': 'Tempo (ms)',
   'settings.dialog.add_step.threshold': 'Soglia (%)',
-  'settings.dialog.delete.confirm_text':
-    'Per confermare l\'eliminazione del mazzo "{name}", digita {token} qui sotto:',
-
   // App Settings
   'app_settings.title': 'Impostazioni app',
   'app_settings.theme': 'Tema',
@@ -154,6 +161,17 @@ export const it: Record<string, string> = {
     'Estrai i colori di accento e di sistema direttamente dal dispositivo (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Attivato',
   'app_settings.dynamic_colors.disabled': 'Disattivato',
+  'app_settings.archived': 'Archiviati',
+  'app_settings.archived_open': 'Apri archivio',
+  // Archive
+  'archive.title': 'Archiviati',
+  'archive.empty': 'Nessun mazzo archiviato.',
+  'archive.cards_count': '{count} carte',
+  'archive.auto_delete_in': 'Eliminato tra {days} giorni',
+  'archive.auto_delete_tomorrow': 'Eliminato domani',
+  'archive.auto_delete_today': 'Eliminato oggi',
+  'archive.delete_permanently': 'Elimina permanentemente',
+  'archive.decks_count': '{count} archiviati',
 
   // Mode names
   'mode.classic.name': 'Classico',

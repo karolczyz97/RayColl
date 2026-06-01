@@ -15,9 +15,21 @@ export const de: Record<string, string> = {
     'Du hast lokale Decks aus einer früheren Sitzung. Möchtest du sie auf dein Konto übertragen oder neu beginnen?',
   'auth.migration.migrate_btn': 'Auf Konto übertragen',
   'auth.migration.fresh_btn': 'Neu beginnen',
+  'auth.error.not_configured': 'Anmeldung ist nicht konfiguriert. Die App läuft im lokalen Modus.',
+  'auth.error.state_mismatch': 'Sicherheitsfehler. Bitte erneut versuchen.',
+  'auth.error.no_token': 'Kein Anmeldetoken erhalten. Bitte erneut versuchen.',
+  'auth.error.invalid_token': 'Ungültiges Anmeldetoken. Bitte erneut versuchen.',
+  'auth.error.login_failed': 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   'dialog.delete.title': 'Sind Sie sicher?',
   'dialog.delete.desc': 'Diese Aktion kann nicht rückgängig gemacht werden.',
-  'dialog.delete.token': 'LÖSCHEN',
+  'dialog.delete_permanent.title': 'Endgültig löschen?',
+  'dialog.delete_permanent.desc': 'Das Deck "{name}" wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.',
+  'dialog.archive.title': 'Deck archivieren?',
+  'dialog.archive.confirm': 'Das Deck wird ins Archiv verschoben und nach {days} Tagen endgültig gelöscht. Du kannst es vorher wiederherstellen.',
+  'dialog.restore.title': '"{name}" wiederherstellen?',
+  'dialog.restore.desc': 'Das Deck "{name}" kehrt zur Hauptliste zurück.',
+  'btn.archive': 'Archivieren',
+  'btn.restore': 'Wiederherstellen',
 
   // Dashboard
   'dashboard.no_groups': 'Keine Decks gefunden. Klicken Sie auf +, um eines hinzuzufügen.',
@@ -105,9 +117,7 @@ export const de: Record<string, string> = {
   'settings.title': 'Deck-Einstellungen: {name}',
   'settings.modes_title': 'Lernmodus',
   'settings.steps_title': 'Schrittfolge',
-  'settings.delete_btn': 'Deck löschen',
-  'settings.delete_desc':
-    'Sind Sie sicher, dass Sie dieses Deck löschen möchten? Dadurch werden alle seine Karten dauerhaft entfernt.',
+  'settings.archive_btn': 'Deck archivieren',
   'settings.rename_label': 'Deckname',
   'settings.pages_config': 'Seitenkonfiguration',
   'settings.reorder_columns': 'Spalten neu ordnen',
@@ -125,9 +135,6 @@ export const de: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Seitenindex (beginnt bei 0)',
   'settings.dialog.add_step.time': 'Zeit (ms)',
   'settings.dialog.add_step.threshold': 'Schwellenwert (%)',
-  'settings.dialog.delete.confirm_text':
-    'Um das Löschen des Decks "{name}" zu bestätigen, geben Sie unten {token} ein:',
-
   // App Settings
   'app_settings.title': 'App-Einstellungen',
   'app_settings.theme': 'Thema',
@@ -154,6 +161,17 @@ export const de: Record<string, string> = {
     'Akzent- und Systemfarben direkt vom Gerät extrahieren (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Aktiviert',
   'app_settings.dynamic_colors.disabled': 'Deaktiviert',
+  'app_settings.archived': 'Archivierte',
+  'app_settings.archived_open': 'Archiv öffnen',
+  // Archive
+  'archive.title': 'Archivierte',
+  'archive.empty': 'Keine archivierten Decks.',
+  'archive.cards_count': '{count} Karten',
+  'archive.auto_delete_in': 'Wird in {days} Tagen gelöscht',
+  'archive.auto_delete_tomorrow': 'Wird morgen gelöscht',
+  'archive.auto_delete_today': 'Wird heute gelöscht',
+  'archive.delete_permanently': 'Endgültig löschen',
+  'archive.decks_count': '{count} archiviert',
 
   // Mode names
   'mode.classic.name': 'Klassisch',

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import type { User } from 'firebase/auth';
 import type { FlashcardGroup, StudyMode } from '../types/models';
 import { signInWithGoogle, signOutUser } from '../services/firebase';
@@ -14,7 +15,7 @@ import { StoreStateContext } from './StoreStateContext';
 import { useStorePersistence } from './useStorePersistence';
 import { useStoreBootstrap } from './useStoreBootstrap';
 import { useStoreActionsCore } from './useStoreActions';
-import { selectLiveGroups, selectLiveStudyModes } from './selectors/tombstones';
+import { selectActiveGroups, selectArchivedGroups, selectLiveStudyModes } from './selectors/tombstones';
 import { createSeedGroups } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { normalizeStoreData } from './storeDataNormalization';
@@ -43,6 +44,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [lastPersistenceError, setLastPersistenceError] = useState<string | null>(null);
   const [lastStoreError, setLastStoreError] = useState<string | null>(null);
+  const [lastLoginError, setLastLoginError] = useState<string | null>(null);
 
   const [migrationPending, setMigrationPending] = useState(false);
   const [pendingGuestSnapshot, setPendingGuestSnapshot] = useState<StoreData | null>(null);
@@ -113,8 +115,40 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     commitHeatmap: persistence.commitHeatmap,
   });
 
+  const purgeArchivesRef = useRef(actions.purgeArchives);
+  useEffect(() => { purgeArchivesRef.current = actions.purgeArchives; }, [actions.purgeArchives]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      purgeArchivesRef.current();
+    }, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        purgeArchivesRef.current();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const signIn = React.useCallback(async () => {
-    await signInWithGoogle();
+    setLastLoginError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setLastLoginError(
+        message.startsWith('auth.error.') ? message : 'auth.error.login_failed',
+      );
+      throw e;
+    }
+  }, []);
+
+  const clearLastLoginError = React.useCallback(() => {
+    setLastLoginError(null);
   }, []);
 
   const signOut = React.useCallback(async () => {
@@ -154,7 +188,8 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
 
   const stateValue = useMemo<FlashcardStoreState>(
     () => ({
-      groups: selectLiveGroups(groups),
+      groups: selectActiveGroups(groups),
+      archivedGroups: selectArchivedGroups(groups),
       studyModes: selectLiveStudyModes(studyModes),
       activityHeatmap: heatmap,
       isLoading,
@@ -163,6 +198,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       lastSyncError,
       lastPersistenceError,
       lastStoreError,
+      lastLoginError,
     }),
     [
       groups,
@@ -170,6 +206,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       isLoading,
       lastPersistenceError,
       lastStoreError,
+      lastLoginError,
       lastSyncError,
       studyModes,
       syncStatus,
@@ -187,6 +224,9 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       importDeck: actions.importDeck,
       updateGroup: actions.updateGroup,
       deleteGroup: actions.deleteGroup,
+      archiveGroup: actions.archiveGroup,
+      restoreGroup: actions.restoreGroup,
+      purgeArchives: actions.purgeArchives,
       addFlashcard: actions.addFlashcard,
       updateFlashcard: actions.updateFlashcard,
       deleteFlashcard: actions.deleteFlashcard,
@@ -205,12 +245,14 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       setStudyFilter: actions.setStudyFilter,
       setActiveStudyMode: actions.setActiveStudyMode,
       addFlashcardsBulk: actions.addFlashcardsBulk,
+      clearLastLoginError,
     }),
     [
       actions,
       flushPersistence,
       signIn,
       signOut,
+      clearLastLoginError,
     ],
   );
 

@@ -4,6 +4,7 @@ export const ROUTES = {
   APP_SETTINGS: '/app-settings',
   IMPORT: '/import',
   STATS: '/stats',
+  ARCHIVE: '/archive' as Href,
   browseDeck: (groupId: string): Href => ({
     pathname: '/browse/[groupId]',
     params: { groupId },

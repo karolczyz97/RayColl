@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import * as Application from 'expo-application';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
+import { router } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 import { AppSnackbar } from '../../components/feedback/AppSnackbar';
@@ -16,6 +17,7 @@ import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useI18n, type LanguageCode } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
+import { ROUTES } from '../../constants/routes';
 import { releaseInfo } from '../../config/releaseInfo';
 import { ChangelogDialog } from '../../components/feedback/ChangelogDialog';
 
@@ -264,6 +266,19 @@ export function AppSettingsScreen() {
       </AnimatedSection>
 
       <AnimatedSection order={5}>
+        <SectionCard title={t('app_settings.archived')}>
+          <Button
+            mode="contained-tonal"
+            icon="archive-outline"
+            onPress={() => router.push(ROUTES.ARCHIVE)}
+          >
+            {t('app_settings.archived_open')}
+            {store.archivedGroups.length > 0 && ` (${store.archivedGroups.length})`}
+          </Button>
+        </SectionCard>
+      </AnimatedSection>
+
+      <AnimatedSection order={6}>
         <SectionCard title={t('app_settings.danger_zone')} danger>
           <Text variant="bodySmall" style={styles.mutedText}>
             {t('app_settings.reset_confirm')}

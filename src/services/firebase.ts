@@ -19,6 +19,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import type { StoreData } from '../store/persistence/localPersistence';
@@ -58,53 +59,88 @@ export const db = app
     })
   : null;
 
+function getGoogleClientId(): string {
+  if (Platform.OS === 'web') return '';
+  const platformId = Platform.OS === 'ios'
+    ? process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+    : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  return platformId || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
+}
+
 export async function signInWithGoogle(): Promise<User | null> {
   if (!auth) {
-    console.warn('Firebase not configured');
-    return null;
+    throw new Error('auth.error.not_configured');
   }
 
   if (Platform.OS === 'web') {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
-  } else {
-    const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
-    if (!clientId) {
-      console.warn('Google Client ID not configured in .env (EXPO_PUBLIC_GOOGLE_CLIENT_ID)');
-    }
-
-    const redirectUrl = makeRedirectUri({
-      scheme: 'raycoll',
-    });
-
-    const authUrl =
-      `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${clientId}` +
-      `&redirect_uri=${encodeURIComponent(redirectUrl)}` +
-      `&response_type=id_token` +
-      `&scope=${encodeURIComponent('openid email profile')}` +
-      `&nonce=raycoll_nonce`;
-
     try {
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-
-      if (result.type === 'success' && result.url) {
-        const hash = result.url.split('#')[1] || result.url.split('?')[1] || '';
-        const params = new URLSearchParams(hash);
-        const idToken = params.get('id_token');
-
-        if (idToken) {
-          const credential = GoogleAuthProvider.credential(idToken);
-          const userCredential = await signInWithCredential(auth, credential);
-          return userCredential.user;
-        }
+      const result = await signInWithPopup(auth, provider);
+      return result.user;
+    } catch (err: unknown) {
+      if (err instanceof Error && /popup|cancel/i.test(err.message)) {
+        return null;
       }
-    } catch (err) {
-      console.error('Native sign in error:', err);
+      throw err;
     }
+  }
 
+  const clientId = getGoogleClientId();
+  if (!clientId) {
+    throw new Error('auth.error.not_configured');
+  }
+
+  const nonce = Crypto.randomUUID();
+  const state = Crypto.randomUUID();
+
+  const redirectUrl = makeRedirectUri({ scheme: 'raycoll' });
+
+  const authUrl =
+    `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUrl)}` +
+    `&response_type=id_token` +
+    `&scope=${encodeURIComponent('openid email profile')}` +
+    `&nonce=${nonce}` +
+    `&state=${state}`;
+
+  let result;
+  try {
+    result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+  } catch {
+    throw new Error('auth.error.login_failed');
+  }
+
+  if (result.type === 'cancel' || result.type === 'dismiss') {
     return null;
+  }
+
+  if (result.type !== 'success' || !result.url) {
+    return null;
+  }
+
+  const hash = result.url.split('#')[1] || '';
+  const params = new URLSearchParams(hash);
+
+  const returnedState = params.get('state');
+  if (returnedState !== state) {
+    throw new Error('auth.error.state_mismatch');
+  }
+
+  const idToken = params.get('id_token');
+  if (!idToken) {
+    throw new Error('auth.error.no_token');
+  }
+
+  try {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const userCredential = await signInWithCredential(auth, credential);
+    return userCredential.user;
+  } catch (err: unknown) {
+    if (err instanceof Error && /invalid_id_token|auth/i.test(err.message)) {
+      throw new Error('auth.error.invalid_token');
+    }
+    throw err;
   }
 }
 

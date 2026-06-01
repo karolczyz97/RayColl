@@ -13,6 +13,7 @@ export interface PersistOptions {
 
 export interface FlashcardStore {
   groups: FlashcardGroup[];
+  archivedGroups: FlashcardGroup[];
   studyModes: StudyMode[];
   activityHeatmap: Record<string, number>;
   isLoading: boolean;
@@ -21,8 +22,10 @@ export interface FlashcardStore {
   lastSyncError: string | null;
   lastPersistenceError: string | null;
   lastStoreError: string | null;
+  lastLoginError: string | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  clearLastLoginError: () => void;
   flushPersistence: () => Promise<void>;
   addGroup: (name: string, languages: string[], pageNames: string[]) => string;
   addGroupWithCards: (
@@ -34,6 +37,9 @@ export interface FlashcardStore {
   importDeck: (payload: ImportDeckPayload) => Promise<ImportDeckResult>;
   updateGroup: (group: FlashcardGroup) => void;
   deleteGroup: (groupId: string) => void;
+  archiveGroup: (groupId: string) => void;
+  restoreGroup: (groupId: string) => void;
+  purgeArchives: () => void;
   addFlashcard: (groupId: string, pages: string[]) => string;
   updateFlashcard: (groupId: string, card: Flashcard) => void;
   deleteFlashcard: (groupId: string, cardId: string) => void;
@@ -57,6 +63,7 @@ export interface FlashcardStore {
 export type FlashcardStoreState = Pick<
   FlashcardStore,
   | 'groups'
+  | 'archivedGroups'
   | 'studyModes'
   | 'activityHeatmap'
   | 'isLoading'
@@ -65,6 +72,7 @@ export type FlashcardStoreState = Pick<
   | 'lastSyncError'
   | 'lastPersistenceError'
   | 'lastStoreError'
+  | 'lastLoginError'
 >;
 
 export type FlashcardStoreActions = Omit<FlashcardStore, keyof FlashcardStoreState>;

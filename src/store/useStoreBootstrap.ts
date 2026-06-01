@@ -12,6 +12,8 @@ import type { StoreData } from './persistence/localPersistence';
 import { FIRESTORE_SCHEMA_VERSION } from './persistence/firestoreSchema';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 import { getErrorMessage } from '../utils/errors';
+import { purgeExpiredArchivesAction } from './actions/groupActions';
+import { ARCHIVE_RETENTION_MS } from '../constants/archive';
 
 interface UseStoreBootstrapParams {
   user: User | null;
@@ -77,6 +79,8 @@ export function useStoreBootstrap({
       if (modes.length === 0) {
         modes = createSeedModes();
       }
+
+      groups = purgeExpiredArchivesAction(groups, Date.now(), ARCHIVE_RETENTION_MS).groups;
 
       if (active) {
         const snapshot = normalizeStoreData({

@@ -1,4 +1,4 @@
-import { setVisiblePageCountAction, deleteGroupAction, updateGroupAction } from '../groupActions';
+import { setVisiblePageCountAction, deleteGroupAction, updateGroupAction, archiveGroupAction, restoreGroupAction, purgeExpiredArchivesAction } from '../groupActions';
 import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 import { createNewSrsState } from '../../../srs/srsEngine';
 
@@ -84,6 +84,43 @@ export async function runTests() {
     'updated',
     'Live card updates should be preserved',
   );
+
+  // archiveGroupAction: archivedAt + updatedAt set
+  const archived = archiveGroupAction([group], 'g1');
+  assertEqual(archived.length, 1, 'Archived group should still be in the array');
+  assertOk(archived[0].archivedAt != null && archived[0].archivedAt > 0, 'Archived group must have archivedAt set');
+  assertOk(archived[0].updatedAt != null && archived[0].updatedAt > 0, 'Archiving must bump updatedAt');
+  assertEqual(archived[0].deletedAt ?? 0, 0, 'Archived group must NOT have deletedAt');
+
+  // restoreGroupAction: clears archivedAt, bumps updatedAt
+  const restored = restoreGroupAction(archived, 'g1');
+  assertOk(!restored[0].archivedAt, 'Restored group must have archivedAt cleared');
+  assertOk(restored[0].updatedAt != null && restored[0].updatedAt > 0, 'Restoring must bump updatedAt');
+
+  // purgeExpiredArchivesAction: 13 days — no purge
+  {
+    const now = Date.now();
+    const recentGroup = { ...group, archivedAt: now - 13 * 24 * 60 * 60 * 1000 };
+    const purgedRecent = purgeExpiredArchivesAction([recentGroup], now, 14 * 24 * 60 * 60 * 1000);
+    assertOk(!purgedRecent.changed, 'Purge must not fire before retention period');
+    assertOk(!purgedRecent.groups[0].deletedAt, 'Recent archive must not get deletedAt');
+
+    // purgeExpiredArchivesAction: 14 days — purge
+    const oldGroup = { ...group, archivedAt: now - 14 * 24 * 60 * 60 * 1000 };
+    const purgedOld = purgeExpiredArchivesAction([oldGroup], now, 14 * 24 * 60 * 60 * 1000);
+    assertOk(purgedOld.changed, 'Purge must fire after retention period');
+    assertOk(purgedOld.groups[0].deletedAt != null && purgedOld.groups[0].deletedAt > 0, 'Expired archive must get deletedAt');
+
+    // purgeExpiredArchivesAction: already deleted — skip
+    const alreadyDeleted = { ...group, archivedAt: now - 20 * 24 * 60 * 60 * 1000, deletedAt: now };
+    const purgedDeleted = purgeExpiredArchivesAction([alreadyDeleted], now, 14 * 24 * 60 * 60 * 1000);
+    assertOk(!purgedDeleted.changed, 'Purge must skip already-deleted groups');
+    assertOk(purgedDeleted.groups[0].deletedAt === now, 'Already-deleted must not change deletedAt');
+
+    // purgeExpiredArchivesAction: no archivedAt — skip
+    const purgedNone = purgeExpiredArchivesAction([group], now, 14 * 24 * 60 * 60 * 1000);
+    assertOk(!purgedNone.changed, 'Purge must skip groups without archivedAt');
+  }
 
   console.log('Group actions tests passed');
 }

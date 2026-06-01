@@ -22,6 +22,7 @@ export interface FirestoreDeckDoc {
   studyFilter?: FlashcardGroup['studyFilter'];
   updatedAt?: number;
   deletedAt?: number | null;
+  archivedAt?: number | null;
 }
 
 export interface FirestoreCardDoc extends Flashcard {
@@ -99,6 +100,7 @@ export function serializeDeckDoc(group: FlashcardGroup): FirestoreDeckDoc {
     studyFilter: normalizeStudyFilter(group.studyFilter),
     updatedAt: group.updatedAt,
     ...(group.deletedAt != null ? { deletedAt: group.deletedAt } : {}),
+    archivedAt: group.archivedAt ?? null,
   };
 }
 
@@ -183,6 +185,8 @@ export function deserializeDeckDoc(
       rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
         ? rawData.deletedAt
         : undefined,
+    archivedAt:
+      typeof rawData.archivedAt === 'number' ? rawData.archivedAt : undefined,
   };
 }
 

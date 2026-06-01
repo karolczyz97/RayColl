@@ -48,7 +48,39 @@ export function updateGroupAction(
 
 export function deleteGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
   const now = Date.now();
-  return groups.map((g) => (g.id === groupId ? { ...g, deletedAt: now } : g));
+  return groups.map((g) => (g.id === groupId ? { ...g, deletedAt: now, archivedAt: null } : g));
+}
+
+export function archiveGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
+  const now = Date.now();
+  return groups.map((g) =>
+    g.id === groupId ? { ...g, archivedAt: now, updatedAt: now } : g
+  );
+}
+
+export function restoreGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
+  const now = Date.now();
+  return groups.map((g) =>
+    g.id === groupId ? { ...g, archivedAt: null, updatedAt: now } : g
+  );
+}
+
+export function purgeExpiredArchivesAction(
+  groups: FlashcardGroup[],
+  now: number,
+  retentionMs: number,
+): { groups: FlashcardGroup[]; changed: boolean } {
+  let changed = false;
+  const next = groups.map((g) => {
+    const archivedAt = g.archivedAt ?? 0;
+    const deletedAt = g.deletedAt ?? 0;
+    if (archivedAt > 0 && deletedAt <= 0 && now - archivedAt >= retentionMs) {
+      changed = true;
+      return { ...g, deletedAt: now };
+    }
+    return g;
+  });
+  return changed ? { groups: next, changed } : { groups, changed };
 }
 
 export function setVisiblePageCountAction(

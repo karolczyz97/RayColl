@@ -27,6 +27,7 @@ export interface FlashcardGroup {
   activePageCount: number; // liczba widocznych/aktywnych stron
   updatedAt?: number;
   deletedAt?: number | null;
+  archivedAt?: number | null;
 }
 
 export type ModeStep =

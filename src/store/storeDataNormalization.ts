@@ -66,6 +66,7 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
     studyFilter: normalizeStudyFilter(group.studyFilter),
     updatedAt: (group as { updatedAt?: number }).updatedAt ?? 0,
     deletedAt: (group as { deletedAt?: number | null }).deletedAt ?? undefined,
+    archivedAt: (group as { archivedAt?: number | null }).archivedAt ?? undefined,
   };
 }
 

@@ -23,8 +23,7 @@ export function useDeckSettingsController() {
   const activeGroupPageNames = activeGroup?.pageNames;
   const pageNamesKey = activeGroupPageNames?.join('\u0000') ?? '';
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [stepDialogOpen, setStepDialogOpen] = useState(false);
   const [newStepType, setNewStepType] = useState<string>('show_page');
   const [newPageIdx, setNewPageIdx] = useState(0);
@@ -191,12 +190,11 @@ export function useDeckSettingsController() {
     closeCreateModeDialog();
   };
 
-  const handleDeleteGroup = () => {
-    if (activeGroup && deleteConfirmText === 'DELETE') {
-      store.deleteGroup(activeGroup.id);
-      setDeleteDialogOpen(false);
-      safeBack();
-    }
+  const handleArchiveGroup = () => {
+    if (!activeGroup) return;
+    store.archiveGroup(activeGroup.id);
+    setArchiveDialogOpen(false);
+    safeBack();
   };
 
   const stepLabels = useMemo<Record<string, string>>(
@@ -220,12 +218,11 @@ export function useDeckSettingsController() {
     creatingMode,
     customSteps,
     deckName,
-    deleteConfirmText,
-    deleteDialogOpen,
+    archiveDialogOpen,
     editingModeId,
     handleBack: safeBack,
     handleColBlur,
-    handleDeleteGroup,
+    handleArchiveGroup,
     handleNameBlur,
     isCompact: responsiveLayout.isCompact,
     isDefaultMode,
@@ -259,8 +256,7 @@ export function useDeckSettingsController() {
     setCreatingMode,
     setCustomSteps,
     setDeckName,
-    setDeleteConfirmText,
-    setDeleteDialogOpen,
+    setArchiveDialogOpen,
     setEditingModeId,
     setNewModeName,
     setNewMs,

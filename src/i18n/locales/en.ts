@@ -15,9 +15,23 @@ export const en: Record<string, string> = {
     'You have local decks from a previous session. Would you like to transfer them to your account or start fresh?',
   'auth.migration.migrate_btn': 'Transfer to account',
   'auth.migration.fresh_btn': 'Start fresh',
+  'auth.error.not_configured': 'Sign-in is not configured. The app works in local mode.',
+  'auth.error.state_mismatch': 'Security error. Please try again.',
+  'auth.error.no_token': 'No login token received. Please try again.',
+  'auth.error.invalid_token': 'Invalid login token. Please try again.',
+  'auth.error.login_failed': 'Login failed. Please try again.',
   'dialog.delete.title': 'Are you sure?',
   'dialog.delete.desc': 'This action cannot be undone.',
-  'dialog.delete.token': 'DELETE',
+  'dialog.delete_permanent.title': 'Delete permanently?',
+  'dialog.delete_permanent.desc':
+    'Deck "{name}" will be permanently deleted. This cannot be undone.',
+  'dialog.archive.title': 'Archive this deck?',
+  'dialog.archive.confirm':
+    'The deck will be moved to Archive and permanently deleted after {days} days. You can restore it before then.',
+  'dialog.restore.title': 'Restore "{name}"?',
+  'dialog.restore.desc': 'Deck "{name}" will return to the main list.',
+  'btn.archive': 'Archive',
+  'btn.restore': 'Restore',
 
   // Dashboard
   'dashboard.no_groups': 'No decks found. Click + to add one.',
@@ -104,9 +118,7 @@ export const en: Record<string, string> = {
   'settings.title': 'Deck Settings: {name}',
   'settings.modes_title': 'Study Mode',
   'settings.steps_title': 'Step Sequence',
-  'settings.delete_btn': 'Delete Deck',
-  'settings.delete_desc':
-    'Are you sure you want to delete this deck? This will remove all its cards permanently.',
+  'settings.archive_btn': 'Archive Deck',
   'settings.rename_label': 'Deck Name',
   'settings.pages_config': 'Pages Configuration',
   'settings.reorder_columns': 'Reorder Columns',
@@ -124,7 +136,6 @@ export const en: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Page index (starts from 0)',
   'settings.dialog.add_step.time': 'Time (ms)',
   'settings.dialog.add_step.threshold': 'Threshold (%)',
-  'settings.dialog.delete.confirm_text': 'To confirm deletion of deck "{name}", type {token} below:',
 
   // App Settings
   'app_settings.title': 'App Settings',
@@ -152,6 +163,19 @@ export const en: Record<string, string> = {
     'Extract accent and system colors directly from the device (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Enabled',
   'app_settings.dynamic_colors.disabled': 'Disabled',
+  'app_settings.archived': 'Archived',
+  'app_settings.archived_open': 'Open archive',
+
+  // Archive
+  'archive.title': 'Archived',
+  'archive.empty': 'No archived decks.',
+  'archive.cards_count': '{count} cards',
+  'archive.auto_delete_in': 'Deletes in {days} days',
+  'archive.auto_delete_tomorrow': 'Deletes tomorrow',
+  'archive.auto_delete_today': 'Deletes today',
+  'archive.delete_permanently': 'Delete permanently',
+  'archive.decks_count': '{count} archived',
+
 
   // Mode names
   'mode.classic.name': 'Classic',

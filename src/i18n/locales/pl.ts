@@ -15,9 +15,23 @@ export const pl: Record<string, string> = {
     'Masz lokalne talie z poprzedniej sesji. Czy chcesz przenieść je na konto, czy zacząć od nowa?',
   'auth.migration.migrate_btn': 'Przenieś na konto',
   'auth.migration.fresh_btn': 'Zacznij od nowa',
+  'auth.error.not_configured': 'Logowanie nie jest skonfigurowane. Aplikacja działa w trybie lokalnym.',
+  'auth.error.state_mismatch': 'Błąd bezpieczeństwa. Spróbuj ponownie.',
+  'auth.error.no_token': 'Brak tokena logowania. Spróbuj ponownie.',
+  'auth.error.invalid_token': 'Token logowania nieprawidłowy. Spróbuj ponownie.',
+  'auth.error.login_failed': 'Logowanie nie powiodło się. Spróbuj ponownie.',
   'dialog.delete.title': 'Czy na pewno?',
   'dialog.delete.desc': 'Tej operacji nie można cofnąć.',
-  'dialog.delete.token': 'USUŃ',
+  'dialog.delete_permanent.title': 'Usunąć trwale?',
+  'dialog.delete_permanent.desc':
+    'Zestaw "{name}" zostanie bezpowrotnie usunięty. Tej operacji nie można cofnąć.',
+  'dialog.archive.title': 'Zarchiwizować zestaw?',
+  'dialog.archive.confirm':
+    'Zestaw trafi do Archiwum i zostanie trwale usunięty po {days} dniach. Możesz go przywrócić wcześniej.',
+  'dialog.restore.title': 'Przywrócić "{name}"?',
+  'dialog.restore.desc': 'Zestaw "{name}" wróci do głównej listy.',
+  'btn.archive': 'Archiwizuj',
+  'btn.restore': 'Przywróć',
 
   // Dashboard
   'dashboard.no_groups': 'Brak zestawów. Kliknij +, aby dodać.',
@@ -104,9 +118,7 @@ export const pl: Record<string, string> = {
   'settings.title': 'Ustawienia zestawu: {name}',
   'settings.modes_title': 'Tryb nauki',
   'settings.steps_title': 'Sekwencja kroków',
-  'settings.delete_btn': 'Usuń zestaw',
-  'settings.delete_desc':
-    'Czy na pewno chcesz usunąć ten zestaw? Spowoduje to trwałe usunięcie wszystkich jego fiszek.',
+  'settings.archive_btn': 'Archiwizuj zestaw',
   'settings.rename_label': 'Nazwa zestawu',
   'settings.pages_config': 'Konfiguracja stron',
   'settings.reorder_columns': 'Zmień kolejność kolumn',
@@ -124,8 +136,6 @@ export const pl: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Indeks strony (od 0)',
   'settings.dialog.add_step.time': 'Czas (ms)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
-  'settings.dialog.delete.confirm_text':
-    'Aby potwierdzić usunięcie zestawu „{name}", wpisz {token} poniżej:',
 
   // App Settings
   'app_settings.title': 'Ustawienia aplikacji',
@@ -153,6 +163,19 @@ export const pl: Record<string, string> = {
     'Pobieraj kolory akcentów bezpośrednio z systemu (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Włączone',
   'app_settings.dynamic_colors.disabled': 'Wyłączone',
+  'app_settings.archived': 'Zarchiwizowane',
+  'app_settings.archived_open': 'Otwórz archiwum',
+
+  // Archive
+  'archive.title': 'Zarchiwizowane',
+  'archive.empty': 'Brak zarchiwizowanych zestawów.',
+  'archive.cards_count': '{count} fiszek',
+  'archive.auto_delete_in': 'Usuwa się za {days} dni',
+  'archive.auto_delete_tomorrow': 'Usuwa się jutro',
+  'archive.auto_delete_today': 'Usuwa się dzisiaj',
+  'archive.delete_permanently': 'Usuń trwale',
+  'archive.decks_count': '{count} zarchiwizowanych',
+
 
   // Mode names
   'mode.classic.name': 'Klasyczny',

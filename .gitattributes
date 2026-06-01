@@ -1,0 +1,14 @@
+# Default: normalize all text files to LF in git
+* text=auto eol=lf
+
+# Windows scripts
+*.bat eol=crlf
+*.cmd eol=crlf
+*.ps1 eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
+*.zip binary

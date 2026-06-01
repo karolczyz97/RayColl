@@ -30,8 +30,11 @@ export function BrowseScreen() {
   const { t } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
-  const group = store.groups.find((item) => item.id === groupId);
+  const group =
+    store.groups.find((item) => item.id === groupId) ??
+    store.archivedGroups.find((item) => item.id === groupId);
   const activeGroup = group;
+  const isReadOnly = group ? (group.archivedAt ?? 0) > 0 : false;
   const [search, setSearch] = useState('');
   const [activeCategories, setActiveCategories] = useState<SrsCardCategory[]>([]);
   const minPagesMessage =
@@ -173,6 +176,7 @@ export function BrowseScreen() {
           group={activeGroup}
           onStartEdit={startEdit}
           onDelete={setDeleteCardId}
+          readOnly={isReadOnly}
           t={t}
           style={styles.list}
           className={Platform.OS === 'web' ? 'raycoll-stable-scrollbar' : undefined}
@@ -183,32 +187,38 @@ export function BrowseScreen() {
         />
       </View>
 
-      <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(5))}>
-        <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />
-      </Animated.View>
+      {!isReadOnly && (
+        <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(5))}>
+          <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />
+        </Animated.View>
+      )}
 
-      <DeleteFlashcardDialog
-        visible={!!deleteCardId}
-        onDismiss={() => setDeleteCardId(null)}
-        onConfirm={confirmDeleteCard}
-        t={t}
-      />
+      {!isReadOnly && (
+        <DeleteFlashcardDialog
+          visible={!!deleteCardId}
+          onDismiss={() => setDeleteCardId(null)}
+          onConfirm={confirmDeleteCard}
+          t={t}
+        />
+      )}
 
-      <EditFlashcardDialog
-        visible={!!editingId}
-        group={activeGroup}
-        editPages={editPages}
-        setEditPages={setEditPages}
-        onSave={() => {
-          if (canSaveEdit) {
-            saveEdit();
-          }
-        }}
-        onCancel={cancelEdit}
-        saveDisabled={!canSaveEdit}
-        validationMessage={!canSaveEdit && editingId ? minPagesMessage : undefined}
-        t={t}
-      />
+      {!isReadOnly && (
+        <EditFlashcardDialog
+          visible={!!editingId}
+          group={activeGroup}
+          editPages={editPages}
+          setEditPages={setEditPages}
+          onSave={() => {
+            if (canSaveEdit) {
+              saveEdit();
+            }
+          }}
+          onCancel={cancelEdit}
+          saveDisabled={!canSaveEdit}
+          validationMessage={!canSaveEdit && editingId ? minPagesMessage : undefined}
+          t={t}
+        />
+      )}
     </AppScreen>
   );
 }

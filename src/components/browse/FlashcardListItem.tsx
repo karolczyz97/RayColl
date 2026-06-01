@@ -21,6 +21,7 @@ interface Props {
   onStartEdit: () => void;
   onDelete: () => void;
   t: TranslationFn;
+  readOnly?: boolean;
 }
 
 function srsChip(
@@ -51,6 +52,7 @@ export function FlashcardListItem({
   onStartEdit,
   onDelete,
   t,
+  readOnly,
 }: Props) {
   const theme = useTheme();
   const [viewHidden, setViewHidden] = useState(false);
@@ -133,22 +135,24 @@ export function FlashcardListItem({
             </View>
           )}
         </View>
-        <View style={styles.cardActionsRight}>
-          <IconButton
-            icon="pencil"
-            size={20}
-            iconColor={theme.colors.primary}
-            onPress={onStartEdit}
-            accessibilityLabel="Edit card"
-          />
-          <IconButton
-            icon="delete"
-            size={20}
-            iconColor={theme.colors.error}
-            onPress={onDelete}
-            accessibilityLabel="Delete card"
-          />
-        </View>
+        {!readOnly && (
+          <View style={styles.cardActionsRight}>
+            <IconButton
+              icon="pencil"
+              size={20}
+              iconColor={theme.colors.primary}
+              onPress={onStartEdit}
+              accessibilityLabel="Edit card"
+            />
+            <IconButton
+              icon="delete"
+              size={20}
+              iconColor={theme.colors.error}
+              onPress={onDelete}
+              accessibilityLabel="Delete card"
+            />
+          </View>
+        )}
       </AppCard.Actions>
     </AppCard>
   );

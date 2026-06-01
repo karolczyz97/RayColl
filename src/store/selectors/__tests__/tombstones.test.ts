@@ -1,10 +1,16 @@
-import { selectLiveGroups, selectLiveStudyModes } from '../tombstones';
+import { selectLiveStudyModes, selectActiveGroups, selectArchivedGroups, isArchived } from '../tombstones';
 import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 import { createNewSrsState } from '../../../srs/srsEngine';
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
     throw new Error(`${message}: expected ${expected}, got ${actual}`);
+  }
+}
+
+function assertOk(condition: boolean, message: string) {
+  if (!condition) {
+    throw new Error(message);
   }
 }
 
@@ -47,15 +53,6 @@ export async function runTests() {
     deletedAt: now,
   };
 
-  const liveResult = selectLiveGroups([group, tombstoneGroup]);
-  assertEqual(liveResult.length, 1, 'selectLiveGroups should filter out groups with deletedAt');
-  assertEqual(liveResult[0].cards.length, 1, 'selectLiveGroups should filter out tombstone cards');
-  assertEqual(liveResult[0].cards[0].id, 'c1', 'selectLiveGroups should keep live cards');
-
-  const tombstoneOnlyGroup = [tombstoneGroup];
-  const emptyResult = selectLiveGroups(tombstoneOnlyGroup);
-  assertEqual(emptyResult.length, 0, 'selectLiveGroups should return empty when all groups are tombstoned');
-
   const liveMode = { id: 'm1', name: 'Live', steps: [], isBuiltIn: false };
   const tombstoneMode = { id: 'm2', name: 'Dead', steps: [], isBuiltIn: false, deletedAt: now };
   const modeResult = selectLiveStudyModes([liveMode, tombstoneMode]);
@@ -65,8 +62,30 @@ export async function runTests() {
   const emptyModes = selectLiveStudyModes([tombstoneMode]);
   assertEqual(emptyModes.length, 0, 'selectLiveStudyModes should return empty when all modes are tombstoned');
 
-  const noDeletedGroups = selectLiveGroups([group]);
-  assertEqual(noDeletedGroups.length, 1, 'selectLiveGroups should keep groups without deletedAt');
+  // isArchived
+  assertOk(!isArchived(group), 'Group without archivedAt should not be archived');
+  const archivedGroup = { ...group, archivedAt: now };
+  assertOk(isArchived(archivedGroup), 'Group with archivedAt should be archived');
+  assertOk(!isArchived({ ...group, archivedAt: 0 as unknown as number | null | undefined }), 'archivedAt=0 should not be archived');
+  assertOk(!isArchived({ ...group, archivedAt: null as unknown as number | null }), 'archivedAt=null should not be archived');
+
+  // selectActiveGroups: excludes deletedAt AND archivedAt
+  const permGroup = { ...group, id: 'g3', deletedAt: now };
+  const activeResult = selectActiveGroups([group, archivedGroup, tombstoneGroup, permGroup]);
+  assertEqual(activeResult.length, 1, 'selectActiveGroups should return only fully active groups');
+  assertEqual(activeResult[0].id, 'g1', 'selectActiveGroups should keep only non-archived non-deleted');
+
+  // selectArchivedGroups: only archivedAt and no deletedAt
+  const archivedWithDeleted = { ...group, id: 'g4', archivedAt: now, deletedAt: now };
+  const archivedResult = selectArchivedGroups([archivedGroup, group, tombstoneGroup, archivedWithDeleted]);
+  assertEqual(archivedResult.length, 1, 'selectArchivedGroups should return only archived (not deleted) groups');
+  assertEqual(archivedResult[0].id, 'g1', 'selectArchivedGroups should keep archived group');
+
+  // selectArchivedGroups: sorted by archivedAt descending
+  const oldArchived = { ...group, id: 'g5', archivedAt: now - 1000 };
+  const newerArchived = { ...group, id: 'g6', archivedAt: now };
+  const sortedResult = selectArchivedGroups([oldArchived, newerArchived]);
+  assertEqual(sortedResult[0].id, 'g6', 'selectArchivedGroups should sort newest first');
 
   console.log('Tombstone selector tests passed');
 }

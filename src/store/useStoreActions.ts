@@ -8,7 +8,10 @@ import { validateBackupData } from '../utils/backupValidation';
 import {
   addGroupAction,
   addGroupWithCardsAction,
+  archiveGroupAction,
   deleteGroupAction,
+  purgeExpiredArchivesAction,
+  restoreGroupAction,
   setActiveStudyModeAction,
   setStudyFilterAction,
   setVisiblePageCountAction,
@@ -26,12 +29,14 @@ import {
   deleteStudyModeAction,
   updateStudyModeAction,
 } from './actions/studyModeActions';
+import { ARCHIVE_RETENTION_MS } from '../constants/archive';
 import { recordActivityAction } from './actions/activityActions';
 import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { getDueCards as selectDueCards } from './selectors/dueCards';
 import { getGroupProgress as selectGroupProgress } from './selectors/progress';
-import { selectLiveGroups, selectLiveStudyModes } from './selectors/tombstones';
+import { selectLiveStudyModes } from './selectors/tombstones';
+import { filterLive } from '../utils/array';
 import { setSeedVersion, type StoreData } from './persistence/localPersistence';
 import type { PersistOptions } from './FlashcardStoreTypes';
 import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from './storeDataNormalization';
@@ -199,6 +204,29 @@ export function useStoreActionsCore({
     [commitGroups, groupsRef],
   );
 
+  const archiveGroup = useCallback(
+    (groupId: string) => {
+      commitGroups(archiveGroupAction(groupsRef.current, groupId), { immediate: true });
+    },
+    [commitGroups, groupsRef],
+  );
+
+  const restoreGroup = useCallback(
+    (groupId: string) => {
+      commitGroups(restoreGroupAction(groupsRef.current, groupId), { immediate: true });
+    },
+    [commitGroups, groupsRef],
+  );
+
+  const purgeArchives = useCallback(() => {
+    const { groups, changed } = purgeExpiredArchivesAction(
+      groupsRef.current,
+      Date.now(),
+      ARCHIVE_RETENTION_MS,
+    );
+    if (changed) commitGroups(groups, { immediate: true });
+  }, [commitGroups, groupsRef]);
+
   const setVisiblePageCount = useCallback(
     (groupId: string, count: number) => {
       commitGroups(setVisiblePageCountAction(groupsRef.current, groupId, count));
@@ -348,9 +376,13 @@ export function useStoreActionsCore({
   );
 
   const exportState = useCallback(() => {
+    const exportGroups = filterLive(groupsRef.current).map((g) => ({
+      ...g,
+      cards: filterLive(g.cards),
+    }));
     return JSON.stringify(
       {
-        groups: selectLiveGroups(groupsRef.current),
+        groups: exportGroups,
         studyModes: selectLiveStudyModes(studyModesRef.current),
         activityHeatmap: heatmapRef.current,
         schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -396,6 +428,9 @@ export function useStoreActionsCore({
     importDeck,
     updateGroup,
     deleteGroup,
+    archiveGroup,
+    restoreGroup,
+    purgeArchives,
     addFlashcard,
     updateFlashcard,
     deleteFlashcard,

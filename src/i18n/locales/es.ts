@@ -15,9 +15,21 @@ export const es: Record<string, string> = {
     'Tienes barajas locales de una sesión anterior. ¿Quieres transferirlas a tu cuenta o empezar desde cero?',
   'auth.migration.migrate_btn': 'Transferir a la cuenta',
   'auth.migration.fresh_btn': 'Empezar desde cero',
+  'auth.error.not_configured': 'Inicio de sesión no configurado. La app funciona en modo local.',
+  'auth.error.state_mismatch': 'Error de seguridad. Inténtalo de nuevo.',
+  'auth.error.no_token': 'No se recibió token de inicio de sesión. Inténtalo de nuevo.',
+  'auth.error.invalid_token': 'Token de inicio de sesión no válido. Inténtalo de nuevo.',
+  'auth.error.login_failed': 'Error de inicio de sesión. Inténtalo de nuevo.',
   'dialog.delete.title': '¿Estás seguro?',
   'dialog.delete.desc': 'Esta acción no se puede deshacer.',
-  'dialog.delete.token': 'BORRAR',
+  'dialog.delete_permanent.title': '¿Eliminar permanentemente?',
+  'dialog.delete_permanent.desc': 'El mazo "{name}" será eliminado permanentemente. Esto no se puede deshacer.',
+  'dialog.archive.title': '¿Archivar este mazo?',
+  'dialog.archive.confirm': 'El mazo se moverá al Archivo y se eliminará permanentemente después de {days} días. Puedes restaurarlo antes.',
+  'dialog.restore.title': '¿Restaurar "{name}"?',
+  'dialog.restore.desc': 'El mazo "{name}" volverá a la lista principal.',
+  'btn.archive': 'Archivar',
+  'btn.restore': 'Restaurar',
 
   // Dashboard
   'dashboard.no_groups': 'No se encontraron barajas. Haz clic en + para añadir una.',
@@ -105,9 +117,7 @@ export const es: Record<string, string> = {
   'settings.title': 'Ajustes de baraja: {name}',
   'settings.modes_title': 'Modo de estudio',
   'settings.steps_title': 'Secuencia de pasos',
-  'settings.delete_btn': 'Eliminar baraja',
-  'settings.delete_desc':
-    '¿Estás seguro de que quieres eliminar esta baraja? Esto eliminará todas sus tarjetas de forma permanente.',
+  'settings.archive_btn': 'Archivar mazo',
   'settings.rename_label': 'Nombre de la baraja',
   'settings.pages_config': 'Configuración de páginas',
   'settings.reorder_columns': 'Reordenar columnas',
@@ -125,9 +135,6 @@ export const es: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Índice de página (empieza por 0)',
   'settings.dialog.add_step.time': 'Tiempo (ms)',
   'settings.dialog.add_step.threshold': 'Umbral (%)',
-  'settings.dialog.delete.confirm_text':
-    'Para confirmar la eliminación de la baraja "{name}", escriba {token} abajo:',
-
   // App Settings
   'app_settings.title': 'Ajustes de la aplicación',
   'app_settings.theme': 'Tema',
@@ -154,6 +161,17 @@ export const es: Record<string, string> = {
     'Extraer colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
   'app_settings.dynamic_colors.enabled': 'Activado',
   'app_settings.dynamic_colors.disabled': 'Desactivado',
+  'app_settings.archived': 'Archivados',
+  'app_settings.archived_open': 'Abrir archivo',
+  // Archive
+  'archive.title': 'Archivados',
+  'archive.empty': 'No hay mazos archivados.',
+  'archive.cards_count': '{count} tarjetas',
+  'archive.auto_delete_in': 'Se elimina en {days} días',
+  'archive.auto_delete_tomorrow': 'Se elimina mañana',
+  'archive.auto_delete_today': 'Se elimina hoy',
+  'archive.delete_permanently': 'Eliminar permanentemente',
+  'archive.decks_count': '{count} archivados',
 
   // Mode names
   'mode.classic.name': 'Clásico',

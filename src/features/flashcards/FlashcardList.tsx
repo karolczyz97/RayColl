@@ -30,6 +30,7 @@ interface FlashcardListProps {
   listHeaderContent?: React.ReactNode;
   itemAnimationOffset?: number;
   className?: string;
+  readOnly?: boolean;
 }
 
 export function FlashcardList({
@@ -50,6 +51,7 @@ export function FlashcardList({
   listHeaderContent,
   itemAnimationOffset = 0,
   className,
+  readOnly,
 }: FlashcardListProps) {
   const theme = useTheme();
   const { useTwoColumnLayout } = useResponsiveLayout();
@@ -113,6 +115,7 @@ export function FlashcardList({
                 group={group}
                 onStartEdit={() => onStartEdit(item)}
                 onDelete={() => onDelete(item.id)}
+                readOnly={readOnly}
                 t={t}
               />
             </AnimatedSection>
