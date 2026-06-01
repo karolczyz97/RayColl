@@ -97,7 +97,7 @@ export function useStudySession(
         sessionAttemptRef.current,
       );
       setDueCards(cards);
-      dispatchIfMounted({ type: 'START_SESSION', cards });
+      dispatchIfMounted({ type: 'START_SESSION' });
     },
     [dispatchIfMounted],
   );
@@ -135,9 +135,8 @@ export function useStudySession(
       try {
         await ttsService.speak({ text, lang, rate: ttsRateRef.current });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
         console.error('TTS Speak Error:', err);
-        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `TTS Error: ${message}` });
+        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.tts' });
       }
       lastTtsDurationRef.current = Date.now() - startTime;
     },
@@ -160,9 +159,8 @@ export function useStudySession(
           },
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
         console.error('STT Listen Error:', err);
-        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: `STT Error: ${message}` });
+        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.stt' });
       }
       return recognized;
     },
@@ -192,7 +190,6 @@ export function useStudySession(
     async (card: Flashcard, stepIndex: number) => {
       const currentGroup = groupRef.current;
       const currentSteps = activeStepsRef.current;
-      const currentState = stateRef.current;
 
       skipRef.current.requested = false;
       skipRef.current.armed = false;
@@ -346,14 +343,8 @@ export function useStudySession(
             }
 
             if (!abortRef.current) {
-              await waitUntilReleased();
               processCardReview(card, 1);
-              const nextIndex = currentState.currentCardIndex + 1;
-              if (nextIndex >= dueCardsRef.current.length) {
-                dispatchIfMounted({ type: 'FINISH_SESSION' });
-              } else {
-                dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIndex });
-              }
+              await advanceToNextCard();
               return;
             }
           }
@@ -361,7 +352,7 @@ export function useStudySession(
         }
       }
     },
-    [advanceToNextCard, dispatchIfMounted, guardedAwait, playTts, processCardReview, runSpeechRecognition, waitUntilReleased],
+    [advanceToNextCard, dispatchIfMounted, guardedAwait, playTts, processCardReview, runSpeechRecognition],
   );
 
   useEffect(() => {
@@ -505,8 +496,10 @@ export function useStudySession(
 
   const handleRating = useCallback(
     async (rating: number) => {
-      if (!groupRef.current || dueCardsRef.current.length === 0) return;
-      const card = dueCardsRef.current[stateRef.current.currentCardIndex];
+      const index = stateRef.current.currentCardIndex;
+      if (index >= dueCardsRef.current.length || !groupRef.current) return;
+      const card = dueCardsRef.current[index];
+      if (!card) return;
       if (rating === 1 && !failedCardsRef.current.find((item) => item.id === card.id)) {
         failedCardsRef.current.push(card);
         if (isMountedRef.current) {
@@ -534,6 +527,10 @@ export function useStudySession(
     ttsService.cancel();
     void sttService.current.stopListening().catch(() => {});
   }, []);
+
+  const clearError = useCallback(() => {
+    dispatchIfMounted({ type: 'CLEAR_ERROR' });
+  }, [dispatchIfMounted]);
 
   const compatibilityState = useMemo(
     () => ({
@@ -565,5 +562,6 @@ export function useStudySession(
     restartSession,
     restartFailed,
     failedCount,
+    clearError,
   };
 }

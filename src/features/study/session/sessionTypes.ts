@@ -1,5 +1,3 @@
-import type { Flashcard } from '../../../types/models';
-
 export type SessionStatus =
   | 'idle'
   | 'speaking'
@@ -22,7 +20,7 @@ export interface StudySessionState {
 }
 
 export type SessionAction =
-  | { type: 'START_SESSION'; cards: Flashcard[] }
+  | { type: 'START_SESSION' }
   | {
       type: 'SET_CURRENT_STEP';
       stepIndex: number;

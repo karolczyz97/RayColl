@@ -62,6 +62,8 @@ export const de: Record<string, string> = {
   'study.back_to_panel': 'Zurück zum Dashboard',
   'study.recognized': 'Erkannt:',
   'study.tap_to_reveal': 'Tippen zum Aufdecken',
+  'study.error.stt': 'Spracherkennung fehlgeschlagen. Mikrofonzugriff prüfen.',
+  'study.error.tts': 'Audiowiedergabe fehlgeschlagen.',
 
   // Browse
   'browse.search_placeholder': 'Karteikarten suchen...',
@@ -151,6 +153,7 @@ export const de: Record<string, string> = {
   'app_settings.import_success': 'Import erfolgreich!',
   'app_settings.import_error': 'Import fehlgeschlagen.',
   'app_settings.reset_success': 'Daten zurückgesetzt.',
+  'app_settings.reset_error': 'Zurücksetzen fehlgeschlagen. Deine Daten wurden nicht geändert.',
   'app_settings.sharing_unavailable': 'Teilen auf diesem Gerät nicht verfügbar.',
   'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
   'app_settings.reset_confirm':

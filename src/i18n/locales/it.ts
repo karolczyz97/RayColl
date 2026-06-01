@@ -62,6 +62,8 @@ export const it: Record<string, string> = {
   'study.back_to_panel': 'Torna al pannello',
   'study.recognized': 'Riconosciuto:',
   'study.tap_to_reveal': 'Tocca per rivelare',
+  'study.error.stt': 'Riconoscimento vocale non riuscito. Controlla l\'accesso al microfono.',
+  'study.error.tts': 'Riproduzione audio non riuscita.',
 
   // Browse
   'browse.search_placeholder': 'Cerca flashcard...',
@@ -151,6 +153,7 @@ export const it: Record<string, string> = {
   'app_settings.import_success': 'Import completato!',
   'app_settings.import_error': 'Import non riuscito.',
   'app_settings.reset_success': 'Dati ripristinati.',
+  'app_settings.reset_error': 'Ripristino non riuscito. I tuoi dati non sono stati modificati.',
   'app_settings.sharing_unavailable': 'Condivisione non disponibile su questo dispositivo.',
   'app_settings.reset_btn': 'Ripristina app',
   'app_settings.reset_confirm':

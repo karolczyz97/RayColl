@@ -295,9 +295,11 @@ class ReactNativeVoiceSttService implements SttService {
   }
 }
 
+let sttServiceInstance: SttService | null = null;
+
 export function getSttService(): SttService {
-  if (Platform.OS === 'web') {
-    return new WebSttService();
-  }
-  return new ReactNativeVoiceSttService();
+  if (sttServiceInstance) return sttServiceInstance;
+  sttServiceInstance =
+    Platform.OS === 'web' ? new WebSttService() : new ReactNativeVoiceSttService();
+  return sttServiceInstance;
 }

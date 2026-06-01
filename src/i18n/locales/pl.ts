@@ -64,6 +64,8 @@ export const pl: Record<string, string> = {
   'study.back_to_panel': 'Powrót do panelu',
   'study.recognized': 'Rozpoznano:',
   'study.tap_to_reveal': 'Dotknij, aby odkryć',
+  'study.error.stt': 'Rozpoznawanie mowy nie powiodło się. Sprawdź dostęp do mikrofonu.',
+  'study.error.tts': 'Nie udało się odtworzyć dźwięku.',
 
   // Browse
   'browse.search_placeholder': 'Szukaj fiszek...',
@@ -153,6 +155,7 @@ export const pl: Record<string, string> = {
   'app_settings.import_success': 'Import zakończony!',
   'app_settings.import_error': 'Import nie powiódł się.',
   'app_settings.reset_success': 'Dane zresetowane.',
+  'app_settings.reset_error': 'Reset nie powiódł się. Dane bez zmian.',
   'app_settings.sharing_unavailable': 'Udostępnianie niedostępne na tym urządzeniu.',
   'app_settings.reset_btn': 'Resetuj aplikację',
   'app_settings.reset_confirm':

@@ -57,6 +57,7 @@ export function useStudyPageController() {
     restartSession,
     restartFailed,
     failedCount,
+    clearError,
   } = useStudySession(activeGroup, steps, onCardReviewed);
 
   const startedRef = useRef<string | null>(null);
@@ -101,6 +102,7 @@ export function useStudyPageController() {
 
   return {
     activeGroup,
+    clearError,
     currentCard: dueCards[sessionState.currentCardIndex] || null,
     dueCards,
     failedCount,

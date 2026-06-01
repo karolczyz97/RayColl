@@ -64,6 +64,8 @@ export const en: Record<string, string> = {
   'study.back_to_panel': 'Back to dashboard',
   'study.recognized': 'Recognized:',
   'study.tap_to_reveal': 'Tap to reveal',
+  'study.error.stt': 'Speech recognition failed. Check microphone access.',
+  'study.error.tts': 'Audio playback failed.',
 
   // Browse
   'browse.search_placeholder': 'Search flashcards...',
@@ -153,6 +155,7 @@ export const en: Record<string, string> = {
   'app_settings.import_success': 'Import completed!',
   'app_settings.import_error': 'Import failed.',
   'app_settings.reset_success': 'Data reset to defaults.',
+  'app_settings.reset_error': 'Reset failed. Your data was not changed.',
   'app_settings.sharing_unavailable': 'Sharing not available on this device.',
   'app_settings.reset_btn': 'Reset App to Defaults',
   'app_settings.reset_confirm':

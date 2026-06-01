@@ -62,6 +62,8 @@ export const es: Record<string, string> = {
   'study.back_to_panel': 'Volver al panel',
   'study.recognized': 'Reconocido:',
   'study.tap_to_reveal': 'Toca para revelar',
+  'study.error.stt': 'Error de reconocimiento de voz. Verifica el acceso al micrófono.',
+  'study.error.tts': 'Error al reproducir el audio.',
 
   // Browse
   'browse.search_placeholder': 'Buscar tarjetas...',
@@ -151,6 +153,7 @@ export const es: Record<string, string> = {
   'app_settings.import_success': '¡Import completado!',
   'app_settings.import_error': 'Import fallido.',
   'app_settings.reset_success': 'Datos restablecidos.',
+  'app_settings.reset_error': 'No se pudo restablecer. Tus datos no se modificaron.',
   'app_settings.sharing_unavailable': 'Compartir no disponible en este dispositivo.',
   'app_settings.reset_btn': 'Restablecer aplicación',
   'app_settings.reset_confirm':

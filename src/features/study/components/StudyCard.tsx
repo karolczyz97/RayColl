@@ -11,7 +11,6 @@ import { TOKENS } from '../../../theme/tokens';
 interface StudyCardProps {
   currentCard: Flashcard | null;
   activeGroup: FlashcardGroup;
-  currentCardIndex: number;
   revealedPages: number[];
   peekedPages: number[];
   showRatingButtons: boolean;
@@ -24,7 +23,6 @@ interface StudyCardProps {
 export function StudyCard({
   currentCard,
   activeGroup,
-  currentCardIndex,
   revealedPages,
   peekedPages,
   showRatingButtons,
@@ -88,7 +86,7 @@ export function StudyCard({
 
               return (
                 <CardPageSection
-                  key={`${currentCardIndex}-${pageIndex}`}
+                  key={`${currentCard.id}-${pageIndex}`}
                   pageName={pageName}
                   pageContent={visiblePages[pageIndex] || ''}
                   isRevealed={isRevealed}

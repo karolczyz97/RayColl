@@ -43,6 +43,7 @@ class TtsService {
     return new Promise((resolve, reject) => {
       if (Platform.OS === 'web') {
         if (!this.synth) {
+          console.warn('[TTS] SpeechSynthesis unavailable');
           resolve();
           return;
         }

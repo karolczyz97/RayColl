@@ -115,10 +115,12 @@ export function sessionReducer(
         peekedPages: [],
       };
     case 'CLEAR_ERROR':
+      // Only clear the message. Status must be preserved: by the time the user
+      // dismisses the error, the step flow has already moved status forward
+      // (e.g. to 'revealed'), and forcing 'idle' here would hide active UI.
       return {
         ...state,
         errorMsg: undefined,
-        status: 'idle',
       };
     default:
       return state;

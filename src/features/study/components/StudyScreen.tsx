@@ -9,10 +9,12 @@ import { StudyStatusBanner } from './StudyStatusBanner';
 import { StudyCard } from './StudyCard';
 import { StudyControls } from './StudyControls';
 import { StudyFinishedState } from './StudyFinishedState';
+import { AppSnackbar } from '../../../components/feedback/AppSnackbar';
 import { TOKENS } from '../../../theme/tokens';
 
 interface StudyScreenProps {
   activeGroup: FlashcardGroup;
+  clearError: () => void;
   currentCard: Flashcard | null;
   dueCards: Flashcard[];
   failedCount: number;
@@ -37,6 +39,7 @@ interface StudyScreenProps {
     sttResultText: string;
     sttMatchPercent: number;
     isSessionFinished: boolean;
+    errorMsg?: string;
   };
   setHolding: (holding: boolean) => void;
   t: TranslationFn;
@@ -44,6 +47,7 @@ interface StudyScreenProps {
 
 export function StudyScreen({
   activeGroup,
+  clearError,
   currentCard,
   dueCards,
   failedCount,
@@ -101,7 +105,6 @@ export function StudyScreen({
             <StudyCard
               currentCard={currentCard}
               activeGroup={activeGroup}
-              currentCardIndex={sessionState.currentCardIndex}
               revealedPages={sessionState.revealedPages}
               peekedPages={sessionState.peekedPages}
               showRatingButtons={sessionState.showRatingButtons}
@@ -133,6 +136,12 @@ export function StudyScreen({
           </>
         )}
       </View>
+
+      <AppSnackbar
+        visible={!!sessionState.errorMsg}
+        message={t(sessionState.errorMsg || '')}
+        onDismiss={clearError}
+      />
     </SafeAreaView>
   );
 }

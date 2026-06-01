@@ -71,7 +71,7 @@ export async function runTests() {
   // --- reducer ---
   const started = reduce(
     { ...INITIAL_STUDY_SESSION_STATE, currentCardIndex: 5, status: 'revealed' },
-    { type: 'START_SESSION', cards: [] },
+    { type: 'START_SESSION' },
   );
   assertEqual(started.status, 'idle', 'START_SESSION resets status');
   assertEqual(started.currentCardIndex, 0, 'START_SESSION resets card index');
@@ -162,8 +162,17 @@ export async function runTests() {
   assertEqual(errored.errorMsg, 'boom', 'SET_ERROR stores message');
 
   const cleared = reduce(errored, { type: 'CLEAR_ERROR' });
-  assertEqual(cleared.status, 'idle', 'CLEAR_ERROR returns to idle');
   assertEqual(cleared.errorMsg, undefined, 'CLEAR_ERROR clears message');
+
+  // CLEAR_ERROR must NOT clobber status: by the time the user dismisses the
+  // snackbar the step flow has already advanced (e.g. to 'revealed'); forcing
+  // 'idle' here would hide active UI like the rating buttons.
+  const clearedWhileRevealed = reduce(
+    { ...INITIAL_STUDY_SESSION_STATE, status: 'revealed', errorMsg: 'study.error.stt' },
+    { type: 'CLEAR_ERROR' },
+  );
+  assertEqual(clearedWhileRevealed.status, 'revealed', 'CLEAR_ERROR preserves active status');
+  assertEqual(clearedWhileRevealed.errorMsg, undefined, 'CLEAR_ERROR clears message regardless of status');
 
   // --- peek ---
   const peeked = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'PEEK_SET', pageIndex: 2 });
