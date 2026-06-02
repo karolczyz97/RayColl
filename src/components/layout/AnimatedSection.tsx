@@ -1,30 +1,28 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { getEnterDelay, MOTION } from '../../theme/motion';
+import { TOKENS, getTokenMotionEnterDelay } from '../../theme/tokens';
 
 interface AnimatedSectionProps {
-  index?: number;
   order?: number;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
 export function AnimatedSection({
-  index = 0,
-  order,
+  order = 0,
   children,
   style,
 }: AnimatedSectionProps) {
-  const delayOrder = order ?? index;
+  const spring = TOKENS.motion.spring.standard;
 
   return (
     <Animated.View
       entering={FadeInDown.springify()
-        .damping(MOTION.spring.damping)
-        .stiffness(MOTION.spring.stiffness)
-        .mass(MOTION.spring.mass)
-        .delay(getEnterDelay(delayOrder))}
+        .damping(spring.damping)
+        .stiffness(spring.stiffness)
+        .mass(spring.mass)
+        .delay(getTokenMotionEnterDelay(order))}
       style={style}
     >
       {children}

@@ -32,7 +32,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     isCompact,
     isDefaultMode,
     hasCustomSteps,
-    isExpanded,
+    useTwoColumnLayout,
     movePageSetting,
     moveStep,
     newModeName,
@@ -81,7 +81,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
   const storedPageCount = activeGroup.pageNames.length;
   const hasHiddenColumns = storedPageCount > (activeGroup.activePageCount ?? 0);
 
-  const sectionOrder = isExpanded
+  const sectionOrder = useTwoColumnLayout
     ? { name: 0, pageConfig: 2, scope: 1, modeEditor: 1, modeSelector: 0 }
     : { name: 0, pageConfig: 2, scope: 1, modeEditor: 4, modeSelector: 3 };
 
@@ -190,7 +190,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
       }
       maxWidth={responsiveLayout.contentMaxWidth}
     >
-      {isExpanded ? (
+      {useTwoColumnLayout ? (
         <View style={styles.row}>
           <View style={styles.column}>{leftColumnContent}</View>
           <View style={styles.column}>{rightColumnContent}</View>
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     gap: TOKENS.spacing.lg,
   },
   singleColumnWide: {
-    maxWidth: 600,
+    maxWidth: TOKENS.layout.deckSettingsSingleColumnMaxWidth,
     alignSelf: 'center',
   },
   reorderButton: {
@@ -305,6 +305,6 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   reorderContent: {
-    minWidth: 320,
+    minWidth: TOKENS.layout.actionMaxWidth,
   },
 });

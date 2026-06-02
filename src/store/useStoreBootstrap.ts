@@ -13,6 +13,7 @@ import { FIRESTORE_SCHEMA_VERSION } from './persistence/firestoreSchema';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 import { getErrorMessage } from '../utils/errors';
 import { purgeExpiredArchivesAction } from './actions/groupActions';
+import { shouldTriggerMigration, getGuestHasData } from './selectors/migrationLogic';
 import { ARCHIVE_RETENTION_MS } from '../constants/archive';
 
 interface UseStoreBootstrapParams {
@@ -148,8 +149,7 @@ export function useStoreBootstrap({
           // cloudData == null — NEW ACCOUNT
           if (loadedGroups.length === 0) {
             const guestData = await loadLocalData();
-
-            if (guestData && guestData.groups.length > 0) {
+            if (shouldTriggerMigration(false, getGuestHasData(guestData))) {
               setMigrationPending(true);
               setPendingGuestSnapshot(guestData);
               return;

@@ -47,14 +47,14 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
         icon="chart-bar"
         size={24}
         iconColor={fg}
-        onPress={() => router.push(ROUTES.STATS)}
+        onPress={() => router.navigate(ROUTES.STATS)}
         accessibilityLabel={t('stats.title')}
       />
       <IconButton
         icon="cog"
         size={24}
         iconColor={fg}
-        onPress={() => router.push(ROUTES.APP_SETTINGS)}
+        onPress={() => router.navigate(ROUTES.APP_SETTINGS)}
         accessibilityLabel={t('app_settings.title')}
       />
       {user ? (

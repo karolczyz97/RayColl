@@ -30,4 +30,4 @@ jobs:
         run: npm run typecheck
 
       - name: Run Unit Tests
-        run: npx tsx src/srs/__tests__/srsEngine.test.ts
+        run: npm run test

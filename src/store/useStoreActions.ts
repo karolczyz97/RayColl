@@ -21,7 +21,7 @@ import {
   addFlashcardAction,
   addFlashcardsBulkAction,
   deleteFlashcardAction,
-  reviewFlashcardAction,
+  reviewCardAction,
   updateFlashcardAction,
 } from './actions/cardActions';
 import {
@@ -197,25 +197,35 @@ export function useStoreActionsCore({
     [commitGroups, groupsRef],
   );
 
-  const deleteGroup = useCallback(
-    (groupId: string) => {
-      commitGroups(deleteGroupAction(groupsRef.current, groupId), { immediate: true });
+  // Best-effort: these are invoked fire-and-forget from screens. A failed flush must not
+  // produce an unhandled rejection — the error is already surfaced via syncStatus /
+  // lastPersistenceError / lastSyncError (shown by SyncStatusBanner).
+  const commitGroupsAndFlush = useCallback(
+    async (next: FlashcardGroup[]) => {
+      groupsRef.current = next;
+      setGroups(next);
+      try {
+        await flushPersistence();
+      } catch (err) {
+        console.error('Critical group op persistence failed:', err);
+      }
     },
-    [commitGroups, groupsRef],
+    [flushPersistence, groupsRef, setGroups],
+  );
+
+  const deleteGroup = useCallback(
+    (groupId: string) => commitGroupsAndFlush(deleteGroupAction(groupsRef.current, groupId)),
+    [commitGroupsAndFlush, groupsRef],
   );
 
   const archiveGroup = useCallback(
-    (groupId: string) => {
-      commitGroups(archiveGroupAction(groupsRef.current, groupId), { immediate: true });
-    },
-    [commitGroups, groupsRef],
+    (groupId: string) => commitGroupsAndFlush(archiveGroupAction(groupsRef.current, groupId)),
+    [commitGroupsAndFlush, groupsRef],
   );
 
   const restoreGroup = useCallback(
-    (groupId: string) => {
-      commitGroups(restoreGroupAction(groupsRef.current, groupId), { immediate: true });
-    },
-    [commitGroups, groupsRef],
+    (groupId: string) => commitGroupsAndFlush(restoreGroupAction(groupsRef.current, groupId)),
+    [commitGroupsAndFlush, groupsRef],
   );
 
   const purgeArchives = useCallback(() => {
@@ -273,8 +283,12 @@ export function useStoreActionsCore({
 
   const reviewFlashcard = useCallback(
     (groupId: string, card: Flashcard) => {
-      const nextGroups = reviewFlashcardAction(groupsRef.current, groupId, card);
-      const { nextHeatmap } = recordActivityAction(heatmapRef.current);
+      const { nextGroups, nextHeatmap } = reviewCardAction(
+        groupsRef.current,
+        groupId,
+        card,
+        heatmapRef.current,
+      );
 
       groupsRef.current = nextGroups;
       heatmapRef.current = nextHeatmap;
@@ -334,23 +348,44 @@ export function useStoreActionsCore({
     [commitStudyModes, studyModesRef],
   );
 
-  const resetToDefault = useCallback(() => {
-    const groupsSnapshot = createSeedGroups();
-    const modesSnapshot = createSeedModes();
-    const heatmapSnapshot: Record<string, number> = {};
+  const resetToDefault = useCallback(async () => {
+    const previousSnapshot: StoreData = {
+      groups: groupsRef.current,
+      studyModes: studyModesRef.current,
+      activityHeatmap: heatmapRef.current,
+    };
+    const seedSnapshot: StoreData = {
+      groups: createSeedGroups(),
+      studyModes: createSeedModes(),
+      activityHeatmap: {},
+    };
 
-    applySnapshot({
-      groups: groupsSnapshot,
-      studyModes: modesSnapshot,
-      activityHeatmap: heatmapSnapshot,
-    });
+    applySnapshot(seedSnapshot);
 
     setSeedVersion(SEED_VERSION).catch((err) => {
       setLastPersistenceError(getErrorMessage(err));
     });
 
-    persistCurrentSnapshot({ immediate: true });
-  }, [applySnapshot, persistCurrentSnapshot, setLastPersistenceError]);
+    try {
+      await persistNow({ uid: getCurrentUid(), ...seedSnapshot });
+    } catch (err) {
+      applySnapshot(previousSnapshot);
+      try {
+        await persistNow({ uid: getCurrentUid(), ...previousSnapshot });
+      } catch (rollbackErr) {
+        console.error('Reset rollback persistence failed:', rollbackErr);
+      }
+      throw err;
+    }
+  }, [
+    applySnapshot,
+    getCurrentUid,
+    groupsRef,
+    heatmapRef,
+    persistNow,
+    setLastPersistenceError,
+    studyModesRef,
+  ]);
 
   const recordActivity = useCallback(() => {
     const { nextHeatmap } = recordActivityAction(heatmapRef.current);
@@ -416,6 +451,11 @@ export function useStoreActionsCore({
         await persistNow({ uid: getCurrentUid(), ...normalized });
       } catch (err) {
         applySnapshot(previousSnapshot);
+        try {
+          await persistNow({ uid: getCurrentUid(), ...previousSnapshot });
+        } catch (rollbackErr) {
+          console.error('Import state rollback persistence failed:', rollbackErr);
+        }
         throw err;
       }
     },

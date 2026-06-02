@@ -27,8 +27,6 @@ import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
 
-console.log('Running RayColl Spaced Repetition Engine and Parser tests...');
-
 function assertEqual<T>(actual: T, expected: T, msg?: string) {
   if (actual !== expected) {
     throw new Error(
@@ -68,6 +66,7 @@ function assertThrows(fn: () => void, expectedMessagePart?: string) {
   throw new Error('Expected function to throw an error, but it did not.');
 }
 
+export async function runTests() {
 // ==========================================
 // 1. Spaced Repetition (FSRS Engine) Tests
 // ==========================================
@@ -557,8 +556,4 @@ const multiPageImport = validateImportDeckPayload({
 assertEqual(multiPageImport.pageNames.length, 6, 'Import should preserve all 6 page names');
 assertEqual(multiPageImport.cards[0].pages.length, 6, 'Import should preserve all 6 card pages');
 console.log('Import page limit boundary tests passed');
-
-console.log('\n==========================================');
-console.log('All tests completed successfully! 🎉');
-console.log('==========================================');
-export {};
+}

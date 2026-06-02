@@ -25,6 +25,7 @@ try {
     '../src/store/persistence/__tests__/persistenceQueue.test.ts',
     '../src/store/persistence/__tests__/webLifecycle.test.ts',
     '../src/store/persistence/__tests__/firestoreSchema.test.ts',
+    '../src/store/selectors/__tests__/migrationLogic.test.ts',
     '../src/store/selectors/__tests__/merge.test.ts',
     '../src/store/selectors/__tests__/tombstones.test.ts',
     '../src/import/__tests__/importParser.test.ts',
@@ -34,7 +35,11 @@ try {
     '../src/store/actions/__tests__/cardActions.test.ts',
     '../src/features/study/session/__tests__/sessionState.test.ts',
     '../src/features/browse/__tests__/browseFilter.test.ts',
+    '../src/theme/__tests__/tokens.test.ts',
     '../src/utils/__tests__/gridLayout.test.ts',
+    '../src/utils/__tests__/windowSizeClass.test.ts',
+    '../src/components/navigation/__tests__/navigationDestinations.test.ts',
+    '../src/components/expressive/__tests__/expressiveGeometry.test.ts',
     '../src/utils/__tests__/backupValidation.test.ts',
   ];
 

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+
 import { safeBack } from '../utils/navigation';
 import { useTheme } from 'react-native-paper';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
@@ -48,7 +48,7 @@ export default function StatsPage() {
     {
       icon: 'fire',
       label: t('stats.streak'),
-      value: `${streak} \u{1F525}`,
+      value: String(streak),
       color: getWarningColor(theme),
     },
     {
@@ -72,16 +72,20 @@ export default function StatsPage() {
   ];
 
   return (
-    <AppScreen title={t('stats.title')} onBack={safeBack} maxWidth={formMaxWidth}>
-      <AnimatedSection index={0}>
+    <AppScreen
+      kind="top-level"
+      title={t('stats.title')}
+      onBack={safeBack}
+      maxWidth={formMaxWidth}
+    >
+      <AnimatedSection order={0}>
         <MetricGrid
           items={statCards}
           screenMaxWidth={formMaxWidth}
-          hasScrollViewPadding={false}
         />
       </AnimatedSection>
 
-      <AnimatedSection index={1}>
+      <AnimatedSection order={1}>
         <SectionCard title={t('stats.deck_progress')} titleAlign="center">
           <DeckProgressList
             groups={groups}
@@ -92,7 +96,7 @@ export default function StatsPage() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection index={2} style={styles.raisedSection}>
+      <AnimatedSection order={2}>
         <SectionCard title={t('stats.heatmap_title')} titleAlign="center">
           <HeatmapGrid heatmap={activityHeatmap} t={t} />
         </SectionCard>
@@ -100,9 +104,3 @@ export default function StatsPage() {
     </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  raisedSection: {
-    marginTop: -8,
-  },
-});

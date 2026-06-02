@@ -1,6 +1,7 @@
 import { FlashcardGroup, Flashcard } from '../../types/models';
 import { createNewSrsState } from '../../srs/srsEngine';
 import { uid } from '../../utils/id';
+import { recordActivityAction } from './activityActions';
 
 export function addFlashcardAction(
   groups: FlashcardGroup[],
@@ -56,6 +57,23 @@ export function reviewFlashcardAction(
         }
       : g,
   );
+}
+
+/**
+ * Atomic review: stamps the card's SRS update time and bumps today's activity heatmap
+ * as one unit. The SRS state itself is computed in the study session (needs the rating)
+ * and passed in via `card`. Returns `todayKey` so callers/tests can assert the heatmap day.
+ * Argument order matches `reviewFlashcardAction(groups, groupId, card)`; heatmap last.
+ */
+export function reviewCardAction(
+  groups: FlashcardGroup[],
+  groupId: string,
+  card: Flashcard,
+  heatmap: Record<string, number>,
+): { nextGroups: FlashcardGroup[]; nextHeatmap: Record<string, number>; todayKey: string } {
+  const nextGroups = reviewFlashcardAction(groups, groupId, card);
+  const { nextHeatmap, todayKey } = recordActivityAction(heatmap);
+  return { nextGroups, nextHeatmap, todayKey };
 }
 
 export function deleteFlashcardAction(

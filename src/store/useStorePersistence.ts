@@ -40,6 +40,7 @@ export function useStorePersistence({
 }: UseStorePersistenceParams) {
   const studyReviewCountRef = useRef(0);
   const pendingStudySnapshotRef = useRef<PersistenceSnapshot | null>(null);
+  const localWriteSeqRef = useRef<Promise<void>>(Promise.resolve());
 
   const getCurrentUid = useCallback(() => userRef.current?.uid ?? null, [userRef]);
 
@@ -72,8 +73,14 @@ export function useStorePersistence({
 
       const { uid, ...payload } = snapshot;
 
+      // Serialize local writes so a fire-and-forget snapshot cannot land out of order
+      // with an awaited one (e.g. review snapshot racing a deleteGroup flush).
+      const doWrite = () => saveLocalData(uid || undefined, payload);
+      const writePromise = localWriteSeqRef.current.then(doWrite, doWrite);
+      localWriteSeqRef.current = writePromise.catch(() => {});
+
       try {
-        await saveLocalData(uid || undefined, payload);
+        await writePromise;
         setSyncStatus('idle');
       } catch (err) {
         console.error('Local persistence failed:', err);
@@ -112,7 +119,10 @@ export function useStorePersistence({
   );
 
   const handleQueueSaving = useCallback(() => setSyncStatus('saving'), [setSyncStatus]);
-  const handleQueueSynced = useCallback(() => setSyncStatus('idle'), [setSyncStatus]);
+  const handleQueueSynced = useCallback(() => {
+    setSyncStatus('idle');
+    setLastSyncError(null);
+  }, [setLastSyncError, setSyncStatus]);
   const handleQueueError = useCallback(
     (err: unknown) => {
       setLastSyncError(getErrorMessage(err));

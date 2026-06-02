@@ -46,7 +46,6 @@ export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Pro
     <MetricGrid
       items={stats}
       screenMaxWidth={TOKENS.layout.maxWidth}
-      hasScrollViewPadding={true}
     />
   );
 }

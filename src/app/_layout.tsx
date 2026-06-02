@@ -2,7 +2,7 @@ import React from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ExperimentalStack as Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PaperProvider } from 'react-native-paper';
+import { PaperProvider, useTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,6 +11,7 @@ import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
 import { FlashcardStoreProvider } from '../hooks/useFlashcardStore';
 import { createAppTheme } from '../theme/createAppTheme';
 import { UpdateNotification } from '../components/feedback/UpdateNotification';
+import { AppNavigationShell } from '../components/navigation/AppNavigationShell';
 
 function logSplashScreenError(action: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -49,16 +50,45 @@ function renderPaperIcon({
   );
 }
 
+function themeColorWithAlpha(color: string, alpha: number): string {
+  const normalized = color.startsWith('#') ? color.slice(1) : color;
+  const expanded =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map((part) => `${part}${part}`)
+          .join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
+    return color;
+  }
+
+  const red = Number.parseInt(expanded.slice(0, 2), 16);
+  const green = Number.parseInt(expanded.slice(2, 4), 16);
+  const blue = Number.parseInt(expanded.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().catch((err: unknown) => {
   logSplashScreenError('prevent auto hide', err);
 });
 
-function InnerLayout() {
+function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
   const { isI18nLoading } = useI18n();
   const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
   const [isIconFontReady, setIsIconFontReady] = React.useState(Platform.OS !== 'web');
+
+  const theme = React.useMemo(() => {
+    return createAppTheme({
+      isDark,
+      useSystemColors,
+      materialColors,
+    });
+  }, [isDark, useSystemColors, materialColors]);
 
   // Inject global scrollbar styles on web.
   React.useEffect(() => {
@@ -74,7 +104,7 @@ function InnerLayout() {
     style.textContent = `
       html {
         scrollbar-width: thin;
-        scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
+        scrollbar-color: var(--raycoll-scrollbar-thumb) transparent;
       }
       .raycoll-stable-scrollbar {
         scrollbar-gutter: stable both-edges;
@@ -88,11 +118,11 @@ function InnerLayout() {
         background: transparent;
       }
       *::-webkit-scrollbar-thumb {
-        background-color: rgba(128, 128, 128, 0.4);
+        background-color: var(--raycoll-scrollbar-thumb);
         border-radius: 4px;
       }
       *::-webkit-scrollbar-thumb:hover {
-        background-color: rgba(128, 128, 128, 0.6);
+        background-color: var(--raycoll-scrollbar-thumb-hover);
       }
       *::-webkit-scrollbar-corner {
         background: transparent;
@@ -101,13 +131,20 @@ function InnerLayout() {
     document.head.appendChild(style);
   }, []);
 
-  const theme = React.useMemo(() => {
-    return createAppTheme({
-      isDark,
-      useSystemColors,
-      materialColors,
-    });
-  }, [isDark, useSystemColors, materialColors]);
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+
+    document.documentElement.style.setProperty(
+      '--raycoll-scrollbar-thumb',
+      themeColorWithAlpha(theme.colors.outline, 0.4),
+    );
+    document.documentElement.style.setProperty(
+      '--raycoll-scrollbar-thumb-hover',
+      themeColorWithAlpha(theme.colors.outline, 0.64),
+    );
+  }, [theme.colors.outline]);
 
   React.useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -149,23 +186,34 @@ function InnerLayout() {
     return null; // Let the splash screen stay visible
   }
 
+  return (
+    <PaperProvider theme={theme} settings={{ icon: renderPaperIcon }}>
+      {children}
+    </PaperProvider>
+  );
+}
+
+function AppContent() {
+  const theme = useTheme();
+
   const content = (
     <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="study/[groupId]" />
-        <Stack.Screen name="browse/[groupId]" />
-        <Stack.Screen name="import" />
-        <Stack.Screen name="settings/[groupId]" />
-        <Stack.Screen name="stats" />
-        <Stack.Screen name="app-settings" />
-        <Stack.Screen name="archive" />
-      </Stack>
+      <AppNavigationShell>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="study/[groupId]" />
+          <Stack.Screen name="browse/[groupId]" />
+          <Stack.Screen name="import" />
+          <Stack.Screen name="settings/[groupId]" />
+          <Stack.Screen name="stats" />
+          <Stack.Screen name="app-settings" />
+        </Stack>
+      </AppNavigationShell>
     </View>
   );
 
   return (
-    <PaperProvider theme={theme} settings={{ icon: renderPaperIcon }}>
+    <>
       {Platform.OS === 'web' ? (
         <View style={[styles.webOuter, { backgroundColor: theme.colors.background }]}>
           {content}
@@ -174,7 +222,7 @@ function InnerLayout() {
         content
       )}
       <UpdateNotification />
-    </PaperProvider>
+    </>
   );
 }
 
@@ -183,9 +231,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <I18nProvider>
         <AppThemeProvider>
-          <FlashcardStoreProvider>
-            <InnerLayout />
-          </FlashcardStoreProvider>
+          <ThemedPaperProvider>
+            <FlashcardStoreProvider>
+              <AppContent />
+            </FlashcardStoreProvider>
+          </ThemedPaperProvider>
         </AppThemeProvider>
       </I18nProvider>
     </SafeAreaProvider>

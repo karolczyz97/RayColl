@@ -7,8 +7,9 @@ import type { TranslationFn } from '../../i18n';
 import { FlashcardListItem } from '../../components/browse/FlashcardListItem';
 import { AnimatedSection } from '../../components/layout/AnimatedSection';
 import { getVisiblePageNames } from '../../store/selectors/pages';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+import { useNavigationShell } from '../../contexts/NavigationShellContext';
 import { TOKENS } from '../../theme/tokens';
+import { isExpandedWindowSize } from '../../utils/windowSizeClass';
 
 type FlashcardRow = Flashcard | { id: string; placeholder: true };
 
@@ -54,7 +55,8 @@ export function FlashcardList({
   readOnly,
 }: FlashcardListProps) {
   const theme = useTheme();
-  const { useTwoColumnLayout } = useResponsiveLayout();
+  const { contentWidth } = useNavigationShell();
+  const useTwoColumnLayout = isExpandedWindowSize(contentWidth);
   const numColumns = useTwoColumnLayout ? 2 : 1;
 
   // Pad an odd card count with an invisible cell so the lone last card keeps

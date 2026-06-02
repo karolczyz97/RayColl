@@ -1,6 +1,7 @@
 export const es: Record<string, string> = {
   // Common
   'app.title': 'RayColl',
+  'nav.dashboard': 'Panel',
   'btn.cancel': 'Cancelar',
   'btn.save': 'Guardar',
   'btn.add': 'Añadir',

@@ -87,7 +87,6 @@ export function GroupCard({ group, onModeChange }: Props) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: TOKENS.radius.xl,
-    marginBottom: TOKENS.spacing.sm,
   },
   cardTitle: {
     fontWeight: 'bold',
@@ -103,7 +102,7 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     paddingHorizontal: TOKENS.spacing.sm,
-    paddingBottom: TOKENS.spacing.sm,
+    paddingVertical: TOKENS.spacing.sm,
   },
   cardActionsRow: {
     flexDirection: 'row',

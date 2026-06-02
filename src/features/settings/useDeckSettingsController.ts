@@ -10,6 +10,8 @@ import { POPULAR_LANGS } from '../../constants/languages';
 import { uid } from '../../utils/id';
 import { createSeedModes } from '../../store/seed/seedModes';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+import { useNavigationShell } from '../../contexts/NavigationShellContext';
+import { isExpandedWindowSize } from '../../utils/windowSizeClass';
 import { stepSummary } from './studyModeUtils';
 
 export function useDeckSettingsController() {
@@ -17,6 +19,7 @@ export function useDeckSettingsController() {
   const { t } = useI18n();
   const store = useFlashcardStore();
   const responsiveLayout = useResponsiveLayout();
+  const navigationShell = useNavigationShell();
   const activeGroup = store.groups.find((group) => group.id === groupId) ?? null;
   const activeGroupId = activeGroup?.id ?? null;
   const activeGroupName = activeGroup?.name ?? '';
@@ -82,6 +85,7 @@ export function useDeckSettingsController() {
     return JSON.stringify(seed.steps) !== JSON.stringify(activeMode.steps);
   }, [activeMode]);
   const pageCount = activeGroup?.activePageCount ?? 0;
+  const useTwoColumnLayout = isExpandedWindowSize(navigationShell.contentWidth);
 
   const adjustPageCount = (count: number) => {
     if (!activeGroup) return;
@@ -227,7 +231,8 @@ export function useDeckSettingsController() {
     isCompact: responsiveLayout.isCompact,
     isDefaultMode,
     hasCustomSteps,
-    isExpanded: responsiveLayout.isExpanded,
+    isExpanded: useTwoColumnLayout,
+    useTwoColumnLayout,
     isLoading: store.isLoading,
     movePageSetting,
     moveStep,

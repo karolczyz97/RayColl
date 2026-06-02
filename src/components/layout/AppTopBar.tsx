@@ -2,9 +2,10 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { MOTION } from '../../theme/motion';
 import { TOKENS } from '../../theme/tokens';
 import { getTopBarColors } from '../../theme/semanticColors';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+import { useAppTheme } from '../../contexts/ThemeContext';
 
 interface AppTopBarProps {
   /** Sub-page mode: title shown next to the back arrow. */
@@ -34,17 +35,31 @@ export function AppTopBar({
 }: AppTopBarProps) {
   const theme = useTheme();
   const { bg, fg } = getTopBarColors(theme);
+  const { showNavigationRail } = useResponsiveLayout();
+  const { railVisible, setRailVisible } = useAppTheme();
+  // At >=600px the rail is reachable; if the user hid it, offer a way back in.
+  const showRailReveal = showNavigationRail && !railVisible;
 
   return (
     <Animated.View
-      entering={FadeIn.duration(MOTION.fadeDuration)}
+      entering={FadeIn.duration(TOKENS.motion.enter.fadeDuration)}
       style={[styles.bar, { backgroundColor: bg }]}
     >
       <View style={styles.leftGroup}>
+        {showRailReveal ? (
+          <IconButton
+            icon="menu"
+            size={TOKENS.iconSize.md}
+            iconColor={fg}
+            onPress={() => void setRailVisible(true)}
+            style={styles.backBtn}
+            accessibilityLabel="Show navigation"
+          />
+        ) : null}
         {onBack ? (
           <IconButton
             icon="arrow-left"
-            size={24}
+            size={TOKENS.iconSize.md}
             iconColor={fg}
             onPress={onBack}
             style={styles.backBtn}
@@ -84,7 +99,7 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   title: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     flexShrink: 1,
   },
   rightGroup: {

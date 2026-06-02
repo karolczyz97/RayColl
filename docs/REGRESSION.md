@@ -128,3 +128,23 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] **Study persistence policy:** sesja 12 ratingów → cloud `setDoc` widać **1× po 10 ratingach** i **1× na wyjściu/zakończeniu** (max 2), **nie** 12× per karta. Lokalnie (AsyncStorage) zapis może być częstszy.
 - [ ] **Sync status:** w czasie zapisu `syncStatus` przechodzi `idle → saving → syncing → idle`; przy błędzie `error` + `lastSyncError` ustawione.
 - [ ] **Critical ops zawsze immediate:** `importDeck`, `importState`, `resetToDefault`, delete deck, `signOut` — cloud write potwierdzony przed kontynuacją lub błąd surface'owany w `lastPersistenceError` / `lastSyncError`.
+
+#### Prompt 9 — kolejność zapisu i rollback (nowe)
+
+- [ ] **Lokalna kolejność zapisu:** dodaj 3 karty pod rząd → kill aplikacji → relaunch → wszystkie 3 karty są (żaden zapis nie nadpisał nowszego).
+- [ ] **Sesja 10 ratingów → restart:** postęp SRS i heatmap zachowane, heatmap dnia **nie jest podwojony** (jeden inkrement per oceniona karta).
+- [ ] **Usunięcie zestawu jest awaitowane:** usuń talię → od razu zapisane lokalnie + cloud; restart → talia nie wraca.
+- [ ] **importState rollback:** import backupu przy odłączonym/błędnym Firebase (zalogowany) → baner błędu, a po restarcie stan = sprzed importu (dysk i pamięć spójne, nie częściowy import).
+- [ ] **resetToDefault rollback:** reset do domyślnych przy błędzie persystencji → UI i dysk wracają do stanu sprzed resetu (nie zostają w połowie zseedowane).
+- [ ] **Recovery baneru sync:** po transient cloud error kolejna udana synchronizacja czyści `lastSyncError` (baner znika).
+
+#### Prompt 11 — product decisions regression (nowe)
+
+- [ ] **First login new account → migration dialog:** guest user z danymi loguje się na nowe konto → dialog z 2 opcjami (Przenieś na konto / Zacznij od nowa). "Przenieś" → dane guest na koncie. "Od nowa" → seed dane na koncie, guest dane zachowane lokalnie. Anuluj/Wstecz → wylogowanie, powrót do guest.
+- [ ] **Existing account → load cloud bez migracji:** user loguje się na konto z istniejącymi danymi w chmurze → dane cloud + merge, brak dialogu migracji.
+- [ ] **Logout → guest state restored:** po wylogowaniu aplikacja wraca do lokalnego stanu guest (oddzielny od konta).
+- [ ] **Delete on device A → nie wraca z device B:** usunięta talia/fiszka (tombstone z deletedAt) propaguje się przez sync i nie wraca po merge z chmurą.
+- [ ] **activePageCount decrease/increase preserves hidden pages:** zmniejszenie liczby stron → ukryte strony zachowane. Zwiększenie → ukryte strony widoczne ponownie z danymi.
+- [ ] **Mobile backup exports real .json file:** na Android/iOS eksport tworzy plik `raycoll-backup-YYYY-MM-DD-HH-mm.json` przez expo-file-system + expo-sharing, nie Share.share z tekstem.
+- [ ] **Localized delete token per language:** token potwierdzenia usunięcia talii zależy od języka (PL: USUŃ, EN: DELETE, DE: LÖSCHEN, ES: BORRAR, IT: ELIMINA), nie hardcoded "DELETE".
+- [ ] **Icon/cache web update smoke:** po deployu favicon.ico ma `no-cache`, hashed JS assety mają `immutable`, HTML shell ma `no-cache`.

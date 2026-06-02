@@ -31,7 +31,7 @@ export function StudyStatusBanner({
           mode="session"
           items={sessionItems}
           currentIndex={currentIndex}
-          height={8}
+          height={TOKENS.control.progressHeight}
         />
       </View>
       <Text style={[styles.progressCounter, { color: theme.colors.onSurfaceVariant }]}>
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
   progressCounter: {
     fontSize: TOKENS.typography.size.xs,
     textAlign: 'right',
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontWeight: TOKENS.typography.weight.semibold,
+    letterSpacing: 0,
     paddingHorizontal: TOKENS.spacing.lg,
   },
 });

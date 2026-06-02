@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useI18n } from '../../i18n';
+import { TOKENS } from '../../theme/tokens';
+import { EmptyDashboardAccent } from '../expressive';
 
 export function EmptyDashboardState() {
   const { t } = useI18n();
@@ -9,6 +11,7 @@ export function EmptyDashboardState() {
 
   return (
     <View style={styles.emptyContainer}>
+      <EmptyDashboardAccent />
       <Text style={{ color: theme.colors.onSurfaceVariant }}>{t('dashboard.no_groups')}</Text>
     </View>
   );
@@ -17,6 +20,6 @@ export function EmptyDashboardState() {
 const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 64,
+    paddingVertical: TOKENS.spacing.xxl * 2,
   },
 });

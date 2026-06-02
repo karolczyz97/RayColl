@@ -109,5 +109,41 @@ export async function runTests() {
     'Queue should continue with the most recent pending snapshot after a flush',
   );
 
+  // Error recovery: a failed immediate flush surfaces onError; a later success reports onSynced.
+  let shouldFail = true;
+  let errorCount = 0;
+  let syncedCount = 0;
+  const controller3 = createPersistenceQueueController({
+    delayMs: 10,
+    persistNow: async () => {
+      if (shouldFail) {
+        throw new Error('cloud down');
+      }
+    },
+    onError: () => {
+      errorCount += 1;
+    },
+    onSynced: () => {
+      syncedCount += 1;
+    },
+  });
+
+  controller3.enqueue(
+    { uid: 'u1', groups: [createGroup('e1')], studyModes: [], activityHeatmap: {} },
+    { immediate: true },
+  );
+  await controller3.flush();
+  assertEqual(errorCount, 1, 'Failed immediate flush should invoke onError once');
+  assertEqual(syncedCount, 0, 'Failed flush should not invoke onSynced');
+
+  shouldFail = false;
+  controller3.enqueue(
+    { uid: 'u1', groups: [createGroup('e2')], studyModes: [], activityHeatmap: {} },
+    { immediate: true },
+  );
+  await controller3.flush();
+  assertEqual(syncedCount, 1, 'Subsequent successful flush should invoke onSynced once');
+  assertEqual(errorCount, 1, 'Successful flush should not add another onError');
+
   console.log('Persistence queue tests passed');
 }

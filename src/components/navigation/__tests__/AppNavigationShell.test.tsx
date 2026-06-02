@@ -1,0 +1,183 @@
+import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, renderAsync, screen, waitFor } from '@testing-library/react-native';
+import { Text } from 'react-native';
+
+import { STORAGE_KEYS } from '../../../constants/storageKeys';
+import { useNavigationShell } from '../../../contexts/NavigationShellContext';
+import { AppThemeProvider } from '../../../contexts/ThemeContext';
+import { I18nProvider } from '../../../i18n';
+import { UI_PREFERENCE_STORAGE_KEYS, clearUiPreferenceCache } from '../../../storage/uiPreferences';
+import { createAppTheme } from '../../../theme/createAppTheme';
+import { AppTopBar } from '../../layout/AppTopBar';
+import { AppNavigationShell } from '../AppNavigationShell';
+import { PaperProvider } from 'react-native-paper';
+
+const mockResponsiveLayout = {
+  width: 840,
+  height: 900,
+  windowSizeClass: 'expanded',
+  contentWidth: 760,
+  contentSizeClass: 'medium',
+  isCompact: false,
+  isMedium: false,
+  isExpanded: true,
+  isDesktop: true,
+  contentMaxWidth: 1200,
+  formMaxWidth: 800,
+  cardMaxWidth: 450,
+  useTwoColumnLayout: false,
+  showNavigationRail: true,
+  showPersistentNavigation: true,
+  navWidth: 80,
+};
+
+jest.mock('../../../hooks/useResponsiveLayout', () => ({
+  useResponsiveLayout: () => mockResponsiveLayout,
+}));
+
+jest.mock('../../../hooks/useFlashcardStore', () => ({
+  useFlashcardStore: () => ({
+    user: null,
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+  }),
+}));
+
+function setResponsiveLayout(overrides: Partial<typeof mockResponsiveLayout>) {
+  Object.assign(mockResponsiveLayout, {
+    width: 840,
+    height: 900,
+    windowSizeClass: 'expanded',
+    contentWidth: 760,
+    contentSizeClass: 'medium',
+    isCompact: false,
+    isMedium: false,
+    isExpanded: true,
+    isDesktop: true,
+    contentMaxWidth: 1200,
+    formMaxWidth: 800,
+    cardMaxWidth: 450,
+    useTwoColumnLayout: false,
+    showNavigationRail: true,
+    showPersistentNavigation: true,
+    navWidth: 80,
+    ...overrides,
+  });
+}
+
+function ShellSizeProbe() {
+  const { contentWidth, navWidth } = useNavigationShell();
+
+  return <Text testID="shell-size">{`${contentWidth}:${navWidth}`}</Text>;
+}
+
+async function renderShell() {
+  const theme = createAppTheme({
+    isDark: false,
+    useSystemColors: false,
+  });
+
+  return renderAsync(
+    <I18nProvider>
+      <AppThemeProvider>
+        <PaperProvider theme={theme}>
+          <AppNavigationShell>
+            <AppTopBar title="Dashboard" />
+            <ShellSizeProbe />
+          </AppNavigationShell>
+        </PaperProvider>
+      </AppThemeProvider>
+    </I18nProvider>,
+  );
+}
+
+describe('AppNavigationShell', () => {
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await AsyncStorage.clear();
+    clearUiPreferenceCache();
+    global.__expoRouterMock.pathname = '/';
+    setResponsiveLayout({});
+  });
+
+  it('provides the actual content width after applying the current rail state', async () => {
+    await renderShell();
+
+    await waitFor(() => expect(screen.getByTestId('shell-size')).toHaveTextContent('760:80'));
+  });
+
+  it('loads UI preferences with a single batched storage read', async () => {
+    await renderShell();
+
+    await waitFor(() => expect(AsyncStorage.multiGet).toHaveBeenCalledWith(UI_PREFERENCE_STORAGE_KEYS));
+  });
+
+  it('hides the rail and persists the user preference', async () => {
+    await renderShell();
+
+    await waitFor(() => expect(screen.getByLabelText('Hide navigation')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByLabelText('Hide navigation'));
+
+    await waitFor(() => expect(screen.queryByLabelText('Hide navigation')).toBeNull());
+    expect(screen.getByLabelText('Show navigation')).toBeOnTheScreen();
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_KEYS.NAV_RAIL_VISIBLE, 'false');
+  });
+
+  it('expands the rail and persists the expanded preference', async () => {
+    await renderShell();
+
+    await waitFor(() => expect(screen.getByLabelText('Expand navigation')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByLabelText('Expand navigation'));
+
+    await waitFor(() => expect(screen.getByLabelText('Collapse navigation')).toBeOnTheScreen());
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_KEYS.NAV_RAIL_EXPANDED, 'true');
+  });
+
+  it('renders bottom navigation instead of a persistent rail on compact top-level routes', async () => {
+    setResponsiveLayout({
+      width: 390,
+      windowSizeClass: 'compact',
+      contentWidth: 390,
+      contentSizeClass: 'compact',
+      isCompact: true,
+      isExpanded: false,
+      isDesktop: false,
+      showNavigationRail: false,
+      showPersistentNavigation: false,
+      navWidth: 0,
+    });
+
+    await renderShell();
+
+    await waitFor(() => expect(screen.queryByLabelText('Hide navigation')).toBeNull());
+    expect(screen.queryByLabelText('Show navigation')).toBeNull();
+    expect(screen.getByTestId('bottom-navigation-bar')).toBeOnTheScreen();
+
+    fireEvent(screen.getByTestId('bottom-nav-stats'), 'click');
+
+    expect(global.__expoRouterMock.router.navigate).toHaveBeenCalledWith('/stats');
+  });
+
+  it('hides bottom navigation on compact immersive routes', async () => {
+    setResponsiveLayout({
+      width: 390,
+      windowSizeClass: 'compact',
+      contentWidth: 390,
+      contentSizeClass: 'compact',
+      isCompact: true,
+      isExpanded: false,
+      isDesktop: false,
+      showNavigationRail: false,
+      showPersistentNavigation: false,
+      navWidth: 0,
+    });
+    global.__expoRouterMock.pathname = '/browse/deck-1';
+
+    await renderShell();
+
+    expect(screen.queryByTestId('bottom-navigation-bar')).toBeNull();
+  });
+});

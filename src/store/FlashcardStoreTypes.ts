@@ -36,9 +36,9 @@ export interface FlashcardStore {
   ) => string;
   importDeck: (payload: ImportDeckPayload) => Promise<ImportDeckResult>;
   updateGroup: (group: FlashcardGroup) => void;
-  deleteGroup: (groupId: string) => void;
-  archiveGroup: (groupId: string) => void;
-  restoreGroup: (groupId: string) => void;
+  deleteGroup: (groupId: string) => Promise<void>;
+  archiveGroup: (groupId: string) => Promise<void>;
+  restoreGroup: (groupId: string) => Promise<void>;
   purgeArchives: () => void;
   addFlashcard: (groupId: string, pages: string[]) => string;
   updateFlashcard: (groupId: string, card: Flashcard) => void;
@@ -48,7 +48,7 @@ export interface FlashcardStore {
   updateStudyMode: (mode: StudyMode) => void;
   deleteStudyMode: (modeId: string) => void;
   resetStudyMode: (modeId: string) => void;
-  resetToDefault: () => void;
+  resetToDefault: () => Promise<void>;
   recordActivity: () => void;
   getDueCards: (groupId: string) => Flashcard[];
   getGroupProgress: (groupId: string) => number;

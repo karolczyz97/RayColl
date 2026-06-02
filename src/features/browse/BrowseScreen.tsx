@@ -3,7 +3,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { FAB, Text, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
+import { AppFloatingActionButton } from '../../components/AppFloatingActionButton';
 import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
 import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
 import { BrowseSearchBar } from '../../components/browse/BrowseSearchBar';
@@ -17,9 +18,8 @@ import { useI18n } from '../../i18n';
 import type { SrsCardCategory } from '../../srs/srsEngine';
 import { getCardCategory } from '../../srs/srsEngine';
 import { computeCardStats } from '../../store/selectors/stats';
-import { getEnterDelay } from '../../theme/motion';
 import { SRS_CATEGORY_ORDER } from '../../theme/srsTokens';
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS, getTokenMotionEnterDelay } from '../../theme/tokens';
 import { shouldShowCard, toggleCategoryReducer } from './browseFilter';
 import type { Flashcard } from '../../types/models';
 import { FlashcardList } from '../flashcards/FlashcardList';
@@ -188,8 +188,13 @@ export function BrowseScreen() {
       </View>
 
       {!isReadOnly && (
-        <Animated.View entering={ZoomIn.springify().delay(getEnterDelay(5))}>
-          <FAB icon="plus" style={styles.fab} onPress={addCard} accessibilityLabel="Add flashcard" />
+        <Animated.View entering={ZoomIn.springify().delay(getTokenMotionEnterDelay(5))}>
+          <AppFloatingActionButton
+            icon="plus"
+            style={styles.fab}
+            onPress={addCard}
+            accessibilityLabel="Add flashcard"
+          />
         </Animated.View>
       )}
 
@@ -257,7 +262,7 @@ const styles = StyleSheet.create({
     maxWidth: TOKENS.layout.maxWidth,
     alignSelf: 'center',
     gap: TOKENS.spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: TOKENS.spacing.xxl * 3,
     paddingHorizontal: TOKENS.spacing.lg,
   },
   fab: {

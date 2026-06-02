@@ -111,7 +111,7 @@ export function useStudySession(
       const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, rating) };
       onCardReviewedRef.current(currentGroup.id, updated);
     }
-  }, []);
+  }, [groupRef, onCardReviewedRef]);
 
   const waitUntilReleased = useCallback(async () => {
     while (holdingRef.current) {
@@ -127,7 +127,7 @@ export function useStudySession(
     } else {
       dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIndex });
     }
-  }, [dispatchIfMounted, waitUntilReleased]);
+  }, [dispatchIfMounted, dueCardsRef, stateRef, waitUntilReleased]);
 
   const playTts = useCallback(
     async (text: string, lang: string) => {
@@ -140,7 +140,7 @@ export function useStudySession(
       }
       lastTtsDurationRef.current = Date.now() - startTime;
     },
-    [dispatchIfMounted],
+    [dispatchIfMounted, ttsRateRef],
   );
 
   const runSpeechRecognition = useCallback(
@@ -352,7 +352,7 @@ export function useStudySession(
         }
       }
     },
-    [advanceToNextCard, dispatchIfMounted, guardedAwait, playTts, processCardReview, runSpeechRecognition],
+    [advanceToNextCard, dispatchIfMounted, groupRef, guardedAwait, playTts, processCardReview, runSpeechRecognition],
   );
 
   useEffect(() => {
@@ -410,7 +410,7 @@ export function useStudySession(
       dispatchIfMounted({ type: 'PEEK_CLEAR' });
       requestSkip();
     }
-  }, [dispatchIfMounted, resumeAfterStep, requestSkip]);
+  }, [dispatchIfMounted, dueCardsRef, groupRef, requestSkip, resumeAfterStep, stateRef]);
 
   const setHolding = useCallback((holding: boolean) => {
     holdingRef.current = holding;
@@ -460,7 +460,7 @@ export function useStudySession(
       }
       gesture.hasPeeked = false;
     }
-  }, [dispatchIfMounted]);
+  }, [dispatchIfMounted, groupRef, stateRef]);
 
   const getFreshCards = useCallback((cards: Flashcard[]) => {
     const currentGroup = groupRef.current;
@@ -468,7 +468,7 @@ export function useStudySession(
 
     const cardsById = new Map(currentGroup.cards.map((card) => [card.id, card]));
     return cards.map((card) => cardsById.get(card.id) ?? card);
-  }, []);
+  }, [groupRef]);
 
   useEffect(() => {
     if (dueCards.length === 0 || state.status === 'finished') {
@@ -509,7 +509,7 @@ export function useStudySession(
       processCardReview(card, rating);
       await advanceToNextCard();
     },
-    [advanceToNextCard, processCardReview],
+    [advanceToNextCard, dueCardsRef, groupRef, processCardReview, stateRef],
   );
 
   const restartSession = useCallback(() => {

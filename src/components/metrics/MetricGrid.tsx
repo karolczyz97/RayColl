@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
-import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import type { MetricItem } from './MetricCard';
 import { MetricCard } from './MetricCard';
 import { TOKENS } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+import { useNavigationShell } from '../../contexts/NavigationShellContext';
 import {
   getDeterministicContainerWidth,
   getGridColumns,
@@ -13,24 +15,23 @@ import {
 interface MetricGridProps {
   items: MetricItem[];
   screenMaxWidth?: number;
-  hasScrollViewPadding?: boolean;
 }
 
 export function MetricGrid({
   items,
   screenMaxWidth = TOKENS.layout.maxWidth,
-  hasScrollViewPadding = false,
 }: MetricGridProps) {
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth } = useResponsiveLayout();
+  const { navWidth } = useNavigationShell();
 
   const currentWidth = useMemo(() => {
     return getDeterministicContainerWidth(
       windowWidth,
       screenMaxWidth,
-      hasScrollViewPadding,
       Platform.OS === 'web',
+      navWidth,
     );
-  }, [windowWidth, screenMaxWidth, hasScrollViewPadding]);
+  }, [windowWidth, screenMaxWidth, navWidth]);
 
   const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
   // Use same threshold as DeckGrid: expand to 4 cols when 2 deck-sized cards fit side by side.

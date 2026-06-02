@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
-import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 import { GroupCard } from './GroupCard';
 import type { FlashcardGroup } from '../../types/models';
 import { TOKENS } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
+import { useNavigationShell } from '../../contexts/NavigationShellContext';
 import { AnimatedSection } from '../layout/AnimatedSection';
 import {
   getGridColumns,
@@ -18,16 +20,17 @@ interface Props {
 }
 
 export function DeckGrid({ baseOrder = 0, groups, onModeChange }: Props) {
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth } = useResponsiveLayout();
+  const { navWidth } = useNavigationShell();
 
   const currentWidth = useMemo(() => {
     return getDeterministicContainerWidth(
       windowWidth,
       TOKENS.layout.maxWidth,
-      true, // Dashboard has ScrollView padding (16px on each side)
       Platform.OS === 'web',
+      navWidth,
     );
-  }, [windowWidth]);
+  }, [windowWidth, navWidth]);
 
   const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
 

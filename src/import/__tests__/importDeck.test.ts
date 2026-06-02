@@ -45,5 +45,16 @@ export async function runTests() {
     'Valid languages should not throw',
   );
 
+  assertThrows(
+    () =>
+      validateImportDeckPayload({
+        name: 'Test',
+        languages: ['en-US'],
+        pageNames: ['A', 'B', 'C'],
+        cards: [{ pages: ['a', 'b', 'c'] }],
+      }),
+    'Fewer languages than pageNames should throw',
+  );
+
   console.log('Import deck tests passed');
 }

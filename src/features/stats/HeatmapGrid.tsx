@@ -112,12 +112,12 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     flexDirection: 'row',
-    gap: 3,
+    gap: TOKENS.spacing.xxs,
     height: 116,
   },
   gridColumn: {
     flexDirection: 'column',
-    gap: 3,
+    gap: TOKENS.spacing.xxs,
   },
   gridCell: {
     width: 14,

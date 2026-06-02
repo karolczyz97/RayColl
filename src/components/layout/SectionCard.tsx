@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     paddingBottom: TOKENS.spacing.lg,
   },
   title: {
-    fontWeight: '700',
+    fontWeight: TOKENS.typography.weight.bold,
     marginBottom: TOKENS.spacing.xs,
   },
   centerTitle: {

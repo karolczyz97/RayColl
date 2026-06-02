@@ -8,12 +8,16 @@ import { useStudySession } from '../../../hooks/useStudySession';
 import { useI18n } from '../../../i18n';
 import { buildSessionProgressItems } from '../session/sessionProgress';
 
+// Narrow-phone threshold: rating buttons collapse to icon-only below this width.
+// Component-specific layout switch, not a global MD3 window class.
+const NARROW_CONTROLS_WIDTH = 480;
+
 export function useStudyPageController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { t } = useI18n();
   const store = useFlashcardStore();
   const { width } = useWindowDimensions();
-  const isNarrow = width < 480;
+  const isNarrow = width < NARROW_CONTROLS_WIDTH;
 
   const {
     groups,

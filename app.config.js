@@ -41,10 +41,8 @@ module.exports = {
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
-          }
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
         }
       ],
       "@react-native-voice/voice",

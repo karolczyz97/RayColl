@@ -3,20 +3,23 @@ import { TOKENS } from '../theme/tokens';
 export function getDeterministicContainerWidth(
   windowWidth: number,
   screenMaxWidth: number,
-  hasScrollViewPadding: boolean,
   isWeb: boolean,
+  // Width reserved by a persistent navigation rail (0 when absent).
+  reservedWidth = 0,
 ): number {
+  const usableWindow = Math.max(0, windowWidth - reservedWidth);
   if (isWeb) {
-    // Web: Card has paddingHorizontal: TOKENS.spacing.lg (16px on each side = 32px total).
-    // The ScrollView has scrollbarGutter: 'stable both-edges' (8px scrollbar width on each side = 16px total).
+    // Web: webCard has paddingHorizontal: TOKENS.spacing.lg (16px each side = 32px total).
+    // ScrollView has scrollbarGutter: 'stable both-edges' (8px each side = 16px total).
+    // ScreenContent applies maxWidth: screenMaxWidth inside the padded card.
+    // Grid container width = min(screenMaxWidth, webCardInnerWidth).
     const scrollbarGutterWidth = 16;
-    const availableWidth = windowWidth - scrollbarGutterWidth;
-    const cardMaxWidth = Math.min(TOKENS.layout.maxWidth, screenMaxWidth);
-    const cardWidth = Math.min(cardMaxWidth, availableWidth);
-    return Math.max(0, cardWidth - TOKENS.spacing.lg * 2);
+    const availableWidth = usableWindow - scrollbarGutterWidth;
+    const webCardInnerWidth = Math.min(TOKENS.layout.maxWidth, availableWidth) - TOKENS.spacing.lg * 2;
+    return Math.max(0, Math.min(screenMaxWidth, webCardInnerWidth));
   } else {
     // Native: contentRegion has nativePadding (TOKENS.spacing.lg on each side = 32px total).
-    const availableWidth = windowWidth - TOKENS.spacing.lg * 2;
+    const availableWidth = usableWindow - TOKENS.spacing.lg * 2;
     return Math.max(0, Math.min(screenMaxWidth, availableWidth));
   }
 }

@@ -23,13 +23,15 @@ export function MetricCard({ item }: MetricCardProps) {
   return (
     <SectionCard>
       <View style={styles.content}>
-        <AppIcon name={item.icon} size={20} color={color} style={styles.icon} />
-        <Text variant="titleMedium" style={[styles.value, { color }]}>
-          {item.value}
-        </Text>
         <Text variant="labelSmall" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
           {item.label}
         </Text>
+        <View style={styles.bottomRow}>
+          <Text variant="titleMedium" style={styles.value}>
+            {item.value}
+          </Text>
+          <AppIcon name={item.icon} size={TOKENS.iconSize.sm} color={color} />
+        </View>
       </View>
     </SectionCard>
   );
@@ -38,19 +40,20 @@ export function MetricCard({ item }: MetricCardProps) {
 const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: TOKENS.spacing.xs,
     paddingVertical: TOKENS.spacing.sm,
   },
-  icon: {
-    marginBottom: TOKENS.spacing.xxs,
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: TOKENS.spacing.xs,
   },
   label: {
     width: '100%',
     textAlign: 'center',
   },
   value: {
-    width: '100%',
-    textAlign: 'center',
     fontWeight: TOKENS.typography.weight.bold,
     fontVariant: ['tabular-nums'],
   },

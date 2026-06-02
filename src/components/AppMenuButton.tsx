@@ -24,7 +24,7 @@ export function AppMenuButton({
   renderAnchor,
   items,
   header,
-  menuWidth = 200,
+  menuWidth = TOKENS.menu.minWidth,
   align = 'left',
 }: AppMenuButtonProps) {
   const theme = useTheme();

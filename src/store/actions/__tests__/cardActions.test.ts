@@ -2,6 +2,7 @@ import { createNewSrsState } from '../../../srs/srsEngine';
 import {
   addFlashcardsBulkAction,
   deleteFlashcardAction,
+  reviewCardAction,
   reviewFlashcardAction,
   updateFlashcardAction,
 } from '../cardActions';
@@ -99,6 +100,32 @@ export async function runTests() {
     bulkGroups[0].cards[1].srsUpdatedAt ?? 1,
     0,
     'Bulk-added cards should have srsUpdatedAt = 0',
+  );
+
+  // reviewCardAction: atomic bundle — stamps srsUpdatedAt, preserves input srsState, bumps heatmap once
+  const reviewSrsState = { ...originalCard.srsState, repetitions: 3 };
+  const reviewInputCard = { ...originalCard, srsState: reviewSrsState };
+  const heatmapBefore: Record<string, number> = {};
+  const reviewResult = reviewCardAction(groups, 'g1', reviewInputCard, heatmapBefore);
+
+  assertOk(
+    (reviewResult.nextGroups[0].cards[0].srsUpdatedAt ?? 0) > 0,
+    'reviewCardAction should stamp srsUpdatedAt',
+  );
+  assertEqual(
+    reviewResult.nextGroups[0].cards[0].srsState.repetitions,
+    3,
+    'reviewCardAction must preserve the input srsState (computed in session)',
+  );
+  assertEqual(
+    reviewResult.nextHeatmap[reviewResult.todayKey],
+    1,
+    'reviewCardAction should increment today heatmap exactly once',
+  );
+  assertEqual(
+    Object.keys(heatmapBefore).length,
+    0,
+    'reviewCardAction must not mutate the source heatmap',
   );
 
   console.log('Card actions tests passed');

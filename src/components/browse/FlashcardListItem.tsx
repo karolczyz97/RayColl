@@ -164,8 +164,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardContent: {
-    paddingTop: TOKENS.spacing.md,
-    paddingBottom: TOKENS.spacing.xs,
+    paddingVertical: TOKENS.spacing.sm,
     gap: TOKENS.spacing.sm,
   },
   pageLine: {
@@ -183,8 +182,7 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
   cardActions: {
-    paddingHorizontal: TOKENS.spacing.md,
-    paddingVertical: TOKENS.spacing.xs,
+    padding: TOKENS.spacing.sm,
     justifyContent: 'space-between',
   },
   cardActionsLeft: {

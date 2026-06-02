@@ -20,9 +20,15 @@ export async function runTests() {
   assertEqual(getGridGap(1600), TOKENS.layout.maxGap, 'Grid gap should clamp to maximum on large widths');
 
   assertEqual(
-    getDeterministicContainerWidth(1600, TOKENS.layout.maxWidth, true, true),
+    getDeterministicContainerWidth(1600, TOKENS.layout.maxWidth, true, 0),
     1168,
     'Dashboard width calculation should account for all padding layers',
+  );
+
+  assertEqual(
+    getDeterministicContainerWidth(900, TOKENS.layout.maxWidth, true, TOKENS.layout.railWidth),
+    772,
+    'Dashboard width calculation should subtract persistent rail width before web padding',
   );
 
   const gap = getGridGap(850);

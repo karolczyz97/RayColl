@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { Flashcard, FlashcardGroup } from '../../../types/models';
@@ -7,6 +7,7 @@ import { AppIcon } from '../../../components/AppIcon';
 import { getVisiblePages } from '../../../store/selectors/pages';
 import { CardPageSection } from './CardPageSection';
 import { TOKENS } from '../../../theme/tokens';
+import { getElevationStyle } from '../../../theme/elevation';
 
 interface StudyCardProps {
   currentCard: Flashcard | null;
@@ -71,8 +72,8 @@ export function StudyCard({
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.outlineVariant,
-              shadowColor: theme.colors.shadow,
             },
+            getElevationStyle(TOKENS.elevation.level2, theme.colors.shadow, Platform.OS),
           ]}
         >
           {(() => {
@@ -129,10 +130,6 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: TOKENS.radius.xxl,
     borderWidth: 1,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
     padding: TOKENS.spacing.xl,
     maxWidth: 600,
     width: '100%',
@@ -142,7 +139,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: TOKENS.spacing.sm,
     position: 'absolute',
     bottom: TOKENS.spacing.md,
     left: 0,

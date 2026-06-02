@@ -45,7 +45,7 @@ export function StudyFinishedState({
   return (
     <View style={styles.finishedContainer}>
       <Animated.View entering={ZoomIn.springify().damping(12)}>
-        <AppIcon name="check-circle" size={96} color={getSuccessColor(theme)} />
+        <AppIcon name="check-circle" size={TOKENS.iconSize.display} color={getSuccessColor(theme)} />
       </Animated.View>
       <Animated.View entering={FadeInUp.springify().delay(150)}>
         <Text variant="headlineLarge" style={styles.bravoTitle}>
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     paddingVertical: TOKENS.spacing.xl,
   },
   bravoTitle: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     marginTop: TOKENS.spacing.lg,
     marginBottom: TOKENS.spacing.sm,
   },
@@ -100,20 +100,20 @@ const styles = StyleSheet.create({
   },
   statsSummary: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: TOKENS.layout.studyCardMaxWidth,
     marginBottom: TOKENS.spacing.xxl,
   },
   statsTitle: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     textAlign: 'center',
     marginBottom: TOKENS.spacing.lg,
   },
   actionButtons: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: TOKENS.layout.actionMaxWidth,
     gap: TOKENS.spacing.md,
   },
   actionButton: {
-    borderRadius: 100,
+    borderRadius: TOKENS.radius.pill,
   },
 });

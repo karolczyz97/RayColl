@@ -6,6 +6,10 @@ export const STORAGE_KEYS = {
   // Speech settings
   TTS_RATE: 'td-tts-rate',
 
+  // Navigation rail (persisted user preference, ≥600px widths)
+  NAV_RAIL_VISIBLE: 'td-nav-rail-visible',
+  NAV_RAIL_EXPANDED: 'td-nav-rail-expanded',
+
   // Language settings
   LANGUAGE: 'td-lang',
 

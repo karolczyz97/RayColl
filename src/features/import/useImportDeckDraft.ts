@@ -72,7 +72,7 @@ export function useImportDeckDraft() {
         ),
       );
     },
-    [customSep, getActiveSepValue, pageCount, pageNames, sepKey],
+    [customSep, firstRowIsHeaderRef, getActiveSepValue, pageCount, pageNames, sepKey],
   );
 
   const {
@@ -201,7 +201,7 @@ export function useImportDeckDraft() {
 
       rebuildPreviewFromText(text, currentSepKey, currentPageCount, effectiveFirstRowIsHeader);
     },
-    [rebuildPreviewFromText, syncHeaderConfigFromText],
+    [firstRowIsHeaderRef, pageNamesRef, rebuildPreviewFromText, syncHeaderConfigFromText],
   );
 
   const applyDetectedText = useCallback(
@@ -266,7 +266,7 @@ export function useImportDeckDraft() {
       setRawColumnCount(detectedCount);
     }
     syncDraftFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
-  }, [customSep, debouncedRawText, getActiveSepValue, pageCount, sepKey, syncDraftFromText]);
+  }, [customSep, debouncedRawText, firstRowIsHeaderRef, getActiveSepValue, pageCount, sepKey, syncDraftFromText]);
 
   const handlePaste = useCallback(() => {
     isPasteRef.current = true;
@@ -295,7 +295,7 @@ export function useImportDeckDraft() {
         setRawText(text);
       }
     },
-    [applyDetectedText],
+    [applyDetectedText, rawTextRef],
   );
 
   const handleSepKeyChange = useCallback(
@@ -331,7 +331,7 @@ export function useImportDeckDraft() {
       }
       syncDraftFromText(nextText, activeSep, clampedCount);
     },
-    [customSep, getActiveSepValue, pageNames, rawText, sepKey, syncDraftFromText],
+    [customSep, firstRowIsHeaderRef, getActiveSepValue, pageNames, rawText, sepKey, syncDraftFromText],
   );
 
   const handleHeaderToggle = useCallback(
@@ -357,8 +357,10 @@ export function useImportDeckDraft() {
     },
     [
       customSep,
+      firstRowIsHeaderRef,
       getActiveSepValue,
       pageCount,
+      pageNamesRef,
       rawText,
       sepKey,
       syncDraftFromText,
@@ -381,7 +383,7 @@ export function useImportDeckDraft() {
       setRawText(nextText);
       syncDraftFromText(nextText, activeSep, pageCount);
     },
-    [customSep, getActiveSepValue, pageCount, pageNames, rawText, sepKey, syncDraftFromText],
+    [customSep, firstRowIsHeaderRef, getActiveSepValue, pageCount, pageNames, rawText, sepKey, syncDraftFromText],
   );
 
   const handleMovePage = useCallback(
@@ -421,7 +423,7 @@ export function useImportDeckDraft() {
         syncDraftFromText(nextText, activeSep, pageCount);
       }
     },
-    [customSep, getActiveSepValue, pageCount, pageLangs, pageNames, rawText, sepKey, syncDraftFromText],
+    [customSep, firstRowIsHeaderRef, getActiveSepValue, pageCount, pageLangs, pageNames, rawText, sepKey, syncDraftFromText],
   );
 
   const handlePickFile = useCallback(async () => {

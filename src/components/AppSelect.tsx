@@ -118,7 +118,7 @@ export function AppSelect({
                 </Text>
                 <Icon
                   source={open ? 'chevron-up' : 'chevron-down'}
-                  size={22}
+                  size={TOKENS.iconSize.md}
                   color={disabled ? theme.colors.onSurfaceDisabled : theme.colors.onSurfaceVariant}
                 />
               </View>
@@ -142,7 +142,7 @@ export function AppSelect({
                 ]}
                 titleStyle={
                   isSelected
-                    ? { color: theme.colors.onSecondaryContainer, fontWeight: '700' }
+                    ? { color: theme.colors.onSecondaryContainer, fontWeight: TOKENS.typography.weight.bold }
                     : { color: theme.colors.onSurface }
                 }
               />

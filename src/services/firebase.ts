@@ -1,27 +1,17 @@
 import { Platform } from 'react-native';
-import { initializeApp } from 'firebase/app';
 import {
-  initializeAuth,
-  getAuth,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithCredential,
   signOut as fbSignOut,
   onAuthStateChanged,
-  getReactNativePersistence,
 } from 'firebase/auth';
 import type { User, Unsubscribe } from 'firebase/auth';
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  doc,
-  getDoc,
-} from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc } from 'firebase/firestore';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
+import { auth, db } from './firebaseClient';
 import type { StoreData } from '../store/persistence/localPersistence';
 import { migrateLegacyUserDataToV2 } from '../store/persistence/firestoreMigration';
 import { FIRESTORE_SCHEMA_VERSION } from '../store/persistence/firestoreSchema';
@@ -30,34 +20,10 @@ import { validateBackupData } from '../utils/backupValidation';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
-};
-
-const isConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
-
-const app = isConfigured ? initializeApp(firebaseConfig) : null;
-
-export const auth = app
-  ? Platform.OS === 'web'
-    ? getAuth(app)
-    : initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage),
-      })
-  : null;
-
-export const db = app
-  ? initializeFirestore(app, {
-      localCache: persistentLocalCache(
-        Platform.OS === 'web' ? { tabManager: persistentMultipleTabManager() } : {},
-      ),
-    })
-  : null;
+// Firebase app/auth/db live in `firebaseClient` (leaf module) to avoid a
+// require cycle with the persistence layer. Re-exported here to preserve the
+// existing public API surface of `services/firebase`.
+export { auth, db };
 
 function getGoogleClientId(): string {
   if (Platform.OS === 'web') return '';

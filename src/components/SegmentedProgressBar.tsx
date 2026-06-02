@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import type { MD3Theme } from 'react-native-paper';
-import { TouchableRipple, useTheme } from 'react-native-paper';
+import { Text, TouchableRipple, useTheme } from 'react-native-paper';
 import type { CardStats } from '../store/selectors/stats';
 import type { TranslationFn } from '../i18n';
 import { useI18n } from '../i18n';
@@ -13,6 +13,7 @@ import {
   getSessionProgressSegments,
   type SessionProgressItem,
 } from '../features/study/session/sessionProgress';
+import { ExpressiveProgress, ExpressiveSegmentedProgress } from './expressive';
 
 const STATS_KEY: Record<string, keyof CardStats> = {
   new: 'newCount',
@@ -55,7 +56,7 @@ export function SegmentedProgressBar(props: Props) {
 function renderStatsMode(
   {
     stats,
-    height = 12,
+    height = TOKENS.control.progressHeight,
     showLegend = false,
     legendPosition = 'bottom',
     selectedCategories,
@@ -79,8 +80,11 @@ function renderStatsMode(
 
   if (total === 0) {
     return (
-      <View
-        style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: emptyColor }]}
+      <ExpressiveProgress
+        value={0}
+        max={1}
+        height={height}
+        colorRole="surface"
       />
     );
   }
@@ -107,7 +111,7 @@ function renderStatsMode(
         ]}
       >
         <View style={[styles.dot, { backgroundColor: dotColor }]} />
-        <Text style={[styles.pillText, { color: textColor }]}>
+        <Text variant="labelSmall" style={[styles.pillText, { color: textColor }]}>
           {item.label} ({item.count})
         </Text>
       </View>
@@ -139,23 +143,14 @@ function renderStatsMode(
           {categoryData.map(renderLegendItem)}
         </View>
       ) : null}
-      <View
-        style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: emptyColor }]}
-      >
-        {segments.map((segment) => {
-          const widthPercent = (segment.count / total) * 100;
-          return (
-            <View
-              key={segment.category}
-              style={{
-                width: `${widthPercent}%`,
-                height: '100%',
-                backgroundColor: segment.isActive ? segment.color : emptyColor,
-              }}
-            />
-          );
-        })}
-      </View>
+      <ExpressiveSegmentedProgress
+        height={height}
+        segments={segments.map((segment) => ({
+          id: segment.category,
+          value: segment.count,
+          color: segment.isActive ? segment.color : emptyColor,
+        }))}
+      />
       {showLegend && legendPosition === 'bottom' && (
         <View style={styles.legendContainer}>
           {categoryData.map(renderLegendItem)}
@@ -166,14 +161,17 @@ function renderStatsMode(
 }
 
 function renderSessionMode(
-  { items, currentIndex, height = 8 }: SessionModeProps,
+  { items, currentIndex, height = TOKENS.control.progressHeight }: SessionModeProps,
   theme: MD3Theme,
   emptyColor: string,
 ) {
   if (items.length === 0) {
     return (
-      <View
-        style={[styles.bar, { height, borderRadius: height / 2, backgroundColor: emptyColor }]}
+      <ExpressiveProgress
+        value={0}
+        max={1}
+        height={height}
+        colorRole="surface"
       />
     );
   }
@@ -182,33 +180,19 @@ function renderSessionMode(
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.bar,
-          styles.sessionBar,
-          { height, borderRadius: height / 2, backgroundColor: emptyColor },
-        ]}
-      >
-        {segments.map((segment) => {
+      <ExpressiveSegmentedProgress
+        height={height}
+        segments={segments.map((segment) => {
           const { color } = getReviewStatusColor(theme, segment.category);
-          const backgroundColor = segment.state === 'future' ? emptyColor : color;
-          const isCurrent = segment.state === 'current';
+          const segmentColor = segment.state === 'future' ? emptyColor : color;
 
-          return (
-            <View
-              key={segment.id}
-              style={[
-                styles.sessionSegment,
-                { backgroundColor },
-                isCurrent && {
-                  borderWidth: 1,
-                  borderColor: theme.colors.onSurface,
-                },
-              ]}
-            />
-          );
+          return {
+            id: segment.id,
+            value: 1,
+            color: segmentColor,
+          };
         })}
-      </View>
+      />
     </View>
   );
 }
@@ -217,21 +201,16 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
-  bar: {
-    flexDirection: 'row',
-    overflow: 'hidden',
-    width: '100%',
-  },
   legendContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: TOKENS.spacing.sm,
-    marginTop: 10,
+    marginTop: TOKENS.spacing.sm,
   },
   legendTop: {
     marginTop: 0,
-    marginBottom: 10,
+    marginBottom: TOKENS.spacing.sm,
   },
   pill: {
     flexDirection: 'row',
@@ -246,19 +225,11 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.pill,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: TOKENS.spacing.sm,
+    height: TOKENS.spacing.sm,
+    borderRadius: TOKENS.radius.pill,
   },
   pillText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  sessionBar: {
-    gap: 1,
-  },
-  sessionSegment: {
-    flex: 1,
-    height: '100%',
+    fontWeight: TOKENS.typography.weight.semibold,
   },
 });

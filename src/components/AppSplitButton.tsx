@@ -71,7 +71,7 @@ export function AppSplitButton({
             accessibilityState={{ disabled }}
           >
             <View style={styles.primaryContent}>
-              {leadingIcon ? <Icon source={leadingIcon} size={18} color={textColor} /> : null}
+              {leadingIcon ? <Icon source={leadingIcon} size={TOKENS.iconSize.sm} color={textColor} /> : null}
               <Text
                 variant="labelLarge"
                 style={[styles.label, { color: textColor }]}
@@ -96,7 +96,7 @@ export function AppSplitButton({
             accessibilityState={{ disabled: menuDisabled, expanded: open }}
           >
             <View style={styles.trailingContent}>
-              <Icon source={open ? 'chevron-up' : 'chevron-down'} size={22} color={textColor} />
+              <Icon source={open ? 'chevron-up' : 'chevron-down'} size={TOKENS.iconSize.md} color={textColor} />
             </View>
           </TouchableRipple>
         </Surface>
@@ -119,7 +119,7 @@ export function AppSplitButton({
             ]}
             titleStyle={
               isSelected
-                ? { color: theme.colors.onSecondaryContainer, fontWeight: '700' }
+                ? { color: theme.colors.onSecondaryContainer, fontWeight: TOKENS.typography.weight.bold }
                 : { color: theme.colors.onSurface }
             }
           />

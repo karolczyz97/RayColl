@@ -126,6 +126,9 @@ jobs:
           # version.json must be no-cache
           check_no_cache "$BASE/version.json"
 
+          # favicon.ico must be no-cache (not immutable)
+          check_no_cache "$BASE/favicon.ico"
+
           # One hashed JS asset must be immutable
           # Find the entry JS from the built manifest
           ASSET_URL=$(curl -s "$BASE/" | grep -oP '/_expo/static/js/[^"]+\.js' | head -1)

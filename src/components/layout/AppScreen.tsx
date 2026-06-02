@@ -3,10 +3,13 @@ import { Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle 
 import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TOKENS } from '../../theme/tokens';
+import { getElevationStyle } from '../../theme/elevation';
+import { useNavigationShell } from '../../contexts/NavigationShellContext';
 import { AppTopBar } from './AppTopBar';
 import { ScreenContent } from './ScreenContent';
 
 interface AppScreenProps {
+  kind?: 'top-level' | 'detail';
   title?: string;
   onBack?: () => void;
   /** Right-side slot: action icon(s) for sub-pages or home action cluster. */
@@ -37,6 +40,7 @@ interface AppScreenProps {
  * Native: ScrollView (scroll) or View (no scroll) with horizontal padding.
  */
 export function AppScreen({
+  kind = 'detail',
   title,
   onBack,
   right,
@@ -49,8 +53,17 @@ export function AppScreen({
   contentStyle,
 }: AppScreenProps) {
   const theme = useTheme();
+  const { showPersistentNavigation, showBottomNavigation } = useNavigationShell();
   const isWeb = Platform.OS === 'web';
-  const showBar = !!(onBack || title || right || brand);
+  const isTopLevel = kind === 'top-level';
+  const hideTopLevelPersistentChrome = isTopLevel && showPersistentNavigation;
+  const effectiveOnBack = isTopLevel && (showPersistentNavigation || showBottomNavigation)
+    ? undefined
+    : onBack;
+  const effectiveRight = hideTopLevelPersistentChrome ? undefined : right;
+  const effectiveBrand = hideTopLevelPersistentChrome ? undefined : brand;
+  const effectiveOverlay = hideTopLevelPersistentChrome ? undefined : overlay;
+  const showBar = !!(effectiveOnBack || title || effectiveRight || effectiveBrand);
 
   const screenContent = (
     <ScreenContent maxWidth={maxWidth} fill={!scroll} style={contentStyle}>
@@ -71,7 +84,8 @@ export function AppScreen({
         <View
           style={[
             styles.webCard,
-            { backgroundColor: theme.colors.surface, shadowColor: theme.colors.shadow },
+            { backgroundColor: theme.colors.surface },
+            getElevationStyle(TOKENS.elevation.level3, theme.colors.shadow, Platform.OS),
           ]}
         >
           {screenContent}
@@ -99,7 +113,12 @@ export function AppScreen({
       style={[styles.root, { backgroundColor: theme.colors.background }]}
     >
       {showBar ? (
-        <AppTopBar title={title} onBack={onBack} right={right} brand={brand} />
+        <AppTopBar
+          title={title}
+          onBack={effectiveOnBack}
+          right={effectiveRight}
+          brand={effectiveBrand}
+        />
       ) : null}
 
       <View
@@ -110,7 +129,7 @@ export function AppScreen({
         ]}
       >
         {body}
-        {overlay}
+        {effectiveOverlay}
       </View>
     </SafeAreaView>
   );
@@ -139,10 +158,6 @@ const styles = StyleSheet.create({
     maxWidth: TOKENS.layout.maxWidth,
     paddingHorizontal: TOKENS.spacing.lg,
     borderRadius: TOKENS.radius.xl,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
   },
   nativeScrollContent: {
     paddingBottom: TOKENS.spacing.xxl * 2,

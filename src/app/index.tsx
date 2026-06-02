@@ -1,17 +1,15 @@
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { FAB } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
 import { DashboardBrand, DashboardActions } from '../components/dashboard/DashboardHeader';
 import { DashboardStats } from '../components/dashboard/DashboardStats';
 import { EmptyDashboardState } from '../components/dashboard/EmptyDashboardState';
 import { DeckGrid } from '../components/dashboard/DeckGrid';
-import { ArchiveBanner } from '../components/dashboard/ArchiveBanner';
 import { computeStreak, getTotalCardsCount, getTotalDueCardsCount } from '../store/selectors/stats';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS, getTokenMotionEnterDelay } from '../theme/tokens';
 import { AppScreen } from '../components/layout/AppScreen';
 import { AnimatedSection } from '../components/layout/AnimatedSection';
 import { LoadingState } from '../components/layout/LoadingState';
@@ -19,14 +17,14 @@ import { SyncStatusBanner } from '../components/feedback/SyncStatusBanner';
 import { AppSnackbar } from '../components/feedback/AppSnackbar';
 import { useI18n } from '../i18n';
 import { ROUTES } from '../constants/routes';
-import { getEnterDelay } from '../theme/motion';
+import { AppFloatingActionButton } from '../components/AppFloatingActionButton';
 
 export default function Dashboard() {
   const store = useFlashcardStore();
   const { contentMaxWidth } = useResponsiveLayout();
   const { t } = useI18n();
 
-  const { groups, archivedGroups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap, lastLoginError, clearLastLoginError } = store;
+  const { groups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap, lastLoginError, clearLastLoginError } = store;
 
   const handleLogin = async () => {
     try {
@@ -57,14 +55,13 @@ export default function Dashboard() {
     [groups, updateGroup],
   );
 
-  const archivedCount = archivedGroups.length;
-
   if (isLoading) {
     return <LoadingState />;
   }
 
   return (
     <AppScreen
+      kind="top-level"
       maxWidth={contentMaxWidth}
       brand={<DashboardBrand />}
       right={
@@ -76,10 +73,10 @@ export default function Dashboard() {
       }
       overlay={
         <Animated.View
-          entering={ZoomIn.springify().delay(getEnterDelay(3))}
+          entering={ZoomIn.springify().delay(getTokenMotionEnterDelay(3))}
           style={styles.fabWrapper}
         >
-          <FAB
+          <AppFloatingActionButton
             icon="plus"
             style={styles.fab}
             onPress={() => router.push(ROUTES.IMPORT)}
@@ -114,11 +111,6 @@ export default function Dashboard() {
         <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} />
       )}
 
-      {archivedCount > 0 && (
-        <AnimatedSection order={50}>
-          <ArchiveBanner count={archivedCount} />
-        </AnimatedSection>
-      )}
       <AppSnackbar
         visible={!!lastLoginError}
         message={t(lastLoginError || '')}

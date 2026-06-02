@@ -1,10 +1,10 @@
 import type { Href } from 'expo-router';
 
 export const ROUTES = {
+  HOME: '/',
   APP_SETTINGS: '/app-settings',
   IMPORT: '/import',
   STATS: '/stats',
-  ARCHIVE: '/archive' as Href,
   browseDeck: (groupId: string): Href => ({
     pathname: '/browse/[groupId]',
     params: { groupId },
