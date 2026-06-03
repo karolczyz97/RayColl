@@ -1,4 +1,5 @@
 import type { SrsState } from '../types/models';
+import { clamp } from '../utils/math';
 
 // --- FSRS Parameters (v4.5 defaults) ---
 const W = [
@@ -18,10 +19,6 @@ export function createNewSrsState(): SrsState {
     lastReviewTimestamp: 0,
     nextReviewTimestamp: 0,
   };
-}
-
-function clamp(val: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, val));
 }
 
 function initDifficulty(rating: number): number {

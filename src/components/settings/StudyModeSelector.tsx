@@ -41,7 +41,7 @@ export function StudyModeSelector({ activeModeId, onModeChange, studyModes, t, o
             mode="contained"
             onPress={onCreateMode}
             style={styles.plusButton}
-            size={24}
+            size={TOKENS.iconSize.md}
             accessibilityLabel="Create study mode button"
           />
         )}

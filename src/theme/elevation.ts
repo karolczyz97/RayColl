@@ -1,16 +1,13 @@
 import type { PlatformOSType, ViewStyle } from 'react-native';
 
 import { TOKENS } from './tokens';
+import { clamp } from '../utils/math';
 
 export type ElevationSpec = (typeof TOKENS.elevation)[keyof typeof TOKENS.elevation];
 export type ElevationPlatform = PlatformOSType | 'native';
 
-function clampAlpha(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
 function withOpacity(color: string, opacity: number): string {
-  const alpha = clampAlpha(opacity);
+  const alpha = clamp(opacity, 0, 1);
   const normalized = color.trim();
 
   const hex = normalized.startsWith('#') ? normalized.slice(1) : '';
@@ -36,7 +33,7 @@ function withOpacity(color: string, opacity: number): string {
   if (rgbaMatch) {
     const [, red, green, blue, sourceAlpha] = rgbaMatch;
     const parsedSourceAlpha = sourceAlpha === undefined ? 1 : Number(sourceAlpha);
-    const finalAlpha = clampAlpha(parsedSourceAlpha * alpha);
+    const finalAlpha = clamp(parsedSourceAlpha * alpha, 0, 1);
     return `rgba(${red}, ${green}, ${blue}, ${finalAlpha})`;
   }
 

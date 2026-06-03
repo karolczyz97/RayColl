@@ -1,10 +1,13 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { TextInput, Text, IconButton, Button, useTheme, Dialog } from 'react-native-paper';
+import { Text, Button, Dialog } from 'react-native-paper';
 import type { ModeStep } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { dialogStyles } from '../../theme/dialogStyles';
+import { AppTextInput } from '../forms/AppTextInput';
+import { swapElements } from '../../utils/array';
+import { StepReorderControls } from './StepReorderControls';
 
 interface Props {
   visible: boolean;
@@ -33,55 +36,26 @@ export function CreateStudyModeSection({
   t,
   stepSummary,
 }: Props) {
-  const theme = useTheme();
-
   return (
     <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
       <Dialog.Title>{t('settings.create_mode_btn')}</Dialog.Title>
       <Dialog.Content>
-        <TextInput
-          mode="outlined"
+        <AppTextInput
           label={t('settings.new_mode_name')}
           value={newModeName}
           onChangeText={setNewModeName}
           style={styles.nameInput}
-          outlineStyle={styles.inputOutline}
         />
         {customSteps.map((step, index) => (
           <View key={index} style={styles.customStepRow}>
             <Text style={styles.stepText}>{`${index + 1}. ${stepSummary(step, t)}`}</Text>
-            <IconButton
-              icon="arrow-up"
-              size={16}
-              onPress={() => {
-                const steps = [...customSteps];
-                [steps[index], steps[Math.max(0, index - 1)]] = [
-                  steps[Math.max(0, index - 1)],
-                  steps[index],
-                ];
-                setCustomSteps(steps);
-              }}
-              disabled={index === 0}
-              accessibilityLabel={`Move step ${index + 1} up`}
-            />
-            <IconButton
-              icon="arrow-down"
-              size={16}
-              onPress={() => {
-                const steps = [...customSteps];
-                const nextIndex = Math.min(steps.length - 1, index + 1);
-                [steps[index], steps[nextIndex]] = [steps[nextIndex], steps[index]];
-                setCustomSteps(steps);
-              }}
-              disabled={index === customSteps.length - 1}
-              accessibilityLabel={`Move step ${index + 1} down`}
-            />
-            <IconButton
-              icon="delete"
-              size={16}
-              iconColor={theme.colors.error}
-              onPress={() => setCustomSteps((steps) => steps.filter((_, i) => i !== index))}
-              accessibilityLabel={`Delete step ${index + 1}`}
+            <StepReorderControls
+              index={index}
+              isFirst={index === 0}
+              isLast={index === customSteps.length - 1}
+              onMoveUp={() => setCustomSteps((steps) => swapElements(steps, index, index - 1))}
+              onMoveDown={() => setCustomSteps((steps) => swapElements(steps, index, index + 1))}
+              onDelete={() => setCustomSteps((steps) => steps.filter((_, i) => i !== index))}
             />
           </View>
         ))}
@@ -115,11 +89,7 @@ export function CreateStudyModeSection({
 
 const styles = StyleSheet.create({
   nameInput: {
-    height: TOKENS.control.height,
     marginBottom: TOKENS.spacing.md,
-  },
-  inputOutline: {
-    borderRadius: TOKENS.control.borderRadius,
   },
   customStepRow: {
     flexDirection: 'row',

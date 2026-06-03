@@ -59,13 +59,19 @@ function getWebSpeechRecognition(): SpeechRecognitionConstructor | undefined {
   return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
 }
 
-function normalizeRecognizedText(text: string): string {
+/**
+ * Minimal normalization for speech-recognition results. Speech engines typically
+ * return lowercase text without punctuation, so only whitespace is collapsed.
+ * For fuzzy matching against card text use {@link normalizeText} from srsEngine
+ * instead — it strips punctuation and lowercases aggressively.
+ */
+function normalizeSttResult(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
 function combineRecognizedText(finalText: string, interimText: string): string {
-  const normalizedFinal = normalizeRecognizedText(finalText);
-  const normalizedInterim = normalizeRecognizedText(interimText);
+  const normalizedFinal = normalizeSttResult(finalText);
+  const normalizedInterim = normalizeSttResult(interimText);
 
   if (!normalizedFinal) return normalizedInterim;
   if (!normalizedInterim) return normalizedFinal;
@@ -143,7 +149,7 @@ class WebSttService implements SttService {
         const interimParts: string[] = [];
         let hasFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = normalizeRecognizedText(event.results[i][0].transcript);
+          const transcript = normalizeSttResult(event.results[i][0].transcript);
           if (!transcript) {
             continue;
           }
@@ -253,7 +259,7 @@ class ReactNativeVoiceSttService implements SttService {
 
       Voice.onSpeechResults = (e) => {
         if (e.value && e.value.length > 0) {
-          finalResult = normalizeRecognizedText(e.value[0]);
+          finalResult = normalizeSttResult(e.value[0]);
           options.onPartialResult?.(finalResult);
         }
         resetInactivityTimer();
@@ -261,7 +267,7 @@ class ReactNativeVoiceSttService implements SttService {
 
       Voice.onSpeechPartialResults = (e) => {
         if (e.value && e.value.length > 0) {
-          finalResult = normalizeRecognizedText(e.value[0]);
+          finalResult = normalizeSttResult(e.value[0]);
           options.onPartialResult?.(finalResult);
         }
         resetInactivityTimer();

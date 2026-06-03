@@ -1,5 +1,6 @@
 import { SrsState } from '../types/models';
 import { SrsCardCategory } from '../srs/srsEngine';
+import type { CardStats } from '../store/selectors/stats';
 
 export interface SrsCategoryToken {
   labelKey: string;
@@ -33,6 +34,17 @@ export const SRS_CATEGORY_ORDER: SrsCardCategory[] = [
   'review',
   'mastered',
 ];
+
+/**
+ * Canonical mapping from SRS card category to its key in `CardStats`.
+ * Single source of truth for SegmentedProgressBar, Browse filters, etc.
+ */
+export const CATEGORY_TO_STATS_KEY: Record<SrsCardCategory, keyof CardStats> = {
+  new: 'newCount',
+  learning: 'learning',
+  review: 'review',
+  mastered: 'mastered',
+};
 
 export function getMasteryPercent(state: SrsState): number {
   if (state.state === 0) return 0;

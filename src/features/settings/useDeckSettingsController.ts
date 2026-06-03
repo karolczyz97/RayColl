@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import { swapElements } from '../../utils/array';
+import { deepEqual } from '../../utils/deepEqual';
 import type { ModeStep, StudyMode } from '../../types/models';
 import type { CardFilter } from '../../constants/cardFilters';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
@@ -82,7 +83,7 @@ export function useDeckSettingsController() {
     if (!activeMode?.isBuiltIn || !activeMode.builtInSourceId) return false;
     const seed = createSeedModes().find((mode) => mode.id === activeMode.builtInSourceId);
     if (!seed) return false;
-    return JSON.stringify(seed.steps) !== JSON.stringify(activeMode.steps);
+    return !deepEqual(seed.steps, activeMode.steps);
   }, [activeMode]);
   const pageCount = activeGroup?.activePageCount ?? 0;
   const useTwoColumnLayout = isExpandedWindowSize(navigationShell.contentWidth);

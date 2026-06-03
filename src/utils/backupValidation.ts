@@ -1,4 +1,5 @@
 import type { FlashcardGroup, StudyMode } from '../types/models';
+import { isRecord } from './types';
 
 export interface BackupData {
   groups: FlashcardGroup[];
@@ -6,10 +7,6 @@ export interface BackupData {
   activityHeatmap: Record<string, number>;
   schemaVersion?: number;
   exportedAt?: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 function assertNumber(value: unknown, message: string): asserts value is number {

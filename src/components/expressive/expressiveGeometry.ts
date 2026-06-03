@@ -1,10 +1,8 @@
+import { clamp } from '../../utils/math';
+
 export interface ProgressGeometryOptions {
   value: number;
   max: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 export function getProgressRatio({ value, max }: ProgressGeometryOptions): number {

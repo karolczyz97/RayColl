@@ -1,5 +1,6 @@
 import { Flashcard, FlashcardGroup } from '../../types/models';
 import { padArray } from '../../utils/array';
+import { padPageMetadata } from '../storeDataNormalization';
 
 export function getVisiblePages(card: Flashcard, group: FlashcardGroup): string[] {
   const count = group.activePageCount;
@@ -20,19 +21,15 @@ export function ensureCardHasPageSlots(card: Flashcard, minPageCount: number): F
 }
 
 export function normalizeGroupPageConfig(group: FlashcardGroup): FlashcardGroup {
-  const activeCount = group.activePageCount;
-  const names = [...group.pageNames];
-  const langs = [...group.pageLanguages];
-  while (names.length < activeCount) {
-    names.push(`Page ${names.length + 1}`);
-  }
-  while (langs.length < activeCount) {
-    langs.push('en-US');
-  }
+  const { pageNames, pageLanguages } = padPageMetadata(
+    group.pageNames,
+    group.pageLanguages,
+    group.activePageCount,
+  );
   return {
     ...group,
-    activePageCount: activeCount,
-    pageNames: names,
-    pageLanguages: langs,
+    activePageCount: group.activePageCount,
+    pageNames,
+    pageLanguages,
   };
 }

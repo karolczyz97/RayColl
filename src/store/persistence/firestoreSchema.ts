@@ -1,5 +1,7 @@
 import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
 import { normalizeStudyFilter } from '../storeDataNormalization';
+import { coerceStringArray } from '../../utils/array';
+import { isRecord } from '../../utils/types';
 import type { StoreData } from './localPersistence';
 
 export const FIRESTORE_SCHEMA_VERSION = 2;
@@ -31,14 +33,6 @@ export interface FirestoreStudyModeDoc {
   builtInSourceId?: string;
   updatedAt?: unknown;
   deletedAt?: number | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
 function requireString(value: unknown, label: string): string {
@@ -151,8 +145,8 @@ export function deserializeDeckDoc(
     throw new Error(`Firestore deck ${docId} is malformed.`);
   }
 
-  const pageNames = asStringArray(rawData.pageNames);
-  const pageLanguages = asStringArray(rawData.pageLanguages);
+  const pageNames = coerceStringArray(rawData.pageNames);
+  const pageLanguages = coerceStringArray(rawData.pageLanguages);
   const fallbackPageCount = Math.max(pageNames.length, pageLanguages.length, 2);
   const rawActivePageCount = rawData.activePageCount;
   const activePageCount =

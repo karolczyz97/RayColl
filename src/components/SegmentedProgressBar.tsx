@@ -7,20 +7,13 @@ import type { TranslationFn } from '../i18n';
 import { useI18n } from '../i18n';
 import type { SrsCardCategory } from '../srs/srsEngine';
 import { getReviewStatusColor } from '../theme/semanticColors';
-import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS } from '../theme/srsTokens';
+import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS, CATEGORY_TO_STATS_KEY } from '../theme/srsTokens';
 import { TOKENS } from '../theme/tokens';
 import {
   getSessionProgressSegments,
   type SessionProgressItem,
 } from '../features/study/session/sessionProgress';
 import { ExpressiveProgress, ExpressiveSegmentedProgress } from './expressive';
-
-const STATS_KEY: Record<string, keyof CardStats> = {
-  new: 'newCount',
-  learning: 'learning',
-  review: 'review',
-  mastered: 'mastered',
-};
 
 interface StatsModeProps {
   mode?: 'stats';
@@ -70,7 +63,7 @@ function renderStatsMode(
   const isFiltering = selectedCategories != null && selectedCategories.length > 0;
 
   const categoryData = SRS_CATEGORY_ORDER.map((category) => {
-    const statsKey = STATS_KEY[category];
+    const statsKey = CATEGORY_TO_STATS_KEY[category];
     const count = (stats[statsKey] as number) ?? 0;
     const { color, bg } = getReviewStatusColor(theme, category);
     const label = t(SRS_CATEGORIES_TOKENS[category].labelKey);

@@ -26,45 +26,7 @@ import { validateBackupData } from '../../utils/backupValidation';
 import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
 import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
-
-function assertEqual<T>(actual: T, expected: T, msg?: string) {
-  if (actual !== expected) {
-    throw new Error(
-      `Assertion failed: expected ${expected}, got ${actual}${msg ? ` - ${msg}` : ''}`,
-    );
-  }
-}
-
-function assertDeepEqual<T>(actual: T, expected: T, msg?: string) {
-  const aStr = JSON.stringify(actual);
-  const eStr = JSON.stringify(expected);
-  if (aStr !== eStr) {
-    throw new Error(`Assertion failed: expected ${eStr}, got ${aStr}${msg ? ` - ${msg}` : ''}`);
-  }
-}
-
-function assertOk(value: unknown, msg?: string) {
-  if (!value) {
-    throw new Error(
-      `Assertion failed: expected truthy value, got ${value}${msg ? ` - ${msg}` : ''}`,
-    );
-  }
-}
-
-function assertThrows(fn: () => void, expectedMessagePart?: string) {
-  try {
-    fn();
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (expectedMessagePart && !message.includes(expectedMessagePart)) {
-      throw new Error(
-        `Expected error containing "${expectedMessagePart}", but got: "${message}"`,
-      );
-    }
-    return;
-  }
-  throw new Error('Expected function to throw an error, but it did not.');
-}
+import { assertEqual, assertOk, assertThrows, assertDeepEqual } from '../../test/assertions';
 
 export async function runTests() {
 // ==========================================

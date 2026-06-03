@@ -10,6 +10,7 @@ import {
   playSuccessSound,
 } from '../services/audioFeedback';
 import { useAppTheme } from '../contexts/ThemeContext';
+import { getErrorMessage } from '../utils/errors';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '../features/study/session/sessionReducer';
 import { useSyncedRef } from './useSyncedRef';
 import {
@@ -135,7 +136,7 @@ export function useStudySession(
       try {
         await ttsService.speak({ text, lang, rate: ttsRateRef.current });
       } catch (err) {
-        console.error('TTS Speak Error:', err);
+        console.error('TTS Speak Error:', getErrorMessage(err));
         dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.tts' });
       }
       lastTtsDurationRef.current = Date.now() - startTime;
@@ -159,7 +160,7 @@ export function useStudySession(
           },
         });
       } catch (err) {
-        console.error('STT Listen Error:', err);
+        console.error('STT Listen Error:', getErrorMessage(err));
         dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.stt' });
       }
       return recognized;

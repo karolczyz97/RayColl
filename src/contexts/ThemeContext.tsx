@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { loadUiPreferences, setUiPreference } from '../storage/uiPreferences';
+import { clamp } from '../utils/math';
 
 export type ThemePref = 'light' | 'dark' | 'system';
 
@@ -26,7 +27,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const MIN_TTS_RATE = 0.5;
 const MAX_TTS_RATE = 2.0;
 
-function isThemePref(value: string): value is ThemePref {
+export function isThemePref(value: string): value is ThemePref {
   return value === 'light' || value === 'dark' || value === 'system';
 }
 
@@ -35,7 +36,7 @@ function clampTtsRate(value: number): number {
     return 1.0;
   }
 
-  return Math.max(MIN_TTS_RATE, Math.min(MAX_TTS_RATE, value));
+  return clamp(value, MIN_TTS_RATE, MAX_TTS_RATE);
 }
 
 export function useAppTheme() {

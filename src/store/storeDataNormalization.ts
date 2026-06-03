@@ -3,14 +3,11 @@ import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '.
 import type { Flashcard, FlashcardGroup, StudyMode } from '../types/models';
 import type { StoreData } from './persistence/localPersistence';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
+import { coerceStringArray } from '../utils/array';
 
 export const CURRENT_SCHEMA_VERSION = 1;
 export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
 const VALID_STUDY_FILTERS = new Set<CardFilter>(Object.values(CARD_FILTERS));
-
-function coerceStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-}
 
 export function normalizeStudyFilter(filter: unknown): CardFilter {
   return VALID_STUDY_FILTERS.has(filter as CardFilter)

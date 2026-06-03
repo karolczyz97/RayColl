@@ -1,3 +1,8 @@
+/** Keeps only string entries of an unknown value; non-arrays become `[]`. */
+export function coerceStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
 export function padArray<T>(arr: T[], targetLength: number, fillValue: T): T[] {
   if (arr.length >= targetLength) return arr;
   const padded = arr.slice();

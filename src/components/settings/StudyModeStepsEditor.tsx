@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Divider, List, IconButton, Button, useTheme } from 'react-native-paper';
+import { Divider, List, Button } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { SectionCard } from '../layout/SectionCard';
 import { getModeName } from '../../i18n/modeHelpers';
+import { StepReorderControls } from './StepReorderControls';
 
 interface Props {
   activeMode: StudyMode;
@@ -30,8 +31,6 @@ export function StudyModeStepsEditor({
   t,
   stepSummary,
 }: Props) {
-  const theme = useTheme();
-
   return (
     <SectionCard title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}>
         <View style={styles.stepsList}>
@@ -42,32 +41,14 @@ export function StudyModeStepsEditor({
                 style={styles.listItem}
                 title={`${index + 1}. ${stepSummary(step, t)}`}
                 right={() => (
-                  <View style={styles.stepControls}>
-                    <IconButton
-                      icon="arrow-up"
-                      size={16}
-                      style={styles.stepControlBtn}
-                      onPress={() => moveStep(activeMode, index, -1)}
-                      disabled={index === 0}
-                      accessibilityLabel={`Move step ${index + 1} up`}
-                    />
-                    <IconButton
-                      icon="arrow-down"
-                      size={16}
-                      style={styles.stepControlBtn}
-                      onPress={() => moveStep(activeMode, index, 1)}
-                      disabled={index === activeMode.steps.length - 1}
-                      accessibilityLabel={`Move step ${index + 1} down`}
-                    />
-                    <IconButton
-                      icon="delete"
-                      size={16}
-                      style={styles.stepControlBtn}
-                      iconColor={theme.colors.error}
-                      onPress={() => deleteStep(activeMode, index)}
-                      accessibilityLabel={`Delete step ${index + 1}`}
-                    />
-                  </View>
+                  <StepReorderControls
+                    index={index}
+                    isFirst={index === 0}
+                    isLast={index === activeMode.steps.length - 1}
+                    onMoveUp={() => moveStep(activeMode, index, -1)}
+                    onMoveDown={() => moveStep(activeMode, index, 1)}
+                    onDelete={() => deleteStep(activeMode, index)}
+                  />
                 )}
               />
             </View>
@@ -108,12 +89,6 @@ const styles = StyleSheet.create({
   listItem: {
     paddingVertical: TOKENS.spacing.xs,
     paddingHorizontal: 0,
-  },
-  stepControls: {
-    flexDirection: 'row',
-  },
-  stepControlBtn: {
-    margin: 0,
   },
   footer: {
     flexDirection: 'row',

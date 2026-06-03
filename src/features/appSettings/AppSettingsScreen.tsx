@@ -11,7 +11,7 @@ import { AnimatedSection } from '../../components/layout/AnimatedSection';
 import { AppScreen } from '../../components/layout/AppScreen';
 import { LoadingState } from '../../components/layout/LoadingState';
 import { SectionCard } from '../../components/layout/SectionCard';
-import { useAppTheme, type ThemePref } from '../../contexts/ThemeContext';
+import { useAppTheme, isThemePref } from '../../contexts/ThemeContext';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useI18n, type LanguageCode } from '../../i18n';
@@ -28,14 +28,8 @@ const LANGUAGE_OPTIONS = [
   { label: 'Italiano', value: 'it' },
 ] satisfies { label: string; value: LanguageCode }[];
 
-const THEME_OPTIONS = ['light', 'system', 'dark'] satisfies ThemePref[];
-
 function isLanguageCode(value: string): value is LanguageCode {
   return LANGUAGE_OPTIONS.some((option) => option.value === value);
-}
-
-function isThemePref(value: string): value is ThemePref {
-  return THEME_OPTIONS.some((option) => option === value);
 }
 
 export function AppSettingsScreen() {

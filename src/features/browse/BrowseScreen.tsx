@@ -18,7 +18,7 @@ import { useI18n } from '../../i18n';
 import type { SrsCardCategory } from '../../srs/srsEngine';
 import { getCardCategory } from '../../srs/srsEngine';
 import { computeCardStats } from '../../store/selectors/stats';
-import { SRS_CATEGORY_ORDER } from '../../theme/srsTokens';
+import { SRS_CATEGORY_ORDER, CATEGORY_TO_STATS_KEY } from '../../theme/srsTokens';
 import { TOKENS, getTokenMotionEnterDelay } from '../../theme/tokens';
 import { shouldShowCard, toggleCategoryReducer } from './browseFilter';
 import type { Flashcard } from '../../types/models';
@@ -37,10 +37,7 @@ export function BrowseScreen() {
   const isReadOnly = group ? (group.archivedAt ?? 0) > 0 : false;
   const [search, setSearch] = useState('');
   const [activeCategories, setActiveCategories] = useState<SrsCardCategory[]>([]);
-  const minPagesMessage =
-    t('browse.min_filled_pages') === 'browse.min_filled_pages'
-      ? 'Fill at least 2 pages to save this flashcard.'
-      : t('browse.min_filled_pages');
+  const minPagesMessage = t('browse.min_filled_pages');
 
   const stats = useMemo(() => {
     return activeGroup
@@ -49,13 +46,7 @@ export function BrowseScreen() {
   }, [activeGroup]);
 
   const nonEmptyCategories = useMemo(() => {
-    const keyMap: Record<SrsCardCategory, keyof typeof stats> = {
-      new: 'newCount',
-      learning: 'learning',
-      review: 'review',
-      mastered: 'mastered',
-    };
-    return SRS_CATEGORY_ORDER.filter((cat) => (stats[keyMap[cat]] as number) > 0);
+    return SRS_CATEGORY_ORDER.filter((cat) => (stats[CATEGORY_TO_STATS_KEY[cat]] as number) > 0);
   }, [stats]);
 
   const toggleCategory = useCallback((category: SrsCardCategory) => {
