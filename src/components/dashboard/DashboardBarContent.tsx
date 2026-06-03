@@ -7,6 +7,7 @@ import { TOKENS } from '../../theme/tokens';
 import { ROUTES } from '../../constants/routes';
 import { AppMenuButton } from '../AppMenuButton';
 import { getTopBarColors } from '../../theme/semanticColors';
+import { APP_NAME } from '../../constants/app';
 import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
 
 // ─── DashboardBrand ──────────────────────────────────────────────────────────
@@ -19,10 +20,10 @@ export function DashboardBrand() {
         size={40}
         icon="book-open-page-variant"
         style={styles.logoIcon}
-        accessibilityLabel="RayColl Logo Icon"
+        accessibilityLabel={`${APP_NAME} Logo Icon`}
       />
       <Text variant="headlineMedium" style={[styles.logoText, { color: fg }]}>
-        RayColl
+        {APP_NAME}
       </Text>
     </View>
   );
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   logoText: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
   },
   actionsGroup: {
     flexDirection: 'row',
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
     marginBottom: TOKENS.spacing.sm,
   },
   userName: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
   },
   userEmail: {
     marginBottom: TOKENS.spacing.sm,

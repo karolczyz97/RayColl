@@ -88,23 +88,47 @@ export async function loadUserDataV2(uid: string): Promise<UserData | null> {
   }
 
   const decksSnap = await getDocs(collection(db, 'users', uid, 'decks'));
-  const groups = await Promise.all(
-    decksSnap.docs.map(async (deckDoc) => {
-      const cardsSnap = await getDocs(collection(db!, 'users', uid, 'decks', deckDoc.id, 'cards'));
-      const cards = cardsSnap.docs.map((cardDoc) => deserializeCardDoc(cardDoc.id, cardDoc.data()));
-      return deserializeDeckDoc(deckDoc.id, deckDoc.data(), cards);
-    }),
-  );
+  const groups = (
+    await Promise.all(
+      decksSnap.docs.map(async (deckDoc) => {
+        const cardsSnap = await getDocs(collection(db!, 'users', uid, 'decks', deckDoc.id, 'cards'));
+        // Skip individual corrupt cards rather than failing the whole load.
+        const cards = cardsSnap.docs.flatMap((cardDoc) => {
+          try {
+            return [deserializeCardDoc(cardDoc.id, cardDoc.data())];
+          } catch (err) {
+            console.warn(`Skipping corrupt Firestore card ${cardDoc.id} in deck ${deckDoc.id}:`, err);
+            return [];
+          }
+        });
+        try {
+          return deserializeDeckDoc(deckDoc.id, deckDoc.data(), cards);
+        } catch (err) {
+          console.warn(`Skipping corrupt Firestore deck ${deckDoc.id}:`, err);
+          return null;
+        }
+      }),
+    )
+  ).filter((group): group is FlashcardGroup => group !== null);
 
   const studyModesSnap = await getDocs(collection(db, 'users', uid, 'studyModes'));
-  const studyModes = studyModesSnap.docs.map((modeDoc) =>
-    deserializeStudyModeDoc(modeDoc.id, modeDoc.data()),
-  );
+  const studyModes = studyModesSnap.docs.flatMap((modeDoc) => {
+    try {
+      return [deserializeStudyModeDoc(modeDoc.id, modeDoc.data())];
+    } catch (err) {
+      console.warn(`Skipping corrupt Firestore study mode ${modeDoc.id}:`, err);
+      return [];
+    }
+  });
 
   const activitySnap = await getDocs(collection(db, 'users', uid, 'activity'));
   const activityHeatmap: Record<string, number> = {};
   activitySnap.docs.forEach((dayDoc) => {
-    activityHeatmap[dayDoc.id] = deserializeActivityDayCount(dayDoc.id, dayDoc.data());
+    try {
+      activityHeatmap[dayDoc.id] = deserializeActivityDayCount(dayDoc.id, dayDoc.data());
+    } catch (err) {
+      console.warn(`Skipping corrupt Firestore activity day ${dayDoc.id}:`, err);
+    }
   });
 
   return normalizeStoreData({

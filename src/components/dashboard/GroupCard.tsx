@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.xl,
   },
   cardTitle: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     marginBottom: TOKENS.spacing.xs,
   },
   subtitleRow: {
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     marginBottom: TOKENS.spacing.md,
   },
   cardSubtitle: {
-    fontWeight: '500',
+    fontWeight: TOKENS.typography.weight.medium,
   },
   cardActions: {
     paddingHorizontal: TOKENS.spacing.sm,

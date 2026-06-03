@@ -73,7 +73,6 @@ export default function StatsPage() {
 
   return (
     <AppScreen
-      kind="top-level"
       title={t('stats.title')}
       onBack={safeBack}
       maxWidth={formMaxWidth}

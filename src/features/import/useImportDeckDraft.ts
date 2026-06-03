@@ -6,7 +6,6 @@ import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useSyncedRef } from '../../hooks/useSyncedRef';
 import {
-  SEPARATORS,
   detectFirstRowHeader,
   detectLangFromHeader,
   detectPageCount,
@@ -231,9 +230,8 @@ export function useImportDeckDraft() {
       setPageLangs(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
 
       const detectedSep = detectSeparator(safeText);
-      const separator = SEPARATORS[detectedSep] || ';';
       const headerDetection = detectFirstRowHeader(safeText, detectedSep);
-      const detectedCount = detectPageCount(safeText, separator, headerDetection.isLikelyHeader);
+      const detectedCount = detectPageCount(safeText, detectedSep, headerDetection.isLikelyHeader);
 
       if (detectedCount > MAX_STORED_PAGE_COUNT) {
         setImportError('import.err.too_many_columns');
@@ -260,8 +258,7 @@ export function useImportDeckDraft() {
   useEffect(() => {
     if (debouncedRawText.trim()) {
       const activeSep = getActiveSepValue(sepKey, customSep);
-      const separator = SEPARATORS[activeSep] || activeSep;
-      const detectedCount = detectPageCount(debouncedRawText, separator, firstRowIsHeaderRef.current);
+      const detectedCount = detectPageCount(debouncedRawText, activeSep, firstRowIsHeaderRef.current);
       rawColumnCountRef.current = detectedCount;
       setRawColumnCount(detectedCount);
     }

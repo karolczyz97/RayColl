@@ -68,14 +68,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   pageLabel: {
-    fontSize: 11,
+    fontSize: TOKENS.typography.size.xxs,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     marginBottom: TOKENS.spacing.sm,
-    fontWeight: '700',
+    fontWeight: TOKENS.typography.weight.bold,
   },
   cardText: {
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
   },
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import { TOKENS } from '../../theme/tokens';
+import { useI18n } from '../../i18n';
 
 interface AppErrorBoundaryProps {
   children: React.ReactNode;
@@ -20,20 +21,23 @@ function ErrorFallback({
 }: {
   error: Error;
   onReset: () => void;
-  title: string;
+  title?: string;
 }) {
   const theme = useTheme();
+  const { t } = useI18n();
+  const heading = title ?? t('errors.generic_title');
+  const retryLabel = t('errors.retry');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Text variant="headlineSmall" style={styles.title}>
-        {title}
+        {heading}
       </Text>
       <Text variant="bodyMedium" style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
         {error.message}
       </Text>
-      <Button mode="contained" onPress={onReset} accessibilityLabel="Try rendering this screen again">
-        Try again
+      <Button mode="contained" onPress={onReset} accessibilityLabel={retryLabel}>
+        {retryLabel}
       </Button>
     </View>
   );
@@ -65,7 +69,7 @@ export class AppErrorBoundary extends React.Component<
         <ErrorFallback
           error={this.state.error}
           onReset={this.reset}
-          title={this.props.title ?? 'Something went wrong'}
+          title={this.props.title}
         />
       );
     }

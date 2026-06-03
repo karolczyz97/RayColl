@@ -18,6 +18,27 @@ export function normalizeStudyFilter(filter: unknown): CardFilter {
     : DEFAULT_STUDY_FILTER;
 }
 
+/**
+ * Pads page names and languages up to `count`, filling gaps with the canonical
+ * defaults ("Page N" / "en-US"). Single source of truth for page metadata
+ * padding shared by normalization and the setVisiblePageCount action.
+ */
+export function padPageMetadata(
+  pageNames: string[],
+  pageLanguages: string[],
+  count: number,
+): { pageNames: string[]; pageLanguages: string[] } {
+  const names = [...pageNames];
+  const langs = [...pageLanguages];
+  while (names.length < count) {
+    names.push(`Page ${names.length + 1}`);
+  }
+  while (langs.length < count) {
+    langs.push('en-US');
+  }
+  return { pageNames: names, pageLanguages: langs };
+}
+
 function getStoredPageCount(group: FlashcardGroup, pageNames: string[], pageLanguages: string[]): number {
   const maxCardPages = Math.max(0, ...group.cards.map((c) => c.pages.length));
   const rawStored = Math.max(pageNames.length, pageLanguages.length, maxCardPages, MIN_PAGE_COUNT);
@@ -34,16 +55,10 @@ function normalizeCard(card: Flashcard): Flashcard {
 }
 
 export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
-  const pageNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
-  const pageLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
-  const storedPageCount = getStoredPageCount(group, pageNames, pageLanguages);
-
-  while (pageNames.length < storedPageCount) {
-    pageNames.push(`Page ${pageNames.length + 1}`);
-  }
-  while (pageLanguages.length < storedPageCount) {
-    pageLanguages.push('en-US');
-  }
+  const rawNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
+  const rawLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
+  const storedPageCount = getStoredPageCount(group, rawNames, rawLanguages);
+  const { pageNames, pageLanguages } = padPageMetadata(rawNames, rawLanguages, storedPageCount);
 
   const rawActivePageCount = (group as { activePageCount?: unknown }).activePageCount;
   const fallback = storedPageCount;

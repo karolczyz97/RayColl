@@ -69,7 +69,7 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
     if (!hovered || Platform.OS !== 'web') return undefined;
     return {
       boxShadow: `0 0 0 1px ${theme.colors.outlineVariant}, 0 10px 24px ${theme.colors.shadow}`,
-    } as ViewStyle;
+    };
   }, [hovered, theme.colors.outlineVariant, theme.colors.shadow]);
 
   // Propagate flex to inner layers so flex: 1 works on AppCard

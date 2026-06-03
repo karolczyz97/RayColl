@@ -1,9 +1,28 @@
 import { FlashcardGroup, Flashcard } from '../../types/models';
 import { CardFilter } from '../../constants/cardFilters';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '../../constants/pages';
-import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
+import { DEFAULT_STUDY_FILTER, padPageMetadata } from '../storeDataNormalization';
 import { uid } from '../../utils/id';
 import { createNewSrsState } from '../../srs/srsEngine';
+
+function createGroupObject(
+  name: string,
+  languages: string[],
+  pageNames: string[],
+  cards: Flashcard[],
+): FlashcardGroup {
+  return {
+    id: uid(),
+    name: name.trim(),
+    cards,
+    activeModeId: 'classic',
+    studyFilter: DEFAULT_STUDY_FILTER,
+    pageLanguages: languages,
+    pageNames,
+    activePageCount: Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, pageNames.length)),
+    updatedAt: Date.now(),
+  };
+}
 
 export function addGroupAction(
   groups: FlashcardGroup[],
@@ -11,20 +30,8 @@ export function addGroupAction(
   languages: string[],
   pageNames: string[],
 ): { nextGroups: FlashcardGroup[]; newGroupId: string } {
-  const now = Date.now();
-  const newGroupId = uid();
-  const g: FlashcardGroup = {
-    id: newGroupId,
-    name: name.trim(),
-    cards: [],
-    activeModeId: 'classic',
-    studyFilter: DEFAULT_STUDY_FILTER,
-    pageLanguages: languages,
-    pageNames,
-    activePageCount: Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, pageNames.length)),
-    updatedAt: now,
-  };
-  return { nextGroups: [...groups, g], newGroupId };
+  const g = createGroupObject(name, languages, pageNames, []);
+  return { nextGroups: [...groups, g], newGroupId: g.id };
 }
 
 export function updateGroupAction(
@@ -92,19 +99,12 @@ export function setVisiblePageCountAction(
   const clampedCount = Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, count));
   return groups.map((g) => {
     if (g.id !== groupId) return g;
-    const names = [...g.pageNames];
-    const langs = [...g.pageLanguages];
-    while (names.length < clampedCount) {
-      names.push(`Page ${names.length + 1}`);
-    }
-    while (langs.length < clampedCount) {
-      langs.push('en-US');
-    }
+    const { pageNames, pageLanguages } = padPageMetadata(g.pageNames, g.pageLanguages, clampedCount);
     return {
       ...g,
       activePageCount: clampedCount,
-      pageNames: names,
-      pageLanguages: langs,
+      pageNames,
+      pageLanguages,
       updatedAt: now,
     };
   });
@@ -136,7 +136,6 @@ export function addGroupWithCardsAction(
   cardsData: Omit<Flashcard, 'id' | 'srsState'>[],
 ): { nextGroups: FlashcardGroup[]; newGroupId: string } {
   const now = Date.now();
-  const newGroupId = uid();
   const cards: Flashcard[] = cardsData.map((c) => ({
     id: uid(),
     pages: c.pages,
@@ -145,16 +144,6 @@ export function addGroupWithCardsAction(
     srsUpdatedAt: 0,
   }));
 
-  const g: FlashcardGroup = {
-    id: newGroupId,
-    name: name.trim(),
-    cards,
-    activeModeId: 'classic',
-    studyFilter: DEFAULT_STUDY_FILTER,
-    pageLanguages: languages,
-    pageNames,
-    activePageCount: Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, pageNames.length)),
-    updatedAt: now,
-  };
-  return { nextGroups: [...groups, g], newGroupId };
+  const g = createGroupObject(name, languages, pageNames, cards);
+  return { nextGroups: [...groups, g], newGroupId: g.id };
 }

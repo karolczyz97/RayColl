@@ -16,6 +16,7 @@ import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useI18n, type LanguageCode } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
+import { APP_NAME } from '../../constants/app';
 import { releaseInfo } from '../../config/releaseInfo';
 import { ChangelogDialog } from '../../components/feedback/ChangelogDialog';
 
@@ -97,7 +98,7 @@ export function AppSettingsScreen() {
         setSnackbarMessage(t('app_settings.sharing_unavailable'));
         return;
       }
-      await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'RayColl Backup' });
+      await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: `${APP_NAME} Backup` });
     } catch (error) {
       console.warn('Export failed:', error);
       setSnackbarMessage(t('app_settings.export_error'));
@@ -150,7 +151,6 @@ export function AppSettingsScreen() {
 
   return (
     <AppScreen
-      kind="top-level"
       title={t('app_settings.title')}
       onBack={safeBack}
       maxWidth={formMaxWidth}

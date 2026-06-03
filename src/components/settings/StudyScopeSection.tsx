@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sectionTitle: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     marginBottom: TOKENS.spacing.xs,
   },
 });

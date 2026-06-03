@@ -65,6 +65,9 @@ export const it: Record<string, string> = {
   'study.tap_to_reveal': 'Tocca per rivelare',
   'study.error.stt': 'Riconoscimento vocale non riuscito. Controlla l\'accesso al microfono.',
   'study.error.tts': 'Riproduzione audio non riuscita.',
+  'study.exit_confirm_title': 'Uscire dalla modalità studio?',
+  'study.exit_confirm_message': 'Sei in modalità studio. Vuoi davvero uscire?',
+  'study.exit_confirm_btn': 'Esci',
 
   // Browse
   'browse.search_placeholder': 'Cerca flashcard...',
@@ -244,4 +247,12 @@ export const it: Record<string, string> = {
   'lang.ru-RU': 'Russo',
   'lang.ja-JP': 'Giapponese',
   'lang.zh-CN': 'Cinese',
+
+  // Error boundary
+  'errors.generic_title': 'Qualcosa è andato storto',
+  'errors.retry': 'Riprova',
+  'errors.study_crashed': 'Schermata di studio in errore',
+  'errors.settings_crashed': 'Schermata impostazioni in errore',
+  'errors.import_crashed': 'Schermata di importazione in errore',
+  'errors.browse_crashed': 'Schermata di esplorazione in errore',
 };

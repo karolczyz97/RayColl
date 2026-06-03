@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   },
   text: {
     marginBottom: TOKENS.spacing.lg,
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     textAlign: 'center',
   },
 });

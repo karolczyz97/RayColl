@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
     gap: TOKENS.spacing.md,
   },
   title: {
-    fontWeight: '700',
+    fontWeight: TOKENS.typography.weight.bold,
   },
 });

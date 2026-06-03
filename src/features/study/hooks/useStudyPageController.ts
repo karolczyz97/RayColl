@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../../utils/navigation';
@@ -7,9 +7,8 @@ import { useFlashcardStore } from '../../../hooks/useFlashcardStore';
 import { useStudySession } from '../../../hooks/useStudySession';
 import { useI18n } from '../../../i18n';
 import { buildSessionProgressItems } from '../session/sessionProgress';
+import { setIsStudyActive } from '../studyGuard';
 
-// Narrow-phone threshold: rating buttons collapse to icon-only below this width.
-// Component-specific layout switch, not a global MD3 window class.
 const NARROW_CONTROLS_WIDTH = 480;
 
 export function useStudyPageController() {
@@ -18,6 +17,8 @@ export function useStudyPageController() {
   const store = useFlashcardStore();
   const { width } = useWindowDimensions();
   const isNarrow = width < NARROW_CONTROLS_WIDTH;
+
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const {
     groups,
@@ -76,26 +77,46 @@ export function useStudyPageController() {
       if (due.length > 0) {
         startSession(due);
         startedRef.current = groupId;
+        setIsStudyActive(true);
       }
     }
   }, [groupId, startSession, isLoading, groups, getDueCards]);
 
   const handleBack = useCallback(() => {
+    if (sessionState.isSessionFinished) {
+      stopSession();
+      void flushPersistence();
+      setIsStudyActive(false);
+      safeBack();
+      return;
+    }
+    setShowExitConfirm(true);
+  }, [stopSession, flushPersistence, sessionState.isSessionFinished]);
+
+  const confirmExit = useCallback(() => {
+    setShowExitConfirm(false);
     stopSession();
     void flushPersistence();
+    setIsStudyActive(false);
     safeBack();
   }, [stopSession, flushPersistence]);
+
+  const cancelExit = useCallback(() => {
+    setShowExitConfirm(false);
+  }, []);
 
   useEffect(() => {
     return () => {
       stopSession();
       void flushPersistence();
+      setIsStudyActive(false);
     };
   }, [stopSession, flushPersistence]);
 
   useEffect(() => {
     if (sessionState.isSessionFinished) {
       void flushPersistence();
+      setIsStudyActive(false);
     }
   }, [sessionState.isSessionFinished, flushPersistence]);
 
@@ -106,7 +127,9 @@ export function useStudyPageController() {
 
   return {
     activeGroup,
+    cancelExit,
     clearError,
+    confirmExit,
     currentCard: dueCards[sessionState.currentCardIndex] || null,
     dueCards,
     failedCount,
@@ -124,6 +147,7 @@ export function useStudyPageController() {
     sessionProgressItems,
     sessionState,
     setHolding,
+    showExitConfirm,
     t,
   };
 }

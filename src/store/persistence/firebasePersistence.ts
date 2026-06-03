@@ -2,6 +2,7 @@ import { saveUserData, loadUserData, UserData } from '../../services/firebase';
 import { normalizeStoreData } from '../storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
 import { cloneUserData } from './firestoreSchema';
+import { deepEqual } from '../../utils/deepEqual';
 import {
   deleteActivityDay,
   deleteCard,
@@ -16,7 +17,7 @@ import {
 const cloudSnapshotCache = new Map<string, UserData>();
 
 function isEqual(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return deepEqual(a, b);
 }
 
 export async function saveCloudData(userId: string, data: UserData): Promise<void> {
@@ -96,8 +97,8 @@ export async function saveCloudData(userId: string, data: UserData): Promise<voi
 export async function loadCloudData(userId: string): Promise<UserData | null> {
   const data = await loadUserData(userId);
   if (!data) return null;
-  validateBackupData(data);
   const normalized = normalizeStoreData(data);
+  validateBackupData(normalized);
   cloudSnapshotCache.set(userId, cloneUserData(normalized));
   return normalized;
 }

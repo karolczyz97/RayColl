@@ -65,6 +65,9 @@ export const de: Record<string, string> = {
   'study.tap_to_reveal': 'Tippen zum Aufdecken',
   'study.error.stt': 'Spracherkennung fehlgeschlagen. Mikrofonzugriff prüfen.',
   'study.error.tts': 'Audiowiedergabe fehlgeschlagen.',
+  'study.exit_confirm_title': 'Lernmodus verlassen?',
+  'study.exit_confirm_message': 'Du bist im Lernmodus. Möchtest du wirklich gehen?',
+  'study.exit_confirm_btn': 'Verlassen',
 
   // Browse
   'browse.search_placeholder': 'Karteikarten suchen...',
@@ -244,4 +247,12 @@ export const de: Record<string, string> = {
   'lang.ru-RU': 'Russisch',
   'lang.ja-JP': 'Japanisch',
   'lang.zh-CN': 'Chinesisch',
+
+  // Error boundary
+  'errors.generic_title': 'Etwas ist schiefgelaufen',
+  'errors.retry': 'Erneut versuchen',
+  'errors.study_crashed': 'Lernbildschirm abgestürzt',
+  'errors.settings_crashed': 'Einstellungsbildschirm abgestürzt',
+  'errors.import_crashed': 'Import-Bildschirm abgestürzt',
+  'errors.browse_crashed': 'Durchsuchen-Bildschirm abgestürzt',
 };

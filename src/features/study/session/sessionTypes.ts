@@ -12,7 +12,7 @@ export interface StudySessionState {
   currentCardIndex: number;
   currentStepIndex: number;
   revealedPages: number[];
-  peekedPages: number[];
+  peekedPageIndex: number | null;
   sttResultText: string;
   sttMatchPercent: number;
   waitingForTap: boolean;

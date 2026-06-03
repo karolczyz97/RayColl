@@ -1,5 +1,6 @@
 import React from 'react';
 import { Snackbar } from 'react-native-paper';
+import { TOKENS } from '../../theme/tokens';
 
 interface AppSnackbarProps {
   visible: boolean;
@@ -14,7 +15,7 @@ export function AppSnackbar({
   message,
   onDismiss,
   actionLabel = 'OK',
-  duration = 6000,
+  duration = TOKENS.motion.duration.snackbar,
 }: AppSnackbarProps) {
   return (
     <Snackbar

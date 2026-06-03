@@ -41,6 +41,7 @@ try {
     '../src/components/navigation/__tests__/navigationDestinations.test.ts',
     '../src/components/expressive/__tests__/expressiveGeometry.test.ts',
     '../src/utils/__tests__/backupValidation.test.ts',
+    '../src/utils/__tests__/deepEqual.test.ts',
   ];
 
   for (const file of testFiles) {

@@ -58,13 +58,3 @@ export function getActiveDestination(pathname: string): TopLevelDestinationKey |
 
   return null;
 }
-
-export function isImmersivePathname(pathname: string): boolean {
-  return (
-    pathname === ROUTES.IMPORT ||
-    pathname.startsWith(`${ROUTES.IMPORT}/`) ||
-    pathname.startsWith('/browse/') ||
-    pathname.startsWith('/settings/') ||
-    pathname.startsWith('/study/')
-  );
-}

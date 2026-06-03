@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '../hooks/useFlashcardStore';
-import { DashboardBrand, DashboardActions } from '../components/dashboard/DashboardHeader';
+import { DashboardBrand, DashboardActions } from '../components/dashboard/DashboardBarContent';
 import { DashboardStats } from '../components/dashboard/DashboardStats';
 import { EmptyDashboardState } from '../components/dashboard/EmptyDashboardState';
 import { DeckGrid } from '../components/dashboard/DeckGrid';
@@ -61,7 +61,7 @@ export default function Dashboard() {
 
   return (
     <AppScreen
-      kind="top-level"
+      kind="home"
       maxWidth={contentMaxWidth}
       brand={<DashboardBrand />}
       right={

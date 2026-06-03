@@ -6,12 +6,6 @@ export const FIRESTORE_SCHEMA_VERSION = 2;
 
 export type UserData = StoreData;
 
-export interface FirestoreUserRootDoc {
-  schemaVersion: number;
-  updatedAt?: unknown;
-  legacyBackup?: UserData;
-}
-
 export interface FirestoreDeckDoc {
   id: string;
   name: string;
@@ -37,11 +31,6 @@ export interface FirestoreStudyModeDoc {
   builtInSourceId?: string;
   updatedAt?: unknown;
   deletedAt?: number | null;
-}
-
-export interface FirestoreActivityDayDoc {
-  count: number;
-  updatedAt?: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

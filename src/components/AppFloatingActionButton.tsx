@@ -58,12 +58,12 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.lg,
   },
   iconOnly: {
-    width: 56,
-    height: 56,
+    width: TOKENS.layout.fabIconSize,
+    height: TOKENS.layout.fabIconSize,
   },
   extended: {
-    minHeight: 56,
-    minWidth: 80,
+    minHeight: TOKENS.layout.fabMinHeight,
+    minWidth: TOKENS.layout.fabExtendedMinWidth,
   },
   content: {
     flex: 1,

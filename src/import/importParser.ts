@@ -162,7 +162,8 @@ export function detectSeparator(text: string): string {
   return bestScore > 0 ? bestKey : 'semicolon';
 }
 
-export function detectPageCount(text: string, sep: string, skipFirstRow?: boolean): number {
+export function detectPageCount(text: string, sepKey: string, skipFirstRow?: boolean): number {
+  const sep = resolveSep(sepKey);
   const allLines = normalizeCsvText(text)
     .split('\n')
     .filter((l) => l.trim());

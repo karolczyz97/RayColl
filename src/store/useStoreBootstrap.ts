@@ -9,7 +9,6 @@ import { createSeedModes } from './seed/seedModes';
 import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
 import type { StoreData } from './persistence/localPersistence';
-import { FIRESTORE_SCHEMA_VERSION } from './persistence/firestoreSchema';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 import { getErrorMessage } from '../utils/errors';
 import { purgeExpiredArchivesAction } from './actions/groupActions';
@@ -88,13 +87,13 @@ export function useStoreBootstrap({
           groups,
           studyModes: modes,
           activityHeatmap: heatmap,
-          schemaVersion: FIRESTORE_SCHEMA_VERSION,
           ...(cloudSynced ? { lastSyncedAt: Date.now() } : {}),
         });
         applySnapshot(snapshot);
         if (cloudLoadFailed) {
+          // Best-effort local fallback: keep the cloud failure visible via
+          // lastSyncError/lastStoreError instead of clearing it here.
           await persistLocalSnapshot({ uid, ...snapshot });
-          setLastStoreError(null);
         } else {
           await persistNow({ uid, ...snapshot });
         }

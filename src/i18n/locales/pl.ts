@@ -67,6 +67,9 @@ export const pl: Record<string, string> = {
   'study.tap_to_reveal': 'Dotknij, aby odkryć',
   'study.error.stt': 'Rozpoznawanie mowy nie powiodło się. Sprawdź dostęp do mikrofonu.',
   'study.error.tts': 'Nie udało się odtworzyć dźwięku.',
+  'study.exit_confirm_title': 'Opuścić tryb nauki?',
+  'study.exit_confirm_message': 'Jesteś w trybie nauki. Na pewno wyjść?',
+  'study.exit_confirm_btn': 'Wyjdź',
 
   // Browse
   'browse.search_placeholder': 'Szukaj fiszek...',
@@ -248,4 +251,12 @@ export const pl: Record<string, string> = {
   'lang.ru-RU': 'Rosyjski',
   'lang.ja-JP': 'Japoński',
   'lang.zh-CN': 'Chiński',
+
+  // Error boundary
+  'errors.generic_title': 'Coś poszło nie tak',
+  'errors.retry': 'Spróbuj ponownie',
+  'errors.study_crashed': 'Ekran nauki uległ awarii',
+  'errors.settings_crashed': 'Ekran ustawień uległ awarii',
+  'errors.import_crashed': 'Ekran importu uległ awarii',
+  'errors.browse_crashed': 'Ekran przeglądania uległ awarii',
 };

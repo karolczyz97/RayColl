@@ -16,7 +16,6 @@ interface AppTopBarProps {
   right?: React.ReactNode;
   /** Home mode: left-side branding (logo + name) instead of a title. */
   brand?: React.ReactNode;
-  backAccessibilityLabel?: string;
 }
 
 /**
@@ -31,7 +30,6 @@ export function AppTopBar({
   onBack,
   right,
   brand,
-  backAccessibilityLabel = 'Go back',
 }: AppTopBarProps) {
   const theme = useTheme();
   const { bg, fg } = getTopBarColors(theme);
@@ -63,7 +61,7 @@ export function AppTopBar({
             iconColor={fg}
             onPress={onBack}
             style={styles.backBtn}
-            accessibilityLabel={backAccessibilityLabel}
+            accessibilityLabel="Go back"
           />
         ) : null}
         {brand ?? (title ? (

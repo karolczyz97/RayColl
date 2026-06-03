@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import type { User } from 'firebase/auth';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
@@ -10,6 +10,28 @@ import type { StoreData } from './persistence/localPersistence';
 import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
 import { createWebPersistenceHandlers } from './persistence/webLifecycle';
 import { getErrorMessage } from '../utils/errors';
+
+// Cap how long a single local write may block the serialized write chain. If
+// AsyncStorage hangs (e.g. a stuck native lock), the timeout rejects so the
+// next queued snapshot is not blocked forever; the underlying write may still
+// resolve later in the background.
+const LOCAL_WRITE_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 interface UseStorePersistenceParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
@@ -75,7 +97,8 @@ export function useStorePersistence({
 
       // Serialize local writes so a fire-and-forget snapshot cannot land out of order
       // with an awaited one (e.g. review snapshot racing a deleteGroup flush).
-      const doWrite = () => saveLocalData(uid || undefined, payload);
+      const doWrite = () =>
+        withTimeout(saveLocalData(uid || undefined, payload), LOCAL_WRITE_TIMEOUT_MS, 'Local persistence');
       const writePromise = localWriteSeqRef.current.then(doWrite, doWrite);
       localWriteSeqRef.current = writePromise.catch(() => {});
 
@@ -272,16 +295,30 @@ export function useStorePersistence({
     [heatmapRef, persistCurrentSnapshot, setHeatmap],
   );
 
-  return {
-    getCurrentUid,
-    applySnapshot,
-    getSnapshot,
-    persistNow,
-    persistLocalSnapshot,
-    persistCurrentSnapshot,
-    flushPersistence,
-    commitGroups,
-    commitStudyModes,
-    commitHeatmap,
-  };
+  return useMemo(
+    () => ({
+      getCurrentUid,
+      applySnapshot,
+      getSnapshot,
+      persistNow,
+      persistLocalSnapshot,
+      persistCurrentSnapshot,
+      flushPersistence,
+      commitGroups,
+      commitStudyModes,
+      commitHeatmap,
+    }),
+    [
+      getCurrentUid,
+      applySnapshot,
+      getSnapshot,
+      persistNow,
+      persistLocalSnapshot,
+      persistCurrentSnapshot,
+      flushPersistence,
+      commitGroups,
+      commitStudyModes,
+      commitHeatmap,
+    ],
+  );
 }

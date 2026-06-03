@@ -65,6 +65,9 @@ export const es: Record<string, string> = {
   'study.tap_to_reveal': 'Toca para revelar',
   'study.error.stt': 'Error de reconocimiento de voz. Verifica el acceso al micrófono.',
   'study.error.tts': 'Error al reproducir el audio.',
+  'study.exit_confirm_title': '¿Salir del modo estudio?',
+  'study.exit_confirm_message': 'Estás en modo estudio. ¿Seguro que quieres salir?',
+  'study.exit_confirm_btn': 'Salir',
 
   // Browse
   'browse.search_placeholder': 'Buscar tarjetas...',
@@ -244,4 +247,12 @@ export const es: Record<string, string> = {
   'lang.ru-RU': 'Ruso',
   'lang.ja-JP': 'Japonés',
   'lang.zh-CN': 'Chino',
+
+  // Error boundary
+  'errors.generic_title': 'Algo salió mal',
+  'errors.retry': 'Intentar de nuevo',
+  'errors.study_crashed': 'La pantalla de estudio falló',
+  'errors.settings_crashed': 'La pantalla de ajustes falló',
+  'errors.import_crashed': 'La pantalla de importación falló',
+  'errors.browse_crashed': 'La pantalla de exploración falló',
 };

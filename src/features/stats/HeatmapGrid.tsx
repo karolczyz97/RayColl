@@ -91,21 +91,21 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     width: '100%',
-    maxWidth: 337,
+    maxWidth: TOKENS.layout.heatmapGridMaxWidth,
   },
   dayLabelsColumn: {
     position: 'absolute',
-    left: -28,
-    width: 24,
+    left: TOKENS.layout.heatmapDayLabelOffset,
+    width: TOKENS.layout.heatmapDayLabelWidth,
     justifyContent: 'space-around',
-    height: 116,
+    height: TOKENS.layout.heatmapGridHeight,
   },
   dayLabelCell: {
-    height: 14,
+    height: TOKENS.layout.heatmapCellSize,
     justifyContent: 'center',
   },
   dayLabelText: {
-    fontSize: 9,
+    fontSize: TOKENS.typography.size.xxxs,
   },
   gridScroll: {
     paddingBottom: TOKENS.spacing.xs,
@@ -113,15 +113,15 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     gap: TOKENS.spacing.xxs,
-    height: 116,
+    height: TOKENS.layout.heatmapGridHeight,
   },
   gridColumn: {
     flexDirection: 'column',
     gap: TOKENS.spacing.xxs,
   },
   gridCell: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
+    width: TOKENS.layout.heatmapCellSize,
+    height: TOKENS.layout.heatmapCellSize,
+    borderRadius: TOKENS.radius.xs,
   },
 });

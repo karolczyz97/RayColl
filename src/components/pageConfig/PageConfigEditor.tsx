@@ -217,12 +217,12 @@ const styles = StyleSheet.create({
   },
   counterText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: TOKENS.typography.weight.bold,
     minWidth: TOKENS.touchTarget.compact,
     textAlign: 'center',
   },
   separatorSelect: {
-    width: 160,
+    width: TOKENS.layout.formSelectWidth,
   },
   pageRow: {
     alignItems: 'flex-end',
@@ -241,6 +241,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   languageInput: {
-    width: 160,
+    width: TOKENS.layout.formSelectWidth,
   },
 });

@@ -5,6 +5,7 @@ import { AppSelect } from '../AppSelect';
 import { TOKENS } from '../../theme/tokens';
 import type { StudyMode } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
+import { getModeName } from '../../i18n/modeHelpers';
 
 interface Props {
   activeModeId: string;
@@ -15,14 +16,8 @@ interface Props {
 }
 
 export function StudyModeSelector({ activeModeId, onModeChange, studyModes, t, onCreateMode }: Props) {
-  const getModeName = (mode: StudyMode) => {
-    const key = `mode.${mode.id}.name`;
-    const translated = t(key);
-    return translated === key ? mode.name : translated;
-  };
-
   const options = studyModes.map((mode) => ({
-    label: getModeName(mode),
+    label: getModeName(t, mode.id, mode.name),
     value: mode.id,
   }));
 
@@ -61,7 +56,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sectionTitle: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     marginBottom: TOKENS.spacing.xs,
   },
   selectorRow: {

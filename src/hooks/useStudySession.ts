@@ -537,7 +537,7 @@ export function useStudySession(
       currentCardIndex: state.currentCardIndex,
       currentStepIndex: state.currentStepIndex,
       revealedPages: state.revealedPages,
-      peekedPages: state.peekedPages,
+      peekedPageIndex: state.peekedPageIndex,
       sttResultText: state.sttResultText,
       sttMatchPercent: state.sttMatchPercent,
       waitingForTap: state.waitingForTap,

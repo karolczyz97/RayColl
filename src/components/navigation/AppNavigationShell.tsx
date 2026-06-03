@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useTheme } from 'react-native-paper';
@@ -6,31 +6,30 @@ import { useTheme } from 'react-native-paper';
 import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { useFlashcardStore } from '../../hooks/useFlashcardStore';
 import { useAppTheme } from '../../contexts/ThemeContext';
+import { useI18n } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { NavigationShellProvider } from '../../contexts/NavigationShellContext';
-import { NavigationBottomBar } from './NavigationBottomBar';
+import { ConfirmDialog } from '../dialogs/ConfirmDialog';
 import { NavigationRail } from './NavigationRail';
 import {
   IMPORT_ACTION_HREF,
   getActiveDestination,
-  isImmersivePathname,
   type NavigationDestination,
 } from './navigationDestinations';
+import { getIsStudyActive } from '../../features/study/studyGuard';
 
-/**
- * On >=600px the persistent navigation rail is shown or hidden purely by user
- * preference (`railVisible`), persisted across reloads — it never auto-hides on
- * route changes. On <600px there is no rail; screens keep their own top bar.
- * When the rail is hidden, `AppTopBar` shows a leading menu button to reveal it.
- */
 export function AppNavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const theme = useTheme();
+  const { t } = useI18n();
   const responsive = useResponsiveLayout();
   const { user, signIn, signOut } = useFlashcardStore();
   const { railVisible, setRailVisible, railExpanded, setRailExpanded } = useAppTheme();
 
-  const canShowPersistentNavigation = responsive.showPersistentNavigation; // width >= 600
+  const [showRailGuard, setShowRailGuard] = useState(false);
+  const pendingNavRef = useRef<NavigationDestination | null>(null);
+
+  const canShowPersistentNavigation = responsive.showPersistentNavigation;
   const showPersistentNavigation = canShowPersistentNavigation && railVisible;
   const isRailExpanded = showPersistentNavigation && railExpanded;
   const actualNavWidth = showPersistentNavigation
@@ -40,8 +39,6 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
     : 0;
   const contentWidth = Math.max(0, responsive.width - actualNavWidth);
   const activeDestination = getActiveDestination(pathname);
-  const showBottomNavigation =
-    responsive.isCompact && activeDestination !== null && !isImmersivePathname(pathname);
 
   const contextValue = React.useMemo(
     () => ({
@@ -50,7 +47,6 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
       isExpanded: responsive.isExpanded,
       contentWidth,
       showPersistentNavigation,
-      showBottomNavigation,
       navWidth: actualNavWidth,
     }),
     [
@@ -59,13 +55,30 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
       responsive.isCompact,
       responsive.isExpanded,
       responsive.isMedium,
-      showBottomNavigation,
       showPersistentNavigation,
     ],
   );
 
-  const handleNavigate = React.useCallback((destination: NavigationDestination) => {
+  const handleNavigate = useCallback((destination: NavigationDestination) => {
+    if (getIsStudyActive()) {
+      pendingNavRef.current = destination;
+      setShowRailGuard(true);
+      return;
+    }
     router.navigate(destination.href);
+  }, []);
+
+  const confirmRailNavAway = useCallback(() => {
+    setShowRailGuard(false);
+    if (pendingNavRef.current) {
+      router.navigate(pendingNavRef.current.href);
+      pendingNavRef.current = null;
+    }
+  }, []);
+
+  const cancelRailNavAway = useCallback(() => {
+    setShowRailGuard(false);
+    pendingNavRef.current = null;
   }, []);
 
   const handleImport = React.useCallback(() => {
@@ -81,20 +94,6 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
   }, [signOut]);
 
   if (!showPersistentNavigation) {
-    if (showBottomNavigation && activeDestination) {
-      return (
-        <NavigationShellProvider value={contextValue}>
-          <View style={[styles.bottomRoot, { backgroundColor: theme.colors.background }]}>
-            <View style={styles.content}>{children}</View>
-            <NavigationBottomBar
-              activeDestination={activeDestination}
-              onNavigate={handleNavigate}
-            />
-          </View>
-        </NavigationShellProvider>
-      );
-    }
-
     return <NavigationShellProvider value={contextValue}>{children}</NavigationShellProvider>;
   }
 
@@ -114,6 +113,16 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
         />
         <View style={styles.content}>{children}</View>
       </View>
+
+      <ConfirmDialog
+        visible={showRailGuard}
+        title={t('study.exit_confirm_title')}
+        message={t('study.exit_confirm_message')}
+        confirmLabel={t('study.exit_confirm_btn')}
+        cancelLabel={t('btn.cancel')}
+        onConfirm={confirmRailNavAway}
+        onDismiss={cancelRailNavAway}
+      />
     </NavigationShellProvider>
   );
 }
@@ -126,11 +135,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   content: {
-    flex: 1,
-    minHeight: 0,
-    minWidth: 0,
-  },
-  bottomRoot: {
     flex: 1,
     minHeight: 0,
     minWidth: 0,

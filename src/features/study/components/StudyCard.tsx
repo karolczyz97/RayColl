@@ -13,7 +13,7 @@ interface StudyCardProps {
   currentCard: Flashcard | null;
   activeGroup: FlashcardGroup;
   revealedPages: number[];
-  peekedPages: number[];
+  peekedPageIndex: number | null;
   showRatingButtons: boolean;
   waitingForTap: boolean;
   onCardPress: () => void;
@@ -25,7 +25,7 @@ export function StudyCard({
   currentCard,
   activeGroup,
   revealedPages,
-  peekedPages,
+  peekedPageIndex,
   showRatingButtons,
   waitingForTap,
   onCardPress,
@@ -83,7 +83,7 @@ export function StudyCard({
 
             return activeGroup.pageNames.slice(0, activePageCount).map((pageName, pageIndex) => {
               const isRevealed =
-                pageIndex === 0 || revealedPages.includes(pageIndex) || peekedPages.includes(pageIndex) || showRatingButtons;
+                pageIndex === 0 || revealedPages.includes(pageIndex) || peekedPageIndex === pageIndex || showRatingButtons;
 
               return (
                 <CardPageSection
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.xxl,
     borderWidth: 1,
     padding: TOKENS.spacing.xl,
-    maxWidth: 600,
+    maxWidth: TOKENS.layout.studyCardMaxWidth,
     width: '100%',
     alignSelf: 'center',
   },
@@ -146,6 +146,6 @@ const styles = StyleSheet.create({
     right: 0,
   },
   tapLabel: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
   },
 });

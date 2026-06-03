@@ -14,37 +14,43 @@ export interface StoreData {
 
 export async function loadLocalData(userId?: string): Promise<StoreData | null> {
   try {
-    let data: StoreData | null = null;
-    if (userId) {
-      const cachedGroups = await AsyncStorage.getItem(STORAGE_KEYS.USER_GROUPS(userId));
-      const cachedModes = await AsyncStorage.getItem(STORAGE_KEYS.USER_MODES(userId));
-      const cachedHeatmap = await AsyncStorage.getItem(STORAGE_KEYS.USER_HEATMAP(userId));
-
-      if (cachedGroups && cachedModes) {
-        data = {
-          groups: JSON.parse(cachedGroups),
-          studyModes: JSON.parse(cachedModes),
-          activityHeatmap: cachedHeatmap ? JSON.parse(cachedHeatmap) : {},
+    const keys = userId
+      ? {
+          groups: STORAGE_KEYS.USER_GROUPS(userId),
+          modes: STORAGE_KEYS.USER_MODES(userId),
+          heatmap: STORAGE_KEYS.USER_HEATMAP(userId),
+        }
+      : {
+          groups: STORAGE_KEYS.LOCAL_GROUPS,
+          modes: STORAGE_KEYS.LOCAL_MODES,
+          heatmap: STORAGE_KEYS.LOCAL_HEATMAP,
         };
-      }
-    } else {
-      const storedGroups = await AsyncStorage.getItem(STORAGE_KEYS.LOCAL_GROUPS);
-      const storedModes = await AsyncStorage.getItem(STORAGE_KEYS.LOCAL_MODES);
-      const storedHeatmap = await AsyncStorage.getItem(STORAGE_KEYS.LOCAL_HEATMAP);
 
-      if (storedGroups && storedModes) {
-        data = {
-          groups: JSON.parse(storedGroups),
-          studyModes: JSON.parse(storedModes),
-          activityHeatmap: storedHeatmap ? JSON.parse(storedHeatmap) : {},
-        };
-      }
+    const [storedGroups, storedModes, storedHeatmap] = await Promise.all([
+      AsyncStorage.getItem(keys.groups),
+      AsyncStorage.getItem(keys.modes),
+      AsyncStorage.getItem(keys.heatmap),
+    ]);
+
+    // Nothing stored at all -> no local data (caller seeds).
+    if (storedGroups == null && storedModes == null && storedHeatmap == null) {
+      return null;
     }
 
-    if (data) {
-      validateBackupData(data);
-      return normalizeStoreData(data);
-    }
+    // Assemble from whatever exists so a partial write (e.g. groups saved but
+    // modes missing) does not discard everything. Missing pieces are filled in
+    // by normalizeStoreData (built-in modes, empty heatmap).
+    const data: StoreData = {
+      groups: storedGroups ? JSON.parse(storedGroups) : [],
+      studyModes: storedModes ? JSON.parse(storedModes) : [],
+      activityHeatmap: storedHeatmap ? JSON.parse(storedHeatmap) : {},
+    };
+
+    // Normalize first so data that normalization can repair is not rejected by
+    // validation; then validate the canonical result.
+    const normalized = normalizeStoreData(data);
+    validateBackupData(normalized);
+    return normalized;
   } catch (err) {
     console.error('Failed to load local data:', err);
   }

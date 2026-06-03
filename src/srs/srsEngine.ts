@@ -86,9 +86,9 @@ export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
     }
   }
 
+  // stability (newS) doubles as the interval: days until retrievability drops to 90%
   newS = clamp(newS, MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS);
-  const interval = newS; // stability = days until retrievability drops to 90%
-  const nextReview = now + interval * 24 * 60 * 60 * 1000;
+  const nextReview = now + newS * 24 * 60 * 60 * 1000;
 
   return {
     difficulty: newD,

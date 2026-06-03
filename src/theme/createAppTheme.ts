@@ -26,6 +26,7 @@ export const lightTheme: MD3Theme = {
     error: '#ba1a1a',
     onError: '#ffffff',
     errorContainer: '#ffdad6',
+    surfaceDisabled: 'rgba(27, 27, 31, 0.12)',
   },
 };
 
@@ -53,6 +54,7 @@ export const darkTheme: MD3Theme = {
     error: '#ffb4ab',
     onError: '#690005',
     errorContainer: '#93000a',
+    surfaceDisabled: 'rgba(230, 225, 229, 0.12)',
   },
 };
 

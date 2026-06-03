@@ -164,7 +164,7 @@ export function StudyControls({
   };
 
   return (
-    <View style={[styles.bottomControlZone, { height: hasTts || hasStt ? 180 : 80 }]}>
+    <View style={[styles.bottomControlZone, { height: hasTts || hasStt ? TOKENS.layout.studyControlZoneTall : TOKENS.layout.studyControlZoneCompact }]}> 
       {showRatingButtons ? (
         <Animated.View entering={FadeIn.springify()} style={styles.ratingButtonsRow}>
           {renderRatingButton({
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   rateButton: {
     flex: 1,
-    borderRadius: 100,
+    borderRadius: TOKENS.radius.pill,
   },
   compactContent: {
     justifyContent: 'center',
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sttTextWrapper: {
-    height: 80,
+    height: TOKENS.layout.sttTextWrapperHeight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -277,14 +277,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   recognizedText: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
   },
   audioIconsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: TOKENS.spacing.xxl,
-    height: 60,
+    height: TOKENS.layout.audioIconsRowHeight,
   },
   iconWrapper: {
     width: TOKENS.touchTarget.min,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   matchPercentText: {
-    fontWeight: 'bold',
+    fontWeight: TOKENS.typography.weight.bold,
     marginTop: TOKENS.spacing.xs,
   },
 });

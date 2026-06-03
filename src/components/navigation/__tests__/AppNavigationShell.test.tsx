@@ -136,7 +136,7 @@ describe('AppNavigationShell', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_KEYS.NAV_RAIL_EXPANDED, 'true');
   });
 
-  it('renders bottom navigation instead of a persistent rail on compact top-level routes', async () => {
+  it('renders children directly on compact screens without rail or bottom bar', async () => {
     setResponsiveLayout({
       width: 390,
       windowSizeClass: 'compact',
@@ -154,30 +154,7 @@ describe('AppNavigationShell', () => {
 
     await waitFor(() => expect(screen.queryByLabelText('Hide navigation')).toBeNull());
     expect(screen.queryByLabelText('Show navigation')).toBeNull();
-    expect(screen.getByTestId('bottom-navigation-bar')).toBeOnTheScreen();
-
-    fireEvent(screen.getByTestId('bottom-nav-stats'), 'click');
-
-    expect(global.__expoRouterMock.router.navigate).toHaveBeenCalledWith('/stats');
-  });
-
-  it('hides bottom navigation on compact immersive routes', async () => {
-    setResponsiveLayout({
-      width: 390,
-      windowSizeClass: 'compact',
-      contentWidth: 390,
-      contentSizeClass: 'compact',
-      isCompact: true,
-      isExpanded: false,
-      isDesktop: false,
-      showNavigationRail: false,
-      showPersistentNavigation: false,
-      navWidth: 0,
-    });
-    global.__expoRouterMock.pathname = '/browse/deck-1';
-
-    await renderShell();
-
-    expect(screen.queryByTestId('bottom-navigation-bar')).toBeNull();
+    expect(screen.getByText('Dashboard')).toBeOnTheScreen();
+    expect(screen.getByTestId('shell-size')).toBeOnTheScreen();
   });
 });

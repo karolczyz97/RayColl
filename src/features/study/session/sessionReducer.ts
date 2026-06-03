@@ -6,7 +6,7 @@ export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
   currentCardIndex: 0,
   currentStepIndex: 0,
   revealedPages: [],
-  peekedPages: [],
+  peekedPageIndex: null,
   sttResultText: '',
   sttMatchPercent: 0,
   waitingForTap: false,
@@ -28,7 +28,7 @@ export function sessionReducer(
         currentStepIndex: action.stepIndex,
         revealedPages: action.revealedPages ?? state.revealedPages,
         waitingForTap: action.waitingForTap ?? state.waitingForTap,
-        peekedPages: [],
+        peekedPageIndex: null,
       };
     case 'START_SPEAKING':
       return {
@@ -62,11 +62,14 @@ export function sessionReducer(
         sttMatchPercent: action.matchPercent,
       };
     case 'REVEAL_PAGES': {
-      const newRevealed = action.revealedPages;
+      const newRevealed = uniquePageIndexes(action.revealedPages);
       return {
         ...state,
         revealedPages: newRevealed,
-        peekedPages: state.peekedPages.filter((p) => !newRevealed.includes(p)),
+        peekedPageIndex:
+          state.peekedPageIndex != null && newRevealed.includes(state.peekedPageIndex)
+            ? null
+            : state.peekedPageIndex,
         waitingForTap: action.waitingForTap ?? state.waitingForTap,
       };
     }
@@ -76,7 +79,10 @@ export function sessionReducer(
         ...state,
         currentStepIndex: action.stepIndex,
         revealedPages: newRevealed,
-        peekedPages: state.peekedPages.filter((p) => !newRevealed.includes(p)),
+        peekedPageIndex:
+          state.peekedPageIndex != null && newRevealed.includes(state.peekedPageIndex)
+            ? null
+            : state.peekedPageIndex,
       };
     }
     case 'SHOW_RATINGS':
@@ -84,14 +90,14 @@ export function sessionReducer(
         ...state,
         status: 'revealed',
         waitingForTap: false,
-        peekedPages: [],
+        peekedPageIndex: null,
       };
     case 'FINISH_SESSION':
       return {
         ...state,
         status: 'finished',
         waitingForTap: false,
-        peekedPages: [],
+        peekedPageIndex: null,
       };
     case 'ADVANCE_CARD':
       return {
@@ -107,12 +113,12 @@ export function sessionReducer(
     case 'PEEK_SET':
       return {
         ...state,
-        peekedPages: [action.pageIndex],
+        peekedPageIndex: action.pageIndex,
       };
     case 'PEEK_CLEAR':
       return {
         ...state,
-        peekedPages: [],
+        peekedPageIndex: null,
       };
     case 'CLEAR_ERROR':
       // Only clear the message. Status must be preserved: by the time the user
@@ -122,7 +128,12 @@ export function sessionReducer(
         ...state,
         errorMsg: undefined,
       };
-    default:
+    default: {
+      // Compile-time exhaustiveness guard: a new SessionAction without a case
+      // here fails typecheck instead of being silently ignored.
+      const _exhaustive: never = action;
+      void _exhaustive;
       return state;
+    }
   }
 }

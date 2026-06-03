@@ -67,6 +67,9 @@ export const en: Record<string, string> = {
   'study.tap_to_reveal': 'Tap to reveal',
   'study.error.stt': 'Speech recognition failed. Check microphone access.',
   'study.error.tts': 'Audio playback failed.',
+  'study.exit_confirm_title': 'Leave study mode?',
+  'study.exit_confirm_message': 'You are in study mode. Are you sure you want to leave?',
+  'study.exit_confirm_btn': 'Leave',
 
   // Browse
   'browse.search_placeholder': 'Search flashcards...',
@@ -248,4 +251,12 @@ export const en: Record<string, string> = {
   'lang.ru-RU': 'Russian',
   'lang.ja-JP': 'Japanese',
   'lang.zh-CN': 'Chinese',
+
+  // Error boundary
+  'errors.generic_title': 'Something went wrong',
+  'errors.retry': 'Try again',
+  'errors.study_crashed': 'Study screen crashed',
+  'errors.settings_crashed': 'Settings screen crashed',
+  'errors.import_crashed': 'Import screen crashed',
+  'errors.browse_crashed': 'Browse screen crashed',
 };

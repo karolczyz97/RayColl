@@ -1,20 +1,23 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import type { TranslationFn } from '../../../i18n';
 import type { Flashcard, FlashcardGroup } from '../../../types/models';
 import type { SessionProgressItem } from '../session/sessionProgress';
-import { StudyStatusBanner } from './StudyStatusBanner';
+import { AppScreen } from '../../../components/layout/AppScreen';
+import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
 import { StudyCard } from './StudyCard';
 import { StudyControls } from './StudyControls';
 import { StudyFinishedState } from './StudyFinishedState';
 import { AppSnackbar } from '../../../components/feedback/AppSnackbar';
+import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { TOKENS } from '../../../theme/tokens';
 
 interface StudyScreenProps {
   activeGroup: FlashcardGroup;
+  cancelExit: () => void;
   clearError: () => void;
+  confirmExit: () => void;
   currentCard: Flashcard | null;
   dueCards: Flashcard[];
   failedCount: number;
@@ -31,7 +34,7 @@ interface StudyScreenProps {
   sessionState: {
     currentCardIndex: number;
     revealedPages: number[];
-    peekedPages: number[];
+    peekedPageIndex: number | null;
     waitingForTap: boolean;
     showRatingButtons: boolean;
     isTtsPlaying: boolean;
@@ -42,12 +45,15 @@ interface StudyScreenProps {
     errorMsg?: string;
   };
   setHolding: (holding: boolean) => void;
+  showExitConfirm: boolean;
   t: TranslationFn;
 }
 
 export function StudyScreen({
   activeGroup,
+  cancelExit,
   clearError,
+  confirmExit,
   currentCard,
   dueCards,
   failedCount,
@@ -63,6 +69,7 @@ export function StudyScreen({
   sessionProgressItems,
   sessionState,
   setHolding,
+  showExitConfirm,
   t,
 }: StudyScreenProps) {
   const theme = useTheme();
@@ -71,18 +78,27 @@ export function StudyScreen({
   const progressLabel = total > 0 ? `${sessionState.currentCardIndex + 1}/${total}` : '0/0';
 
   return (
-    <SafeAreaView
-      style={[styles.root, { backgroundColor: theme.colors.background }]}
+    <AppScreen
+      title={activeGroup.name}
+      onBack={handleBack}
+      scroll={false}
       edges={['top', 'left', 'right', 'bottom']}
+      headerExtension={
+        <View style={styles.headerExtension}>
+          <View style={styles.progressBarWrapper}>
+            <SegmentedProgressBar
+              mode="session"
+              items={sessionProgressItems}
+              currentIndex={sessionState.currentCardIndex}
+              height={TOKENS.control.progressHeight}
+            />
+          </View>
+          <Text style={[styles.progressCounter, { color: theme.colors.onSurfaceVariant }]}>
+            {progressLabel}
+          </Text>
+        </View>
+      }
     >
-      <StudyStatusBanner
-        title={activeGroup.name}
-        sessionItems={sessionProgressItems}
-        currentIndex={sessionState.currentCardIndex}
-        progressLabel={progressLabel}
-        onBack={handleBack}
-      />
-
       <View style={styles.content}>
         {isFinished ? (
           <StudyFinishedState
@@ -106,7 +122,7 @@ export function StudyScreen({
               currentCard={currentCard}
               activeGroup={activeGroup}
               revealedPages={sessionState.revealedPages}
-              peekedPages={sessionState.peekedPages}
+              peekedPageIndex={sessionState.peekedPageIndex}
               showRatingButtons={sessionState.showRatingButtons}
               waitingForTap={sessionState.waitingForTap}
               onCardPress={handleCardPress}
@@ -142,17 +158,38 @@ export function StudyScreen({
         message={t(sessionState.errorMsg || '')}
         onDismiss={clearError}
       />
-    </SafeAreaView>
+
+      <ConfirmDialog
+        visible={showExitConfirm}
+        title={t('study.exit_confirm_title')}
+        message={t('study.exit_confirm_message')}
+        confirmLabel={t('study.exit_confirm_btn')}
+        cancelLabel={t('btn.cancel')}
+        onConfirm={confirmExit}
+        onDismiss={cancelExit}
+      />
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    paddingBottom: TOKENS.spacing.xl,
+  headerExtension: {
+    marginBottom: TOKENS.spacing.lg,
+  },
+  progressBarWrapper: {
+    marginVertical: TOKENS.spacing.md,
+    paddingHorizontal: TOKENS.spacing.lg,
+  },
+  progressCounter: {
+    fontSize: TOKENS.typography.size.xs,
+    textAlign: 'right',
+    fontWeight: TOKENS.typography.weight.semibold,
+    letterSpacing: 0,
+    paddingHorizontal: TOKENS.spacing.lg,
   },
   content: {
     flex: 1,
     paddingHorizontal: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.xl,
   },
 });

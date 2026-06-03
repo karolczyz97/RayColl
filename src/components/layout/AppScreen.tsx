@@ -9,7 +9,7 @@ import { AppTopBar } from './AppTopBar';
 import { ScreenContent } from './ScreenContent';
 
 interface AppScreenProps {
-  kind?: 'top-level' | 'detail';
+  kind?: 'home' | 'detail';
   title?: string;
   onBack?: () => void;
   /** Right-side slot: action icon(s) for sub-pages or home action cluster. */
@@ -23,6 +23,10 @@ interface AppScreenProps {
   maxWidth?: number;
   edges?: ('top' | 'left' | 'right' | 'bottom')[];
   contentStyle?: StyleProp<ViewStyle>;
+  /** When false, AppTopBar is not rendered. Default true. */
+  showBar?: boolean;
+  /** Rendered between AppTopBar and the scroll/content area. */
+  headerExtension?: React.ReactNode;
 }
 
 /**
@@ -51,19 +55,21 @@ export function AppScreen({
   maxWidth,
   edges = ['top', 'left', 'right'],
   contentStyle,
+  showBar: showBarProp = true,
+  headerExtension,
 }: AppScreenProps) {
   const theme = useTheme();
-  const { showPersistentNavigation, showBottomNavigation } = useNavigationShell();
+  const { showPersistentNavigation } = useNavigationShell();
   const isWeb = Platform.OS === 'web';
-  const isTopLevel = kind === 'top-level';
-  const hideTopLevelPersistentChrome = isTopLevel && showPersistentNavigation;
-  const effectiveOnBack = isTopLevel && (showPersistentNavigation || showBottomNavigation)
-    ? undefined
-    : onBack;
-  const effectiveRight = hideTopLevelPersistentChrome ? undefined : right;
-  const effectiveBrand = hideTopLevelPersistentChrome ? undefined : brand;
-  const effectiveOverlay = hideTopLevelPersistentChrome ? undefined : overlay;
-  const showBar = !!(effectiveOnBack || title || effectiveRight || effectiveBrand);
+  const isHome = kind === 'home';
+  // 'home' (Dashboard): hide bar + overlay when rail is visible (branding shown in rail).
+  // 'detail' (everything else): always show bar with back arrow + title.
+  const hideHomeChrome = isHome && showPersistentNavigation;
+  const effectiveOnBack = hideHomeChrome ? undefined : onBack;
+  const effectiveRight = hideHomeChrome ? undefined : right;
+  const effectiveBrand = hideHomeChrome ? undefined : brand;
+  const effectiveOverlay = hideHomeChrome ? undefined : overlay;
+  const showBar = showBarProp && (isHome ? !hideHomeChrome : true);
 
   const screenContent = (
     <ScreenContent maxWidth={maxWidth} fill={!scroll} style={contentStyle}>
@@ -120,6 +126,7 @@ export function AppScreen({
           brand={effectiveBrand}
         />
       ) : null}
+      {headerExtension}
 
       <View
         style={[

@@ -12,6 +12,7 @@ import {
 
 import { useI18n } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
+import { APP_NAME } from '../../constants/app';
 import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
 import {
   NAVIGATION_DESTINATIONS,
@@ -113,15 +114,15 @@ export function NavigationRail({
       <View style={[styles.brand, expanded ? styles.brandExpanded : styles.brandCollapsed]}>
         <Avatar.Icon
           icon="book-open-page-variant"
-          size={expanded ? 40 : 44}
+          size={expanded ? 44 : 40}
           style={{ backgroundColor: theme.colors.secondaryContainer }}
           color={theme.colors.onSecondaryContainer}
-          accessibilityLabel="RayColl Logo Icon"
+          accessibilityLabel={`${APP_NAME} Logo Icon`}
         />
         {expanded ? (
           <>
             <Text variant="titleLarge" style={styles.brandText}>
-              RayColl
+              {APP_NAME}
             </Text>
             <IconButton
               icon="chevron-left"
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     paddingVertical: TOKENS.spacing.md,
   },
   brand: {
-    minHeight: 56,
+    minHeight: TOKENS.layout.collapsedRailBrandMinHeight,
     marginBottom: TOKENS.spacing.lg,
   },
   brandCollapsed: {
@@ -240,29 +241,29 @@ const styles = StyleSheet.create({
   },
   collapsedItemRipple: {
     alignSelf: 'center',
-    width: 72,
-    minHeight: 64,
+    width: TOKENS.layout.collapsedRailItemWidth,
+    minHeight: TOKENS.layout.collapsedRailItemMinHeight,
     borderRadius: TOKENS.radius.lg,
     overflow: 'hidden',
   },
   collapsedItemContent: {
-    minHeight: 64,
+    minHeight: TOKENS.layout.collapsedRailItemMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
     gap: TOKENS.spacing.xs,
     paddingVertical: TOKENS.spacing.xs,
   },
   collapsedIconContainer: {
-    width: 56,
-    height: 32,
+    width: TOKENS.layout.collapsedRailIconContainerWidth,
+    height: TOKENS.layout.collapsedRailIconContainerHeight,
     borderRadius: TOKENS.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   collapsedItemLabel: {
-    width: 68,
+    width: TOKENS.layout.collapsedRailItemLabelWidth,
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: TOKENS.layout.collapsedRailItemLabelLineHeight,
   },
   expandedItem: {
     marginHorizontal: TOKENS.spacing.sm,
@@ -286,13 +287,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   importActionCollapsed: {
-    width: 56,
-    height: 56,
+    width: TOKENS.layout.collapsedRailImportActionSize,
+    height: TOKENS.layout.collapsedRailImportActionSize,
     marginBottom: TOKENS.spacing.xs,
   },
   importActionExpanded: {
     alignSelf: 'stretch',
     marginHorizontal: TOKENS.spacing.md,
-    minHeight: 56,
+    minHeight: TOKENS.layout.fabMinHeight,
   },
 });

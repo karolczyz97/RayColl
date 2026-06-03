@@ -5,6 +5,7 @@ import type { StudyMode, ModeStep } from '../../types/models';
 import type { TranslationFn } from '../../i18n';
 import { TOKENS } from '../../theme/tokens';
 import { SectionCard } from '../layout/SectionCard';
+import { getModeName } from '../../i18n/modeHelpers';
 
 interface Props {
   activeMode: StudyMode;
@@ -31,14 +32,8 @@ export function StudyModeStepsEditor({
 }: Props) {
   const theme = useTheme();
 
-  const getModeName = (mode: StudyMode) => {
-    const key = `mode.${mode.id}.name`;
-    const translated = t(key);
-    return translated === key ? mode.name : translated;
-  };
-
   return (
-    <SectionCard title={t('settings.mode_steps', { name: getModeName(activeMode) })}>
+    <SectionCard title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}>
         <View style={styles.stepsList}>
           {activeMode.steps.map((step, index) => (
             <View key={index}>

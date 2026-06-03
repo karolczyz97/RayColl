@@ -102,6 +102,34 @@ export const TOKENS = {
     actionMaxWidth: 320,
     studyCardMaxWidth: 600,
     deckSettingsSingleColumnMaxWidth: 600,
+    // Heatmap
+    heatmapGridMaxWidth: 337,
+    heatmapCellSize: 14,
+    heatmapDayLabelWidth: 24,
+    heatmapDayLabelOffset: -28,
+    heatmapGridHeight: 116,
+    // FAB
+    fabIconSize: 56,
+    fabExtendedMinWidth: 80,
+    fabMinHeight: 56,
+    // Navigation rail collapsed
+    collapsedRailItemWidth: 72,
+    collapsedRailItemMinHeight: 64,
+    collapsedRailItemLabelWidth: 68,
+    collapsedRailItemLabelLineHeight: 14,
+    collapsedRailIconContainerWidth: 56,
+    collapsedRailIconContainerHeight: 32,
+    collapsedRailBrandMinHeight: 56,
+    collapsedRailImportActionSize: 56,
+    // Form
+    formSelectWidth: 160,
+    // Banners
+    syncBannerMaxWidth: 520,
+    // Study controls
+    studyControlZoneTall: 180,
+    studyControlZoneCompact: 80,
+    sttTextWrapperHeight: 80,
+    audioIconsRowHeight: 60,
   },
   emptyState: {
     accentWidth: 112,
@@ -122,6 +150,7 @@ export const TOKENS = {
       short: 150,
       medium: 300,
       long: 500,
+      snackbar: 6000,
     },
     // Staggered section enter — canonical home for the former theme/motion.ts values.
     enter: {

@@ -5,6 +5,7 @@ import { GroupNotFound } from '../../components/GroupNotFound';
 import { LoadingState } from '../../components/layout/LoadingState';
 import { DeckSettingsScreen } from '../../features/settings/DeckSettingsScreen';
 import { useDeckSettingsController } from '../../features/settings/useDeckSettingsController';
+import { useI18n } from '../../i18n';
 
 function SettingsPageContent() {
   const controller = useDeckSettingsController();
@@ -22,9 +23,10 @@ function SettingsPageContent() {
 
 export default function SettingsPage() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const { t } = useI18n();
 
   return (
-    <AppErrorBoundary resetKey={groupId} title="Settings screen crashed">
+    <AppErrorBoundary resetKey={groupId} title={t('errors.settings_crashed')}>
       <SettingsPageContent />
     </AppErrorBoundary>
   );

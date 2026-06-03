@@ -6,7 +6,6 @@ interface NavigationShellContextValue {
   isExpanded: boolean;
   contentWidth: number;
   showPersistentNavigation: boolean;
-  showBottomNavigation: boolean;
   navWidth: number;
 }
 
@@ -16,7 +15,6 @@ const NavigationShellContext = React.createContext<NavigationShellContextValue>(
   isExpanded: false,
   contentWidth: 0,
   showPersistentNavigation: false,
-  showBottomNavigation: false,
   navWidth: 0,
 });
 
