@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { ROUTES } from '@/constants/routes';
 import { AppMenuButton } from '@/components/AppMenuButton';
+import { UserMenuHeader } from '@/components/navigation/UserMenuHeader';
 import { getTopBarColors } from '@/theme/semanticColors';
 import { APP_NAME } from '@/constants/app';
 import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
@@ -46,14 +47,14 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
     <View style={styles.actionsGroup}>
       <IconButton
         icon="chart-bar"
-        size={24}
+        size={TOKENS.iconSize.md}
         iconColor={fg}
         onPress={() => router.navigate(ROUTES.STATS)}
         accessibilityLabel={t('stats.title')}
       />
       <IconButton
         icon="cog"
-        size={24}
+        size={TOKENS.iconSize.md}
         iconColor={fg}
         onPress={() => router.navigate(ROUTES.APP_SETTINGS)}
         accessibilityLabel={t('app_settings.title')}
@@ -70,7 +71,7 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
               accessibilityState={{ expanded: visible }}
             >
               <Avatar.Image
-                size={36}
+                size={TOKENS.iconSize.lg}
                 source={
                   user.photoURL
                     ? { uri: user.photoURL }
@@ -80,26 +81,15 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
             </TouchableRipple>
           )}
           header={
-            <View style={styles.userMenuContent}>
-              <Avatar.Image
-                size={48}
-                source={
-                  user.photoURL
-                    ? { uri: user.photoURL }
-                    : require('../../../assets/images/icon.png')
-                }
-                style={styles.userMenuAvatar}
-              />
-              <Text variant="titleMedium" style={styles.userName}>
-                {user.displayName || t('auth.local')}
-              </Text>
-              <Text
-                variant="bodySmall"
-                style={[styles.userEmail, { color: theme.colors.onSurfaceVariant }]}
-              >
-                {user.email}
-              </Text>
-            </View>
+            <UserMenuHeader
+              source={
+                user.photoURL
+                  ? { uri: user.photoURL }
+                  : require('../../../assets/images/icon.png')
+              }
+              displayName={user.displayName}
+              email={user.email}
+            />
           }
           items={[
             {
@@ -115,7 +105,7 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
       ) : (
         <IconButton
           icon="account-circle"
-          size={24}
+          size={TOKENS.iconSize.md}
           iconColor={fg}
           onPress={onLogin}
           accessibilityLabel="Log in with Google"
@@ -147,18 +137,5 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.touchTarget.min,
     minWidth: TOKENS.touchTarget.min,
     borderRadius: TOKENS.radius.pill,
-  },
-  userMenuContent: {
-    padding: TOKENS.spacing.lg,
-    alignItems: 'center',
-  },
-  userMenuAvatar: {
-    marginBottom: TOKENS.spacing.sm,
-  },
-  userName: {
-    fontWeight: TOKENS.typography.weight.bold,
-  },
-  userEmail: {
-    marginBottom: TOKENS.spacing.sm,
   },
 });

@@ -15,10 +15,6 @@ export function getLatestEdit(card: Flashcard): number {
   return Math.max(card.contentUpdatedAt ?? 0, card.srsUpdatedAt ?? 0);
 }
 
-export function isDeleted(entity: { deletedAt?: number | null }): boolean {
-  return !!(entity.deletedAt && entity.deletedAt > 0);
-}
-
 export function mergeSrsStateNeverRegress(
   localReps: number,
   localSrsAt: number,

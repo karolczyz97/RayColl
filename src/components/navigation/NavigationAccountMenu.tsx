@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
 import { AppMenuButton } from '@/components/AppMenuButton';
+import { UserMenuHeader } from '@/components/navigation/UserMenuHeader';
 
 interface NavigationAccountMenuProps {
   user: FlashcardStoreState['user'];
@@ -86,18 +87,7 @@ export function NavigationAccountMenu({
         </TouchableRipple>
       )}
       header={
-        <View style={styles.menuHeader}>
-          <Avatar.Image size={48} source={source} style={styles.menuAvatar} />
-          <Text variant="titleMedium" style={styles.menuName}>
-            {user.displayName || t('auth.local')}
-          </Text>
-          <Text
-            variant="bodySmall"
-            style={[styles.menuEmail, { color: theme.colors.onSurfaceVariant }]}
-          >
-            {user.email}
-          </Text>
-        </View>
+        <UserMenuHeader source={source} displayName={user.displayName} email={user.email} />
       }
       items={[
         {
@@ -140,19 +130,6 @@ const styles = StyleSheet.create({
   accountText: {
     flex: 1,
     minWidth: 0,
-  },
-  menuHeader: {
-    padding: TOKENS.spacing.lg,
-    alignItems: 'center',
-  },
-  menuAvatar: {
-    marginBottom: TOKENS.spacing.sm,
-  },
-  menuName: {
-    fontWeight: TOKENS.typography.weight.bold,
-  },
-  menuEmail: {
-    marginBottom: TOKENS.spacing.sm,
   },
 });
 

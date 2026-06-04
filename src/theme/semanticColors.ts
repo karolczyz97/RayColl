@@ -1,5 +1,7 @@
 import { MD3Theme } from 'react-native-paper';
 import { SrsCardCategory } from '@/srs/srsEngine';
+import { hexToRgba } from './colorUtils';
+import { TOKENS } from './tokens';
 
 export function getSuccessColor(theme: MD3Theme): string {
   // Tertiary is green in our theme, representing success
@@ -11,11 +13,11 @@ export function getSuccessBgColor(theme: MD3Theme): string {
 }
 
 export function getWarningColor(theme: MD3Theme): string {
-  return theme.dark ? theme.colors.primary : '#b86800';
+  return theme.dark ? theme.colors.primary : TOKENS.colors.warning;
 }
 
 export function getWarningBgColor(theme: MD3Theme): string {
-  return theme.dark ? theme.colors.primaryContainer : '#ffddb3';
+  return theme.dark ? theme.colors.primaryContainer : TOKENS.colors.warningBg;
 }
 
 export function getDueColor(theme: MD3Theme): string {
@@ -61,17 +63,9 @@ export function getHeatmapColor(theme: MD3Theme, count: number): string {
     return theme.colors.surfaceVariant;
   }
   const primary = theme.colors.primary;
-  // If color is hex, we can apply opacities
-  if (primary.startsWith('#')) {
-    const base =
-      primary.length === 4
-        ? `#${primary[1]}${primary[1]}${primary[2]}${primary[2]}${primary[3]}${primary[3]}`
-        : primary;
-    if (count <= 2) return `${base}40`; // 25% opacity
-    if (count <= 5) return `${base}80`; // 50% opacity
-    if (count <= 10) return `${base}c0`; // 75% opacity
-    return base; // 100% opacity
-  }
+  if (count <= 2) return hexToRgba(primary, 0.25);
+  if (count <= 5) return hexToRgba(primary, 0.5);
+  if (count <= 10) return hexToRgba(primary, 0.75);
   return primary;
 }
 
@@ -92,7 +86,7 @@ export function getReviewStatusColor(
         bg: getSecondaryBgColor(theme),
       };
     case 'review':
-      // Powtórki -> orange (warning)
+      // Review -> orange (warning)
       return {
         color: getWarningColor(theme),
         bg: getWarningBgColor(theme),

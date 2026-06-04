@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Platform, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
 import { safeBack } from '@/utils/navigation';
 import { DeleteFlashcardDialog } from '@/components/browse/DeleteFlashcardDialog';
@@ -11,6 +11,7 @@ import { POPULAR_LANGS } from '@/constants/languages';
 import { useFlashcardStore } from '@/hooks/useFlashcardStore';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
+import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
 import { ImportConfigCard } from './ImportConfigCard';
 import { ImportPreviewSection } from './ImportPreviewSection';
 import { ImportSourceCard } from './ImportSourceCard';
@@ -20,6 +21,7 @@ import { MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages
 export function ImportScreen() {
   const { t } = useI18n();
   const store = useFlashcardStore();
+  const scrollbarProps = useStableScrollbarProps();
   const draft = useImportDeckDraft();
 
   if (store.isLoading) {
@@ -99,8 +101,8 @@ export function ImportScreen() {
       <FlatList
         data={[]}
         keyExtractor={(item: { key: string }) => item.key}
-        style={styles.list}
-        className={Platform.OS === 'web' ? 'raycoll-stable-scrollbar' : undefined}
+        style={[styles.list, scrollbarProps.style]}
+        className={scrollbarProps.className}
         renderItem={null}
         ListHeaderComponent={topCards}
         contentContainerStyle={styles.listContent}
@@ -147,11 +149,6 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-    ...Platform.select({
-      web: {
-        scrollbarGutter: 'stable both-edges',
-      },
-    }),
   },
   singleColumn: {
     width: '100%',

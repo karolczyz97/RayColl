@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Switch, Text, useTheme } from 'react-native-paper';
 import type { FlashcardGroup } from '@/types/models';
@@ -6,6 +6,7 @@ import { getVisiblePageNames } from '@/store/selectors/pages';
 import type { TranslationFn } from '@/i18n';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 import { TOKENS } from '@/theme/tokens';
+import { useHiddenPagesToggle } from '@/hooks/useHiddenPagesToggle';
 
 interface Props {
   group: FlashcardGroup;
@@ -23,7 +24,7 @@ export function EditFlashcardForm({
   t,
 }: Props) {
   const theme = useTheme();
-  const [showHidden, setShowHidden] = useState(false);
+  const { showHidden, setShowHidden } = useHiddenPagesToggle();
 
   const activeCount = group.activePageCount;
   const totalCount = editPages.length;

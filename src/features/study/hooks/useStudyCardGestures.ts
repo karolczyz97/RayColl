@@ -56,7 +56,7 @@ export function useStudyCardGestures({
     }
   }, []);
 
-  useEffect(() => clearPeekTimer, [clearPeekTimer]);
+  useEffect(() => () => clearPeekTimer(), [clearPeekTimer]);
 
   const handleCardPress = useCallback(() => {
     const gesture = gestureRef.current;

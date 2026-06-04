@@ -1,12 +1,12 @@
 import type { CardFilter } from '@/constants/cardFilters';
 
 export interface SrsState {
-  difficulty: number; // Trudność (1-10)
-  stability: number; // Stabilność
-  repetitions: number; // Liczba powtórzeń (repetitions >= 1 oznacza, że karta została "nauczona")
+  difficulty: number; // Difficulty (1-10)
+  stability: number; // Stability
+  repetitions: number; // Repetition count (repetitions >= 1 means the card has been "learned")
   state: 0 | 1 | 2 | 3; // Stan FSRS (0: New, 1: Learning, 2: Review, 3: Relearning)
-  lastReviewTimestamp: number; // Znacznik czasu ostatniej powtórki
-  nextReviewTimestamp: number; // Znacznik czasu kolejnej powtórki
+  lastReviewTimestamp: number; // Timestamp of the last review
+  nextReviewTimestamp: number; // Timestamp of the next scheduled review
 }
 
 export interface Flashcard {
@@ -25,7 +25,7 @@ export interface FlashcardGroup {
   activeModeId: string;
   studyFilter: CardFilter;
   pageLanguages: string[]; // tagi BCP-47 dla stron
-  pageNames: string[]; // np. ['Słowo', 'Tłumaczenie', 'Przykład']
+  pageNames: string[]; // e.g. ['Word', 'Translation', 'Example']
   activePageCount: number; // liczba widocznych/aktywnych stron
   updatedAt?: number;
   deletedAt?: number | null;
@@ -58,11 +58,11 @@ export type ModeStep =
       incorrectTtsPageIndex?: number;
     }
   | {
-      // Czeka, aż użytkownik dotknie karty, i dopiero wtedy odkrywa kolejną ukrytą stronę.
+      // Waits for the user to tap the card, then reveals the next hidden page.
       type: 'reveal_on_tap';
     }
   | {
-      // Pokazuje przyciski oceny znajomości fiszki i czeka na ocenę użytkownika.
+      // Shows rating buttons for the flashcard and waits for the user's rating.
       type: 'rate';
     };
 

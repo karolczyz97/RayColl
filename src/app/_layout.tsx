@@ -14,6 +14,7 @@ import { createAppTheme } from '@/theme/createAppTheme';
 import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 import { UpdateNotification } from '@/components/feedback/UpdateNotification';
 import { AppNavigationShell } from '@/components/navigation/AppNavigationShell';
+import { hexToRgba } from '@/theme/colorUtils';
 import { getErrorMessage } from '@/utils/errors';
 
 function logSplashScreenError(action: string, error: unknown) {
@@ -50,27 +51,6 @@ function renderPaperIcon({
       testID={testID}
     />
   );
-}
-
-function themeColorWithAlpha(color: string, alpha: number): string {
-  const normalized = color.startsWith('#') ? color.slice(1) : color;
-  const expanded =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map((part) => `${part}${part}`)
-          .join('')
-      : normalized;
-
-  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
-    return color;
-  }
-
-  const red = Number.parseInt(expanded.slice(0, 2), 16);
-  const green = Number.parseInt(expanded.slice(2, 4), 16);
-  const blue = Number.parseInt(expanded.slice(4, 6), 16);
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -153,11 +133,11 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
 
     document.documentElement.style.setProperty(
       '--raycoll-scrollbar-thumb',
-      themeColorWithAlpha(theme.colors.outline, 0.4),
+      hexToRgba(theme.colors.outline, 0.4),
     );
     document.documentElement.style.setProperty(
       '--raycoll-scrollbar-thumb-hover',
-      themeColorWithAlpha(theme.colors.outline, 0.64),
+      hexToRgba(theme.colors.outline, 0.64),
     );
   }, [theme.colors.outline]);
 

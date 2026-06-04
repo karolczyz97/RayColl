@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import Animated, { ZoomIn } from 'react-native-reanimated';
@@ -13,6 +13,7 @@ import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
+import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
 import { useFlashcardStore } from '@/hooks/useFlashcardStore';
 import { useI18n } from '@/i18n';
 import type { SrsCardCategory } from '@/srs/srsEngine';
@@ -29,6 +30,7 @@ export function BrowseScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { t } = useI18n();
   const theme = useTheme();
+  const scrollbarProps = useStableScrollbarProps();
   const store = useFlashcardStore();
   const group =
     store.groups.find((item) => item.id === groupId) ??
@@ -169,8 +171,8 @@ export function BrowseScreen() {
           onDelete={setDeleteCardId}
           readOnly={isReadOnly}
           t={t}
-          style={styles.list}
-          className={Platform.OS === 'web' ? 'raycoll-stable-scrollbar' : undefined}
+          style={[styles.list, scrollbarProps.style]}
+          className={scrollbarProps.className}
           contentContainerStyle={styles.listContainer}
           emptyLabel={t('browse.no_cards')}
           listHeaderContent={listHeaderContent}
@@ -238,11 +240,6 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
     width: '100%',
-    ...Platform.select({
-      web: {
-        scrollbarGutter: 'stable both-edges',
-      },
-    }),
   },
   listSection: {
     flex: 1,

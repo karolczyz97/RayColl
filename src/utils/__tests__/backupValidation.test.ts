@@ -1,29 +1,8 @@
+import { describe, it, expect } from '@jest/globals';
+
 import { validateBackupData, type BackupData } from '../backupValidation';
 import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from '../../store/storeDataNormalization';
 import type { FlashcardGroup, StudyMode } from '../../types/models';
-
-function assertOk(condition: boolean, message: string) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-function assertThrows(fn: () => void, message: string) {
-  try {
-    fn();
-    throw new Error(`${message}: did not throw`);
-  } catch (err) {
-    if (err instanceof Error && err.message === `${message}: did not throw`) {
-      throw err;
-    }
-  }
-}
-
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-  }
-}
 
 function makeValidGroup(): FlashcardGroup {
   return {
@@ -71,110 +50,122 @@ function makeValidBackup(): BackupData {
   };
 }
 
-export async function runTests() {
-  console.log('\n--- Running Backup Validation Tests ---');
+describe('backupValidation', () => {
+  it('accepts valid backup', () => {
+    expect(validateBackupData(makeValidBackup())).toBe(true);
+  });
 
-  // Test 1: Valid backup passes validation
-  assertOk(validateBackupData(makeValidBackup()), 'Valid backup should pass validation');
+  it('accepts backup with optional fields', () => {
+    const withOptional: BackupData = {
+      ...makeValidBackup(),
+      schemaVersion: 1,
+      exportedAt: '2025-06-01T12:00:00.000Z',
+    };
+    expect(validateBackupData(withOptional)).toBe(true);
+  });
 
-  // Test 2: Backup with optional fields passes validation
-  const withOptional: BackupData = {
-    ...makeValidBackup(),
-    schemaVersion: 1,
-    exportedAt: '2025-06-01T12:00:00.000Z',
-  };
-  assertOk(validateBackupData(withOptional), 'Backup with optional fields should pass validation');
-
-  // Test 3: Missing groups throws
-  assertThrows(() => {
+  it('throws on missing groups', () => {
     const { groups: _, ...noGroups } = makeValidBackup();
-    validateBackupData(noGroups);
-  }, 'Missing "groups" array should throw');
+    expect(() => validateBackupData(noGroups)).toThrow();
+  });
 
-  // Test 4: Missing studyModes throws
-  assertThrows(() => {
+  it('throws on missing studyModes', () => {
     const { studyModes: _, ...noModes } = makeValidBackup();
-    validateBackupData(noModes);
-  }, 'Missing "studyModes" array should throw');
+    expect(() => validateBackupData(noModes)).toThrow();
+  });
 
-  // Test 5: Missing activityHeatmap throws
-  assertThrows(() => {
+  it('throws on missing activityHeatmap', () => {
     const { activityHeatmap: _, ...noHeatmap } = makeValidBackup();
-    validateBackupData(noHeatmap);
-  }, 'Missing "activityHeatmap" should throw');
+    expect(() => validateBackupData(noHeatmap)).toThrow();
+  });
 
-  // Test 6: Invalid card difficulty (string instead of number) throws
-  assertThrows(() => {
+  it('throws on invalid card srsState.difficulty', () => {
     const bad = makeValidBackup();
     (bad.groups[0].cards[0].srsState as unknown as Record<string, unknown>).difficulty = 'easy';
-    validateBackupData(bad);
-  }, 'Invalid card srsState.difficulty should throw');
+    expect(() => validateBackupData(bad)).toThrow();
+  });
 
-  // Test 7: Invalid study mode step type throws
-  assertThrows(() => {
+  it('throws on invalid study mode step type', () => {
     const bad = makeValidBackup();
     bad.studyModes[0].steps.push({ type: 'unknown_type' } as never);
-    validateBackupData(bad);
-  }, 'Invalid study mode step type should throw');
-
-  // Test 8: Empty object throws
-  assertThrows(() => {
-    validateBackupData({});
-  }, 'Empty object should throw');
-
-  // Test 9: Legacy backup without timestamps gets normalized
-  const legacyGroup: FlashcardGroup = {
-    id: 'g2',
-    name: 'Legacy Deck',
-    cards: [
-      {
-        id: 'c2',
-        pages: ['a', 'b'],
-        srsState: {
-          difficulty: 2,
-          stability: 5,
-          repetitions: 0,
-          state: 0,
-          lastReviewTimestamp: 0,
-          nextReviewTimestamp: 0,
-        },
-      },
-    ],
-    activeModeId: 'classic',
-    studyFilter: 'new+review',
-    pageLanguages: ['en-US'],
-    pageNames: ['Front'],
-    activePageCount: 1,
-  };
-  // Fields intentionally absent: updatedAt, contentUpdatedAt, srsUpdatedAt, deletedAt
-  const legacyBackup: BackupData = {
-    groups: [legacyGroup],
-    studyModes: [makeValidMode()],
-    activityHeatmap: {},
-  };
-  assertOk(validateBackupData(legacyBackup), 'Legacy backup without timestamps should pass validation');
-
-  const normalized = normalizeStoreData({
-    groups: legacyBackup.groups,
-    studyModes: legacyBackup.studyModes,
-    activityHeatmap: legacyBackup.activityHeatmap,
+    expect(() => validateBackupData(bad)).toThrow();
   });
-  assertEqual(normalized.schemaVersion, CURRENT_SCHEMA_VERSION, 'Legacy backup should receive schemaVersion');
-  assertEqual(normalized.groups[0].updatedAt, 0, 'normalizeGroup should fill missing updatedAt');
-  assertEqual(normalized.groups[0].cards[0].contentUpdatedAt, 0, 'normalizeCard should fill missing contentUpdatedAt');
-  assertEqual(normalized.groups[0].cards[0].srsUpdatedAt, 0, 'normalizeCard should fill missing srsUpdatedAt');
 
-  // Test 10: Export structure contract
-  const exportObj = {
-    groups: [],
-    studyModes: [],
-    activityHeatmap: {},
-    schemaVersion: 1,
-  };
-  assertOk('groups' in exportObj, 'Export must contain groups');
-  assertOk('studyModes' in exportObj, 'Export must contain studyModes');
-  assertOk('activityHeatmap' in exportObj, 'Export must contain activityHeatmap');
-  assertOk('schemaVersion' in exportObj, 'Export must contain schemaVersion');
+  it('throws on empty object', () => {
+    expect(() => validateBackupData({} as BackupData)).toThrow();
+  });
 
-  console.log('Backup validation tests passed');
-}
+  describe('legacy backup normalization', () => {
+    const legacyGroup: FlashcardGroup = {
+      id: 'g2',
+      name: 'Legacy Deck',
+      cards: [
+        {
+          id: 'c2',
+          pages: ['a', 'b'],
+          srsState: {
+            difficulty: 2,
+            stability: 5,
+            repetitions: 0,
+            state: 0,
+            lastReviewTimestamp: 0,
+            nextReviewTimestamp: 0,
+          },
+        },
+      ],
+      activeModeId: 'classic',
+      studyFilter: 'new+review',
+      pageLanguages: ['en-US'],
+      pageNames: ['Front'],
+      activePageCount: 1,
+    };
+    const legacyBackup: BackupData = {
+      groups: [legacyGroup],
+      studyModes: [makeValidMode()],
+      activityHeatmap: {},
+    };
+
+    it('passes validation', () => {
+      expect(validateBackupData(legacyBackup)).toBe(true);
+    });
+
+    it('fills missing timestamps during normalization', () => {
+      const normalized = normalizeStoreData({
+        groups: legacyBackup.groups,
+        studyModes: legacyBackup.studyModes,
+        activityHeatmap: legacyBackup.activityHeatmap,
+      });
+      expect(normalized.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      expect(normalized.groups[0].updatedAt).toBe(0);
+      expect(normalized.groups[0].cards[0].contentUpdatedAt).toBe(0);
+      expect(normalized.groups[0].cards[0].srsUpdatedAt).toBe(0);
+    });
+  });
+
+  describe('export structure contract', () => {
+    it('contains all required keys', () => {
+      const exportObj = { groups: [], studyModes: [], activityHeatmap: {}, schemaVersion: 1 };
+      expect('groups' in exportObj).toBe(true);
+      expect('studyModes' in exportObj).toBe(true);
+      expect('activityHeatmap' in exportObj).toBe(true);
+      expect('schemaVersion' in exportObj).toBe(true);
+    });
+  });
+
+  it('throws on null', () => {
+    expect(() => validateBackupData(null)).toThrow('Backup data is not a valid JSON object.');
+  });
+
+  it('throws on null groups entry', () => {
+    expect(() => validateBackupData({ groups: [null], studyModes: [], activityHeatmap: {} })).toThrow(
+      'Each group must be a valid object.',
+    );
+  });
+
+  it('throws on non-string group id', () => {
+    expect(() => validateBackupData({ groups: [{ id: 123 }], studyModes: [], activityHeatmap: {} })).toThrow(
+      'Each group must have a string id.',
+    );
+  });
+
+});

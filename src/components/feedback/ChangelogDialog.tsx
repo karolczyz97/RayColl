@@ -17,12 +17,12 @@ export function ChangelogDialog({ visible, onDismiss }: ChangelogDialogProps) {
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
-        <Dialog.Title>{releaseInfo.commitTitle}</Dialog.Title>
+        <Dialog.Title accessibilityRole="header">{releaseInfo.commitTitle}</Dialog.Title>
         <Dialog.Content>
           {releaseInfo.notes.length > 0 ? (
             <View style={styles.notesList}>
               {releaseInfo.notes.map((note, index) => (
-                <Text key={index} variant="bodyMedium" style={styles.noteItem}>
+                <Text key={index} variant="bodyMedium" style={styles.noteItem} accessibilityRole="text">
                   {'• '}
                   {note}
                 </Text>
@@ -33,7 +33,7 @@ export function ChangelogDialog({ visible, onDismiss }: ChangelogDialogProps) {
           )}
         </Dialog.Content>
         <Dialog.Actions>
-          <Button mode="contained" onPress={onDismiss}>
+          <Button mode="contained" onPress={onDismiss} accessibilityLabel={t('update.ok')}>
             {t('update.ok')}
           </Button>
         </Dialog.Actions>

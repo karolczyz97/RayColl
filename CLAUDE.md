@@ -19,7 +19,7 @@ Before every refactor step:
 1. Read AGENTS.md.
 2. Preserve behavior unless the step explicitly says visual unification.
 3. Run lint, typecheck, test.
-4. Use `scripts/regression-checklist.md` for manual verification.
+4. Use `docs/REGRESSION.md` for manual verification.
 
 - No big-bang refactors. Work in **small, committable steps**; the app must compile after each.
 - After each step run:
@@ -72,7 +72,7 @@ Before every refactor step:
 
 ## Testing rules
 
-- `npm run test` runs `scripts/run-tests.mjs`; keep that runner the single entry point for unit tests.
+- `npm run test` runs `jest --runInBand`; keep that the single entry point for unit tests.
 - Add or extend a unit test whenever you touch:
   - SRS engine
   - import parser

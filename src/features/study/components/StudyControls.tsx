@@ -1,15 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
-import Animated, {
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { AppIcon } from '@/components/AppIcon';
+import { usePulseAnimation } from '@/hooks/usePulseAnimation';
 import {
   getDangerBgColor,
   getDangerColor,
@@ -62,39 +56,8 @@ export function StudyControls({
   onRate,
 }: StudyControlsProps) {
   const theme = useTheme();
-  const ttsScale = useSharedValue(1);
-  const sttScale = useSharedValue(1);
-
-  useEffect(() => {
-    if (isTtsPlaying) {
-      ttsScale.value = withRepeat(
-        withSequence(withSpring(1.25, { damping: 3 }), withSpring(1, { damping: 3 })),
-        -1,
-        true,
-      );
-    } else {
-      ttsScale.value = withSpring(1);
-    }
-  }, [isTtsPlaying, ttsScale]);
-
-  useEffect(() => {
-    if (isSttListening) {
-      sttScale.value = withRepeat(
-        withSequence(withSpring(1.25, { damping: 3 }), withSpring(1, { damping: 3 })),
-        -1,
-        true,
-      );
-    } else {
-      sttScale.value = withSpring(1);
-    }
-  }, [isSttListening, sttScale]);
-
-  const ttsIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ttsScale.value }],
-  }));
-  const sttIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sttScale.value }],
-  }));
+  const ttsIconStyle = usePulseAnimation(isTtsPlaying);
+  const sttIconStyle = usePulseAnimation(isSttListening);
 
   const matchColor =
     sttMatchPercent >= 85
@@ -221,7 +184,7 @@ export function StudyControls({
               <Animated.View style={[styles.iconWrapper, ttsIconStyle]}>
                 <AppIcon
                   name="volume-high"
-                  size={36}
+                  size={TOKENS.iconSize.lg}
                   color={isTtsPlaying ? theme.colors.primary : theme.colors.outline}
                 />
               </Animated.View>
@@ -230,7 +193,7 @@ export function StudyControls({
               <Animated.View style={[styles.iconWrapper, sttIconStyle]}>
                 <AppIcon
                   name="microphone"
-                  size={36}
+                  size={TOKENS.iconSize.lg}
                   color={isSttListening ? getDangerColor(theme) : theme.colors.outline}
                 />
               </Animated.View>

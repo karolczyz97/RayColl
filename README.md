@@ -75,7 +75,7 @@ npm run typecheck
 npm run test
 ```
 
-Use [scripts/regression-checklist.md](/C:/Users/Karol/.gemini/antigravity/scratch/TensorDeck/scripts/regression-checklist.md)
+Use [docs/REGRESSION.md](docs/REGRESSION.md)
 after each refactor step for the manual functional baseline.
 
 Create a static web export:

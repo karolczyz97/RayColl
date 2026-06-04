@@ -62,8 +62,8 @@ export function StudyCard({
         onPressIn={pressIn}
         onPressOut={pressOut}
         onPress={onCardPress}
-        accessibilityRole={waitingForTap ? 'button' : undefined}
-        accessibilityLabel={waitingForTap ? tapToRevealLabel : undefined}
+        accessibilityRole="button"
+        accessibilityLabel={waitingForTap ? tapToRevealLabel : currentCard?.pages[0] || tapToRevealLabel}
       >
         <Animated.View
           style={[
@@ -104,7 +104,7 @@ export function StudyCard({
 
           {waitingForTap ? (
             <View style={styles.tapIndicator}>
-              <AppIcon name="gesture-tap" size={20} color={theme.colors.outline} />
+              <AppIcon name="gesture-tap" size={TOKENS.iconSize.sm} color={theme.colors.outline} />
               <Text variant="labelMedium" style={[styles.tapLabel, { color: theme.colors.outline }]}>
                 {tapToRevealLabel}
               </Text>

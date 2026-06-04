@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Chip, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '@/types/models';
 import { getCardCategory } from '@/srs/srsEngine';
 import { AppIcon } from '@/components/AppIcon';
 import { AppCard } from '@/components/AppCard';
+import { useHiddenPagesToggle } from '@/hooks/useHiddenPagesToggle';
 import {
   SRS_CATEGORIES_TOKENS,
   getMasteryPercent,
@@ -55,7 +56,7 @@ export function FlashcardListItem({
   readOnly,
 }: Props) {
   const theme = useTheme();
-  const [viewHidden, setViewHidden] = useState(false);
+  const { showHidden: viewHidden, setShowHidden: setViewHidden } = useHiddenPagesToggle();
 
   const activeCount = group.activePageCount;
   const totalCount = card.pages.length;
@@ -136,14 +137,14 @@ export function FlashcardListItem({
           <View style={styles.cardActionsRight}>
             <IconButton
               icon="pencil"
-              size={20}
+              size={TOKENS.iconSize.sm}
               iconColor={theme.colors.primary}
               onPress={onStartEdit}
               accessibilityLabel="Edit card"
             />
             <IconButton
               icon="delete"
-              size={20}
+              size={TOKENS.iconSize.sm}
               iconColor={theme.colors.error}
               onPress={onDelete}
               accessibilityLabel="Delete card"

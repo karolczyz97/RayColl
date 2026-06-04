@@ -39,7 +39,7 @@ export function ImportPreviewSection({
   return (
     <View style={styles.container}>
       <Text variant="titleMedium" style={styles.title}>
-        {`${t('import.preview') || 'Preview'} (${cards.length})`}
+        {`${t('import.preview')} (${cards.length})`}
       </Text>
       <FlashcardList
         cards={cards}
