@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, Portal } from 'react-native-paper';
+import { Button, Dialog, Portal } from 'react-native-paper';
 import type { FlashcardGroup } from '@/types/models';
 import type { TranslationFn } from '@/i18n';
 import { dialogStyles } from '@/theme/dialogStyles';
@@ -31,18 +31,22 @@ export function EditFlashcardDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onCancel} style={dialogStyles.dialog}>
+        <Dialog.Title>{t('browse.edit_card')}</Dialog.Title>
         <Dialog.Content>
           <EditFlashcardForm
             group={group}
             editPages={editPages}
             setEditPages={setEditPages}
-            onSave={onSave}
-            onCancel={onCancel}
-            saveDisabled={saveDisabled}
             validationMessage={validationMessage}
             t={t}
           />
         </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={onCancel}>{t('btn.cancel')}</Button>
+          <Button mode="contained" onPress={onSave} disabled={saveDisabled}>
+            {t('btn.save')}
+          </Button>
+        </Dialog.Actions>
       </Dialog>
     </Portal>
   );

@@ -50,9 +50,7 @@ export function ImportSourceCard({
         style={{ borderRadius: TOKENS.radius.pill }}
         accessibilityLabel="Upload CSV, TXT, or MD file"
       >
-        {t('import.upload_file') === 'import.upload_file'
-          ? 'Upload file (.csv, .txt, .md)'
-          : t('import.upload_file')}
+        {t('import.upload_file')}
       </Button>
     </SectionCard>
   );

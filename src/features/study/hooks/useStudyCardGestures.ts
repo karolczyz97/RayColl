@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
 import type { StudySkipState } from '@/features/study/hooks/useStudyAudio';
@@ -47,6 +47,16 @@ export function useStudyCardGestures({
     blockPress: false,
     peekTimer: null,
   });
+
+  const clearPeekTimer = useCallback(() => {
+    const gesture = gestureRef.current;
+    if (gesture.peekTimer) {
+      clearTimeout(gesture.peekTimer);
+      gesture.peekTimer = null;
+    }
+  }, []);
+
+  useEffect(() => clearPeekTimer, [clearPeekTimer]);
 
   const handleCardPress = useCallback(() => {
     const gesture = gestureRef.current;
@@ -114,10 +124,10 @@ export function useStudyCardGestures({
       const currentState = stateRef.current;
 
       if (holding) {
+        clearPeekTimer();
         gesture.pressTime = Date.now();
         gesture.hasPeeked = false;
         gesture.blockPress = false;
-        gesture.peekTimer = null;
 
         if (
           currentGroup &&
@@ -133,8 +143,7 @@ export function useStudyCardGestures({
           }
         }
       } else {
-        clearTimeout(gesture.peekTimer!);
-        gesture.peekTimer = null;
+        clearPeekTimer();
         const holdDuration = Date.now() - gesture.pressTime;
 
         if (holdDuration < PEEK_HOLD_THRESHOLD_MS) {
@@ -166,7 +175,7 @@ export function useStudyCardGestures({
         gesture.hasPeeked = false;
       }
     },
-    [dispatchIfMounted, groupRef, holdingRef, stateRef],
+    [clearPeekTimer, dispatchIfMounted, groupRef, holdingRef, stateRef],
   );
 
   return {

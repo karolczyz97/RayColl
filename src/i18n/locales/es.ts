@@ -75,6 +75,8 @@ export const es: Record<string, string> = {
   'browse.edit_card': 'Editar tarjeta',
   'browse.no_cards': 'No se encontraron tarjetas.',
   'browse.min_filled_pages': 'Rellena al menos 2 campos para guardar esta tarjeta.',
+  'browse.show_hidden_pages': 'Mostrar páginas ocultas',
+  'import.upload_file': 'Subir archivo (.csv, .txt, .md)',
 
   // Import
   'import.title': 'Importar tarjetas',
@@ -251,6 +253,9 @@ export const es: Record<string, string> = {
   // Error boundary
   'errors.generic_title': 'Algo salió mal',
   'errors.retry': 'Intentar de nuevo',
+  'errors.dashboard_crashed': 'La pantalla principal falló',
+  'errors.stats_crashed': 'La pantalla de estadísticas falló',
+  'errors.app_settings_crashed': 'La pantalla de ajustes de la app falló',
   'errors.study_crashed': 'La pantalla de estudio falló',
   'errors.settings_crashed': 'La pantalla de ajustes falló',
   'errors.import_crashed': 'La pantalla de importación falló',

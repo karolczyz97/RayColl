@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, Switch, Text, useTheme } from 'react-native-paper';
+import { Switch, Text, useTheme } from 'react-native-paper';
 import type { FlashcardGroup } from '@/types/models';
 import { getVisiblePageNames } from '@/store/selectors/pages';
 import type { TranslationFn } from '@/i18n';
@@ -11,9 +11,6 @@ interface Props {
   group: FlashcardGroup;
   editPages: string[];
   setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
-  onSave: () => void;
-  onCancel: () => void;
-  saveDisabled?: boolean;
   validationMessage?: string;
   t: TranslationFn;
 }
@@ -22,9 +19,6 @@ export function EditFlashcardForm({
   group,
   editPages,
   setEditPages,
-  onSave,
-  onCancel,
-  saveDisabled = false,
   validationMessage,
   t,
 }: Props) {
@@ -37,10 +31,7 @@ export function EditFlashcardForm({
 
   const displayCount = showHidden ? totalCount : activeCount;
 
-  const toggleLabel =
-    t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
-      ? 'Show hidden pages'
-      : t('browse.show_hidden_pages');
+  const toggleLabel = t('browse.show_hidden_pages');
 
   const displayNames = showHidden ? group.pageNames : getVisiblePageNames(group);
 
@@ -79,13 +70,6 @@ export function EditFlashcardForm({
           {validationMessage}
         </Text>
       ) : null}
-
-      <View style={styles.editingActions}>
-        <Button onPress={onCancel}>{t('btn.cancel')}</Button>
-        <Button mode="contained" onPress={onSave} disabled={saveDisabled}>
-          {t('btn.save')}
-        </Button>
-      </View>
     </View>
   );
 }
@@ -104,11 +88,6 @@ const styles = StyleSheet.create({
   },
   editInput: {
     minHeight: TOKENS.control.compactHeight,
-  },
-  editingActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: TOKENS.spacing.sm,
   },
   validationText: {
     marginTop: -TOKENS.spacing.xs,

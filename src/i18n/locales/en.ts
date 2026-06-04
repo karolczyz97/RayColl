@@ -77,6 +77,8 @@ export const en: Record<string, string> = {
   'browse.edit_card': 'Edit Flashcard',
   'browse.no_cards': 'No flashcards found.',
   'browse.min_filled_pages': 'Fill at least 2 pages to save this flashcard.',
+  'browse.show_hidden_pages': 'Show hidden pages',
+  'import.upload_file': 'Upload file (.csv, .txt, .md)',
 
   // Import
   'import.title': 'Import Flashcards',
@@ -255,6 +257,9 @@ export const en: Record<string, string> = {
   // Error boundary
   'errors.generic_title': 'Something went wrong',
   'errors.retry': 'Try again',
+  'errors.dashboard_crashed': 'Dashboard screen crashed',
+  'errors.stats_crashed': 'Stats screen crashed',
+  'errors.app_settings_crashed': 'App settings screen crashed',
   'errors.study_crashed': 'Study screen crashed',
   'errors.settings_crashed': 'Settings screen crashed',
   'errors.import_crashed': 'Import screen crashed',

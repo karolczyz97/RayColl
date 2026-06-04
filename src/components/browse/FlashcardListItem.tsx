@@ -69,10 +69,7 @@ export function FlashcardListItem({
 
   const displayPages = viewHidden ? card.pages : visiblePages;
 
-  const toggleLabel =
-    t('browse.show_hidden_pages') === 'browse.show_hidden_pages'
-      ? 'Show hidden pages'
-      : t('browse.show_hidden_pages');
+  const toggleLabel = t('browse.show_hidden_pages');
 
   return (
     <AppCard style={styles.card} mode="elevated">

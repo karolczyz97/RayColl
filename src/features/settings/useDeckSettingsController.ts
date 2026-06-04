@@ -14,6 +14,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { isExpandedWindowSize } from '@/utils/windowSizeClass';
 import { stepSummary } from './studyModeUtils';
+import { reorderDeckPages } from './deckPageReorder';
 
 export function useDeckSettingsController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -112,37 +113,12 @@ export function useDeckSettingsController() {
     const allCount = activeGroup.pageNames.length;
     const target = index + direction;
     if (target < 0 || target >= allCount) return;
-    if (target < pageCount) {
-      movePageInGroup(activeGroup, index, target);
-    } else {
-      // Moving a hidden page: swap only pageNames and pageLanguages,
-      // cards have already been truncated to activePageCount by normalization.
-      const nextNames = swapElements(activeGroup.pageNames, index, target);
-      const nextLanguages = swapElements(activeGroup.pageLanguages, index, target);
-      store.updateGroup({
-        ...activeGroup,
-        pageNames: nextNames,
-        pageLanguages: nextLanguages,
-      });
-    }
+    movePageInGroup(activeGroup, index, target);
   };
 
   const movePageInGroup = (group: typeof activeGroup, index: number, target: number) => {
     if (!group) return;
-    const nextNames = swapElements(group.pageNames, index, target);
-    const nextLanguages = swapElements(group.pageLanguages, index, target);
-
-    const updatedCards = group.cards.map((card) => {
-      const pages = swapElements(card.pages, index, target);
-      return { ...card, pages };
-    });
-
-    store.updateGroup({
-      ...group,
-      pageNames: nextNames,
-      pageLanguages: nextLanguages,
-      cards: updatedCards,
-    });
+    store.updateGroup(reorderDeckPages(group, index, target));
   };
 
   const moveStep = (mode: StudyMode, index: number, direction: -1 | 1) => {

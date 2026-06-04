@@ -2,6 +2,8 @@ import React, { type ReactNode, useCallback, useLayoutEffect, useRef, useState }
 import { StyleSheet, View } from 'react-native';
 import { Menu, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
+import { menuStyles } from '@/theme/menuStyles';
+import { AppMenuItem } from './AppMenuItem';
 
 export interface AppMenuButtonItem {
   label: string;
@@ -48,12 +50,12 @@ export function AppMenuButton({
       onDismiss={close}
       anchorPosition={align === 'right' ? 'bottom' : 'top'}
       style={[
-        styles.menu,
+        menuStyles.menu,
         align === 'right' && styles.rightAlignedMenu,
         { transformOrigin: align === 'right' ? 'top right' : 'top left' },
       ]}
       contentStyle={[
-        styles.menuContent,
+        menuStyles.menuContent,
         { backgroundColor: theme.colors.elevation.level2 },
         { width: menuWidth, maxWidth: menuWidth },
         { transformOrigin: align === 'right' ? 'top right' : 'top left' },
@@ -65,54 +67,26 @@ export function AppMenuButton({
       }
     >
       {header}
-      {items.map((item) => {
-        const textColor = item.destructive
-          ? theme.colors.error
-          : item.selected
-            ? theme.colors.onSecondaryContainer
-            : theme.colors.onSurface;
-
-        return (
-          <Menu.Item
-            key={item.label}
-            title={item.label}
-            leadingIcon={item.selected ? 'check' : item.leadingIcon}
-            disabled={item.disabled}
-            onPress={() => {
-              close();
-              item.onPress();
-            }}
-            style={[
-              styles.menuItem,
-              item.selected && { backgroundColor: theme.colors.secondaryContainer },
-            ]}
-            titleStyle={{
-              color: textColor,
-              fontWeight: item.selected
-                ? TOKENS.typography.weight.bold
-                : TOKENS.typography.weight.medium,
-            }}
-          />
-        );
-      })}
+      {items.map((item) => (
+        <AppMenuItem
+          key={item.label}
+          label={item.label}
+          icon={item.leadingIcon}
+          selected={item.selected}
+          destructive={item.destructive}
+          disabled={item.disabled}
+          onPress={() => {
+            close();
+            item.onPress();
+          }}
+        />
+      ))}
     </Menu>
   );
 }
 
 const styles = StyleSheet.create({
-  menu: {
-    marginTop: TOKENS.menu.gap,
-  },
   rightAlignedMenu: {
     alignSelf: 'flex-end',
-  },
-  menuContent: {
-    borderRadius: TOKENS.radius.lg,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    minHeight: TOKENS.menu.itemHeight,
-    width: '100%',
-    maxWidth: '100%',
   },
 });

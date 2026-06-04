@@ -1,11 +1,14 @@
-import { CARD_FILTERS, type CardFilter } from '@/constants/cardFilters';
+import { CARD_FILTERS, DEFAULT_STUDY_FILTER, type CardFilter } from '@/constants/cardFilters';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 import type { Flashcard, FlashcardGroup, StudyMode, StoreData } from '@/types/models';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
+import { isRecord } from '@/utils/types';
 
 export const CURRENT_SCHEMA_VERSION = 1;
-export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
+// Canonical definition lives in constants/cardFilters; re-exported here to keep
+// existing import sites stable.
+export { DEFAULT_STUDY_FILTER };
 const VALID_STUDY_FILTERS = new Set<CardFilter>(Object.values(CARD_FILTERS));
 
 export function normalizeStudyFilter(filter: unknown): CardFilter {
@@ -112,11 +115,24 @@ export function normalizeStudyModes(modes: StudyMode[]): StudyMode[] {
   return [...normalizedModes, ...missingBuiltIns];
 }
 
+export function normalizeActivityHeatmap(value: unknown): Record<string, number> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, number] => {
+      const [, count] = entry;
+      return typeof count === 'number' && Number.isFinite(count);
+    }),
+  );
+}
+
 export function normalizeStoreData(data: StoreData): StoreData {
   return {
     groups: data.groups.map(normalizeGroup),
     studyModes: normalizeStudyModes(data.studyModes),
-    activityHeatmap: data.activityHeatmap,
+    activityHeatmap: normalizeActivityHeatmap(data.activityHeatmap),
     schemaVersion: data.schemaVersion ?? CURRENT_SCHEMA_VERSION,
     lastSyncedAt: data.lastSyncedAt,
   };

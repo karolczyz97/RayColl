@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, Menu, Surface, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
+import { menuStyles } from '@/theme/menuStyles';
+import { AppMenuItem } from './AppMenuItem';
 
 export interface SplitButtonOption {
   label: string;
@@ -45,12 +47,12 @@ export function AppSplitButton({
       visible={open}
       onDismiss={() => setOpen(false)}
       style={[
-        styles.menu,
+        menuStyles.menu,
         anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
         { transformOrigin: 'top' },
       ]}
       contentStyle={[
-        styles.menuContent,
+        menuStyles.menuContent,
         { backgroundColor: theme.colors.elevation.level2 },
         anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
         { transformOrigin: 'top' },
@@ -102,29 +104,18 @@ export function AppSplitButton({
         </Surface>
       }
     >
-      {options.map((option) => {
-        const isSelected = option.value === selectedValue;
-        return (
-          <Menu.Item
-            key={option.value}
-            leadingIcon={isSelected ? 'check' : option.icon}
-            title={option.label}
-            onPress={() => {
-              onSelect(option.value);
-              setOpen(false);
-            }}
-            style={[
-              styles.menuItem,
-              isSelected && { backgroundColor: theme.colors.secondaryContainer },
-            ]}
-            titleStyle={
-              isSelected
-                ? { color: theme.colors.onSecondaryContainer, fontWeight: TOKENS.typography.weight.bold }
-                : { color: theme.colors.onSurface }
-            }
-          />
-        );
-      })}
+      {options.map((option) => (
+        <AppMenuItem
+          key={option.value}
+          label={option.label}
+          icon={option.icon}
+          selected={option.value === selectedValue}
+          onPress={() => {
+            onSelect(option.value);
+            setOpen(false);
+          }}
+        />
+      ))}
     </Menu>
   );
 }
@@ -172,17 +163,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: TOKENS.splitButton.height,
     width: '100%',
-  },
-  menu: {
-    marginTop: TOKENS.menu.gap,
-  },
-  menuContent: {
-    borderRadius: TOKENS.radius.lg,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    minHeight: TOKENS.menu.itemHeight,
-    width: '100%',
-    maxWidth: '100%',
   },
 });

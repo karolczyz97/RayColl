@@ -17,6 +17,7 @@ import { migrateLegacyUserDataToV2 } from '@/store/persistence/firestoreMigratio
 import { FIRESTORE_SCHEMA_VERSION } from '@/store/persistence/firestoreSchema';
 import { loadUserDataV2, saveUserDataV2 } from '@/store/persistence/firestoreV2Persistence';
 import { validateBackupData } from '@/utils/backupValidation';
+import { getErrorMessage } from '@/utils/errors';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -151,9 +152,14 @@ export async function loadUserData(uid: string): Promise<UserData | null> {
       activityHeatmap: rootData.activityHeatmap,
     };
 
-    validateBackupData(legacyDataCandidate);
-    const legacyData = legacyDataCandidate as UserData;
-    return migrateLegacyUserDataToV2(uid, legacyData);
+    try {
+      validateBackupData(legacyDataCandidate);
+      const legacyData = legacyDataCandidate as UserData;
+      return await migrateLegacyUserDataToV2(uid, legacyData);
+    } catch (err) {
+      console.warn('Legacy Firestore data is invalid; falling back to V2 data:', getErrorMessage(err));
+      return loadUserDataV2(uid);
+    }
   }
 
   return loadUserDataV2(uid);

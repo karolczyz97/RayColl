@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+import { describe, it, expect } from '@jest/globals';
 
 import {
   getNavigationRailWidth,
@@ -7,19 +7,25 @@ import {
 } from '../windowSizeClass';
 import { TOKENS } from '../../theme/tokens';
 
-export async function runTests() {
-  assert.equal(getWindowSizeClass(0), 'compact');
-  assert.equal(getWindowSizeClass(599), 'compact');
-  assert.equal(getWindowSizeClass(600), 'medium');
-  assert.equal(getWindowSizeClass(839), 'medium');
-  assert.equal(getWindowSizeClass(840), 'expanded');
-  assert.equal(getWindowSizeClass(1239), 'expanded');
-  assert.equal(getWindowSizeClass(1240), 'expanded');
+describe('windowSizeClass', () => {
+  it('maps width to the correct size class', () => {
+    expect(getWindowSizeClass(0)).toBe('compact');
+    expect(getWindowSizeClass(599)).toBe('compact');
+    expect(getWindowSizeClass(600)).toBe('medium');
+    expect(getWindowSizeClass(839)).toBe('medium');
+    expect(getWindowSizeClass(840)).toBe('expanded');
+    expect(getWindowSizeClass(1239)).toBe('expanded');
+    expect(getWindowSizeClass(1240)).toBe('expanded');
+  });
 
-  assert.equal(isExpandedWindowSize(839), false);
-  assert.equal(isExpandedWindowSize(840), true);
+  it('flags expanded sizes', () => {
+    expect(isExpandedWindowSize(839)).toBe(false);
+    expect(isExpandedWindowSize(840)).toBe(true);
+  });
 
-  assert.equal(getNavigationRailWidth(599), 0);
-  assert.equal(getNavigationRailWidth(600), TOKENS.layout.railWidth);
-  assert.equal(getNavigationRailWidth(840), TOKENS.layout.railWidth);
-}
+  it('derives navigation rail width from window width', () => {
+    expect(getNavigationRailWidth(599)).toBe(0);
+    expect(getNavigationRailWidth(600)).toBe(TOKENS.layout.railWidth);
+    expect(getNavigationRailWidth(840)).toBe(TOKENS.layout.railWidth);
+  });
+});

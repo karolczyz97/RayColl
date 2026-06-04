@@ -1,10 +1,64 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import type { StoreData } from '@/types/models';
-import { normalizeStoreData } from '@/store/storeDataNormalization';
+import {
+  normalizeActivityHeatmap,
+  normalizeGroup,
+  normalizeStoreData,
+  normalizeStudyMode,
+} from '@/store/storeDataNormalization';
 import { validateBackupData } from '@/utils/backupValidation';
 
 export type { StoreData };
+
+export const SEED_VERSION_READ_FAILED = -1;
+
+function parseStoredItems<T>(
+  raw: string | null,
+  label: string,
+  normalizeItem: (value: T) => T,
+  validateItem: (value: T) => void,
+): T[] {
+  if (!raw) {
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    console.error(`Failed to parse local ${label}:`, err);
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.flatMap((item, index) => {
+    try {
+      const normalized = normalizeItem(item as T);
+      validateItem(normalized);
+      return [normalized];
+    } catch (err) {
+      console.error(`Failed to normalize local ${label} item ${index}:`, err);
+      return [];
+    }
+  });
+}
+
+function parseStoredHeatmap(raw: string | null): Record<string, number> {
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return normalizeActivityHeatmap(JSON.parse(raw));
+  } catch (err) {
+    console.error('Failed to parse local activity heatmap:', err);
+    return {};
+  }
+}
 
 export async function loadLocalData(userId?: string): Promise<StoreData | null> {
   try {
@@ -35,9 +89,19 @@ export async function loadLocalData(userId?: string): Promise<StoreData | null> 
     // modes missing) does not discard everything. Missing pieces are filled in
     // by normalizeStoreData (built-in modes, empty heatmap).
     const data: StoreData = {
-      groups: storedGroups ? JSON.parse(storedGroups) : [],
-      studyModes: storedModes ? JSON.parse(storedModes) : [],
-      activityHeatmap: storedHeatmap ? JSON.parse(storedHeatmap) : {},
+      groups: parseStoredItems(
+        storedGroups,
+        'groups',
+        normalizeGroup,
+        (group) => validateBackupData({ groups: [group], studyModes: [], activityHeatmap: {} }),
+      ),
+      studyModes: parseStoredItems(
+        storedModes,
+        'study modes',
+        normalizeStudyMode,
+        (mode) => validateBackupData({ groups: [], studyModes: [mode], activityHeatmap: {} }),
+      ),
+      activityHeatmap: parseStoredHeatmap(storedHeatmap),
     };
 
     // Normalize first so data that normalization can repair is not rejected by
@@ -77,7 +141,7 @@ export async function getSeedVersion(): Promise<number> {
     return ver ? Number(ver) : 0;
   } catch (err) {
     console.error('Failed to read seed version:', err);
-    return 0;
+    return SEED_VERSION_READ_FAILED;
   }
 }
 

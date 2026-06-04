@@ -1,7 +1,7 @@
 import React from 'react';
 // eslint-disable-next-line no-restricted-imports -- required as PaperProvider icon renderer
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ExperimentalStack as Stack } from 'expo-router';
+import { ExperimentalStack as Stack, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider, useTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
@@ -11,6 +11,7 @@ import { I18nProvider, useI18n } from '@/i18n';
 import { AppThemeProvider, useAppTheme } from '@/contexts/ThemeContext';
 import { FlashcardStoreProvider } from '@/hooks/useFlashcardStore';
 import { createAppTheme } from '@/theme/createAppTheme';
+import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 import { UpdateNotification } from '@/components/feedback/UpdateNotification';
 import { AppNavigationShell } from '@/components/navigation/AppNavigationShell';
 import { getErrorMessage } from '@/utils/errors';
@@ -76,6 +77,19 @@ function themeColorWithAlpha(color: string, alpha: number): string {
 SplashScreen.preventAutoHideAsync().catch((err: unknown) => {
   logSplashScreenError('prevent auto hide', err);
 });
+
+function getGlobalErrorTitleKey(pathname: string): string | undefined {
+  switch (pathname) {
+    case '/':
+      return 'errors.dashboard_crashed';
+    case '/stats':
+      return 'errors.stats_crashed';
+    case '/app-settings':
+      return 'errors.app_settings_crashed';
+    default:
+      return undefined;
+  }
+}
 
 function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
   const { isI18nLoading } = useI18n();
@@ -195,35 +209,41 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const theme = useTheme();
+  const pathname = usePathname();
+  const { t } = useI18n();
+  const globalErrorTitleKey = getGlobalErrorTitleKey(pathname);
 
   const content = (
-    <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
-      <AppNavigationShell>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="study/[groupId]" />
-          <Stack.Screen name="browse/[groupId]" />
-          <Stack.Screen name="import" />
-          <Stack.Screen name="settings/[groupId]" />
-          <Stack.Screen name="stats" />
-          <Stack.Screen name="app-settings" />
-        </Stack>
-      </AppNavigationShell>
-    </View>
+    <AppErrorBoundary
+      resetKey={pathname}
+      title={globalErrorTitleKey ? t(globalErrorTitleKey) : undefined}
+    >
+      <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
+        <AppNavigationShell>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="study/[groupId]" />
+            <Stack.Screen name="browse/[groupId]" />
+            <Stack.Screen name="import" />
+            <Stack.Screen name="settings/[groupId]" />
+            <Stack.Screen name="stats" />
+            <Stack.Screen name="app-settings" />
+          </Stack>
+        </AppNavigationShell>
+      </View>
+      <UpdateNotification />
+    </AppErrorBoundary>
   );
 
-  return (
-    <>
-      {Platform.OS === 'web' ? (
-        <View style={[styles.webOuter, { backgroundColor: theme.colors.background }]}>
-          {content}
-        </View>
-      ) : (
-        content
-      )}
-      <UpdateNotification />
-    </>
-  );
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.webOuter, { backgroundColor: theme.colors.background }]}>
+        {content}
+      </View>
+    );
+  }
+
+  return content;
 }
 
 export default function RootLayout() {

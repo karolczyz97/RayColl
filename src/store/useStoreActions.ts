@@ -42,6 +42,7 @@ import type { PersistOptions } from './FlashcardStoreTypes';
 import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
 import { captureSnapshot, persistWithRollback } from './rollbackHelper';
+import { parseBackupJson } from './backupImport';
 
 interface UseStoreActionsParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
@@ -417,8 +418,10 @@ export function useStoreActionsCore({
     async (json: string) => {
       const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
 
-      const data = JSON.parse(json);
-      validateBackupData(data);
+      const data = parseBackupJson(json);
+      if (!validateBackupData(data)) {
+        throw new Error('app_settings.import_error');
+      }
 
       const normalized = normalizeStoreData({
         groups: data.groups,

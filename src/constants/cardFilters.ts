@@ -7,6 +7,9 @@ export const CARD_FILTERS = {
   NEW_REVIEW: 'new+review' as const,
 };
 
+/** Canonical default study filter for new/normalized decks. */
+export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;
+
 export const CARD_FILTER_OPTIONS: { value: CardFilter; labelKey: string }[] = [
   { value: CARD_FILTERS.NEW_REVIEW, labelKey: 'filter.new_review' },
   { value: CARD_FILTERS.NEW, labelKey: 'filter.new' },

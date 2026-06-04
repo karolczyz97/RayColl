@@ -1,3 +1,5 @@
+import { describe, it, expect } from '@jest/globals';
+
 import { TOKENS } from '../../theme/tokens';
 import {
   getDeterministicContainerWidth,
@@ -6,47 +8,24 @@ import {
   getGridItemWidth,
 } from '../gridLayout';
 
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected ${expected}, got ${actual}`);
-  }
-}
+describe('gridLayout', () => {
+  it('clamps the grid gap across widths', () => {
+    expect(getGridGap(320)).toBe(TOKENS.layout.minGap);
+    expect(getGridGap(768)).toBe(20);
+    expect(getGridGap(1600)).toBe(TOKENS.layout.maxGap);
+  });
 
-export async function runTests() {
-  console.log('\n--- Running Grid Layout Tests ---');
+  it('accounts for all padding layers in the container width', () => {
+    expect(getDeterministicContainerWidth(1600, TOKENS.layout.maxWidth, true, 0)).toBe(1168);
+    expect(
+      getDeterministicContainerWidth(900, TOKENS.layout.maxWidth, true, TOKENS.layout.railWidth),
+    ).toBe(772);
+  });
 
-  assertEqual(getGridGap(320), TOKENS.layout.minGap, 'Grid gap should clamp to minimum on small widths');
-  assertEqual(getGridGap(768), 20, 'Grid gap should scale up on medium widths');
-  assertEqual(getGridGap(1600), TOKENS.layout.maxGap, 'Grid gap should clamp to maximum on large widths');
-
-  assertEqual(
-    getDeterministicContainerWidth(1600, TOKENS.layout.maxWidth, true, 0),
-    1168,
-    'Dashboard width calculation should account for all padding layers',
-  );
-
-  assertEqual(
-    getDeterministicContainerWidth(900, TOKENS.layout.maxWidth, true, TOKENS.layout.railWidth),
-    772,
-    'Dashboard width calculation should subtract persistent rail width before web padding',
-  );
-
-  const gap = getGridGap(850);
-  assertEqual(
-    getGridColumns(883, 8, TOKENS.layout.minCardWidth, TOKENS.layout.maxCols, gap),
-    2,
-    'Columns should not jump early before the real three-column threshold',
-  );
-  assertEqual(
-    getGridColumns(884, 8, TOKENS.layout.minCardWidth, TOKENS.layout.maxCols, gap),
-    3,
-    'Columns should expand exactly at the three-column threshold',
-  );
-  assertEqual(
-    getGridItemWidth(884, 3, gap),
-    280,
-    'Threshold width should still keep cards at the minimum supported width',
-  );
-
-  console.log('Grid layout tests passed');
-}
+  it('expands columns exactly at the three-column threshold', () => {
+    const gap = getGridGap(850);
+    expect(getGridColumns(883, 8, TOKENS.layout.minCardWidth, TOKENS.layout.maxCols, gap)).toBe(2);
+    expect(getGridColumns(884, 8, TOKENS.layout.minCardWidth, TOKENS.layout.maxCols, gap)).toBe(3);
+    expect(getGridItemWidth(884, 3, gap)).toBe(280);
+  });
+});

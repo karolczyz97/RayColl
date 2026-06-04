@@ -75,6 +75,8 @@ export const it: Record<string, string> = {
   'browse.edit_card': 'Modifica flashcard',
   'browse.no_cards': 'Nessuna flashcard trovata.',
   'browse.min_filled_pages': 'Compila almeno 2 campi per salvare questa flashcard.',
+  'browse.show_hidden_pages': 'Mostra pagine nascoste',
+  'import.upload_file': 'Carica file (.csv, .txt, .md)',
 
   // Import
   'import.title': 'Importa flashcard',
@@ -251,6 +253,9 @@ export const it: Record<string, string> = {
   // Error boundary
   'errors.generic_title': 'Qualcosa è andato storto',
   'errors.retry': 'Riprova',
+  'errors.dashboard_crashed': 'Schermata principale in errore',
+  'errors.stats_crashed': 'Schermata statistiche in errore',
+  'errors.app_settings_crashed': 'Schermata impostazioni app in errore',
   'errors.study_crashed': 'Schermata di studio in errore',
   'errors.settings_crashed': 'Schermata impostazioni in errore',
   'errors.import_crashed': 'Schermata di importazione in errore',

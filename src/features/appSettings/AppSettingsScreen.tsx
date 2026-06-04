@@ -119,7 +119,9 @@ export function AppSettingsScreen() {
       await store.importState(content);
       setSnackbarMessage(t('app_settings.import_success'));
     } catch (error) {
-      if (error instanceof SyntaxError) {
+      if (error instanceof Error && error.message.startsWith('app_settings.')) {
+        setSnackbarMessage(t(error.message));
+      } else if (error instanceof SyntaxError) {
         setSnackbarMessage(t('app_settings.import_error'));
       } else {
         setSnackbarMessage(error instanceof Error ? error.message : t('app_settings.import_error'));

@@ -77,6 +77,8 @@ export const pl: Record<string, string> = {
   'browse.edit_card': 'Edytuj fiszkę',
   'browse.no_cards': 'Nie znaleziono fiszek.',
   'browse.min_filled_pages': 'Wypełnij przynajmniej 2 pola, aby zapisać fiszkę.',
+  'browse.show_hidden_pages': 'Pokaż ukryte strony',
+  'import.upload_file': 'Wgraj plik (.csv, .txt, .md)',
 
   // Import
   'import.title': 'Importuj fiszki',
@@ -255,6 +257,9 @@ export const pl: Record<string, string> = {
   // Error boundary
   'errors.generic_title': 'Coś poszło nie tak',
   'errors.retry': 'Spróbuj ponownie',
+  'errors.dashboard_crashed': 'Ekran główny uległ awarii',
+  'errors.stats_crashed': 'Ekran statystyk uległ awarii',
+  'errors.app_settings_crashed': 'Ekran ustawień aplikacji uległ awarii',
   'errors.study_crashed': 'Ekran nauki uległ awarii',
   'errors.settings_crashed': 'Ekran ustawień uległ awarii',
   'errors.import_crashed': 'Ekran importu uległ awarii',

@@ -75,6 +75,8 @@ export const de: Record<string, string> = {
   'browse.edit_card': 'Karte bearbeiten',
   'browse.no_cards': 'Keine Karteikarten gefunden.',
   'browse.min_filled_pages': 'Fülle mindestens 2 Felder aus, um diese Karte zu speichern.',
+  'browse.show_hidden_pages': 'Ausgeblendete Seiten anzeigen',
+  'import.upload_file': 'Datei hochladen (.csv, .txt, .md)',
 
   // Import
   'import.title': 'Karteikarten importieren',
@@ -251,6 +253,9 @@ export const de: Record<string, string> = {
   // Error boundary
   'errors.generic_title': 'Etwas ist schiefgelaufen',
   'errors.retry': 'Erneut versuchen',
+  'errors.dashboard_crashed': 'Dashboard-Bildschirm abgestürzt',
+  'errors.stats_crashed': 'Statistikbildschirm abgestürzt',
+  'errors.app_settings_crashed': 'App-Einstellungen-Bildschirm abgestürzt',
   'errors.study_crashed': 'Lernbildschirm abgestürzt',
   'errors.settings_crashed': 'Einstellungsbildschirm abgestürzt',
   'errors.import_crashed': 'Import-Bildschirm abgestürzt',

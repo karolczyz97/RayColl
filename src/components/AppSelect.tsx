@@ -2,6 +2,8 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { HelperText, Icon, Menu, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
+import { menuStyles } from '@/theme/menuStyles';
+import { AppMenuItem } from './AppMenuItem';
 
 export interface SelectOption {
   label: string;
@@ -74,12 +76,12 @@ export function AppSelect({
           visible={open}
           onDismiss={() => setOpen(false)}
           style={[
-            styles.menu,
+            menuStyles.menu,
             anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
             { transformOrigin: 'top' },
           ]}
           contentStyle={[
-            styles.menuContent,
+            menuStyles.menuContent,
             { backgroundColor: theme.colors.elevation.level2 },
             anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
             { transformOrigin: 'top' },
@@ -125,29 +127,18 @@ export function AppSelect({
             </TouchableRipple>
           }
         >
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <Menu.Item
-                key={option.value}
-                leadingIcon={isSelected ? 'check' : option.icon}
-                title={option.label}
-                onPress={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                style={[
-                  styles.menuItem,
-                  isSelected && { backgroundColor: theme.colors.secondaryContainer },
-                ]}
-                titleStyle={
-                  isSelected
-                    ? { color: theme.colors.onSecondaryContainer, fontWeight: TOKENS.typography.weight.bold }
-                    : { color: theme.colors.onSurface }
-                }
-              />
-            );
-          })}
+          {options.map((option) => (
+            <AppMenuItem
+              key={option.value}
+              label={option.label}
+              icon={option.icon}
+              selected={option.value === value}
+              onPress={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+            />
+          ))}
         </Menu>
       </View>
 
@@ -190,17 +181,5 @@ const styles = StyleSheet.create({
   fieldText: {
     flex: 1,
     paddingRight: TOKENS.spacing.sm,
-  },
-  menu: {
-    marginTop: TOKENS.menu.gap,
-  },
-  menuContent: {
-    borderRadius: TOKENS.radius.lg,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    minHeight: TOKENS.menu.itemHeight,
-    width: '100%',
-    maxWidth: '100%',
   },
 });
