@@ -2,10 +2,10 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { TOKENS } from '../../theme/tokens';
-import { getTopBarColors } from '../../theme/semanticColors';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-import { useAppTheme } from '../../contexts/ThemeContext';
+import { TOKENS } from '@/theme/tokens';
+import { getTopBarColors } from '@/theme/semanticColors';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { useAppTheme } from '@/contexts/ThemeContext';
 
 interface AppTopBarProps {
   /** Sub-page mode: title shown next to the back arrow. */

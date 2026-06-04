@@ -1,4 +1,4 @@
-import { StudyMode } from '../../types/models';
+import { StudyMode } from '@/types/models';
 
 export function createSeedModes(): StudyMode[] {
   return [

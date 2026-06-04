@@ -1,6 +1,6 @@
-import { SrsState } from '../types/models';
-import { SrsCardCategory } from '../srs/srsEngine';
-import type { CardStats } from '../store/selectors/stats';
+import { SrsState } from '@/types/models';
+import { SrsCardCategory } from '@/srs/srsEngine';
+import type { CardStats } from '@/store/selectors/stats';
 
 export interface SrsCategoryToken {
   labelKey: string;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Portal } from 'react-native-paper';
-import { dialogStyles } from '../../theme/dialogStyles';
-import { AppTextInput } from '../forms/AppTextInput';
+import { dialogStyles } from '@/theme/dialogStyles';
+import { AppTextInput } from '@/components/forms/AppTextInput';
 
 interface TextEntryDialogProps {
   visible: boolean;

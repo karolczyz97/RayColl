@@ -2,10 +2,10 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Avatar, Button, IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper';
 
-import { useI18n } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
-import { AppMenuButton } from '../AppMenuButton';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
+import { AppMenuButton } from '@/components/AppMenuButton';
 
 interface NavigationAccountMenuProps {
   user: FlashcardStoreState['user'];

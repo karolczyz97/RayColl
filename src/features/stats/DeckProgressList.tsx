@@ -1,12 +1,12 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import type { FlashcardGroup } from '../../types/models';
-import type { CardStats } from '../../store/selectors/stats';
-import { computeCardStats } from '../../store/selectors/stats';
-import { SegmentedProgressBar } from '../../components/SegmentedProgressBar';
-import { TOKENS } from '../../theme/tokens';
+import type { TranslationFn } from '@/i18n';
+import type { FlashcardGroup } from '@/types/models';
+import type { CardStats } from '@/store/selectors/stats';
+import { computeCardStats } from '@/store/selectors/stats';
+import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
+import { TOKENS } from '@/theme/tokens';
 
 interface DeckProgressListProps {
   groups: FlashcardGroup[];

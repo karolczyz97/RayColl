@@ -1,19 +1,18 @@
 import { useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
-import type { FlashcardGroup, StudyMode } from '../types/models';
-import { onAuthChange } from '../services/firebase';
+import type { FlashcardGroup, StudyMode, StoreData } from '@/types/models';
+import { onAuthChange } from '@/services/firebase';
 import { loadCloudData } from './persistence/firebasePersistence';
 import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
-import type { StoreData } from './persistence/localPersistence';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
-import { getErrorMessage } from '../utils/errors';
+import { getErrorMessage } from '@/utils/errors';
 import { purgeExpiredArchivesAction } from './actions/groupActions';
 import { shouldTriggerMigration, getGuestHasData } from './selectors/migrationLogic';
-import { ARCHIVE_RETENTION_MS } from '../constants/archive';
+import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
 
 interface UseStoreBootstrapParams {
   user: User | null;

@@ -25,7 +25,7 @@ import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../../store/storeDataN
 import { validateBackupData } from '../../utils/backupValidation';
 import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
-import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
+import { MAX_STORED_PAGE_COUNT } from '../../constants/pages';
 import { assertEqual, assertOk, assertThrows, assertDeepEqual } from '../../test/assertions';
 
 export async function runTests() {
@@ -43,17 +43,17 @@ console.log('✓ createNewSrsState test passed');
 
 // Card categories mapping
 assertEqual(getCardCategory(state), 'new', 'Category should be "new"');
-const learningState = { ...state, state: 1 };
+const learningState = { ...state, state: 1 as const };
 assertEqual(getCardCategory(learningState), 'learning', 'Category should be "learning"');
-const relearningState = { ...state, state: 3 };
+const relearningState = { ...state, state: 3 as const };
 assertEqual(
   getCardCategory(relearningState),
   'learning',
   'Category should be "learning" for relearning state',
 );
-const reviewState = { ...state, state: 2, repetitions: 2 };
+const reviewState = { ...state, state: 2 as const, repetitions: 2 };
 assertEqual(getCardCategory(reviewState), 'review', 'Category should be "review"');
-const masteredState = { ...state, state: 2, repetitions: 3 };
+const masteredState = { ...state, state: 2 as const, repetitions: 3 };
 assertEqual(getCardCategory(masteredState), 'mastered', 'Category should be "mastered"');
 console.log('✓ getCardCategory tests passed');
 
@@ -486,7 +486,6 @@ assertThrows(
       cards: [{ pages: ['one'] }],
     }),
   'must contain at least',
-  `Import with < ${MIN_PAGE_COUNT} pages should throw`,
 );
 
 // Import with excessive pages > MAX_STORED_PAGE_COUNT
@@ -502,7 +501,6 @@ assertThrows(
       cards: [{ pages: manyCardPages }],
     }),
   'can contain at most',
-  `Import with > ${MAX_STORED_PAGE_COUNT} pages should throw`,
 );
 
 // Import with > MIN_PAGE_COUNT and <= MAX_STORED is allowed (6 pages, > visible=5)

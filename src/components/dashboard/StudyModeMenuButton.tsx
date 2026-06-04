@@ -1,9 +1,9 @@
 import React from 'react';
-import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useI18n } from '../../i18n';
-import type { FlashcardGroup } from '../../types/models';
-import { AppSplitButton } from '../AppSplitButton';
-import { getModeName } from '../../i18n/modeHelpers';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useI18n } from '@/i18n';
+import type { FlashcardGroup } from '@/types/models';
+import { AppSplitButton } from '@/components/AppSplitButton';
+import { getModeName } from '@/i18n/modeHelpers';
 
 interface Props {
   group: FlashcardGroup;

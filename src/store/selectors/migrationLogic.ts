@@ -1,4 +1,4 @@
-import type { StoreData } from '../persistence/localPersistence';
+import type { StoreData } from '@/types/models';
 
 export function shouldTriggerMigration(
   hasUserLocalCache: boolean,

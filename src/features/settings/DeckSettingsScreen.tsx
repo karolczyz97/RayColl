@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Dialog, IconButton, Portal, useTheme } from 'react-native-paper';
-import { getTopBarColors } from '../../theme/semanticColors';
-import { DeckNameSection } from '../../components/settings/DeckNameSection';
-import { StudyScopeSection } from '../../components/settings/StudyScopeSection';
-import { StudyModeSelector } from '../../components/settings/StudyModeSelector';
-import { StudyModeStepsEditor } from '../../components/settings/StudyModeStepsEditor';
-import { CreateStudyModeSection } from '../../components/settings/CreateStudyModeSection';
-import { ArchiveDeckDialog } from '../../components/settings/ArchiveDeckDialog';
-import { AddStepDialog } from '../../components/settings/AddStepDialog';
-import { TOKENS } from '../../theme/tokens';
-import { AppScreen } from '../../components/layout/AppScreen';
-import { AnimatedSection } from '../../components/layout/AnimatedSection';
-import { SectionCard } from '../../components/layout/SectionCard';
-import { PageConfigEditor } from '../../components/pageConfig/PageConfigEditor';
+import { getTopBarColors } from '@/theme/semanticColors';
+import { DeckNameSection } from '@/components/settings/DeckNameSection';
+import { StudyScopeSection } from '@/components/settings/StudyScopeSection';
+import { StudyModeSelector } from '@/components/settings/StudyModeSelector';
+import { StudyModeStepsEditor } from '@/components/settings/StudyModeStepsEditor';
+import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
+import { ArchiveDeckDialog } from '@/components/settings/ArchiveDeckDialog';
+import { AddStepDialog } from '@/components/settings/AddStepDialog';
+import { TOKENS } from '@/theme/tokens';
+import { AppScreen } from '@/components/layout/AppScreen';
+import { AnimatedSection } from '@/components/layout/AnimatedSection';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { PageConfigEditor } from '@/components/pageConfig/PageConfigEditor';
 
 export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDeckSettingsController').useDeckSettingsController>) {
   const { fg: topBarFg } = getTopBarColors(useTheme());
@@ -34,6 +34,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     hasCustomSteps,
     useTwoColumnLayout,
     movePageSetting,
+    movePageSettingAll,
     moveStep,
     newModeName,
     newMs,
@@ -257,8 +258,9 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
                     return next;
                   });
                 }}
+                onPageNameBlur={handleColBlur}
                 onPageLanguageChange={updatePageLangValue}
-                onMovePage={movePageSetting}
+                onMovePage={movePageSettingAll}
               />
             </View>
           </Dialog.ScrollArea>

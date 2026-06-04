@@ -1,5 +1,5 @@
-import { Flashcard } from '../../types/models';
-import { filterLive } from '../../utils/array';
+import { Flashcard } from '@/types/models';
+import { filterLive } from '@/utils/array';
 
 export function getGroupProgress(cards: Flashcard[]): number {
   const liveCards = filterLive(cards);

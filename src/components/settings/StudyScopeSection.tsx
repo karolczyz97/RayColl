@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { AppSelect } from '../AppSelect';
-import { CARD_FILTER_OPTIONS, type CardFilter } from '../../constants/cardFilters';
-import { TOKENS } from '../../theme/tokens';
-import type { TranslationFn } from '../../i18n';
+import { AppSelect } from '@/components/AppSelect';
+import { CARD_FILTER_OPTIONS, type CardFilter } from '@/constants/cardFilters';
+import { TOKENS } from '@/theme/tokens';
+import type { TranslationFn } from '@/i18n';
 
 interface Props {
   studyFilter: CardFilter;

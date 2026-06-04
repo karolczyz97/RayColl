@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { Platform, View, StyleSheet } from 'react-native';
 import { GroupCard } from './GroupCard';
-import type { FlashcardGroup } from '../../types/models';
-import { TOKENS } from '../../theme/tokens';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-import { useNavigationShell } from '../../contexts/NavigationShellContext';
-import { AnimatedSection } from '../layout/AnimatedSection';
+import type { FlashcardGroup } from '@/types/models';
+import { TOKENS } from '@/theme/tokens';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { useNavigationShell } from '@/contexts/NavigationShellContext';
+import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import {
   getGridColumns,
   getDeterministicContainerWidth,
   getGridGap,
   getGridItemWidth,
-} from '../../utils/gridLayout';
+} from '@/utils/gridLayout';
 
 interface Props {
   baseOrder?: number;

@@ -1,9 +1,9 @@
-import { FlashcardGroup, Flashcard } from '../../types/models';
-import { CardFilter } from '../../constants/cardFilters';
-import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '../../constants/pages';
-import { DEFAULT_STUDY_FILTER, padPageMetadata } from '../storeDataNormalization';
-import { uid } from '../../utils/id';
-import { createNewSrsState } from '../../srs/srsEngine';
+import { FlashcardGroup, Flashcard } from '@/types/models';
+import { CardFilter } from '@/constants/cardFilters';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '@/constants/pages';
+import { DEFAULT_STUDY_FILTER, padPageMetadata } from '@/store/storeDataNormalization';
+import { uid } from '@/utils/id';
+import { createNewSrsState } from '@/srs/srsEngine';
 
 function createGroupObject(
   name: string,

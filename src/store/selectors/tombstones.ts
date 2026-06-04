@@ -1,5 +1,5 @@
-import { FlashcardGroup, StudyMode } from '../../types/models';
-import { filterLive } from '../../utils/array';
+import { FlashcardGroup, StudyMode } from '@/types/models';
+import { filterLive } from '@/utils/array';
 
 export function selectLiveStudyModes(modes: StudyMode[]): StudyMode[] {
   return filterLive(modes);

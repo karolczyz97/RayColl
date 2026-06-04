@@ -1,8 +1,7 @@
-import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
-import { normalizeStudyFilter } from '../storeDataNormalization';
-import { coerceStringArray } from '../../utils/array';
-import { isRecord } from '../../utils/types';
-import type { StoreData } from './localPersistence';
+import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
+import { normalizeStudyFilter } from '@/store/storeDataNormalization';
+import { coerceStringArray } from '@/utils/array';
+import { isRecord } from '@/utils/types';
 
 export const FIRESTORE_SCHEMA_VERSION = 2;
 
@@ -60,7 +59,7 @@ function deserializeSrsState(docId: string, value: unknown): Flashcard['srsState
     difficulty: requireFiniteNumber(value.difficulty, `srsState.difficulty for card ${docId}`),
     stability: requireFiniteNumber(value.stability, `srsState.stability for card ${docId}`),
     repetitions: requireFiniteNumber(value.repetitions, `srsState.repetitions for card ${docId}`),
-    state: requireFiniteNumber(value.state, `srsState.state for card ${docId}`),
+    state: requireFiniteNumber(value.state, `srsState.state for card ${docId}`) as SrsState['state'],
     lastReviewTimestamp: requireFiniteNumber(
       value.lastReviewTimestamp,
       `srsState.lastReviewTimestamp for card ${docId}`,

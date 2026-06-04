@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { TOKENS } from '../../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 interface CardPageSectionProps {
   pageName: string;

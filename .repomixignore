@@ -1,10 +1,10 @@
-# Dependency and lockfile noise
+# === Zależności i lockfile ===
 node_modules/
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
 
-# Local tooling caches and generated outputs
+# === Build outputy i cache ===
 .expo/
 .firebase/
 .npm-cache/
@@ -16,29 +16,69 @@ out/
 .next/
 .gradle/
 app/build/
-repomix-output.xml
+*.tsbuildinfo
+.artifacts/
+.chrome-headless-*/
 
-# Local editor / agent state
-.claude/settings.local.json
-.vscode/
-
-# Large or generated binaries
+# === Binary assets ===
 *.png
 *.jpg
 *.jpeg
 *.ico
+*.svg
+*.gif
+*.webp
+*.mp3
+*.mp4
+*.mov
+*.wav
+*.ogg
 *.woff
 *.woff2
+*.otf
+*.ttf
 *.gguf
 
-# Low-signal content for coding context
+# === Sekrety i env (zawiera klucze API i token EAS!) ===
+.env
+.env.*
+*.env
+
+# === Editor / agent local state ===
+.vscode/
+.idea/
+.claude/settings.local.json
+plany/
+
+# === Tooling config (formatowanie, lint, bundler, test runner) ===
+.prettierrc
+.prettierignore
+.gitattributes
+.gitignore
+eslint.config.js
+metro.config.js
+jest.config.js
+jest.setup.js
+
+# === Infrastruktura (Firebase, EAS, CI/CD) ===
+.firebaserc
+firebase.json
+firestore.rules
+firestore.indexes.json
+eas.json
+.github/
+
+# === Niskosygnałowe treści (nie kod aplikacji) ===
 src/i18n/locales/**
 src/store/seed/**
 **/__tests__/**
 docs/**
-scripts/regression-checklist.md
+LICENSE
 
-# Keep instruction and architecture docs available to the model
+# === Poprzednie outputy repomixa ===
+repomix-output.xml
+
+# === Zachowaj pliki instrukcji dla agentów ===
 !AGENTS.md
 !CLAUDE.md
 !GEMINI.md

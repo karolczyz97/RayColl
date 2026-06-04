@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { Flashcard, FlashcardGroup, StudyMode } from '../types/models';
-import type { CardFilter } from '../constants/cardFilters';
-import type { ImportDeckPayload, ImportDeckResult } from '../import/importDeck';
-import { validateImportDeckPayload } from '../import/importDeck';
-import { validateBackupData } from '../utils/backupValidation';
+import type { Flashcard, FlashcardGroup, StudyMode, StoreData } from '@/types/models';
+import type { CardFilter } from '@/constants/cardFilters';
+import type { ImportDeckPayload, ImportDeckResult } from '@/import/importDeck';
+import { validateImportDeckPayload } from '@/import/importDeck';
+import { validateBackupData } from '@/utils/backupValidation';
 import {
   addGroupAction,
   addGroupWithCardsAction,
@@ -29,18 +29,19 @@ import {
   deleteStudyModeAction,
   updateStudyModeAction,
 } from './actions/studyModeActions';
-import { ARCHIVE_RETENTION_MS } from '../constants/archive';
+import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
 import { recordActivityAction } from './actions/activityActions';
 import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { getDueCards as selectDueCards } from './selectors/dueCards';
 import { getGroupProgress as selectGroupProgress } from './selectors/progress';
 import { selectLiveStudyModes } from './selectors/tombstones';
-import { filterLive } from '../utils/array';
-import { setSeedVersion, type StoreData } from './persistence/localPersistence';
+import { filterLive } from '@/utils/array';
+import { setSeedVersion } from './persistence/localPersistence';
 import type { PersistOptions } from './FlashcardStoreTypes';
 import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from './storeDataNormalization';
-import { getErrorMessage } from '../utils/errors';
+import { getErrorMessage } from '@/utils/errors';
+import { captureSnapshot, persistWithRollback } from './rollbackHelper';
 
 interface UseStoreActionsParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
@@ -122,11 +123,7 @@ export function useStoreActionsCore({
         return { ok: false, error: getErrorMessage(err) };
       }
 
-      const previousSnapshot: StoreData = {
-        groups: groupsRef.current,
-        studyModes: studyModesRef.current,
-        activityHeatmap: heatmapRef.current,
-      };
+      const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
       const currentUid = getCurrentUid();
       const { nextGroups, newGroupId } = addGroupWithCardsAction(
         previousSnapshot.groups,
@@ -150,24 +147,20 @@ export function useStoreActionsCore({
       setGroups(nextGroups);
 
       try {
-        await persistNow({
-          uid: currentUid,
-          groups: nextGroups,
-          studyModes: previousSnapshot.studyModes,
-          activityHeatmap: previousSnapshot.activityHeatmap,
-        });
+        await persistWithRollback(
+          applySnapshot,
+          persistNow,
+          previousSnapshot,
+          { groups: nextGroups, studyModes: previousSnapshot.studyModes, activityHeatmap: previousSnapshot.activityHeatmap },
+          currentUid,
+          'Import deck',
+        );
         return {
           ok: true,
           groupId: newGroupId,
           importedCards: normalized.cards.length,
         };
       } catch (err) {
-        applySnapshot(previousSnapshot);
-        try {
-          await persistNow({ uid: currentUid, ...previousSnapshot });
-        } catch (rollbackErr) {
-          console.error('Import rollback persistence failed:', rollbackErr);
-        }
         const message = getErrorMessage(err);
         setLastPersistenceError(message);
         setLastStoreError(message);
@@ -349,11 +342,7 @@ export function useStoreActionsCore({
   );
 
   const resetToDefault = useCallback(async () => {
-    const previousSnapshot: StoreData = {
-      groups: groupsRef.current,
-      studyModes: studyModesRef.current,
-      activityHeatmap: heatmapRef.current,
-    };
+    const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
     const seedSnapshot: StoreData = {
       groups: createSeedGroups(),
       studyModes: createSeedModes(),
@@ -362,21 +351,18 @@ export function useStoreActionsCore({
 
     applySnapshot(seedSnapshot);
 
+    await persistWithRollback(
+      applySnapshot,
+      persistNow,
+      previousSnapshot,
+      seedSnapshot,
+      getCurrentUid(),
+      'Reset to default',
+    );
+
     setSeedVersion(SEED_VERSION).catch((err) => {
       setLastPersistenceError(getErrorMessage(err));
     });
-
-    try {
-      await persistNow({ uid: getCurrentUid(), ...seedSnapshot });
-    } catch (err) {
-      applySnapshot(previousSnapshot);
-      try {
-        await persistNow({ uid: getCurrentUid(), ...previousSnapshot });
-      } catch (rollbackErr) {
-        console.error('Reset rollback persistence failed:', rollbackErr);
-      }
-      throw err;
-    }
   }, [
     applySnapshot,
     getCurrentUid,
@@ -429,11 +415,7 @@ export function useStoreActionsCore({
 
   const importState = useCallback(
     async (json: string) => {
-      const previousSnapshot: StoreData = {
-        groups: groupsRef.current,
-        studyModes: studyModesRef.current,
-        activityHeatmap: heatmapRef.current,
-      };
+      const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
 
       const data = JSON.parse(json);
       validateBackupData(data);
@@ -447,17 +429,14 @@ export function useStoreActionsCore({
 
       applySnapshot(normalized);
 
-      try {
-        await persistNow({ uid: getCurrentUid(), ...normalized });
-      } catch (err) {
-        applySnapshot(previousSnapshot);
-        try {
-          await persistNow({ uid: getCurrentUid(), ...previousSnapshot });
-        } catch (rollbackErr) {
-          console.error('Import state rollback persistence failed:', rollbackErr);
-        }
-        throw err;
-      }
+      await persistWithRollback(
+        applySnapshot,
+        persistNow,
+        previousSnapshot,
+        normalized,
+        getCurrentUid(),
+        'Import state',
+      );
     },
     [applySnapshot, getCurrentUid, groupsRef, heatmapRef, persistNow, studyModesRef],
   );

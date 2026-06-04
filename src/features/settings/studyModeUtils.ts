@@ -1,5 +1,5 @@
-import type { ModeStep } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
+import type { ModeStep } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
 
 export function stepSummary(step: ModeStep, t: TranslationFn): string {
   switch (step.type) {

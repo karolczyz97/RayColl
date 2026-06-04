@@ -8,7 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 type PaperCardProps = ComponentProps<typeof Card>;
 

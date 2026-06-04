@@ -1,5 +1,5 @@
-import type { SrsState } from '../types/models';
-import { clamp } from '../utils/math';
+import type { SrsState } from '@/types/models';
+import { clamp } from '@/utils/math';
 
 // --- FSRS Parameters (v4.5 defaults) ---
 const W = [
@@ -64,7 +64,7 @@ export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
   const elapsedMs = now - (current.lastReviewTimestamp || now);
   const elapsedDays = Math.max(elapsedMs / (1000 * 60 * 60 * 24), 0);
 
-  let newD: number, newS: number, newState: number;
+  let newD: number, newS: number, newState: SrsState['state'];
 
   if (current.state === 0 || current.stability <= 0) {
     // New or first review
@@ -179,5 +179,6 @@ export function getCardCategory(state: SrsState): SrsCardCategory {
   if (state.state === 2) {
     return state.repetitions >= 3 ? 'mastered' : 'review';
   }
-  return 'new'; // default fallback
+  const _exhaustive: never = state.state;
+  return _exhaustive;
 }

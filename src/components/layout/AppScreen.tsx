@@ -2,9 +2,9 @@ import React from 'react';
 import { Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TOKENS } from '../../theme/tokens';
-import { getElevationStyle } from '../../theme/elevation';
-import { useNavigationShell } from '../../contexts/NavigationShellContext';
+import { TOKENS } from '@/theme/tokens';
+import { getElevationStyle } from '@/theme/elevation';
+import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { AppTopBar } from './AppTopBar';
 import { ScreenContent } from './ScreenContent';
 

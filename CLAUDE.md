@@ -34,9 +34,9 @@ Before every refactor step:
 ## UI / MD3 rules
 
 - Use existing primitives. Do not reinvent:
-  - `AppCard`, `AppSelect`, `AppSplitButton`, `AppMenuButton`, `AppIcon`, `PageHeader`, `GroupNotFound`, `SegmentedProgressBar`
+  - `AppCard`, `AppSelect`, `AppSplitButton`, `AppMenuButton`, `AppIcon`, `GroupNotFound`, `SegmentedProgressBar`
   - `AppTextInput`, `SectionCard`, `AppScreen`, `AnimatedSection`, `MetricGrid`
-  - `ConfirmDialog`, `DangerDialog`, `AppSnackbar`, `SyncStatusBanner`
+  - `ConfirmDialog`, `AppSnackbar`, `SyncStatusBanner`, `ChangelogDialog`
 - Spacing, radius, control height, motion durations, and layout breakpoints come from **`TOKENS`** in `src/theme/tokens.ts`. No magic numbers for those values in `StyleSheet.create`.
 - Colors come from `theme.colors.*` and `src/theme/semanticColors.ts`. No raw hex in screens unless there is a strong reason and it belongs in the theme layer.
 - Dialogs should use `dialogStyles.dialog` from `src/theme/dialogStyles.ts` and be wrapped in `<Portal>`.

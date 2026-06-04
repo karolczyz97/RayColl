@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal, Text } from 'react-native-paper';
-import { useI18n } from '../../i18n';
-import { releaseInfo } from '../../config/releaseInfo';
-import { dialogStyles } from '../../theme/dialogStyles';
-import { TOKENS } from '../../theme/tokens';
+import { useI18n } from '@/i18n';
+import { releaseInfo } from '@/config/releaseInfo';
+import { dialogStyles } from '@/theme/dialogStyles';
+import { TOKENS } from '@/theme/tokens';
 
 interface ChangelogDialogProps {
   visible: boolean;

@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Switch, Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import { SectionCard } from '../../components/layout/SectionCard';
-import { PageConfigEditor } from '../../components/pageConfig/PageConfigEditor';
-import { TOKENS } from '../../theme/tokens';
+import type { TranslationFn } from '@/i18n';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { PageConfigEditor } from '@/components/pageConfig/PageConfigEditor';
+import { TOKENS } from '@/theme/tokens';
 
 interface ImportConfigCardProps {
   sepKey: string;

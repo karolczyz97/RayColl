@@ -13,7 +13,7 @@ import { en } from './locales/en';
 import { de } from './locales/de';
 import { es } from './locales/es';
 import { it } from './locales/it';
-import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
 
 export type LanguageCode = 'pl' | 'en' | 'de' | 'es' | 'it';
 export type TranslationReplacements = Record<string, string | number>;

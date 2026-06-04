@@ -1,6 +1,6 @@
-import { Flashcard, FlashcardGroup } from '../../types/models';
-import { padArray } from '../../utils/array';
-import { padPageMetadata } from '../storeDataNormalization';
+import { Flashcard, FlashcardGroup } from '@/types/models';
+import { padArray } from '@/utils/array';
+import { padPageMetadata } from '@/store/storeDataNormalization';
 
 export function getVisiblePages(card: Flashcard, group: FlashcardGroup): string[] {
   const count = group.activePageCount;

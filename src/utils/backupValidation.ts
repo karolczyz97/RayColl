@@ -1,4 +1,4 @@
-import type { FlashcardGroup, StudyMode } from '../types/models';
+import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { isRecord } from './types';
 
 export interface BackupData {

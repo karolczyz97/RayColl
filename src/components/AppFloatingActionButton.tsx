@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 interface AppFloatingActionButtonProps {
   icon: string;

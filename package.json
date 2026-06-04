@@ -57,9 +57,7 @@
     "web": "expo start --web",
     "lint": "expo lint --no-cache",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:logic && npm run test:components",
-    "test:logic": "node scripts/run-tests.mjs",
-    "test:components": "jest --runInBand",
+    "test": "jest --runInBand",
     "check-assets": "node scripts/check-assets.mjs",
     "check-ui": "node scripts/check-ui-constraints.mjs",
     "postinstall": "node scripts/patch-voice-gradle.js"

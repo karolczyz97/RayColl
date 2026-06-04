@@ -2,12 +2,12 @@ import React, { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import type { Flashcard, FlashcardGroup } from '../../../types/models';
-import { AppIcon } from '../../../components/AppIcon';
-import { getVisiblePages } from '../../../store/selectors/pages';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
+import { AppIcon } from '@/components/AppIcon';
+import { getVisiblePages } from '@/store/selectors/pages';
 import { CardPageSection } from './CardPageSection';
-import { TOKENS } from '../../../theme/tokens';
-import { getElevationStyle } from '../../../theme/elevation';
+import { TOKENS } from '@/theme/tokens';
+import { getElevationStyle } from '@/theme/elevation';
 
 interface StudyCardProps {
   currentCard: Flashcard | null;

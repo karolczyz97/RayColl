@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Divider, List, Button } from 'react-native-paper';
-import type { StudyMode, ModeStep } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { SectionCard } from '../layout/SectionCard';
-import { getModeName } from '../../i18n/modeHelpers';
+import type { StudyMode, ModeStep } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { getModeName } from '@/i18n/modeHelpers';
 import { StepReorderControls } from './StepReorderControls';
 
 interface Props {

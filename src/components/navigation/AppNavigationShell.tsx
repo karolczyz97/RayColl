@@ -3,20 +3,20 @@ import { StyleSheet, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useTheme } from 'react-native-paper';
 
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useAppTheme } from '../../contexts/ThemeContext';
-import { useI18n } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { NavigationShellProvider } from '../../contexts/NavigationShellContext';
-import { ConfirmDialog } from '../dialogs/ConfirmDialog';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useAppTheme } from '@/contexts/ThemeContext';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { NavigationShellProvider } from '@/contexts/NavigationShellContext';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { NavigationRail } from './NavigationRail';
 import {
   IMPORT_ACTION_HREF,
   getActiveDestination,
   type NavigationDestination,
 } from './navigationDestinations';
-import { getIsStudyActive } from '../../features/study/studyGuard';
+import { getIsStudyActive } from '@/features/study/studyGuard';
 
 export function AppNavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

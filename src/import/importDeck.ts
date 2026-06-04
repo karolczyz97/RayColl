@@ -1,5 +1,5 @@
-import type { Flashcard } from '../types/models';
-import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../constants/pages';
+import type { Flashcard } from '@/types/models';
+import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 
 export interface ImportDeckCardInput {
   pages: string[];

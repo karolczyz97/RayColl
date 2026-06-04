@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Icon, Text, useTheme } from 'react-native-paper';
-import { TOKENS } from '../theme/tokens';
-import { usePressAnimation } from '../hooks/usePressAnimation';
+import { TOKENS } from '@/theme/tokens';
+import { usePressAnimation } from '@/hooks/usePressAnimation';
 
 export interface ButtonGroupOption {
   label: string;

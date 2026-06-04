@@ -2,12 +2,12 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
-import type { FlashcardGroup } from '../../../types/models';
-import { AppIcon } from '../../../components/AppIcon';
-import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
-import { computeCardStats } from '../../../store/selectors/stats';
-import { getSuccessColor } from '../../../theme/semanticColors';
-import { TOKENS } from '../../../theme/tokens';
+import type { FlashcardGroup } from '@/types/models';
+import { AppIcon } from '@/components/AppIcon';
+import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
+import { computeCardStats } from '@/store/selectors/stats';
+import { getSuccessColor } from '@/theme/semanticColors';
+import { TOKENS } from '@/theme/tokens';
 
 interface StudyFinishedStateProps {
   activeGroup: FlashcardGroup;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Dialog, Portal, Text, useTheme } from 'react-native-paper';
-import { dialogStyles } from '../../theme/dialogStyles';
+import { dialogStyles } from '@/theme/dialogStyles';
 
 export interface ConfirmDialogProps {
   visible: boolean;

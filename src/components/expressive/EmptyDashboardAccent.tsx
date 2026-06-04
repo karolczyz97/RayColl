@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, useTheme } from 'react-native-paper';
 
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 import { ExpressiveShapeSurface } from './ExpressiveShapeSurface';
 
 export function EmptyDashboardAccent() {

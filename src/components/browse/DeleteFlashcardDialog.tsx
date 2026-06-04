@@ -1,6 +1,6 @@
 import React from 'react';
-import type { TranslationFn } from '../../i18n';
-import { ConfirmDialog } from '../dialogs/ConfirmDialog';
+import type { TranslationFn } from '@/i18n';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 
 interface Props {
   visible: boolean;

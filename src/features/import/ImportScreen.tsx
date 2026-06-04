@@ -1,21 +1,21 @@
 import React from 'react';
 import { FlatList, Platform, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
-import { safeBack } from '../../utils/navigation';
-import { DeleteFlashcardDialog } from '../../components/browse/DeleteFlashcardDialog';
-import { AppSnackbar } from '../../components/feedback/AppSnackbar';
-import { AnimatedSection } from '../../components/layout/AnimatedSection';
-import { AppScreen } from '../../components/layout/AppScreen';
-import { LoadingState } from '../../components/layout/LoadingState';
-import { POPULAR_LANGS } from '../../constants/languages';
-import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useI18n } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
+import { safeBack } from '@/utils/navigation';
+import { DeleteFlashcardDialog } from '@/components/browse/DeleteFlashcardDialog';
+import { AppSnackbar } from '@/components/feedback/AppSnackbar';
+import { AnimatedSection } from '@/components/layout/AnimatedSection';
+import { AppScreen } from '@/components/layout/AppScreen';
+import { LoadingState } from '@/components/layout/LoadingState';
+import { POPULAR_LANGS } from '@/constants/languages';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
 import { ImportConfigCard } from './ImportConfigCard';
 import { ImportPreviewSection } from './ImportPreviewSection';
 import { ImportSourceCard } from './ImportSourceCard';
 import { useImportDeckDraft } from './useImportDeckDraft';
-import { MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
+import { MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 
 export function ImportScreen() {
   const { t } = useI18n();
@@ -110,7 +110,7 @@ export function ImportScreen() {
         <Button
           mode="contained"
           onPress={() => void draft.submitImport()}
-          disabled={!draft.name.trim() || draft.cards.length === 0 || draft.isImporting}
+          disabled={!draft.name.trim() || draft.cards.length === 0 || draft.isImporting || draft.isImportBlocked}
           loading={draft.isImporting}
           style={styles.importButton}
           accessibilityLabel="Perform flashcard import button"

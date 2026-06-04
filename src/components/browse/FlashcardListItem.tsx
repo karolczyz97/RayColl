@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Chip, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
-import type { Flashcard, FlashcardGroup, SrsState } from '../../types/models';
-import { getCardCategory } from '../../srs/srsEngine';
-import { AppIcon } from '../../components/AppIcon';
-import { AppCard } from '../../components/AppCard';
+import type { Flashcard, FlashcardGroup, SrsState } from '@/types/models';
+import { getCardCategory } from '@/srs/srsEngine';
+import { AppIcon } from '@/components/AppIcon';
+import { AppCard } from '@/components/AppCard';
 import {
   SRS_CATEGORIES_TOKENS,
   getMasteryPercent,
   getDaysUntilReview,
-} from '../../theme/srsTokens';
-import { TOKENS } from '../../theme/tokens';
-import { getVisiblePages } from '../../store/selectors/pages';
-import { getReviewStatusColor } from '../../theme/semanticColors';
-import type { TranslationFn } from '../../i18n';
+} from '@/theme/srsTokens';
+import { TOKENS } from '@/theme/tokens';
+import { getVisiblePages } from '@/store/selectors/pages';
+import { getReviewStatusColor } from '@/theme/semanticColors';
+import type { TranslationFn } from '@/i18n';
 
 interface Props {
   card: Flashcard;

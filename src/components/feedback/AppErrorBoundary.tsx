@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
-import { TOKENS } from '../../theme/tokens';
-import { useI18n } from '../../i18n';
+import { TOKENS } from '@/theme/tokens';
+import { useI18n } from '@/i18n';
 
 interface AppErrorBoundaryProps {
   children: React.ReactNode;

@@ -1,7 +1,7 @@
 import type { PlatformOSType, ViewStyle } from 'react-native';
 
 import { TOKENS } from './tokens';
-import { clamp } from '../utils/math';
+import { clamp } from '@/utils/math';
 
 export type ElevationSpec = (typeof TOKENS.elevation)[keyof typeof TOKENS.elevation];
 export type ElevationPlatform = PlatformOSType | 'native';

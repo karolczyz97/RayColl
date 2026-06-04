@@ -1,1 +1,1 @@
-export { useStoreStateContext as useStoreState } from '../store/StoreStateContext';
+export { useStoreStateContext as useStoreState } from '@/store/StoreStateContext';

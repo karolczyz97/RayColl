@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Text } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../../constants/pages';
-import { AppSelect } from '../AppSelect';
-import { AppFormRow } from '../forms/AppFormRow';
-import { AppTextInput } from '../forms/AppTextInput';
-import { TextEntryDialog } from '../dialogs/TextEntryDialog';
+import type { TranslationFn } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
+import { AppSelect } from '@/components/AppSelect';
+import { AppFormRow } from '@/components/forms/AppFormRow';
+import { AppTextInput } from '@/components/forms/AppTextInput';
+import { TextEntryDialog } from '@/components/dialogs/TextEntryDialog';
 
 type PageConfigEditorMode = 'import' | 'settings';
 

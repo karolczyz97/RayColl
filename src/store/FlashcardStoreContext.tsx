@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import type { User } from 'firebase/auth';
-import type { FlashcardGroup, StudyMode } from '../types/models';
-import { signInWithGoogle, signOutUser } from '../services/firebase';
-import { validateBackupData } from '../utils/backupValidation';
+import type { FlashcardGroup, StudyMode, StoreData } from '@/types/models';
+import { signInWithGoogle, signOutUser } from '@/services/firebase';
+import { validateBackupData } from '@/utils/backupValidation';
 import type {
   FlashcardStore,
   FlashcardStoreActions,
@@ -19,8 +19,8 @@ import { selectActiveGroups, selectArchivedGroups, selectLiveStudyModes } from '
 import { createSeedGroups } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { normalizeStoreData } from './storeDataNormalization';
-import type { StoreData } from './persistence/localPersistence';
-import { MigrationDialog } from '../components/dialogs/MigrationDialog';
+import { MigrationDialog } from '@/components/dialogs/MigrationDialog';
+import { getErrorMessage } from '@/utils/errors';
 
 const FlashcardStoreContext = createContext<FlashcardStore | undefined>(undefined);
 
@@ -139,7 +139,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     try {
       await signInWithGoogle();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = getErrorMessage(e);
       setLastLoginError(
         message.startsWith('auth.error.') ? message : 'auth.error.login_failed',
       );

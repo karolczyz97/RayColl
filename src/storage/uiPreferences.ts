@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
 
 export const UI_PREFERENCE_STORAGE_KEYS = [
   STORAGE_KEYS.THEME_PREF,

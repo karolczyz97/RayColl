@@ -1,4 +1,5 @@
 import React from 'react';
+// eslint-disable-next-line no-restricted-imports -- required as PaperProvider icon renderer
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ExperimentalStack as Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -6,16 +7,16 @@ import { PaperProvider, useTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import * as SplashScreen from 'expo-splash-screen';
-import { I18nProvider, useI18n } from '../i18n';
-import { AppThemeProvider, useAppTheme } from '../contexts/ThemeContext';
-import { FlashcardStoreProvider } from '../hooks/useFlashcardStore';
-import { createAppTheme } from '../theme/createAppTheme';
-import { UpdateNotification } from '../components/feedback/UpdateNotification';
-import { AppNavigationShell } from '../components/navigation/AppNavigationShell';
+import { I18nProvider, useI18n } from '@/i18n';
+import { AppThemeProvider, useAppTheme } from '@/contexts/ThemeContext';
+import { FlashcardStoreProvider } from '@/hooks/useFlashcardStore';
+import { createAppTheme } from '@/theme/createAppTheme';
+import { UpdateNotification } from '@/components/feedback/UpdateNotification';
+import { AppNavigationShell } from '@/components/navigation/AppNavigationShell';
+import { getErrorMessage } from '@/utils/errors';
 
 function logSplashScreenError(action: string, error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.warn(`Splash screen ${action} failed:`, message);
+  console.warn(`Splash screen ${action} failed:`, getErrorMessage(error));
 }
 
 interface PaperIconRendererProps {
@@ -160,8 +161,7 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        console.warn('MaterialCommunityIcons font preload failed:', message);
+        console.warn('MaterialCommunityIcons font preload failed:', getErrorMessage(err));
         if (!cancelled) {
           setIsIconFontReady(true);
         }

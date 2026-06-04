@@ -1,7 +1,7 @@
-import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
-import type { UserData } from '../../services/firebase';
-import { normalizeStoreData } from '../storeDataNormalization';
-import { isBuiltInModeSourceId } from '../seed/seedModes';
+import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
+import type { UserData } from '@/services/firebase';
+import { normalizeStoreData } from '@/store/storeDataNormalization';
+import { isBuiltInModeSourceId } from '@/store/seed/seedModes';
 
 function latestDelete(aDeletedAt: number | null | undefined, bDeletedAt: number | null | undefined): number {
   return Math.max(aDeletedAt ?? 0, bDeletedAt ?? 0);

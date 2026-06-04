@@ -1,6 +1,6 @@
-import { Flashcard } from '../../types/models';
-import { CardFilter } from '../../constants/cardFilters';
-import { filterLive } from '../../utils/array';
+import { Flashcard } from '@/types/models';
+import { CardFilter } from '@/constants/cardFilters';
+import { filterLive } from '@/utils/array';
 
 export function filterCards(cards: Flashcard[], filter: CardFilter): Flashcard[] {
   const liveCards = filterLive(cards);

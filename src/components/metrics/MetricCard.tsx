@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { AppIcon } from '../AppIcon';
-import { SectionCard } from '../layout/SectionCard';
-import { TOKENS } from '../../theme/tokens';
+import { AppIcon } from '@/components/AppIcon';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { TOKENS } from '@/theme/tokens';
 
 export interface MetricItem {
   icon: string;

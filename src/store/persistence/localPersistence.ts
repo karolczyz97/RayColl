@@ -1,16 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../../constants/storageKeys';
-import { FlashcardGroup, StudyMode } from '../../types/models';
-import { normalizeStoreData } from '../storeDataNormalization';
-import { validateBackupData } from '../../utils/backupValidation';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import type { StoreData } from '@/types/models';
+import { normalizeStoreData } from '@/store/storeDataNormalization';
+import { validateBackupData } from '@/utils/backupValidation';
 
-export interface StoreData {
-  groups: FlashcardGroup[];
-  studyModes: StudyMode[];
-  activityHeatmap: Record<string, number>;
-  schemaVersion?: number;
-  lastSyncedAt?: number;
-}
+export type { StoreData };
 
 export async function loadLocalData(userId?: string): Promise<StoreData | null> {
   try {

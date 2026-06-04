@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import type { StoreData } from './localPersistence';
+import type { StoreData } from '@/types/models';
 
 export interface PersistenceSnapshot extends StoreData {
   uid: string | null;

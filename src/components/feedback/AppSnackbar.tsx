@@ -1,6 +1,6 @@
 import React from 'react';
 import { Snackbar } from 'react-native-paper';
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 interface AppSnackbarProps {
   visible: boolean;

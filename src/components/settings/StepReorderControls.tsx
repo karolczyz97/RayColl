@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { IconButton, useTheme } from 'react-native-paper';
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 interface Props {
   index: number;

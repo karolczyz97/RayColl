@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 interface AppFormRowProps {
   children: React.ReactNode;

@@ -1,17 +1,17 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '../../../i18n';
-import type { Flashcard, FlashcardGroup } from '../../../types/models';
-import type { SessionProgressItem } from '../session/sessionProgress';
-import { AppScreen } from '../../../components/layout/AppScreen';
-import { SegmentedProgressBar } from '../../../components/SegmentedProgressBar';
+import type { TranslationFn } from '@/i18n';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
+import type { SessionProgressItem } from '@/features/study/session/sessionProgress';
+import { AppScreen } from '@/components/layout/AppScreen';
+import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { StudyCard } from './StudyCard';
 import { StudyControls } from './StudyControls';
 import { StudyFinishedState } from './StudyFinishedState';
-import { AppSnackbar } from '../../../components/feedback/AppSnackbar';
-import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
-import { TOKENS } from '../../../theme/tokens';
+import { AppSnackbar } from '@/components/feedback/AppSnackbar';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
+import { TOKENS } from '@/theme/tokens';
 
 interface StudyScreenProps {
   activeGroup: FlashcardGroup;

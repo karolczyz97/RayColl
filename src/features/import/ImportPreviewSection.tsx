@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import type { Flashcard, FlashcardGroup } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
-import { FlashcardList } from '../flashcards/FlashcardList';
-import { EditFlashcardDialog } from '../../components/browse/EditFlashcardDialog';
-import { TOKENS } from '../../theme/tokens';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
+import { FlashcardList } from '@/features/flashcards/FlashcardList';
+import { EditFlashcardDialog } from '@/components/browse/EditFlashcardDialog';
+import { TOKENS } from '@/theme/tokens';
 
 interface ImportPreviewSectionProps {
   cards: Flashcard[];

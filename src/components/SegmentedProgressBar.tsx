@@ -2,17 +2,17 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { MD3Theme } from 'react-native-paper';
 import { Text, TouchableRipple, useTheme } from 'react-native-paper';
-import type { CardStats } from '../store/selectors/stats';
-import type { TranslationFn } from '../i18n';
-import { useI18n } from '../i18n';
-import type { SrsCardCategory } from '../srs/srsEngine';
-import { getReviewStatusColor } from '../theme/semanticColors';
-import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS, CATEGORY_TO_STATS_KEY } from '../theme/srsTokens';
-import { TOKENS } from '../theme/tokens';
+import type { CardStats } from '@/store/selectors/stats';
+import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
+import type { SrsCardCategory } from '@/srs/srsEngine';
+import { getReviewStatusColor } from '@/theme/semanticColors';
+import { SRS_CATEGORY_ORDER, SRS_CATEGORIES_TOKENS, CATEGORY_TO_STATS_KEY } from '@/theme/srsTokens';
+import { TOKENS } from '@/theme/tokens';
 import {
   getSessionProgressSegments,
   type SessionProgressItem,
-} from '../features/study/session/sessionProgress';
+} from '@/features/study/session/sessionProgress';
 import { ExpressiveProgress, ExpressiveSegmentedProgress } from './expressive';
 
 interface StatsModeProps {

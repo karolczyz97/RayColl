@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import { AppTextInput } from '../../components/forms/AppTextInput';
-import { SectionCard } from '../../components/layout/SectionCard';
-import { TOKENS } from '../../theme/tokens';
+import type { TranslationFn } from '@/i18n';
+import { AppTextInput } from '@/components/forms/AppTextInput';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { TOKENS } from '@/theme/tokens';
 
 interface ImportSourceCardProps {
   name: string;

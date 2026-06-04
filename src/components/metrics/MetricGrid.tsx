@@ -2,15 +2,15 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { MetricItem } from './MetricCard';
 import { MetricCard } from './MetricCard';
-import { TOKENS } from '../../theme/tokens';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-import { useNavigationShell } from '../../contexts/NavigationShellContext';
+import { TOKENS } from '@/theme/tokens';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import {
   getDeterministicContainerWidth,
   getGridColumns,
   getGridGap,
   getGridItemWidth,
-} from '../../utils/gridLayout';
+} from '@/utils/gridLayout';
 
 interface MetricGridProps {
   items: MetricItem[];

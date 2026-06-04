@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, Switch, Text, useTheme } from 'react-native-paper';
-import type { FlashcardGroup } from '../../types/models';
-import { getVisiblePageNames } from '../../store/selectors/pages';
-import type { TranslationFn } from '../../i18n';
-import { AppTextInput } from '../forms/AppTextInput';
-import { TOKENS } from '../../theme/tokens';
+import type { FlashcardGroup } from '@/types/models';
+import { getVisiblePageNames } from '@/store/selectors/pages';
+import type { TranslationFn } from '@/i18n';
+import { AppTextInput } from '@/components/forms/AppTextInput';
+import { TOKENS } from '@/theme/tokens';
 
 interface Props {
   group: FlashcardGroup;

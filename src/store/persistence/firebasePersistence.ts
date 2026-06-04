@@ -1,8 +1,8 @@
-import { saveUserData, loadUserData, UserData } from '../../services/firebase';
-import { normalizeStoreData } from '../storeDataNormalization';
-import { validateBackupData } from '../../utils/backupValidation';
+import { saveUserData, loadUserData, UserData } from '@/services/firebase';
+import { normalizeStoreData } from '@/store/storeDataNormalization';
+import { validateBackupData } from '@/utils/backupValidation';
 import { cloneUserData } from './firestoreSchema';
-import { deepEqual } from '../../utils/deepEqual';
+import { deepEqual } from '@/utils/deepEqual';
 import {
   deleteActivityDay,
   deleteCard,

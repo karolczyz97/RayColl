@@ -1,4 +1,4 @@
-import type { FlashcardGroup } from '../../../types/models';
+import type { FlashcardGroup } from '@/types/models';
 
 export const PEEK_HOLD_THRESHOLD_MS = 500;
 

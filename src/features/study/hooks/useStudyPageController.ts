@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { safeBack } from '../../../utils/navigation';
-import type { Flashcard } from '../../../types/models';
-import { useFlashcardStore } from '../../../hooks/useFlashcardStore';
-import { useStudySession } from '../../../hooks/useStudySession';
-import { useI18n } from '../../../i18n';
-import { buildSessionProgressItems } from '../session/sessionProgress';
-import { setIsStudyActive } from '../studyGuard';
+import { safeBack } from '@/utils/navigation';
+import type { Flashcard } from '@/types/models';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useStudySession } from '@/hooks/useStudySession';
+import { useI18n } from '@/i18n';
+import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
+import { setIsStudyActive } from '@/features/study/studyGuard';
 
 const NARROW_CONTROLS_WIDTH = 480;
 

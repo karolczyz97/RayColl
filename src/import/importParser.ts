@@ -1,5 +1,5 @@
-import { MIN_PAGE_COUNT } from '../constants/pages';
-import { padArray } from '../utils/array';
+import { MIN_PAGE_COUNT } from '@/constants/pages';
+import { padArray } from '@/utils/array';
 
 export const SEPARATORS: Record<string, string> = {
   tab: '\t',

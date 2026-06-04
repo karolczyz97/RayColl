@@ -12,11 +12,11 @@ import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { auth, db } from './firebaseClient';
-import type { StoreData } from '../store/persistence/localPersistence';
-import { migrateLegacyUserDataToV2 } from '../store/persistence/firestoreMigration';
-import { FIRESTORE_SCHEMA_VERSION } from '../store/persistence/firestoreSchema';
-import { loadUserDataV2, saveUserDataV2 } from '../store/persistence/firestoreV2Persistence';
-import { validateBackupData } from '../utils/backupValidation';
+import type { StoreData } from '@/types/models';
+import { migrateLegacyUserDataToV2 } from '@/store/persistence/firestoreMigration';
+import { FIRESTORE_SCHEMA_VERSION } from '@/store/persistence/firestoreSchema';
+import { loadUserDataV2, saveUserDataV2 } from '@/store/persistence/firestoreV2Persistence';
+import { validateBackupData } from '@/utils/backupValidation';
 
 WebBrowser.maybeCompleteAuthSession();
 

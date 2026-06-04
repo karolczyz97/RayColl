@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Dialog, Button } from 'react-native-paper';
-import { AppSelect } from '../AppSelect';
-import type { TranslationFn } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { dialogStyles } from '../../theme/dialogStyles';
-import { AppNumberInput } from '../forms/AppNumberInput';
+import { AppSelect } from '@/components/AppSelect';
+import type { TranslationFn } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { dialogStyles } from '@/theme/dialogStyles';
+import { AppNumberInput } from '@/components/forms/AppNumberInput';
 
 interface Props {
   visible: boolean;

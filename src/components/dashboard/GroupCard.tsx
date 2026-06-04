@@ -2,15 +2,15 @@ import React, { Fragment } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
-import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useI18n } from '../../i18n';
-import { AppCard } from '../AppCard';
-import { SegmentedProgressBar } from '../SegmentedProgressBar';
-import { computeCardStats } from '../../store/selectors/stats';
-import { ROUTES } from '../../constants/routes';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useI18n } from '@/i18n';
+import { AppCard } from '@/components/AppCard';
+import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
+import { computeCardStats } from '@/store/selectors/stats';
+import { ROUTES } from '@/constants/routes';
 import { StudyModeMenuButton } from './StudyModeMenuButton';
-import type { FlashcardGroup } from '../../types/models';
-import { TOKENS } from '../../theme/tokens';
+import type { FlashcardGroup } from '@/types/models';
+import { TOKENS } from '@/theme/tokens';
 
 interface Props {
   group: FlashcardGroup;

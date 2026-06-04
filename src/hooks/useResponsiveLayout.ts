@@ -1,11 +1,11 @@
 import { useWindowDimensions } from 'react-native';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 import {
   getNavigationRailWidth,
   getWindowSizeClass,
   isExpandedWindowSize,
   type WindowSizeClass,
-} from '../utils/windowSizeClass';
+} from '@/utils/windowSizeClass';
 
 export interface ResponsiveLayout {
   width: number;

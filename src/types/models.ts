@@ -1,10 +1,10 @@
-import type { CardFilter } from '../constants/cardFilters';
+import type { CardFilter } from '@/constants/cardFilters';
 
 export interface SrsState {
   difficulty: number; // Trudność (1-10)
   stability: number; // Stabilność
   repetitions: number; // Liczba powtórzeń (repetitions >= 1 oznacza, że karta została "nauczona")
-  state: number; // Stan FSRS (0: New, 1: Learning, 2: Review, 3: Relearning)
+  state: 0 | 1 | 2 | 3; // Stan FSRS (0: New, 1: Learning, 2: Review, 3: Relearning)
   lastReviewTimestamp: number; // Znacznik czasu ostatniej powtórki
   nextReviewTimestamp: number; // Znacznik czasu kolejnej powtórki
 }
@@ -74,4 +74,12 @@ export interface StudyMode {
   builtInSourceId?: string;
   updatedAt?: number;
   deletedAt?: number | null;
+}
+
+export interface StoreData {
+  groups: FlashcardGroup[];
+  studyModes: StudyMode[];
+  activityHeatmap: Record<string, number>;
+  schemaVersion?: number;
+  lastSyncedAt?: number;
 }

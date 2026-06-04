@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 /**
  * Expressive spring press feedback. Scales the element down on press-in and

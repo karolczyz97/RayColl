@@ -2,7 +2,7 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 import { getProgressAccessibilityValue, getProgressRatio } from './expressiveGeometry';
 import { getExpressiveColors, type ExpressiveColorRole } from './expressiveColors';
 

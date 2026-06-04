@@ -1,4 +1,4 @@
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 export function getDeterministicContainerWidth(
   windowWidth: number,

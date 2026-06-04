@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Portal, Snackbar, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import type { SyncStatus } from '../../store/FlashcardStoreTypes';
-import { TOKENS } from '../../theme/tokens';
+import type { TranslationFn } from '@/i18n';
+import type { SyncStatus } from '@/store/FlashcardStoreTypes';
+import { TOKENS } from '@/theme/tokens';
 
 interface SyncStatusBannerProps {
   syncStatus: SyncStatus;

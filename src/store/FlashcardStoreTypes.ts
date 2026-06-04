@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
-import type { Flashcard, FlashcardGroup, StudyMode } from '../types/models';
-import type { CardFilter } from '../constants/cardFilters';
-import type { ImportDeckPayload, ImportDeckResult } from '../import/importDeck';
+import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
+import type { CardFilter } from '@/constants/cardFilters';
+import type { ImportDeckPayload, ImportDeckResult } from '@/import/importDeck';
 
 export type SyncStatus = 'idle' | 'loading' | 'saving' | 'syncing' | 'error';
 export type CloudMode = 'debounced' | 'study' | 'none';

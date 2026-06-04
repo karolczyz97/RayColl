@@ -1,8 +1,8 @@
 import { useTheme } from 'react-native-paper';
-import { useI18n } from '../../i18n';
-import { getWarningColor } from '../../theme/semanticColors';
-import { MetricGrid } from '../metrics/MetricGrid';
-import { TOKENS } from '../../theme/tokens';
+import { useI18n } from '@/i18n';
+import { getWarningColor } from '@/theme/semanticColors';
+import { MetricGrid } from '@/components/metrics/MetricGrid';
+import { TOKENS } from '@/theme/tokens';
 
 interface Props {
   decksCount: number;

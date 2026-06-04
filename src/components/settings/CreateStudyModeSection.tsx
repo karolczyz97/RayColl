@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, Dialog } from 'react-native-paper';
-import type { ModeStep } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { dialogStyles } from '../../theme/dialogStyles';
-import { AppTextInput } from '../forms/AppTextInput';
-import { swapElements } from '../../utils/array';
+import type { ModeStep } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { dialogStyles } from '@/theme/dialogStyles';
+import { AppTextInput } from '@/components/forms/AppTextInput';
+import { swapElements } from '@/utils/array';
 import { StepReorderControls } from './StepReorderControls';
 
 interface Props {

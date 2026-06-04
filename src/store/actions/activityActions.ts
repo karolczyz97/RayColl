@@ -1,4 +1,4 @@
-import { getLocalDateString } from '../selectors/stats';
+import { getLocalDateString } from '@/store/selectors/stats';
 
 export function recordActivityAction(heatmap: Record<string, number>): {
   nextHeatmap: Record<string, number>;

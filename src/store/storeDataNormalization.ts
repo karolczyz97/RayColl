@@ -1,9 +1,8 @@
-import { CARD_FILTERS, type CardFilter } from '../constants/cardFilters';
-import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '../constants/pages';
-import type { Flashcard, FlashcardGroup, StudyMode } from '../types/models';
-import type { StoreData } from './persistence/localPersistence';
+import { CARD_FILTERS, type CardFilter } from '@/constants/cardFilters';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
+import type { Flashcard, FlashcardGroup, StudyMode, StoreData } from '@/types/models';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
-import { coerceStringArray } from '../utils/array';
+import { coerceStringArray } from '@/utils/array';
 
 export const CURRENT_SCHEMA_VERSION = 1;
 export const DEFAULT_STUDY_FILTER: CardFilter = CARD_FILTERS.NEW_REVIEW;

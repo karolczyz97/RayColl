@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput, type TextInputProps } from 'react-native-paper';
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 export function AppTextInput(props: TextInputProps) {
   return (

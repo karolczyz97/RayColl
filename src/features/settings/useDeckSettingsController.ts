@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { safeBack } from '../../utils/navigation';
-import { swapElements } from '../../utils/array';
-import { deepEqual } from '../../utils/deepEqual';
-import type { ModeStep, StudyMode } from '../../types/models';
-import type { CardFilter } from '../../constants/cardFilters';
-import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useI18n } from '../../i18n';
-import { POPULAR_LANGS } from '../../constants/languages';
-import { uid } from '../../utils/id';
-import { createSeedModes } from '../../store/seed/seedModes';
-import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
-import { useNavigationShell } from '../../contexts/NavigationShellContext';
-import { isExpandedWindowSize } from '../../utils/windowSizeClass';
+import { safeBack } from '@/utils/navigation';
+import { swapElements } from '@/utils/array';
+import { deepEqual } from '@/utils/deepEqual';
+import type { ModeStep, StudyMode } from '@/types/models';
+import type { CardFilter } from '@/constants/cardFilters';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useI18n } from '@/i18n';
+import { POPULAR_LANGS } from '@/constants/languages';
+import { uid } from '@/utils/id';
+import { createSeedModes } from '@/store/seed/seedModes';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { useNavigationShell } from '@/contexts/NavigationShellContext';
+import { isExpandedWindowSize } from '@/utils/windowSizeClass';
 import { stepSummary } from './studyModeUtils';
 
 export function useDeckSettingsController() {
@@ -104,17 +104,41 @@ export function useDeckSettingsController() {
     if (!activeGroup) return;
     const target = index + direction;
     if (target < 0 || target >= pageCount) return;
+    movePageInGroup(activeGroup, index, target);
+  };
 
-    const nextNames = swapElements(activeGroup.pageNames, index, target);
-    const nextLanguages = swapElements(activeGroup.pageLanguages, index, target);
+  const movePageSettingAll = (index: number, direction: -1 | 1) => {
+    if (!activeGroup) return;
+    const allCount = activeGroup.pageNames.length;
+    const target = index + direction;
+    if (target < 0 || target >= allCount) return;
+    if (target < pageCount) {
+      movePageInGroup(activeGroup, index, target);
+    } else {
+      // Moving a hidden page: swap only pageNames and pageLanguages,
+      // cards have already been truncated to activePageCount by normalization.
+      const nextNames = swapElements(activeGroup.pageNames, index, target);
+      const nextLanguages = swapElements(activeGroup.pageLanguages, index, target);
+      store.updateGroup({
+        ...activeGroup,
+        pageNames: nextNames,
+        pageLanguages: nextLanguages,
+      });
+    }
+  };
 
-    const updatedCards = activeGroup.cards.map((card) => {
+  const movePageInGroup = (group: typeof activeGroup, index: number, target: number) => {
+    if (!group) return;
+    const nextNames = swapElements(group.pageNames, index, target);
+    const nextLanguages = swapElements(group.pageLanguages, index, target);
+
+    const updatedCards = group.cards.map((card) => {
       const pages = swapElements(card.pages, index, target);
       return { ...card, pages };
     });
 
     store.updateGroup({
-      ...activeGroup,
+      ...group,
       pageNames: nextNames,
       pageLanguages: nextLanguages,
       cards: updatedCards,
@@ -236,6 +260,7 @@ export function useDeckSettingsController() {
     useTwoColumnLayout,
     isLoading: store.isLoading,
     movePageSetting,
+    movePageSettingAll,
     moveStep,
     newModeName,
     newMs,

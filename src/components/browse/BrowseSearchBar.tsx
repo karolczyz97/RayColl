@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
+import type { TranslationFn } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
 
 interface Props {
   search: string;

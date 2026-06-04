@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Dialog, Portal, Text } from 'react-native-paper';
-import { useI18n } from '../../i18n';
-import { dialogStyles } from '../../theme/dialogStyles';
+import { useI18n } from '@/i18n';
+import { dialogStyles } from '@/theme/dialogStyles';
 
 interface MigrationDialogProps {
   visible: boolean;

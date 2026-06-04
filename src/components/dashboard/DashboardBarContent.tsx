@@ -2,13 +2,13 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Avatar, IconButton, TouchableRipple, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
-import { useI18n } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { ROUTES } from '../../constants/routes';
-import { AppMenuButton } from '../AppMenuButton';
-import { getTopBarColors } from '../../theme/semanticColors';
-import { APP_NAME } from '../../constants/app';
-import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { ROUTES } from '@/constants/routes';
+import { AppMenuButton } from '@/components/AppMenuButton';
+import { getTopBarColors } from '@/theme/semanticColors';
+import { APP_NAME } from '@/constants/app';
+import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
 
 // ─── DashboardBrand ──────────────────────────────────────────────────────────
 

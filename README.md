@@ -172,31 +172,10 @@ over repeating `|| default` and `?? fallback` across the app.
 - Screens and presentational components may call store actions only. They must not call Firebase services directly.
 - High-frequency changes should use queued persistence. Critical operations should use immediate flush.
 - Route files in `src/app` should stay thin and move business logic into `features/*`, `store/*`, `services/*`, `selectors/*`, or `actions/*`.
-- Prefer shared UI primitives such as `AppTextInput`, `SectionCard`, `AppScreen`, `AnimatedSection`, `MetricGrid`, `ConfirmDialog`, `DangerDialog`, `AppSnackbar`, and `SyncStatusBanner`.
+- Prefer shared UI primitives such as `AppTextInput`, `SectionCard`, `AppScreen`, `AnimatedSection`, `MetricGrid`, `ConfirmDialog`, `AppSnackbar`, and `SyncStatusBanner`.
 - Avoid new magic inline styles like `outlineStyle={{ borderRadius: 12 }}` in screens. Use `TOKENS` and base components instead.
 - Prefer canonical runtime fields over optional domain config when the app already has a real default. For deck config, normalize `studyFilter`, `activePageCount`, `pageNames`, and `pageLanguages` once instead of handling missing values ad hoc in UI code.
 
-## MD3 And Icon Policy
-
-RayColl uses React Native Paper as the app-level UI and icon API. Application code
-should not import icon sets directly from `@expo/vector-icons`,
-`react-native-vector-icons`, or `@react-native-vector-icons/*`.
-
-Use Paper APIs instead:
-
-- `Icon`
-- `IconButton`
-- `Button icon`
-- `FAB icon`
-- `List.Icon`
-- `Avatar.Icon`
-- `TextInput.Icon`
-- `Chip icon`
-- `src/components/AppIcon.tsx`
-
-Icon names should be passed as strings such as `plus`, `delete-outline`,
-`cards-outline`, or `chart-box-outline`. ESLint blocks direct app-level vector
-icon imports.
 
 ## Web Hosting
 

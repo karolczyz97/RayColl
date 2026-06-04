@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '../../i18n';
-import { getLocalDateString } from '../../store/selectors/stats';
-import { getHeatmapColor } from '../../theme/semanticColors';
-import { TOKENS } from '../../theme/tokens';
+import type { TranslationFn } from '@/i18n';
+import { getLocalDateString } from '@/store/selectors/stats';
+import { getHeatmapColor } from '@/theme/semanticColors';
+import { TOKENS } from '@/theme/tokens';
 
 interface HeatmapGridProps {
   heatmap: Record<string, number>;

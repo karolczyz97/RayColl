@@ -1,1 +1,1 @@
-export { useStoreActionsContext as useStoreActions } from '../store/StoreActionsContext';
+export { useStoreActionsContext as useStoreActions } from '@/store/StoreActionsContext';

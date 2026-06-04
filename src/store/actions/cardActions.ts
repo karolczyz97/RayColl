@@ -1,6 +1,6 @@
-import { FlashcardGroup, Flashcard } from '../../types/models';
-import { createNewSrsState } from '../../srs/srsEngine';
-import { uid } from '../../utils/id';
+import { FlashcardGroup, Flashcard } from '@/types/models';
+import { createNewSrsState } from '@/srs/srsEngine';
+import { uid } from '@/utils/id';
 import { recordActivityAction } from './activityActions';
 
 export function addFlashcardAction(

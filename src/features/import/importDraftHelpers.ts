@@ -1,5 +1,5 @@
-import { parseCSVRaw, serializeCSV } from '../../import/importParser';
-import { padArray } from '../../utils/array';
+import { parseCSVRaw, serializeCSV } from '@/import/importParser';
+import { padArray } from '@/utils/array';
 
 function normalizeRow(row: string[], pageCount: number): string[] {
   return padArray(row.slice(0, pageCount), pageCount, '');

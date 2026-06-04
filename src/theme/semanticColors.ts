@@ -1,5 +1,5 @@
 import { MD3Theme } from 'react-native-paper';
-import { SrsCardCategory } from '../srs/srsEngine';
+import { SrsCardCategory } from '@/srs/srsEngine';
 
 export function getSuccessColor(theme: MD3Theme): string {
   // Tertiary is green in our theme, representing success

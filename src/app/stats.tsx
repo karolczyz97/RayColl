@@ -1,30 +1,30 @@
 import React, { useMemo } from 'react';
 
-import { safeBack } from '../utils/navigation';
+import { safeBack } from '@/utils/navigation';
 import { useTheme } from 'react-native-paper';
-import { useFlashcardStore } from '../hooks/useFlashcardStore';
-import { useI18n } from '../i18n';
-import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useI18n } from '@/i18n';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import {
   computeStreak,
   getTotalCardsCount,
   getTotalDueCardsCount,
   getActiveDaysCount,
   getGlobalStats,
-} from '../store/selectors/stats';
+} from '@/store/selectors/stats';
 import {
   getDueColor,
   getInfoColor,
   getSuccessColor,
   getWarningColor,
-} from '../theme/semanticColors';
-import { AppScreen } from '../components/layout/AppScreen';
-import { AnimatedSection } from '../components/layout/AnimatedSection';
-import { LoadingState } from '../components/layout/LoadingState';
-import { SectionCard } from '../components/layout/SectionCard';
-import { MetricGrid } from '../components/metrics/MetricGrid';
-import { HeatmapGrid } from '../features/stats/HeatmapGrid';
-import { DeckProgressList } from '../features/stats/DeckProgressList';
+} from '@/theme/semanticColors';
+import { AppScreen } from '@/components/layout/AppScreen';
+import { AnimatedSection } from '@/components/layout/AnimatedSection';
+import { LoadingState } from '@/components/layout/LoadingState';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { MetricGrid } from '@/components/metrics/MetricGrid';
+import { HeatmapGrid } from '@/features/stats/HeatmapGrid';
+import { DeckProgressList } from '@/features/stats/DeckProgressList';
 
 
 export default function StatsPage() {

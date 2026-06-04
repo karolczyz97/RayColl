@@ -2,36 +2,20 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import type { User } from 'firebase/auth';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { FlashcardGroup, StudyMode } from '../types/models';
+import type { FlashcardGroup, StudyMode, StoreData } from '@/types/models';
 import { saveLocalData } from './persistence/localPersistence';
 import { saveCloudData } from './persistence/firebasePersistence';
 import { usePersistenceQueue, type PersistenceSnapshot } from './persistence/persistenceQueue';
-import type { StoreData } from './persistence/localPersistence';
 import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
 import { createWebPersistenceHandlers } from './persistence/webLifecycle';
-import { getErrorMessage } from '../utils/errors';
+import { getErrorMessage } from '@/utils/errors';
+import { withTimeout } from '@/utils/withTimeout';
 
 // Cap how long a single local write may block the serialized write chain. If
 // AsyncStorage hangs (e.g. a stuck native lock), the timeout rejects so the
 // next queued snapshot is not blocked forever; the underlying write may still
 // resolve later in the background.
 const LOCAL_WRITE_TIMEOUT_MS = 8000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    );
-  });
-}
 
 interface UseStorePersistenceParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;

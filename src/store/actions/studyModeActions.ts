@@ -1,5 +1,5 @@
-import { StudyMode } from '../../types/models';
-import { normalizeStudyMode } from '../storeDataNormalization';
+import { StudyMode } from '@/types/models';
+import { normalizeStudyMode } from '@/store/storeDataNormalization';
 
 export function addStudyModeAction(modes: StudyMode[], mode: StudyMode): StudyMode[] {
   const now = Date.now();

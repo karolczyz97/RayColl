@@ -135,7 +135,7 @@ Top ryzyka przy refaktoryzacji RayColl. Każde ryzyko ma plan minimalizacji i ja
 
 - `npm run lint && npm run typecheck && npm run test`.
 - `npx expo export --platform web` bez błędu.
-- Jeśli usunięcie tknęło coś natywnego: pełny rebuild Android + smoke test ekranów z ikonami (Dashboard FAB, Study rating buttons z `icon=`, IconButton w `PageHeader`).
+- Jeśli usunięcie tknęło coś natywnego: pełny rebuild Android + smoke test ekranów z ikonami (Dashboard FAB, Study rating buttons, IconButton w `AppTopBar`).
 
 ## 7. Zbyt duży refactor naraz
 

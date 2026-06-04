@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import type { Flashcard } from '../../types/models';
-import { padArray } from '../../utils/array';
+import type { Flashcard } from '@/types/models';
+import { padArray } from '@/utils/array';
 
 export const FLASHCARD_DRAFT_ID = '__draft_flashcard__';
 

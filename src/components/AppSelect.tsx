@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { HelperText, Icon, Menu, Text, TouchableRipple, useTheme } from 'react-native-paper';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 export interface SelectOption {
   label: string;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import { releaseInfo } from '../config/releaseInfo';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { releaseInfo } from '@/config/releaseInfo';
 
 interface UpdateNotificationState {
   showSnackbar: boolean;

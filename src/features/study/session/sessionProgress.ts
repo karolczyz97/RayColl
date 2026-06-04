@@ -1,6 +1,6 @@
-import { getCardCategory } from '../../../srs/srsEngine';
-import type { SrsCardCategory } from '../../../srs/srsEngine';
-import type { Flashcard } from '../../../types/models';
+import { getCardCategory } from '@/srs/srsEngine';
+import type { SrsCardCategory } from '@/srs/srsEngine';
+import type { Flashcard } from '@/types/models';
 
 export interface SessionProgressItem {
   id: string;

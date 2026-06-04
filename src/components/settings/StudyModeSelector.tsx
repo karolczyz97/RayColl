@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
-import { AppSelect } from '../AppSelect';
-import { TOKENS } from '../../theme/tokens';
-import type { StudyMode } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
-import { getModeName } from '../../i18n/modeHelpers';
+import { AppSelect } from '@/components/AppSelect';
+import { TOKENS } from '@/theme/tokens';
+import type { StudyMode } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
+import { getModeName } from '@/i18n/modeHelpers';
 
 interface Props {
   activeModeId: string;

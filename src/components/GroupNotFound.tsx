@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
-import { useI18n } from '../i18n';
-import { TOKENS } from '../theme/tokens';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
 
 interface GroupNotFoundProps {
   onBack: () => void;

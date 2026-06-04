@@ -1,7 +1,7 @@
-import { FlashcardGroup, Flashcard } from '../../types/models';
-import { createNewSrsState } from '../../srs/srsEngine';
-import { uid } from '../../utils/id';
-import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
+import { FlashcardGroup, Flashcard } from '@/types/models';
+import { createNewSrsState } from '@/srs/srsEngine';
+import { uid } from '@/utils/id';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
 
 export function createSeedGroups(): FlashcardGroup[] {
   const mk = (pages: string[]): Flashcard => ({

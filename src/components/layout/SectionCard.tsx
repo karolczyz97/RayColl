@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { AppCard } from '../AppCard';
-import { TOKENS } from '../../theme/tokens';
+import { AppCard } from '@/components/AppCard';
+import { TOKENS } from '@/theme/tokens';
 
 interface SectionCardProps {
   title?: string;

@@ -1,33 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import { safeBack } from '../../utils/navigation';
-import { useFlashcardStore } from '../../hooks/useFlashcardStore';
-import { useDebounce } from '../../hooks/useDebounce';
-import { useSyncedRef } from '../../hooks/useSyncedRef';
+import { swapElements } from '@/utils/array';
+import { safeBack } from '@/utils/navigation';
+import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useSyncedRef } from '@/hooks/useSyncedRef';
 import {
   detectFirstRowHeader,
   detectLangFromHeader,
   detectPageCount,
-  detectSeparator,
-} from '../../import/importParser';
-import { createNewSrsState } from '../../srs/srsEngine';
-import type { Flashcard, FlashcardGroup } from '../../types/models';
-import { useFlashcardListEditing } from '../flashcards/useFlashcardListEditing';
-import { DEFAULT_STUDY_FILTER } from '../../store/storeDataNormalization';
-import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MIN_PAGE_COUNT } from '../../constants/pages';
+} from '@/import/importParser';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
+import { useFlashcardListEditing } from '@/features/flashcards/useFlashcardListEditing';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
+import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MIN_PAGE_COUNT } from '@/constants/pages';
 import {
   getHeaderRowFromText,
   getPreviewRows,
   replaceHeaderRowInText,
   serializeImportSourceText,
 } from './importDraftHelpers';
-
-function createCardId() {
-  return `import-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-const IMPORT_LINE_LIMIT = 500;
+import {
+  buildCardsFromText,
+  detectTextProperties,
+  IMPORT_LINE_LIMIT,
+  limitImportLines,
+  pickAndReadFile,
+} from './importDraftUtils';
 
 export function useImportDeckDraft() {
   const store = useFlashcardStore();
@@ -106,33 +104,7 @@ export function useImportDeckDraft() {
 
   const rebuildPreviewFromText = useCallback(
     (text: string, currentSepKey: string, currentPageCount: number, skipHeader: boolean) => {
-      if (!text.trim()) {
-        setCards([]);
-        return;
-      }
-
-      const parsedRows = getPreviewRows(text, currentSepKey, currentPageCount, skipHeader);
-      setCards((prevCards) => {
-        const isSame =
-          prevCards.length === parsedRows.length &&
-          prevCards.every((card, index) => {
-            const row = parsedRows[index];
-            return (
-              card.pages.length === row.length &&
-              card.pages.every((page, pageIndex) => page === row[pageIndex])
-            );
-          });
-
-        if (isSame) {
-          return prevCards;
-        }
-
-        return parsedRows.map((row, index) => ({
-          id: prevCards[index]?.id || createCardId(),
-          pages: row,
-          srsState: createNewSrsState(),
-        }));
-      });
+      setCards((prevCards) => buildCardsFromText(text, currentSepKey, currentPageCount, skipHeader, prevCards));
     },
     [],
   );
@@ -205,9 +177,7 @@ export function useImportDeckDraft() {
 
   const applyDetectedText = useCallback(
     (text: string, nextName?: string) => {
-      const lines = text.split('\n');
-      const limited = lines.length > IMPORT_LINE_LIMIT;
-      const safeText = limited ? lines.slice(0, IMPORT_LINE_LIMIT).join('\n') : text;
+      const { safeText, wasLimited } = limitImportLines(text, IMPORT_LINE_LIMIT);
 
       if (nextName) {
         setName(nextName);
@@ -216,7 +186,7 @@ export function useImportDeckDraft() {
       preHeaderPageNamesRef.current = null;
       headerSettingTouchedRef.current = false;
       lastAppliedHeaderKeyRef.current = null;
-      setImportError(limited ? 'import.err.too_many_lines' : '');
+      setImportError(wasLimited ? 'import.err.too_many_lines' : '');
       setRawText(safeText);
 
       if (!safeText.trim()) {
@@ -229,9 +199,7 @@ export function useImportDeckDraft() {
       setPageNames(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
       setPageLangs(Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''));
 
-      const detectedSep = detectSeparator(safeText);
-      const headerDetection = detectFirstRowHeader(safeText, detectedSep);
-      const detectedCount = detectPageCount(safeText, detectedSep, headerDetection.isLikelyHeader);
+      const { detectedSep, detectedCount } = detectTextProperties(safeText);
 
       if (detectedCount > MAX_STORED_PAGE_COUNT) {
         setImportError('import.err.too_many_columns');
@@ -388,14 +356,8 @@ export function useImportDeckDraft() {
       const target = index + direction;
       if (target < 0 || target >= pageCount) return;
 
-      const swap = <T,>(arr: T[]): T[] => {
-        const next = [...arr];
-        [next[index], next[target]] = [next[target], next[index]];
-        return next;
-      };
-
-      const nextPageNames = swap(pageNames);
-      const nextPageLangs = swap(pageLangs);
+      const nextPageNames = swapElements(pageNames, index, target);
+      const nextPageLangs = swapElements(pageLangs, index, target);
       setPageNames(nextPageNames);
       setPageLangs(nextPageLangs);
 
@@ -428,30 +390,20 @@ export function useImportDeckDraft() {
     sepTouchedRef.current = false;
 
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv', 'text/plain', 'text/comma-separated-values', 'text/tab-separated-values'],
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets?.length) {
-        const asset = result.assets[0];
-        const fileContent =
-          Platform.OS === 'web' && asset.file
-            ? await asset.file.text()
-            : await (await fetch(asset.uri)).text();
-
-        if (fileContent) {
-          const baseName = asset.name?.replace(/\.[^/.]+$/, '').trim();
-          applyDetectedText(fileContent, baseName || undefined);
-        }
+      const result = await pickAndReadFile();
+      if (result) {
+        applyDetectedText(result.content, result.baseName);
       }
     } catch (err: unknown) {
       setImportError(err instanceof Error ? err.message : 'Failed to pick or read file');
     }
   }, [applyDetectedText]);
 
+  const isImportBlocked = importError.startsWith('import.err.');
+
   const submitImport = useCallback(async () => {
     if (!name.trim()) return;
+    if (isImportBlocked) return;
 
     setIsImporting(true);
     setImportError('');
@@ -475,7 +427,7 @@ export function useImportDeckDraft() {
     } finally {
       setIsImporting(false);
     }
-  }, [cards, name, pageCount, pageLangs, pageNames, store]);
+  }, [cards, name, pageCount, pageLangs, pageNames, store, isImportBlocked]);
 
   const previewGroup = useMemo<FlashcardGroup>(
     () => ({
@@ -515,6 +467,7 @@ export function useImportDeckDraft() {
     importError,
     setImportError,
     isImporting,
+    isImportBlocked,
     firstRowIsHeader,
     handleTextChange,
     handleSepKeyChange,

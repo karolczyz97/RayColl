@@ -3,7 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import Svg, { Path } from 'react-native-svg';
 
-import { TOKENS } from '../../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 import { createShapeSurfacePath } from './expressiveGeometry';
 import { getExpressiveColors, type ExpressiveColorRole } from './expressiveColors';
 

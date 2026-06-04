@@ -1,8 +1,8 @@
 import React from 'react';
 import { Dialog, Portal } from 'react-native-paper';
-import type { FlashcardGroup } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
-import { dialogStyles } from '../../theme/dialogStyles';
+import type { FlashcardGroup } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
+import { dialogStyles } from '@/theme/dialogStyles';
 import { EditFlashcardForm } from './EditFlashcardForm';
 
 interface Props {

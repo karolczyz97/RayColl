@@ -2,14 +2,14 @@ import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { Flashcard, FlashcardGroup } from '../../types/models';
-import type { TranslationFn } from '../../i18n';
-import { FlashcardListItem } from '../../components/browse/FlashcardListItem';
-import { AnimatedSection } from '../../components/layout/AnimatedSection';
-import { getVisiblePageNames } from '../../store/selectors/pages';
-import { useNavigationShell } from '../../contexts/NavigationShellContext';
-import { TOKENS } from '../../theme/tokens';
-import { isExpandedWindowSize } from '../../utils/windowSizeClass';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
+import type { TranslationFn } from '@/i18n';
+import { FlashcardListItem } from '@/components/browse/FlashcardListItem';
+import { AnimatedSection } from '@/components/layout/AnimatedSection';
+import { getVisiblePageNames } from '@/store/selectors/pages';
+import { useNavigationShell } from '@/contexts/NavigationShellContext';
+import { TOKENS } from '@/theme/tokens';
+import { isExpandedWindowSize } from '@/utils/windowSizeClass';
 
 type FlashcardRow = Flashcard | { id: string; placeholder: true };
 

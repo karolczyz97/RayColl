@@ -53,7 +53,7 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] Lista kart renderuje się.
 - [ ] Search filtruje po wszystkich `pages` karty.
 - [ ] Chipsy filtra (`all` / `new` / `learning` / `review` / `mastered`) liczą zgodnie z `computeCardStats` + `getCardCategory`.
-- [ ] Inline edit fiszki z `< 2` wypełnionymi polami → karta zostaje **usunięta** (obecne zachowanie).
+- [ ] Inline edit fiszki z `< 2` wypełnionymi polami — przycisk save jest disabled, nie można zapisać.
 - [ ] Inline edit z poprawnymi polami zapisuje zmianę.
 - [ ] Anulowanie edycji nie modyfikuje karty.
 - [ ] FAB **+** dodaje nową kartę i od razu otwiera edycję.
@@ -72,7 +72,7 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] Edycja kroków trybu: add / move (strzałki) / delete — zostają (dla nie-domyślnych trybów).
 - [ ] `AddStepDialog` poprawnie buduje krok każdego typu: `show_page`, `speak_page`, `dynamic_pause`, `wait`, `listen_and_branch`.
 - [ ] Tworzenie nowego custom trybu (`CreateStudyModeSection`) zapisuje go i ustawia jako aktywny.
-- [ ] `DeleteDeckDialog`: usuwa dopiero po wpisaniu dokładnie `DELETE`, wraca na dashboard.
+- [ ] `ArchiveDeckDialog`: archiwizuje talię, wraca na dashboard.
 
 ### Study
 

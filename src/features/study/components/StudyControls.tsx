@@ -9,7 +9,7 @@ import Animated, {
   withSequence,
   withSpring,
 } from 'react-native-reanimated';
-import { AppIcon } from '../../../components/AppIcon';
+import { AppIcon } from '@/components/AppIcon';
 import {
   getDangerBgColor,
   getDangerColor,
@@ -17,8 +17,8 @@ import {
   getSuccessColor,
   getWarningBgColor,
   getWarningColor,
-} from '../../../theme/semanticColors';
-import { TOKENS } from '../../../theme/tokens';
+} from '@/theme/semanticColors';
+import { TOKENS } from '@/theme/tokens';
 
 type RatingTone = 'danger' | 'warning' | 'primary' | 'success';
 

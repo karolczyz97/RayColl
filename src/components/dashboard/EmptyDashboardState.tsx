@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { useI18n } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { EmptyDashboardAccent } from '../expressive';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { EmptyDashboardAccent } from '@/components/expressive';
 
 export function EmptyDashboardState() {
   const { t } = useI18n();

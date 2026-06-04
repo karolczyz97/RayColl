@@ -10,17 +10,17 @@ import {
   useTheme,
 } from 'react-native-paper';
 
-import { useI18n } from '../../i18n';
-import { TOKENS } from '../../theme/tokens';
-import { APP_NAME } from '../../constants/app';
-import type { FlashcardStoreState } from '../../store/FlashcardStoreTypes';
+import { useI18n } from '@/i18n';
+import { TOKENS } from '@/theme/tokens';
+import { APP_NAME } from '@/constants/app';
+import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
 import {
   NAVIGATION_DESTINATIONS,
   type NavigationDestination,
   type TopLevelDestinationKey,
 } from './navigationDestinations';
 import { NavigationAccountMenu } from './NavigationAccountMenu';
-import { AppFloatingActionButton } from '../AppFloatingActionButton';
+import { AppFloatingActionButton } from '@/components/AppFloatingActionButton';
 
 interface NavigationRailProps {
   expanded: boolean;

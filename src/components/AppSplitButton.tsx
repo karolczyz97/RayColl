@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, Menu, Surface, Text, TouchableRipple, useTheme } from 'react-native-paper';
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 export interface SplitButtonOption {
   label: string;

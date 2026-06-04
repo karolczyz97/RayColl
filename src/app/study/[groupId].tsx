@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { AppErrorBoundary } from '../../components/feedback/AppErrorBoundary';
-import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
-import { GroupNotFound } from '../../components/GroupNotFound';
-import { LoadingState } from '../../components/layout/LoadingState';
-import { StudyScreen } from '../../features/study/components/StudyScreen';
-import { useStudyPageController } from '../../features/study/hooks/useStudyPageController';
-import { useI18n } from '../../i18n';
-import { getIsStudyActive } from '../../features/study/studyGuard';
+import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
+import { GroupNotFound } from '@/components/GroupNotFound';
+import { LoadingState } from '@/components/layout/LoadingState';
+import { StudyScreen } from '@/features/study/components/StudyScreen';
+import { useStudyPageController } from '@/features/study/hooks/useStudyPageController';
+import { useI18n } from '@/i18n';
+import { getIsStudyActive } from '@/features/study/studyGuard';
 
 function StudyPageContent() {
   const controller = useStudyPageController();

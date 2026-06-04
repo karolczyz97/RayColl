@@ -8,9 +8,9 @@ import {
   setDoc,
   writeBatch,
 } from 'firebase/firestore';
-import type { Flashcard, FlashcardGroup, StudyMode } from '../../types/models';
-import { db } from '../../services/firebaseClient';
-import { normalizeStoreData } from '../storeDataNormalization';
+import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
+import { db } from '@/services/firebaseClient';
+import { normalizeStoreData } from '@/store/storeDataNormalization';
 import {
   FIRESTORE_SCHEMA_VERSION,
   type UserData,

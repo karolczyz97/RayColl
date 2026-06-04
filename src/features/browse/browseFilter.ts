@@ -1,4 +1,4 @@
-import type { SrsCardCategory } from '../../srs/srsEngine';
+import type { SrsCardCategory } from '@/srs/srsEngine';
 
 /**
  * Pure reducer for category multi-select toggle.

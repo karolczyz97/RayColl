@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import { loadUiPreferences, setUiPreference } from '../storage/uiPreferences';
-import { clamp } from '../utils/math';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { loadUiPreferences, setUiPreference } from '@/storage/uiPreferences';
+import { clamp } from '@/utils/math';
 
 export type ThemePref = 'light' | 'dark' | 'system';
 

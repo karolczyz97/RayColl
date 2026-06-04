@@ -1,5 +1,5 @@
-import { FlashcardGroup, Flashcard } from '../../types/models';
-import { getCardCategory } from '../../srs/srsEngine';
+import { FlashcardGroup, Flashcard } from '@/types/models';
+import { getCardCategory } from '@/srs/srsEngine';
 
 export interface CardStats {
   total: number;

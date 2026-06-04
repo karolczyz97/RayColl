@@ -1,4 +1,4 @@
-import { TOKENS } from '../theme/tokens';
+import { TOKENS } from '@/theme/tokens';
 
 export type WindowSizeClass = 'compact' | 'medium' | 'expanded';
 

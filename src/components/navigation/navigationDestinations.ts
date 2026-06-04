@@ -1,6 +1,6 @@
 import type { Href } from 'expo-router';
 
-import { ROUTES } from '../../constants/routes';
+import { ROUTES } from '@/constants/routes';
 
 export type TopLevelDestinationKey = 'dashboard' | 'stats' | 'settings';
 

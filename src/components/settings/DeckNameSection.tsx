@@ -1,6 +1,6 @@
 import React from 'react';
-import type { TranslationFn } from '../../i18n';
-import { AppTextInput } from '../forms/AppTextInput';
+import type { TranslationFn } from '@/i18n';
+import { AppTextInput } from '@/components/forms/AppTextInput';
 
 interface Props {
   deckName: string;

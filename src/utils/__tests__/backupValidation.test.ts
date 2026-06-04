@@ -106,7 +106,7 @@ export async function runTests() {
   // Test 6: Invalid card difficulty (string instead of number) throws
   assertThrows(() => {
     const bad = makeValidBackup();
-    (bad.groups[0].cards[0].srsState as Record<string, unknown>).difficulty = 'easy';
+    (bad.groups[0].cards[0].srsState as unknown as Record<string, unknown>).difficulty = 'easy';
     validateBackupData(bad);
   }, 'Invalid card srsState.difficulty should throw');
 

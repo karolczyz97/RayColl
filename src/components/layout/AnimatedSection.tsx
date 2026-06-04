@@ -1,7 +1,7 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { TOKENS, getTokenMotionEnterDelay } from '../../theme/tokens';
+import { TOKENS, getTokenMotionEnterDelay } from '@/theme/tokens';
 
 interface AnimatedSectionProps {
   order?: number;
