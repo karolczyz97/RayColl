@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring } from 'react-native-reanimated';
+import { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring } from 'react-native-reanimated';
 
 export function usePulseAnimation(enabled: boolean) {
   const scale = useSharedValue(1);
@@ -12,8 +12,13 @@ export function usePulseAnimation(enabled: boolean) {
         true,
       );
     } else {
-      scale.value = withSpring(1);
+      cancelAnimation(scale);
+      scale.value = 1;
     }
+
+    return () => {
+      cancelAnimation(scale);
+    };
   }, [enabled, scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({

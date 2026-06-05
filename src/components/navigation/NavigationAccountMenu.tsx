@@ -7,6 +7,7 @@ import { TOKENS } from '@/theme/tokens';
 import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
 import { AppMenuButton } from '@/components/AppMenuButton';
 import { UserMenuHeader } from '@/components/navigation/UserMenuHeader';
+import { getUserAvatarSource } from '@/utils/userAvatar';
 
 interface NavigationAccountMenuProps {
   user: FlashcardStoreState['user'];
@@ -23,9 +24,7 @@ export function NavigationAccountMenu({
 }: NavigationAccountMenuProps) {
   const { t } = useI18n();
   const theme = useTheme();
-  const source = user?.photoURL
-    ? { uri: user.photoURL }
-    : require('../../../assets/images/icon.png');
+  const source = getUserAvatarSource(user);
 
   if (!user) {
     if (expanded) {
@@ -132,4 +131,3 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
 });
-

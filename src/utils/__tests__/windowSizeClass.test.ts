@@ -26,6 +26,6 @@ describe('windowSizeClass', () => {
   it('derives navigation rail width from window width', () => {
     expect(getNavigationRailWidth(599)).toBe(0);
     expect(getNavigationRailWidth(600)).toBe(TOKENS.layout.railWidth);
-    expect(getNavigationRailWidth(840)).toBe(TOKENS.layout.railWidth);
+    expect(getNavigationRailWidth(840)).toBe(TOKENS.layout.expandedRailWidth);
   });
 });

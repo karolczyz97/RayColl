@@ -1,19 +1,18 @@
 import React, {
   createContext,
   useContext,
-  useState,
   useEffect,
   useCallback,
   type ReactNode,
 } from 'react';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pl } from './locales/pl';
 import { en } from './locales/en';
 import { de } from './locales/de';
 import { es } from './locales/es';
 import { it } from './locales/it';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { usePersistedState } from '@/hooks/usePersistedState';
 
 export type LanguageCode = 'pl' | 'en' | 'de' | 'es' | 'it';
 export type TranslationReplacements = Record<string, string | number>;
@@ -24,6 +23,16 @@ const LANGUAGE_CODES: LanguageCode[] = ['pl', 'en', 'de', 'es', 'it'];
 
 function isLanguageCode(value: string): value is LanguageCode {
   return LANGUAGE_CODES.some((code) => code === value);
+}
+
+function detectBrowserLanguage(): LanguageCode {
+  if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+    const browserLang = navigator.language.slice(0, 2);
+    if (isLanguageCode(browserLang)) {
+      return browserLang;
+    }
+  }
+  return 'en';
 }
 
 interface I18nContextType {
@@ -38,48 +47,13 @@ const I18nContext = createContext<I18nContextType>(null!);
 export const useI18n = () => useContext(I18nContext);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>('en');
-  const [isI18nLoading, setIsI18nLoading] = useState(true);
-
-  // Load language settings on mount
-  useEffect(() => {
-    let active = true;
-
-    async function loadSavedLanguage() {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE);
-        if (active && saved && isLanguageCode(saved)) {
-          setLanguageState(saved);
-        } else if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
-          // Auto-detect browser language on web
-          const browserLang = navigator.language.slice(0, 2);
-          if (active && isLanguageCode(browserLang)) {
-            setLanguageState(browserLang);
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load saved language:', err);
-      } finally {
-        if (active) {
-          setIsI18nLoading(false);
-        }
-      }
-    }
-    loadSavedLanguage();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const setLanguage = useCallback(async (lang: LanguageCode) => {
-    setLanguageState(lang);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
-    } catch (err) {
-      console.warn('Failed to save language:', err);
-    }
-  }, []);
+  const { value: language, setValue: setLanguage, isLoading: isI18nLoading } =
+    usePersistedState<LanguageCode>({
+      key: STORAGE_KEYS.LANGUAGE,
+      parse: (raw) => (raw && isLanguageCode(raw) ? raw : detectBrowserLanguage()),
+      serialize: (val) => val,
+      fallback: 'en',
+    });
 
   const t = useCallback(
     (key: string, replacements?: Record<string, string | number>): string => {

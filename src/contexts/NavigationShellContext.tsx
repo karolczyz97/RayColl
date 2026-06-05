@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface NavigationShellContextValue {
+export interface NavigationShellContextValue {
   isCompact: boolean;
   isMedium: boolean;
   isExpanded: boolean;

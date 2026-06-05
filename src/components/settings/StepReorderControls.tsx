@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { IconButton, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
 
-interface Props {
+interface StepReorderControlsProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
@@ -19,7 +19,7 @@ export function StepReorderControls({
   onMoveUp,
   onMoveDown,
   onDelete,
-}: Props) {
+}: StepReorderControlsProps) {
   const theme = useTheme();
   const position = index + 1;
 

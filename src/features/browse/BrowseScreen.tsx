@@ -1,11 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { safeBack } from '@/utils/navigation';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Text, useTheme } from 'react-native-paper';
 import { AppFloatingActionButton } from '@/components/AppFloatingActionButton';
-import { DeleteFlashcardDialog } from '@/components/browse/DeleteFlashcardDialog';
+import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { EditFlashcardDialog } from '@/components/browse/EditFlashcardDialog';
 import { BrowseSearchBar } from '@/components/browse/BrowseSearchBar';
 import { GroupNotFound } from '@/components/GroupNotFound';
@@ -14,114 +12,46 @@ import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
-import { useI18n } from '@/i18n';
-import type { SrsCardCategory } from '@/srs/srsEngine';
-import { getCardCategory } from '@/srs/srsEngine';
-import { computeCardStats } from '@/store/selectors/stats';
-import { SRS_CATEGORY_ORDER, CATEGORY_TO_STATS_KEY } from '@/theme/srsTokens';
 import { TOKENS, getTokenMotionEnterDelay } from '@/theme/tokens';
-import { shouldShowCard, toggleCategoryReducer } from './browseFilter';
-import type { Flashcard } from '@/types/models';
 import { FlashcardList } from '@/features/flashcards/FlashcardList';
-import { useFlashcardListEditing } from '@/features/flashcards/useFlashcardListEditing';
+import { useBrowseController } from './useBrowseController';
 
 export function BrowseScreen() {
-  const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const { t } = useI18n();
   const theme = useTheme();
   const scrollbarProps = useStableScrollbarProps();
-  const store = useFlashcardStore();
-  const group =
-    store.groups.find((item) => item.id === groupId) ??
-    store.archivedGroups.find((item) => item.id === groupId);
-  const activeGroup = group;
-  const isReadOnly = group ? (group.archivedAt ?? 0) > 0 : false;
-  const [search, setSearch] = useState('');
-  const [activeCategories, setActiveCategories] = useState<SrsCardCategory[]>([]);
-  const minPagesMessage = t('browse.min_filled_pages');
-
-  const stats = useMemo(() => {
-    return activeGroup
-      ? computeCardStats(activeGroup.cards)
-      : { total: 0, newCount: 0, learning: 0, review: 0, mastered: 0 };
-  }, [activeGroup]);
-
-  const nonEmptyCategories = useMemo(() => {
-    return SRS_CATEGORY_ORDER.filter((cat) => (stats[CATEGORY_TO_STATS_KEY[cat]] as number) > 0);
-  }, [stats]);
-
-  const toggleCategory = useCallback((category: SrsCardCategory) => {
-    setActiveCategories((prev) => toggleCategoryReducer(prev, category, nonEmptyCategories));
-  }, [nonEmptyCategories]);
-
-  const filtered = useMemo(() => {
-    if (!activeGroup) {
-      return [];
-    }
-
-    let cards: Flashcard[];
-
-    cards = activeGroup.cards.filter((card) =>
-      shouldShowCard(activeCategories, getCardCategory(card.srsState))
-    );
-
-    const query = search.toLowerCase();
-    if (query) {
-      cards = cards.filter((card) => card.pages.some((page) => page.toLowerCase().includes(query)));
-    }
-
-    return cards;
-  }, [activeGroup, activeCategories, search]);
-
+  const controller = useBrowseController();
   const {
+    activeCategories,
+    activeGroup,
+    canSaveEdit,
+    cardCountLabel,
+    confirmDeleteCard,
+    deleteCardId,
     editingId,
     editPages,
-    setEditPages,
-    deleteCardId,
+    emptyLabel,
+    filteredCards,
+    handleBack,
+    isLoading,
+    isReadOnly,
+    minPagesMessage,
+    saveEdit,
+    search,
     setDeleteCardId,
+    setEditPages,
+    setSearch,
     startEdit,
     startCreate,
     cancelEdit,
-    saveEdit,
-    confirmDeleteCard,
-  } = useFlashcardListEditing({
-    pageCount: activeGroup?.activePageCount ?? 0,
-    onCreateCard: (pages) => {
-      if (activeGroup) {
-        store.addFlashcard(activeGroup.id, pages);
-      }
-    },
-    onSaveCard: (cardId, pages) => {
-      if (!activeGroup) {
-        return;
-      }
-
-      const card = activeGroup.cards.find((item) => item.id === cardId);
-      if (card) {
-        store.updateFlashcard(activeGroup.id, { ...card, pages });
-      }
-    },
-    onDeleteCard: (cardId) => {
-      if (activeGroup) {
-        store.deleteFlashcard(activeGroup.id, cardId);
-      }
-    },
-  });
-
-  const filledPageCount = useMemo(
-    () => editPages.filter((page) => page.trim().length > 0).length,
-    [editPages],
-  );
-  const canSaveEdit = filledPageCount >= 2;
+    stats,
+    toggleCategory,
+  } = controller;
 
   const addCard = () => {
     startCreate();
   };
 
-  const handleBack = safeBack;
-
-  if (store.isLoading) {
+  if (isLoading) {
     return <LoadingState />;
   }
 
@@ -134,13 +64,13 @@ export function BrowseScreen() {
       <AnimatedSection order={0}>
         <View style={styles.header}>
           <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>
-            {t('dashboard.cards_count', { count: stats.total })}
+            {cardCountLabel}
           </Text>
         </View>
       </AnimatedSection>
 
       <AnimatedSection order={1}>
-        <BrowseSearchBar search={search} setSearch={setSearch} t={t} />
+        <BrowseSearchBar search={search} setSearch={setSearch} />
       </AnimatedSection>
 
       <AnimatedSection order={2}>
@@ -165,16 +95,15 @@ export function BrowseScreen() {
     >
       <View style={styles.listSection}>
         <FlashcardList
-          cards={filtered}
+          cards={filteredCards}
           group={activeGroup}
           onStartEdit={startEdit}
           onDelete={setDeleteCardId}
           readOnly={isReadOnly}
-          t={t}
           style={[styles.list, scrollbarProps.style]}
           className={scrollbarProps.className}
           contentContainerStyle={styles.listContainer}
-          emptyLabel={t('browse.no_cards')}
+          emptyLabel={emptyLabel}
           listHeaderContent={listHeaderContent}
           itemAnimationOffset={3}
         />
@@ -192,11 +121,15 @@ export function BrowseScreen() {
       )}
 
       {!isReadOnly && (
-        <DeleteFlashcardDialog
+        <ActionConfirmDialog
           visible={!!deleteCardId}
           onDismiss={() => setDeleteCardId(null)}
           onConfirm={confirmDeleteCard}
-          t={t}
+          titleKey="browse.delete_card"
+          messageKey="dialog.delete.desc"
+          confirmLabelKey="btn.delete"
+          cancelLabelKey="btn.cancel"
+          destructive
         />
       )}
 
@@ -205,7 +138,7 @@ export function BrowseScreen() {
           visible={!!editingId}
           group={activeGroup}
           editPages={editPages}
-          setEditPages={setEditPages}
+          onPagesChange={(pages) => setEditPages(pages)}
           onSave={() => {
             if (canSaveEdit) {
               saveEdit();
@@ -214,7 +147,6 @@ export function BrowseScreen() {
           onCancel={cancelEdit}
           saveDisabled={!canSaveEdit}
           validationMessage={!canSaveEdit && editingId ? minPagesMessage : undefined}
-          t={t}
         />
       )}
     </AppScreen>

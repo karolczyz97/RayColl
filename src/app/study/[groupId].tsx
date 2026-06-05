@@ -7,25 +7,26 @@ import { LoadingState } from '@/components/layout/LoadingState';
 import { StudyScreen } from '@/features/study/components/StudyScreen';
 import { useStudyPageController } from '@/features/study/hooks/useStudyPageController';
 import { useI18n } from '@/i18n';
-import { getIsStudyActive } from '@/features/study/studyGuard';
+import { useStudyNavigationGuard } from '@/features/study/StudyNavigationGuardContext';
 
 function StudyPageContent() {
   const controller = useStudyPageController();
   const navigation = useNavigation();
   const { t } = useI18n();
+  const { isStudyActive } = useStudyNavigationGuard();
 
   const [showSystemBackGuard, setShowSystemBackGuard] = useState(false);
   const pendingSystemBackRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
-      if (!getIsStudyActive()) return;
+      if (!isStudyActive) return;
       e.preventDefault();
       pendingSystemBackRef.current = () => navigation.dispatch(e.data.action);
       setShowSystemBackGuard(true);
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [isStudyActive, navigation]);
 
   const confirmSystemBack = useCallback(() => {
     setShowSystemBackGuard(false);

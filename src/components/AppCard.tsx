@@ -96,8 +96,6 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
 export const AppCard = Object.assign(AppCardBase, {
   Actions: Card.Actions,
   Content: Card.Content,
-  Cover: Card.Cover,
-  Title: Card.Title,
 });
 
 const styles = StyleSheet.create({

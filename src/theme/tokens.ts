@@ -16,7 +16,6 @@ export const TOKENS = {
     xl: 20,
     xxl: 28,
     pill: 9999,
-    full: 9999,
   },
   // Icon size scale. Snap icon `size=` props to these instead of ad-hoc numbers.
   iconSize: {
@@ -42,6 +41,9 @@ export const TOKENS = {
       medium: '500' as const,
       semibold: '600' as const,
       bold: '700' as const,
+    },
+    letterSpacing: {
+      wide: 1.5,
     },
   },
   opacity: {
@@ -82,7 +84,6 @@ export const TOKENS = {
   breakpoints: {
     medium: 600, // compact -> medium
     expanded: 840, // medium -> expanded
-    large: 1240, // expanded -> large
   },
   layout: {
     maxWidth: 1200,
@@ -98,7 +99,6 @@ export const TOKENS = {
     bottomBarHeight: 80,
     railWidth: 80, // MD3 navigation rail (medium widths)
     expandedRailWidth: 240, // MD3 expanded navigation rail (expanded widths)
-    drawerWidth: 240, // Back-compat alias for existing layout code.
     actionMaxWidth: 320,
     studyCardMaxWidth: 600,
     deckSettingsSingleColumnMaxWidth: 600,
@@ -163,7 +163,14 @@ export const TOKENS = {
     spring: {
       standard: { damping: 18, stiffness: 140, mass: 0.8 },
       expressive: { damping: 14, stiffness: 170, mass: 0.9 },
+      pulse: { damping: 3 },
+      tap: { damping: 12, stiffness: 150 },
     },
+  },
+  // Light-theme fallback colors used when the theme doesn't provide a suitable token.
+  colors: {
+    warning: '#b86800',
+    warningBg: '#ffddb3',
   },
 };
 

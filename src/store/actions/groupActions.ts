@@ -1,6 +1,6 @@
 import { FlashcardGroup, Flashcard } from '@/types/models';
 import { CardFilter } from '@/constants/cardFilters';
-import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT } from '@/constants/pages';
+import { MAX_VISIBLE_PAGE_COUNT, clampActivePageCount } from '@/constants/pages';
 import { DEFAULT_STUDY_FILTER, padPageMetadata } from '@/store/storeDataNormalization';
 import { uid } from '@/utils/id';
 import { createNewSrsState } from '@/srs/srsEngine';
@@ -19,7 +19,7 @@ function createGroupObject(
     studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: languages,
     pageNames,
-    activePageCount: Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, pageNames.length)),
+    activePageCount: clampActivePageCount(pageNames.length, MAX_VISIBLE_PAGE_COUNT),
     updatedAt: Date.now(),
   };
 }
@@ -42,6 +42,7 @@ export function updateGroupAction(
   return groups.map((g) => {
     if (g.id !== group.id) return g;
     const incomingCardIds = new Set(group.cards.map((c) => c.id));
+    // Keep deleted cards that are absent from the edited group so sync can propagate tombstones.
     const tombstonedCards = g.cards.filter(
       (c) => c.deletedAt != null && !incomingCardIds.has(c.id),
     );
@@ -96,7 +97,7 @@ export function setVisiblePageCountAction(
   count: number,
 ): FlashcardGroup[] {
   const now = Date.now();
-  const clampedCount = Math.max(MIN_PAGE_COUNT, Math.min(MAX_VISIBLE_PAGE_COUNT, count));
+  const clampedCount = clampActivePageCount(count, MAX_VISIBLE_PAGE_COUNT);
   return groups.map((g) => {
     if (g.id !== groupId) return g;
     const { pageNames, pageLanguages } = padPageMetadata(g.pageNames, g.pageLanguages, clampedCount);

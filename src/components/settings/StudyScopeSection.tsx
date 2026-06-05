@@ -4,19 +4,19 @@ import { Text } from 'react-native-paper';
 import { AppSelect } from '@/components/AppSelect';
 import { CARD_FILTER_OPTIONS, type CardFilter } from '@/constants/cardFilters';
 import { TOKENS } from '@/theme/tokens';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 
-interface Props {
+interface StudyScopeSectionProps {
   studyFilter: CardFilter;
   onFilterChange: (filter: CardFilter) => void;
-  t: TranslationFn;
 }
 
 function isCardFilter(value: string): value is CardFilter {
   return CARD_FILTER_OPTIONS.some((filter) => filter.value === value);
 }
 
-export function StudyScopeSection({ studyFilter, onFilterChange, t }: Props) {
+export function StudyScopeSection({ studyFilter, onFilterChange }: StudyScopeSectionProps) {
+  const { t } = useI18n();
   const options = CARD_FILTER_OPTIONS.map((filter) => ({
     label: t(filter.labelKey),
     value: filter.value,

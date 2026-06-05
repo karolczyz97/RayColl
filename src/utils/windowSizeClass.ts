@@ -25,5 +25,9 @@ export function getNavigationRailWidth(width: number): number {
     return 0;
   }
 
+  if (sizeClass === 'expanded') {
+    return TOKENS.layout.expandedRailWidth;
+  }
+
   return TOKENS.layout.railWidth;
 }

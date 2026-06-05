@@ -3,7 +3,6 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
-import type { TranslationFn } from '@/i18n';
 import { FlashcardListItem } from '@/components/browse/FlashcardListItem';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { getVisiblePageNames } from '@/store/selectors/pages';
@@ -18,7 +17,6 @@ interface FlashcardListProps {
   group: FlashcardGroup;
   onStartEdit: (card: Flashcard) => void;
   onDelete: (cardId: string) => void;
-  t: TranslationFn;
   style?: StyleProp<ViewStyle>;
   scrollEnabled?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -39,7 +37,6 @@ export function FlashcardList({
   group,
   onStartEdit,
   onDelete,
-  t,
   style,
   scrollEnabled = true,
   contentContainerStyle,
@@ -118,7 +115,6 @@ export function FlashcardList({
                 onStartEdit={() => onStartEdit(item)}
                 onDelete={() => onDelete(item.id)}
                 readOnly={readOnly}
-                t={t}
               />
             </AnimatedSection>
           </View>

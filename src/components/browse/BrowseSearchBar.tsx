@@ -1,16 +1,17 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 
-interface Props {
+interface BrowseSearchBarProps {
   search: string;
   setSearch: (v: string) => void;
-  t: TranslationFn;
 }
 
-export function BrowseSearchBar({ search, setSearch, t }: Props) {
+export function BrowseSearchBar({ search, setSearch }: BrowseSearchBarProps) {
+  const { t } = useI18n();
+
   return (
     <TextInput
       mode="outlined"

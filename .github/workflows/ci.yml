@@ -31,3 +31,9 @@ jobs:
 
       - name: Run Unit Tests
         run: npm run test
+
+      - name: Check UI Constraints
+        run: npm run check-ui
+
+      - name: Check Asset References
+        run: npm run check-assets

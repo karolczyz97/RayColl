@@ -28,7 +28,7 @@ jest.mock('@/services/audioFeedback', () => ({
   playErrorSound: jest.fn(),
 }));
 
-jest.mock('@/contexts/ThemeContext', () => ({
+jest.mock('@/contexts/UserPreferencesContext', () => ({
   useAppTheme: () => ({ ttsRate: 1.0 }),
 }));
 

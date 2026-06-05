@@ -39,6 +39,7 @@ export function AppMenuItem({
       leadingIcon={selected ? 'check' : icon}
       disabled={disabled}
       onPress={onPress}
+      accessibilityLabel={label}
       style={[menuStyles.menuItem, selected && { backgroundColor: theme.colors.secondaryContainer }]}
       titleStyle={{
         color: textColor,

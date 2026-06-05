@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * Leaf module that owns Firebase initialization (app / auth / db).
  *
  * It must NOT import anything from the store/persistence layer so that
- * `firestoreV2Persistence` and `firebase.ts` can both import `db`/`auth`
+ * `firestorePersistence` and `firebase.ts` can both import `db`/`auth`
  * from here without creating a require cycle.
  */
 
@@ -25,7 +25,7 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
 };
 
-export const isConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+const isConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
 
 const app = isConfigured ? initializeApp(firebaseConfig) : null;
 

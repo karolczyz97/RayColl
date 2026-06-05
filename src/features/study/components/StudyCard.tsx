@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
+import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
 import { getVisiblePages } from '@/store/selectors/pages';
 import { CardPageSection } from './CardPageSection';
@@ -18,7 +19,6 @@ interface StudyCardProps {
   waitingForTap: boolean;
   onCardPress: () => void;
   onHoldingChange: (holding: boolean) => void;
-  tapToRevealLabel: string;
 }
 
 export function StudyCard({
@@ -30,22 +30,23 @@ export function StudyCard({
   waitingForTap,
   onCardPress,
   onHoldingChange,
-  tapToRevealLabel,
 }: StudyCardProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const scale = useSharedValue(1);
+  const tapToRevealLabel = t('study.tap_to_reveal');
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
   const pressIn = () => {
-    scale.value = withSpring(0.96, { damping: 12, stiffness: 150 });
+    scale.value = withSpring(0.96, TOKENS.motion.spring.tap);
     onHoldingChange(true);
   };
 
   const pressOut = () => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 150 });
+    scale.value = withSpring(1, TOKENS.motion.spring.tap);
     onHoldingChange(false);
   };
 

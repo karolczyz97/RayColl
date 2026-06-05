@@ -2,29 +2,32 @@ import { Platform } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 import type { AudioSource } from 'expo-audio';
 import { getErrorMessage } from '@/utils/errors';
-
-type BrowserWindowWithAudioContext = Window &
-  typeof globalThis & {
-    webkitAudioContext?: typeof AudioContext;
-  };
+import type { BrowserWindowWith } from '@/utils/types';
 
 const getAudioCtx = (() => {
   let ctx: AudioContext | null = null;
   return () => {
     if (Platform.OS === 'web' && !ctx && typeof window !== 'undefined') {
-      const audioWindow = window as BrowserWindowWithAudioContext;
+      const audioWindow = window as BrowserWindowWith<'webkitAudioContext', typeof AudioContext>;
       const AudioContextCtor = audioWindow.AudioContext || audioWindow.webkitAudioContext;
       if (!AudioContextCtor) return null;
       ctx = new AudioContextCtor();
     }
-    if (ctx?.state === 'suspended') {
-      void ctx.resume().catch((err: unknown) => {
-        console.warn('Failed to resume audio context:', getErrorMessage(err));
-      });
-    }
     return ctx;
   };
 })();
+
+async function ensureAudioCtxRunning(): Promise<AudioContext | null> {
+  const ctx = getAudioCtx();
+  if (ctx?.state === 'suspended') {
+    try {
+      await ctx.resume();
+    } catch (err: unknown) {
+      console.warn('Failed to resume audio context:', getErrorMessage(err));
+    }
+  }
+  return ctx;
+}
 
 async function playNativeSound(asset: AudioSource) {
   try {
@@ -45,13 +48,13 @@ async function playNativeSound(asset: AudioSource) {
   }
 }
 
-function playWebTone(
+async function playWebTone(
   frequency: number,
   duration: number,
   gain: number,
   opts?: { delay?: number; type?: OscillatorType },
-): void {
-  const ctx = getAudioCtx();
+): Promise<void> {
+  const ctx = await ensureAudioCtxRunning();
   if (!ctx) return;
   const osc = ctx.createOscillator();
   const gainNode = ctx.createGain();
@@ -68,7 +71,7 @@ function playWebTone(
 
 export function playMicOnSound(): void {
   if (Platform.OS === 'web') {
-    playWebTone(880, 0.15, 0.15);
+    void playWebTone(880, 0.15, 0.15);
   } else {
     playNativeSound(require('../../assets/sounds/mic_on.mp3'));
   }
@@ -76,7 +79,7 @@ export function playMicOnSound(): void {
 
 export function playMicOffSound(): void {
   if (Platform.OS === 'web') {
-    playWebTone(440, 0.12, 0.15);
+    void playWebTone(440, 0.12, 0.15);
   } else {
     playNativeSound(require('../../assets/sounds/mic_off.mp3'));
   }
@@ -84,8 +87,8 @@ export function playMicOffSound(): void {
 
 export function playSuccessSound(): void {
   if (Platform.OS === 'web') {
-    playWebTone(660, 0.15, 0.12, { delay: 0 });
-    playWebTone(880, 0.15, 0.12, { delay: 0.12 });
+    void playWebTone(660, 0.15, 0.12, { delay: 0 });
+    void playWebTone(880, 0.15, 0.12, { delay: 0.12 });
   } else {
     playNativeSound(require('../../assets/sounds/success.mp3'));
   }
@@ -93,7 +96,7 @@ export function playSuccessSound(): void {
 
 export function playErrorSound(): void {
   if (Platform.OS === 'web') {
-    playWebTone(220, 0.2, 0.1, { type: 'square' });
+    void playWebTone(220, 0.2, 0.1, { type: 'square' });
   } else {
     playNativeSound(require('../../assets/sounds/error.mp3'));
   }

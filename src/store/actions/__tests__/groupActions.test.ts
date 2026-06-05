@@ -1,31 +1,15 @@
+import { describe, it, expect } from '@jest/globals';
+
 import { setVisiblePageCountAction, deleteGroupAction, updateGroupAction, archiveGroupAction, restoreGroupAction, purgeExpiredArchivesAction } from '../groupActions';
 import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 import { createNewSrsState } from '../../../srs/srsEngine';
 
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected ${expected}, got ${actual}`);
-  }
-}
-
-function assertOk(condition: boolean, message: string) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-export async function runTests() {
-  console.log('\n--- Running Group Actions Tests ---');
-
+describe('groupActions', () => {
   const group = {
     id: 'g1',
     name: 'Deck',
     cards: [
-      {
-        id: 'c1',
-        pages: ['front', 'back', 'extra'],
-        srsState: createNewSrsState(),
-      },
+      { id: 'c1', pages: ['front', 'back', 'extra'], srsState: createNewSrsState() },
     ],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
@@ -34,93 +18,117 @@ export async function runTests() {
     activePageCount: 3,
   };
 
-  // setVisiblePageCount: decrease should NOT truncate arrays
-  const decreased = setVisiblePageCountAction([group], 'g1', 2)[0];
-  assertEqual(decreased.pageNames.length, 3, 'Decreasing visible pages must not truncate pageNames');
-  assertEqual(decreased.pageLanguages.length, 3, 'Decreasing visible pages must not truncate pageLanguages');
-  assertEqual(decreased.pageNames[2], 'Extra', 'Hidden page names must be preserved');
-  assertEqual(decreased.activePageCount, 2, 'activePageCount should reflect new visible count');
+  describe('setVisiblePageCountAction', () => {
+    it('does not truncate arrays when decreasing visible pages', () => {
+      const decreased = setVisiblePageCountAction([group], 'g1', 2)[0];
+      expect(decreased.pageNames.length).toBe(3);
+      expect(decreased.pageLanguages.length).toBe(3);
+      expect(decreased.pageNames[2]).toBe('Extra');
+      expect(decreased.activePageCount).toBe(2);
+    });
 
-  // setVisiblePageCount: increase should recover hidden pages
-  const increased = setVisiblePageCountAction([decreased], 'g1', 3)[0];
-  assertEqual(increased.activePageCount, 3, 'Increasing visible pages should restore count');
-  assertEqual(increased.pageNames[2], 'Extra', 'Previously hidden page names should be recovered');
+    it('recovers hidden pages when increasing', () => {
+      const decreased = setVisiblePageCountAction([group], 'g1', 2)[0];
+      const increased = setVisiblePageCountAction([decreased], 'g1', 3)[0];
+      expect(increased.activePageCount).toBe(3);
+      expect(increased.pageNames[2]).toBe('Extra');
+    });
 
-  // setVisiblePageCount: expand beyond existing
-  const expanded = setVisiblePageCountAction([group], 'g1', 4)[0];
-  assertEqual(expanded.pageNames[0], 'Front', 'Existing page names should stay in place');
-  assertEqual(expanded.pageNames[1], 'Back', 'Existing page names should preserve order');
-  assertEqual(expanded.pageLanguages[0], 'en-US', 'Existing page languages should stay in place');
-  assertEqual(expanded.pageLanguages[1], 'pl-PL', 'Existing page languages should preserve order');
-  assertEqual(expanded.pageNames[2], 'Extra', 'Existing extra page names should be kept');
-  assertEqual(expanded.pageNames[3], 'Page 4', 'New page names should be generated for added pages');
-  assertEqual(expanded.pageLanguages[3], 'en-US', 'New page languages should default to en-US');
+    it('generates new page names and defaults when expanding beyond existing', () => {
+      const expanded = setVisiblePageCountAction([group], 'g1', 4)[0];
+      expect(expanded.pageNames[0]).toBe('Front');
+      expect(expanded.pageNames[1]).toBe('Back');
+      expect(expanded.pageLanguages[0]).toBe('en-US');
+      expect(expanded.pageLanguages[1]).toBe('pl-PL');
+      expect(expanded.pageNames[2]).toBe('Extra');
+      expect(expanded.pageNames[3]).toBe('Page 4');
+      expect(expanded.pageLanguages[3]).toBe('en-US');
+    });
+  });
 
-  // deleteGroupAction: soft delete
-  const delResult = deleteGroupAction([group], 'g1');
-  assertEqual(delResult.length, 1, 'Soft-deleted group should still be in the array');
-  assertOk(delResult[0].deletedAt != null, 'Soft-deleted group must have deletedAt set');
+  describe('deleteGroupAction', () => {
+    it('soft-deletes group by setting deletedAt', () => {
+      const result = deleteGroupAction([group], 'g1');
+      expect(result.length).toBe(1);
+      expect(result[0].deletedAt).toBeTruthy();
+    });
+  });
 
-  // updateGroupAction: preserves tombstoned cards
-  const now = Date.now();
-  const canonGroup = {
-    ...group,
-    cards: [
-      { id: 'c1', pages: ['a', 'b', 'c'], srsState: createNewSrsState() },
-      { id: 'c2', pages: ['x', 'y', 'z'], srsState: createNewSrsState(), deletedAt: now },
-    ],
-  };
-  const uiGroup = {
-    ...group,
-    cards: [
-      { id: 'c1', pages: ['updated', 'b', 'c'], srsState: createNewSrsState() },
-    ],
-  };
-  const updated = updateGroupAction([canonGroup], uiGroup)[0];
-  assertEqual(updated.cards.length, 2, 'updateGroup should preserve tombstoned cards from canon');
-  assertOk(updated.cards.some((c) => c.id === 'c2'), 'Tombstoned card should be in result');
-  assertEqual(
-    updated.cards.find((c) => c.id === 'c1')!.pages[0],
-    'updated',
-    'Live card updates should be preserved',
-  );
+  describe('updateGroupAction', () => {
+    it('preserves tombstoned cards from canon', () => {
+      const now = Date.now();
+      const canonGroup = {
+        ...group,
+        cards: [
+          { id: 'c1', pages: ['a', 'b', 'c'], srsState: createNewSrsState() },
+          { id: 'c2', pages: ['x', 'y', 'z'], srsState: createNewSrsState(), deletedAt: now },
+        ],
+      };
+      const uiGroup = {
+        ...group,
+        cards: [
+          { id: 'c1', pages: ['updated', 'b', 'c'], srsState: createNewSrsState() },
+        ],
+      };
+      const updated = updateGroupAction([canonGroup], uiGroup)[0];
+      expect(updated.cards.length).toBe(2);
+      expect(updated.cards.some((c) => c.id === 'c2')).toBe(true);
+      expect(updated.cards.find((c) => c.id === 'c1')!.pages[0]).toBe('updated');
+    });
+  });
 
-  // archiveGroupAction: archivedAt + updatedAt set
-  const archived = archiveGroupAction([group], 'g1');
-  assertEqual(archived.length, 1, 'Archived group should still be in the array');
-  assertOk(archived[0].archivedAt != null && archived[0].archivedAt > 0, 'Archived group must have archivedAt set');
-  assertOk(archived[0].updatedAt != null && archived[0].updatedAt > 0, 'Archiving must bump updatedAt');
-  assertEqual(archived[0].deletedAt ?? 0, 0, 'Archived group must NOT have deletedAt');
+  describe('archiveGroupAction', () => {
+    it('sets archivedAt and bumps updatedAt', () => {
+      const archived = archiveGroupAction([group], 'g1');
+      expect(archived.length).toBe(1);
+      expect(archived[0].archivedAt).toBeTruthy();
+      expect(archived[0].archivedAt).toBeGreaterThan(0);
+      expect(archived[0].updatedAt).toBeTruthy();
+      expect(archived[0].updatedAt).toBeGreaterThan(0);
+      expect(archived[0].deletedAt ?? 0).toBe(0);
+    });
+  });
 
-  // restoreGroupAction: clears archivedAt, bumps updatedAt
-  const restored = restoreGroupAction(archived, 'g1');
-  assertOk(!restored[0].archivedAt, 'Restored group must have archivedAt cleared');
-  assertOk(restored[0].updatedAt != null && restored[0].updatedAt > 0, 'Restoring must bump updatedAt');
+  describe('restoreGroupAction', () => {
+    it('clears archivedAt and bumps updatedAt', () => {
+      const archived = archiveGroupAction([group], 'g1');
+      const restored = restoreGroupAction(archived, 'g1');
+      expect(restored[0].archivedAt).toBeFalsy();
+      expect(restored[0].updatedAt).toBeTruthy();
+      expect(restored[0].updatedAt).toBeGreaterThan(0);
+    });
+  });
 
-  // purgeExpiredArchivesAction: 13 days — no purge
-  {
-    const now = Date.now();
-    const recentGroup = { ...group, archivedAt: now - 13 * 24 * 60 * 60 * 1000 };
-    const purgedRecent = purgeExpiredArchivesAction([recentGroup], now, 14 * 24 * 60 * 60 * 1000);
-    assertOk(!purgedRecent.changed, 'Purge must not fire before retention period');
-    assertOk(!purgedRecent.groups[0].deletedAt, 'Recent archive must not get deletedAt');
+  describe('purgeExpiredArchivesAction', () => {
+    it('does not purge before retention period', () => {
+      const now = Date.now();
+      const recentGroup = { ...group, archivedAt: now - 13 * 24 * 60 * 60 * 1000 };
+      const result = purgeExpiredArchivesAction([recentGroup], now, 14 * 24 * 60 * 60 * 1000);
+      expect(result.changed).toBe(false);
+      expect(result.groups[0].deletedAt).toBeFalsy();
+    });
 
-    // purgeExpiredArchivesAction: 14 days — purge
-    const oldGroup = { ...group, archivedAt: now - 14 * 24 * 60 * 60 * 1000 };
-    const purgedOld = purgeExpiredArchivesAction([oldGroup], now, 14 * 24 * 60 * 60 * 1000);
-    assertOk(purgedOld.changed, 'Purge must fire after retention period');
-    assertOk(purgedOld.groups[0].deletedAt != null && purgedOld.groups[0].deletedAt > 0, 'Expired archive must get deletedAt');
+    it('purges after retention period', () => {
+      const now = Date.now();
+      const oldGroup = { ...group, archivedAt: now - 14 * 24 * 60 * 60 * 1000 };
+      const result = purgeExpiredArchivesAction([oldGroup], now, 14 * 24 * 60 * 60 * 1000);
+      expect(result.changed).toBe(true);
+      expect(result.groups[0].deletedAt).toBeTruthy();
+      expect(result.groups[0].deletedAt).toBeGreaterThan(0);
+    });
 
-    // purgeExpiredArchivesAction: already deleted — skip
-    const alreadyDeleted = { ...group, archivedAt: now - 20 * 24 * 60 * 60 * 1000, deletedAt: now };
-    const purgedDeleted = purgeExpiredArchivesAction([alreadyDeleted], now, 14 * 24 * 60 * 60 * 1000);
-    assertOk(!purgedDeleted.changed, 'Purge must skip already-deleted groups');
-    assertOk(purgedDeleted.groups[0].deletedAt === now, 'Already-deleted must not change deletedAt');
+    it('skips already-deleted groups', () => {
+      const now = Date.now();
+      const alreadyDeleted = { ...group, archivedAt: now - 20 * 24 * 60 * 60 * 1000, deletedAt: now };
+      const result = purgeExpiredArchivesAction([alreadyDeleted], now, 14 * 24 * 60 * 60 * 1000);
+      expect(result.changed).toBe(false);
+      expect(result.groups[0].deletedAt).toBe(now);
+    });
 
-    // purgeExpiredArchivesAction: no archivedAt — skip
-    const purgedNone = purgeExpiredArchivesAction([group], now, 14 * 24 * 60 * 60 * 1000);
-    assertOk(!purgedNone.changed, 'Purge must skip groups without archivedAt');
-  }
-
-  console.log('Group actions tests passed');
-}
+    it('skips groups without archivedAt', () => {
+      const now = Date.now();
+      const result = purgeExpiredArchivesAction([group], now, 14 * 24 * 60 * 60 * 1000);
+      expect(result.changed).toBe(false);
+    });
+  });
+});

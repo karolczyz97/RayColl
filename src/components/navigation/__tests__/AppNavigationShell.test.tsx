@@ -5,7 +5,7 @@ import { Text } from 'react-native';
 
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { useNavigationShell } from '../../../contexts/NavigationShellContext';
-import { AppThemeProvider } from '../../../contexts/ThemeContext';
+import { AppThemeProvider } from '../../../contexts/UserPreferencesContext';
 import { I18nProvider } from '../../../i18n';
 import { UI_PREFERENCE_STORAGE_KEYS, clearUiPreferenceCache } from '../../../storage/uiPreferences';
 import { createAppTheme } from '../../../theme/createAppTheme';
@@ -36,7 +36,7 @@ jest.mock('../../../hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: () => mockResponsiveLayout,
 }));
 
-jest.mock('../../../hooks/useFlashcardStore', () => ({
+jest.mock('../../../store/FlashcardStoreContext', () => ({
   useFlashcardStore: () => ({
     user: null,
     signIn: jest.fn(),

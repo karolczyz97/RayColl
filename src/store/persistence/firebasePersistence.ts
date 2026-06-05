@@ -1,7 +1,7 @@
-import { saveUserData, loadUserData, UserData } from '@/services/firebase';
+import { saveUserData, loadUserData } from '@/services/firebase';
 import { normalizeStoreData } from '@/store/storeDataNormalization';
 import { validateBackupData } from '@/utils/backupValidation';
-import { cloneUserData } from './firestoreSchema';
+import { cloneUserData, type UserData } from './firestoreSchema';
 import { deepEqual } from '@/utils/deepEqual';
 import {
   deleteActivityDay,
@@ -12,7 +12,8 @@ import {
   saveCard,
   saveDeck,
   saveStudyMode,
-} from './firestoreV2Persistence';
+  touchUserRoot,
+} from './firestorePersistence';
 
 const cloudSnapshotCache = new Map<string, UserData>();
 
@@ -20,6 +21,9 @@ function isEqual(a: unknown, b: unknown): boolean {
   return deepEqual(a, b);
 }
 
+// Eventual consistency: individual entity saves are not batched. If a mid-loop
+// save fails, previously saved entities remain on the server. The cache is only
+// updated on full success, so the next diff-save retries the same target state.
 export async function saveCloudData(userId: string, data: UserData): Promise<void> {
   try {
     validateBackupData(data);
@@ -27,7 +31,8 @@ export async function saveCloudData(userId: string, data: UserData): Promise<voi
 
     if (!previous) {
       await saveUserData(userId, data);
-      cloudSnapshotCache.set(userId, cloneUserData(data));
+    cloudSnapshotCache.set(userId, cloneUserData(data));
+    await touchUserRoot(userId);
       return;
     }
 

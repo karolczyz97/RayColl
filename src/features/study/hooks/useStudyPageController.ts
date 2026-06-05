@@ -3,18 +3,17 @@ import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import type { Flashcard } from '@/types/models';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useStudySession } from '@/hooks/useStudySession';
-import { useI18n } from '@/i18n';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
-import { setIsStudyActive } from '@/features/study/studyGuard';
+import { useStudyNavigationGuard } from '@/features/study/StudyNavigationGuardContext';
 
 const NARROW_CONTROLS_WIDTH = 480;
 
 export function useStudyPageController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const { t } = useI18n();
   const store = useFlashcardStore();
+  const { setStudyActive } = useStudyNavigationGuard();
   const { width } = useWindowDimensions();
   const isNarrow = width < NARROW_CONTROLS_WIDTH;
 
@@ -34,15 +33,6 @@ export function useStudyPageController() {
     studyModes.find((studyMode) => studyMode.id === activeGroup?.activeModeId) ||
     studyModes[0];
   const steps = useMemo(() => mode?.steps || [], [mode]);
-
-  const getButtonText = useCallback(
-    (key: string) => {
-      if (isNarrow) return '';
-      const text = t(key);
-      return text.split(' (')[0];
-    },
-    [isNarrow, t],
-  );
 
   const onCardReviewed = useCallback(
     (activeGroupId: string, card: Flashcard) => {
@@ -77,29 +67,29 @@ export function useStudyPageController() {
       if (due.length > 0) {
         startSession(due);
         startedRef.current = groupId;
-        setIsStudyActive(true);
+        setStudyActive(true);
       }
     }
-  }, [groupId, startSession, isLoading, groups, getDueCards]);
+  }, [getDueCards, groupId, groups, isLoading, setStudyActive, startSession]);
 
   const handleBack = useCallback(() => {
     if (sessionState.isSessionFinished) {
       stopSession();
       void flushPersistence();
-      setIsStudyActive(false);
+      setStudyActive(false);
       safeBack();
       return;
     }
     setShowExitConfirm(true);
-  }, [stopSession, flushPersistence, sessionState.isSessionFinished]);
+  }, [flushPersistence, sessionState.isSessionFinished, setStudyActive, stopSession]);
 
   const confirmExit = useCallback(() => {
     setShowExitConfirm(false);
     stopSession();
     void flushPersistence();
-    setIsStudyActive(false);
+    setStudyActive(false);
     safeBack();
-  }, [stopSession, flushPersistence]);
+  }, [flushPersistence, setStudyActive, stopSession]);
 
   const cancelExit = useCallback(() => {
     setShowExitConfirm(false);
@@ -109,16 +99,16 @@ export function useStudyPageController() {
     return () => {
       stopSession();
       void flushPersistence();
-      setIsStudyActive(false);
+      setStudyActive(false);
     };
-  }, [stopSession, flushPersistence]);
+  }, [flushPersistence, setStudyActive, stopSession]);
 
   useEffect(() => {
     if (sessionState.isSessionFinished) {
       void flushPersistence();
-      setIsStudyActive(false);
+      setStudyActive(false);
     }
-  }, [sessionState.isSessionFinished, flushPersistence]);
+  }, [flushPersistence, sessionState.isSessionFinished, setStudyActive]);
 
   const sessionProgressItems = useMemo(
     () => buildSessionProgressItems(dueCards, activeGroup?.cards ?? []),
@@ -133,7 +123,6 @@ export function useStudyPageController() {
     currentCard: dueCards[sessionState.currentCardIndex] || null,
     dueCards,
     failedCount,
-    getButtonText,
     groupId,
     handleBack,
     handleCardPress,
@@ -148,6 +137,5 @@ export function useStudyPageController() {
     sessionState,
     setHolding,
     showExitConfirm,
-    t,
   };
 }

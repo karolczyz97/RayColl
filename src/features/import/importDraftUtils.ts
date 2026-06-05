@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { readAssetText } from '@/utils/fileReader';
 import {
   detectFirstRowHeader,
   detectPageCount,
@@ -10,6 +10,12 @@ import { getPreviewRows } from './importDraftHelpers';
 import type { Flashcard } from '@/types/models';
 
 export const IMPORT_LINE_LIMIT = 500;
+
+/** Resolves the separator key into the literal separator the parser consumes. */
+export function getActiveSepValue(key: string, custom: string): string {
+  if (key === 'custom') return custom || ',';
+  return key;
+}
 
 export function limitImportLines(text: string, maxLines: number): {
   safeText: string;
@@ -84,10 +90,7 @@ export async function pickAndReadFile(): Promise<{
 
   if (!result.canceled && result.assets?.length) {
     const asset = result.assets[0];
-    const fileContent =
-      Platform.OS === 'web' && asset.file
-        ? await asset.file.text()
-        : await (await fetch(asset.uri)).text();
+    const fileContent = await readAssetText(asset);
 
     if (fileContent) {
       const baseName = asset.name?.replace(/\.[^/.]+$/, '').trim();

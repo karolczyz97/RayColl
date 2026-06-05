@@ -1,7 +1,7 @@
 import type { ModeStep } from '@/types/models';
 import type { TranslationFn } from '@/i18n';
 
-export function stepSummary(step: ModeStep, t: TranslationFn): string {
+export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
   switch (step.type) {
     case 'show_page':
       return t('step.show_page', { index: step.pageIndex + 1 });
@@ -20,5 +20,10 @@ export function stepSummary(step: ModeStep, t: TranslationFn): string {
       return t('step.reveal_on_tap');
     case 'rate':
       return t('step.rate');
+
+    default: {
+      void (step as never);
+      return t('step.unknown');
+    }
   }
 }

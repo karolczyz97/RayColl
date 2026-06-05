@@ -1,18 +1,10 @@
 import { useCallback, useRef, useEffect, useMemo, useReducer } from 'react';
 import type { FlashcardGroup, Flashcard, ModeStep } from '@/types/models';
-import { mapMatchToRating, matchSpeech } from '@/srs/srsEngine';
-import {
-  playErrorSound,
-  playSuccessSound,
-} from '@/services/audioFeedback';
-import { useAppTheme } from '@/contexts/ThemeContext';
+import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
 import { useSyncedRef } from './useSyncedRef';
-import {
-  getActivePageIndexes,
-  sleep,
-} from '@/features/study/session/sessionUtils';
 import type { SessionAction } from '@/features/study/session/sessionTypes';
+import { executeStudyStep } from '@/features/study/session/stepExecutor';
 import { useStudyAudio } from '@/features/study/hooks/useStudyAudio';
 import { useStudyCardGestures } from '@/features/study/hooks/useStudyCardGestures';
 import { useStudyReviewFlow } from '@/features/study/hooks/useStudyReviewFlow';
@@ -104,161 +96,24 @@ export function useStudySession(
 
   const executeStep = useCallback(
     async (card: Flashcard, stepIndex: number) => {
-      const currentGroup = groupRef.current;
-      const currentSteps = activeStepsRef.current;
-
-      skipRef.current.requested = false;
-      skipRef.current.armed = false;
-
-      if (abortRef.current || !currentGroup || stepIndex >= currentSteps.length) {
-        dispatchIfMounted({ type: 'SHOW_RATINGS' });
-        return;
-      }
-
-      const step = currentSteps[stepIndex];
-
-      switch (step.type) {
-        case 'show_page': {
-          dispatchIfMounted({ type: 'REVEAL_PAGE', stepIndex, pageIndex: step.pageIndex });
-          if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIndex + 1);
-          }
-          break;
-        }
-
-        case 'reveal_on_tap': {
-          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: true });
-          break;
-        }
-
-        case 'rate': {
-          dispatchIfMounted({ type: 'SHOW_RATINGS' });
-          break;
-        }
-
-        case 'speak_page': {
-          skipRef.current.armed = true;
-          dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
-          await guardedAwait(playTts(card.pages[step.pageIndex] || '', currentGroup.pageLanguages[step.pageIndex] || 'en-US'));
-          if (!skipRef.current.requested && step.extraPauseMs > 0) {
-            await guardedAwait(sleep(step.extraPauseMs));
-          }
-          dispatchIfMounted({ type: 'END_SPEAKING' });
-
-          if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIndex + 1);
-          }
-          break;
-        }
-
-        case 'dynamic_pause': {
-          skipRef.current.armed = true;
-          const text = card.pages[step.nextPageIndex] || '';
-          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
-          await guardedAwait(sleep(text.length * 60 + (step.extraPauseMs || 0)));
-
-          if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIndex + 1);
-          }
-          break;
-        }
-
-        case 'wait': {
-          skipRef.current.armed = true;
-          dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
-          await guardedAwait(sleep(step.ms));
-
-          if (!abortRef.current) {
-            await executeStepRef.current?.(card, stepIndex + 1);
-          }
-          break;
-        }
-
-        case 'listen_and_branch': {
-          skipRef.current.armed = true;
-          dispatchIfMounted({ type: 'START_LISTENING', stepIndex });
-          const lang = currentGroup.pageLanguages[step.pageIndex] || 'en-US';
-          const softTimeout = Math.max(5000, lastTtsDurationRef.current * 3);
-          const recognized = (await guardedAwait(runSpeechRecognition(lang, softTimeout + 10000))) || '';
-          skipRef.current.armed = false;
-
-          if (skipRef.current.requested) {
-            dispatchIfMounted({
-              type: 'END_LISTENING',
-              text: '',
-              matchPercent: 0,
-            });
-            if (!abortRef.current) {
-              await executeStepRef.current?.(card, stepIndex + 1);
-            }
-            break;
-          }
-
-          const original = card.pages[step.pageIndex] || '';
-          const percent = matchSpeech(recognized, original);
-
-          dispatchIfMounted({
-            type: 'END_LISTENING',
-            text: recognized || '',
-            matchPercent: percent,
-          });
-
-          await sleep(1200);
-
-          if (percent >= step.successThreshold) {
-            playSuccessSound();
-            const autoRating = mapMatchToRating(percent);
-            await sleep(600);
-            if (!abortRef.current) {
-              processCardReview(card, autoRating);
-              await advanceToNextCard();
-              return;
-            }
-          } else {
-            playErrorSound();
-            markCardFailed(card);
-          }
-
-          if (percent < step.successThreshold) {
-            dispatchIfMounted({
-              type: 'REVEAL_PAGES',
-              revealedPages: getActivePageIndexes(currentGroup),
-            });
-
-            skipRef.current.armed = true;
-            if (step.incorrectTtsPageIndex !== undefined) {
-              dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
-              const correctionStart = Date.now();
-              await guardedAwait(playTts(
-                card.pages[step.incorrectTtsPageIndex] || '',
-                currentGroup.pageLanguages[step.incorrectTtsPageIndex] || 'en-US',
-              ));
-              const correctionDuration = Date.now() - correctionStart;
-              dispatchIfMounted({ type: 'END_SPEAKING' });
-              if (!skipRef.current.requested) {
-                await guardedAwait(sleep(correctionDuration * 2));
-              }
-            } else {
-              await guardedAwait(sleep(2000));
-            }
-            skipRef.current.armed = false;
-            if (skipRef.current.requested) {
-              unmarkCardFailed(card.id);
-              if (!abortRef.current) {
-                await executeStepRef.current?.(card, stepIndex + 1);
-              }
-              break;
-            }
-
-            if (!abortRef.current) {
-              processCardReview(card, 1);
-              await advanceToNextCard();
-              return;
-            }
-          }
-          break;
-        }
-      }
+      await executeStudyStep(card, stepIndex, {
+        abortRef,
+        activeStepsRef,
+        groupRef,
+        skipRef,
+        lastTtsDurationRef,
+        dispatchIfMounted,
+        guardedAwait,
+        playTts,
+        runSpeechRecognition,
+        processCardReview,
+        advanceToNextCard,
+        markCardFailed,
+        unmarkCardFailed,
+        executeNext: async (nextCard, nextStepIndex) => {
+          await executeStepRef.current?.(nextCard, nextStepIndex);
+        },
+      });
     },
     [
       advanceToNextCard,

@@ -8,7 +8,6 @@ import {
   looksLikeHeaderLabel,
   normalizeImportCell,
   parseCSV,
-  parseCSVLine,
   serializeCSV,
 } from '../importParser';
 
@@ -36,6 +35,10 @@ describe('importParser', () => {
 
     it('detects tab in 2-line data', () => {
       expect(detectSeparator('a\tb\tc\n1\t2\t3')).toBe('tab');
+    });
+
+    it('ignores newlines inside quoted fields when detecting', () => {
+      expect(detectSeparator('"a;b"\n1;2\n3;4')).toBe('semicolon');
     });
   });
 
@@ -81,12 +84,6 @@ describe('importParser', () => {
     });
   });
 
-  describe('parseCSVLine', () => {
-    it('handles long fields without truncation', () => {
-      expect(parseCSVLine(`${'a'.repeat(10000)};tail`, ';')).toEqual(['a'.repeat(10000), 'tail']);
-    });
-  });
-
   describe('detectPageCount', () => {
     it('supports CR-only line endings', () => {
       expect(detectPageCount('front;back\rexample;translation', ';')).toBe(2);
@@ -106,6 +103,10 @@ describe('importParser', () => {
 
     it('does not clamp over 20 columns', () => {
       expect(detectPageCount('1;2;3;4;5;6;7;8;9;0;11;12;13;14;15;16;17;18;19;20;21', ';')).toBe(21);
+    });
+
+    it('handles newlines inside quoted fields', () => {
+      expect(detectPageCount('a;"line\nbreak";c\nd;e;f', ';')).toBe(3);
     });
   });
 

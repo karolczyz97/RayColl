@@ -11,12 +11,10 @@ import {
   getVisiblePages,
   getVisiblePageNames,
 } from '../../store/selectors/pages';
-import { filterCards } from '../../store/selectors/dueCards';
+import { filterCards } from '../../store/selectors/cardSelectors';
 import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../../store/storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
-import { validateImportDeckPayload } from '../../import/importDeck';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
-import { MAX_STORED_PAGE_COUNT } from '../../constants/pages';
 
 describe('srsEngine', () => {
   describe('createNewSrsState', () => {
@@ -156,7 +154,7 @@ describe('pageConfig', () => {
         studyModes: [],
         activityHeatmap: {},
       };
-      expect(validateBackupData(backup)).toBe(true);
+      expect(() => validateBackupData(backup)).not.toThrow();
       const normalized = normalizeStoreData(backup);
       expect(normalized.groups[0].activePageCount).toBe(5);
       expect(normalized.groups[0].pageNames.length).toBe(6);
@@ -260,7 +258,7 @@ describe('backupValidation', () => {
   };
 
   it('accepts valid backup', () => {
-    expect(validateBackupData(validBackup)).toBe(true);
+    expect(() => validateBackupData(validBackup)).not.toThrow();
   });
 
   it('throws on null', () => {
@@ -303,5 +301,3 @@ describe('backupValidation', () => {
     ).toThrow('invalid pageIndex');
   });
 });
-
-

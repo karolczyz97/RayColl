@@ -4,18 +4,18 @@ import { Text, IconButton } from 'react-native-paper';
 import { AppSelect } from '@/components/AppSelect';
 import { TOKENS } from '@/theme/tokens';
 import type { StudyMode } from '@/types/models';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { getModeName } from '@/i18n/modeHelpers';
 
-interface Props {
+interface StudyModeSelectorProps {
   activeModeId: string;
   onModeChange: (modeId: string) => void;
   studyModes: StudyMode[];
-  t: TranslationFn;
   onCreateMode?: () => void;
 }
 
-export function StudyModeSelector({ activeModeId, onModeChange, studyModes, t, onCreateMode }: Props) {
+export function StudyModeSelector({ activeModeId, onModeChange, studyModes, onCreateMode }: StudyModeSelectorProps) {
+  const { t } = useI18n();
   const options = studyModes.map((mode) => ({
     label: getModeName(t, mode.id, mode.name),
     value: mode.id,

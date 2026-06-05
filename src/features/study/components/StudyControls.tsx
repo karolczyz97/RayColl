@@ -2,11 +2,12 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
 import { usePulseAnimation } from '@/hooks/usePulseAnimation';
 import {
-  getDangerBgColor,
-  getDangerColor,
+  getDueBgColor,
+  getDueColor,
   getInfoColor,
   getSuccessColor,
   getWarningBgColor,
@@ -25,10 +26,6 @@ interface StudyControlsProps {
   showRatingButtons: boolean;
   sttResultText: string;
   sttMatchPercent: number;
-  getButtonText: (key: string) => string;
-  ratingLabels: [string, string, string, string];
-  recognizedLabel: string;
-  matchPercentLabel: string;
   onRate: (rating: number) => void;
 }
 
@@ -49,15 +46,16 @@ export function StudyControls({
   showRatingButtons,
   sttResultText,
   sttMatchPercent,
-  getButtonText,
-  ratingLabels,
-  recognizedLabel,
-  matchPercentLabel,
   onRate,
 }: StudyControlsProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const ttsIconStyle = usePulseAnimation(isTtsPlaying);
   const sttIconStyle = usePulseAnimation(isSttListening);
+  const getButtonText = (key: string) => {
+    if (isNarrow) return '';
+    return t(key).split(' (')[0];
+  };
 
   const matchColor =
     sttMatchPercent >= 85
@@ -66,14 +64,14 @@ export function StudyControls({
         ? getInfoColor(theme)
         : sttMatchPercent >= 40
           ? getWarningColor(theme)
-          : getDangerColor(theme);
+          : getDueColor(theme);
 
   const getRatingButtonColors = (tone: RatingTone) => {
     switch (tone) {
       case 'danger':
         return {
-          buttonColor: getDangerBgColor(theme),
-          textColor: getDangerColor(theme),
+          buttonColor: getDueBgColor(theme),
+          textColor: getDueColor(theme),
         };
       case 'warning':
         return {
@@ -133,28 +131,28 @@ export function StudyControls({
           {renderRatingButton({
             iconName: 'replay',
             isNarrow,
-            label: getButtonText('study.rating.1') || ratingLabels[0],
+            label: getButtonText('study.rating.1') || t('study.rating.1'),
             onPress: () => onRate(1),
             tone: 'danger',
           })}
           {renderRatingButton({
             iconName: 'emoticon-sad-outline',
             isNarrow,
-            label: getButtonText('study.rating.2') || ratingLabels[1],
+            label: getButtonText('study.rating.2') || t('study.rating.2'),
             onPress: () => onRate(2),
             tone: 'warning',
           })}
           {renderRatingButton({
             iconName: 'emoticon-happy-outline',
             isNarrow,
-            label: getButtonText('study.rating.3') || ratingLabels[2],
+            label: getButtonText('study.rating.3') || t('study.rating.3'),
             onPress: () => onRate(3),
             tone: 'primary',
           })}
           {renderRatingButton({
             iconName: 'emoticon-excited-outline',
             isNarrow,
-            label: getButtonText('study.rating.4') || ratingLabels[3],
+            label: getButtonText('study.rating.4') || t('study.rating.4'),
             onPress: () => onRate(4),
             tone: 'success',
           })}
@@ -165,14 +163,14 @@ export function StudyControls({
             {sttResultText ? (
               <View style={[styles.sttResultBox, { backgroundColor: theme.colors.surfaceVariant }]}>
                 <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {recognizedLabel}
+                  {t('study.recognized')}
                 </Text>
                 <Text variant="bodyLarge" style={styles.recognizedText}>
                   {sttResultText}
                 </Text>
                 {sttMatchPercent > 0 ? (
                   <Text variant="labelSmall" style={[styles.matchPercentText, { color: matchColor }]}>
-                    {matchPercentLabel}
+                    {t('study.match_percent', { percent: sttMatchPercent })}
                   </Text>
                 ) : null}
               </View>
@@ -194,7 +192,7 @@ export function StudyControls({
                 <AppIcon
                   name="microphone"
                   size={TOKENS.iconSize.lg}
-                  color={isSttListening ? getDangerColor(theme) : theme.colors.outline}
+                  color={isSttListening ? getDueColor(theme) : theme.colors.outline}
                 />
               </Animated.View>
             ) : null}

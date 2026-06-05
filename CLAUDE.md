@@ -30,6 +30,7 @@ Before every refactor step:
 - Do not delete code by guesswork. Verify with grep and typecheck. If something might be needed indirectly (Expo, web, Paper), mark it "to audit" instead of removing it blindly.
 - Every change needs a manual regression checklist. Passing TypeScript does not mean the feature works.
 - Do not introduce abstractions for hypothetical future needs.
+- A split or extraction must **reduce** coupling across its boundary. If pulling logic into a separate file/hook forces you to pass most of the parent's state back into it (many setters/refs/props), that boundary is fake — the two pieces are really one cohesive unit. Prefer one honest file over a split held together by a firehose of parameters. If a long file genuinely must be split, make the seam real first (e.g. a single `dispatch`/reducer or a small typed value object) instead of threading individual setters.
 
 ## UI / MD3 rules
 
@@ -94,6 +95,7 @@ Before every refactor step:
 
 ## File size / structure rules
 
-- Route files in `src/app` should stay around 180 lines or less whenever practical.
-- If a route starts accumulating stateful business logic, move it into `features/*` hooks/components or `store/*`.
+- Line count is a **smell, not a target**. A long file is a prompt to ask "is there a real seam here?", not an order to cut. Never split a file just to hit a number — a 400-line cohesive unit beats two files that share most of their state (see the abstraction-boundary rule above).
+- Route files in `src/app` are best kept lean (~180 lines) by moving **business logic** out — not by slicing the file at an arbitrary line. The win is "screens orchestrate, they don't compute", not the line count itself.
+- If a route accumulates stateful business logic, move that logic into `features/*` hooks/components or `store/*` — but only when the extracted piece has a clear, narrow boundary. If it would need the whole screen's state passed back in, keep it inline.
 - Prefer `useStoreState` and `useStoreActions` for action-only consumers when it helps avoid unnecessary rerenders.

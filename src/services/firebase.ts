@@ -7,17 +7,15 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import type { User, Unsubscribe } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { auth, db } from './firebaseClient';
 import type { StoreData } from '@/types/models';
-import { migrateLegacyUserDataToV2 } from '@/store/persistence/firestoreMigration';
-import { FIRESTORE_SCHEMA_VERSION } from '@/store/persistence/firestoreSchema';
-import { loadUserDataV2, saveUserDataV2 } from '@/store/persistence/firestoreV2Persistence';
-import { validateBackupData } from '@/utils/backupValidation';
-import { getErrorMessage } from '@/utils/errors';
+import {
+  loadUserData as loadFirestoreUserData,
+  saveUserData as saveFirestoreUserData,
+} from '@/store/persistence/firestorePersistence';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -123,44 +121,11 @@ export function onAuthChange(cb: (user: User | null) => void): Unsubscribe {
   return onAuthStateChanged(auth, cb);
 }
 
-export type UserData = StoreData;
-
-export async function saveUserData(uid: string, data: UserData): Promise<void> {
-  await saveUserDataV2(uid, data);
+export async function saveUserData(uid: string, data: StoreData): Promise<void> {
+  await saveFirestoreUserData(uid, data);
 }
 
-export async function loadUserData(uid: string): Promise<UserData | null> {
+export async function loadUserData(uid: string): Promise<StoreData | null> {
   if (!db) return null;
-
-  const rootRef = doc(db, 'users', uid);
-  const rootSnap = await getDoc(rootRef);
-
-  if (!rootSnap.exists()) {
-    return null;
-  }
-
-  const rootData = rootSnap.data() as Record<string, unknown>;
-
-  if (rootData.schemaVersion === FIRESTORE_SCHEMA_VERSION) {
-    return loadUserDataV2(uid);
-  }
-
-  if ('groups' in rootData && 'studyModes' in rootData && 'activityHeatmap' in rootData) {
-    const legacyDataCandidate: unknown = {
-      groups: rootData.groups,
-      studyModes: rootData.studyModes,
-      activityHeatmap: rootData.activityHeatmap,
-    };
-
-    try {
-      validateBackupData(legacyDataCandidate);
-      const legacyData = legacyDataCandidate as UserData;
-      return await migrateLegacyUserDataToV2(uid, legacyData);
-    } catch (err) {
-      console.warn('Legacy Firestore data is invalid; falling back to V2 data:', getErrorMessage(err));
-      return loadUserDataV2(uid);
-    }
-  }
-
-  return loadUserDataV2(uid);
+  return loadFirestoreUserData(uid);
 }

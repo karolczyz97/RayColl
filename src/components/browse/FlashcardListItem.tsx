@@ -14,14 +14,13 @@ import {
 import { TOKENS } from '@/theme/tokens';
 import { getVisiblePages } from '@/store/selectors/pages';
 import { getReviewStatusColor } from '@/theme/semanticColors';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 
-interface Props {
+interface FlashcardListItemProps {
   card: Flashcard;
   group: FlashcardGroup;
   onStartEdit: () => void;
   onDelete: () => void;
-  t: TranslationFn;
   readOnly?: boolean;
 }
 
@@ -52,10 +51,10 @@ export function FlashcardListItem({
   group,
   onStartEdit,
   onDelete,
-  t,
   readOnly,
-}: Props) {
+}: FlashcardListItemProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const { showHidden: viewHidden, setShowHidden: setViewHidden } = useHiddenPagesToggle();
 
   const activeCount = group.activePageCount;

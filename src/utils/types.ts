@@ -1,3 +1,6 @@
+export type BrowserWindowWith<K extends string, V> = Window &
+  typeof globalThis & { [key in K]?: V };
+
 /**
  * Narrowing guard for plain object records. Rejects `null` and arrays.
  * Single source of truth shared by persistence schema parsing and backup

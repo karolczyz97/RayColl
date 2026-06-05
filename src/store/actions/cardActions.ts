@@ -1,7 +1,21 @@
 import { FlashcardGroup, Flashcard } from '@/types/models';
 import { createNewSrsState } from '@/srs/srsEngine';
 import { uid } from '@/utils/id';
-import { recordActivityAction } from './activityActions';
+import { getLocalDateString } from '@/utils/date';
+
+export function recordActivityAction(heatmap: Record<string, number>): {
+  nextHeatmap: Record<string, number>;
+  todayKey: string;
+} {
+  const todayKey = getLocalDateString(new Date());
+
+  const nextHeatmap = {
+    ...heatmap,
+    [todayKey]: (heatmap[todayKey] || 0) + 1,
+  };
+
+  return { nextHeatmap, todayKey };
+}
 
 export function addFlashcardAction(
   groups: FlashcardGroup[],
@@ -41,7 +55,7 @@ export function updateFlashcardAction(
   );
 }
 
-export function reviewFlashcardAction(
+function reviewFlashcardAction(
   groups: FlashcardGroup[],
   groupId: string,
   card: Flashcard,

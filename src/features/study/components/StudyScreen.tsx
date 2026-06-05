@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
 import type { SessionProgressItem } from '@/features/study/session/sessionProgress';
 import { AppScreen } from '@/components/layout/AppScreen';
@@ -21,7 +21,6 @@ interface StudyScreenProps {
   currentCard: Flashcard | null;
   dueCards: Flashcard[];
   failedCount: number;
-  getButtonText: (key: string) => string;
   handleBack: () => void;
   handleCardPress: () => void;
   handleRating: (rating: number) => void;
@@ -46,7 +45,6 @@ interface StudyScreenProps {
   };
   setHolding: (holding: boolean) => void;
   showExitConfirm: boolean;
-  t: TranslationFn;
 }
 
 export function StudyScreen({
@@ -57,7 +55,6 @@ export function StudyScreen({
   currentCard,
   dueCards,
   failedCount,
-  getButtonText,
   handleBack,
   handleCardPress,
   handleRating,
@@ -70,9 +67,9 @@ export function StudyScreen({
   sessionState,
   setHolding,
   showExitConfirm,
-  t,
 }: StudyScreenProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const isFinished = sessionState.isSessionFinished || dueCards.length === 0;
   const total = dueCards.length;
   const progressLabel = total > 0 ? `${sessionState.currentCardIndex + 1}/${total}` : '0/0';
@@ -105,13 +102,6 @@ export function StudyScreen({
             activeGroup={activeGroup}
             failedCount={failedCount}
             dueCardsCount={dueCards.length}
-            bravoLabel={t('study.bravo')}
-            noDueLabel={t('study.no_due')}
-            finishedDescription={t('study.finished_desc')}
-            deckProgressLabel={t('stats.deck_progress')}
-            restartFailedLabel={t('study.restart_failed')}
-            restartSessionLabel={t('study.restart_session')}
-            backToPanelLabel={t('study.back_to_panel')}
             onRestartFailed={restartFailed}
             onRestartSession={restartSession}
             onBack={handleBack}
@@ -127,7 +117,6 @@ export function StudyScreen({
               waitingForTap={sessionState.waitingForTap}
               onCardPress={handleCardPress}
               onHoldingChange={setHolding}
-              tapToRevealLabel={t('study.tap_to_reveal')}
             />
             <StudyControls
               isNarrow={isNarrow}
@@ -138,15 +127,6 @@ export function StudyScreen({
               showRatingButtons={sessionState.showRatingButtons}
               sttResultText={sessionState.sttResultText}
               sttMatchPercent={sessionState.sttMatchPercent}
-              getButtonText={getButtonText}
-              ratingLabels={[
-                t('study.rating.1'),
-                t('study.rating.2'),
-                t('study.rating.3'),
-                t('study.rating.4'),
-              ]}
-              recognizedLabel={t('study.recognized')}
-              matchPercentLabel={t('study.match_percent', { percent: sessionState.sttMatchPercent })}
               onRate={handleRating}
             />
           </>

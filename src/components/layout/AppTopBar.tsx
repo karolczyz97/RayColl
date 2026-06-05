@@ -5,7 +5,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { TOKENS } from '@/theme/tokens';
 import { getTopBarColors } from '@/theme/semanticColors';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { useAppTheme } from '@/contexts/ThemeContext';
+import { useAppTheme } from '@/contexts/UserPreferencesContext';
 
 interface AppTopBarProps {
   /** Sub-page mode: title shown next to the back arrow. */

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Portal, Snackbar, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import type { SyncStatus } from '@/store/FlashcardStoreTypes';
 import { TOKENS } from '@/theme/tokens';
 
@@ -10,7 +10,6 @@ interface SyncStatusBannerProps {
   lastSyncError: string | null;
   lastPersistenceError: string | null;
   lastStoreError: string | null;
-  t?: TranslationFn;
 }
 
 export function SyncStatusBanner({
@@ -18,12 +17,12 @@ export function SyncStatusBanner({
   lastSyncError,
   lastPersistenceError,
   lastStoreError,
-  t,
 }: SyncStatusBannerProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const errorMessage = lastStoreError || lastSyncError || lastPersistenceError;
   const getLabel = (key: string, fallback: string) => {
-    const translated = t?.(key);
+    const translated = t(key);
     return translated && translated !== key ? translated : fallback;
   };
 
@@ -51,6 +50,8 @@ export function SyncStatusBanner({
         visible
         onDismiss={() => undefined}
         duration={Snackbar.DURATION_SHORT}
+        accessibilityRole="alert"
+        accessibilityLabel={statusText}
         style={[
           styles.snackbar,
           {

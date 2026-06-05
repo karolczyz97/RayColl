@@ -4,27 +4,27 @@ import { getWarningColor } from '@/theme/semanticColors';
 import { MetricGrid } from '@/components/metrics/MetricGrid';
 import { TOKENS } from '@/theme/tokens';
 
-interface Props {
+interface DashboardStatsProps {
   decksCount: number;
   cardsCount: number;
   dueCount: number;
   streak: number;
 }
 
-export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: Props) {
+export function DashboardStats({ decksCount, cardsCount, dueCount, streak }: DashboardStatsProps) {
   const { t } = useI18n();
   const theme = useTheme();
 
   const stats = [
     {
       icon: 'book-multiple',
-      label: t('stats.decks_title') || 'Talie',
+      label: t('stats.decks_title'),
       value: String(decksCount),
       color: theme.colors.primary,
     },
     {
       icon: 'card-multiple-outline',
-      label: t('stats.cards_title') || 'Fiszki',
+      label: t('stats.cards_title'),
       value: String(cardsCount),
       color: theme.colors.secondary,
     },

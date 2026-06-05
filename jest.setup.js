@@ -39,7 +39,11 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedStyle: (callback) => callback(),
     withSpring: (value) => value,
     withTiming: (value) => value,
+    withRepeat: (value) => value,
+    withSequence: (...values) => values[values.length - 1],
     FadeIn: animationBuilder,
+    FadeInUp: animationBuilder,
+    FadeInDown: animationBuilder,
     ZoomIn: animationBuilder,
   };
 

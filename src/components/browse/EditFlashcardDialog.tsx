@@ -1,33 +1,33 @@
 import React from 'react';
 import { Button, Dialog, Portal } from 'react-native-paper';
 import type { FlashcardGroup } from '@/types/models';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { dialogStyles } from '@/theme/dialogStyles';
 import { EditFlashcardForm } from './EditFlashcardForm';
 
-interface Props {
+interface EditFlashcardDialogProps {
   visible: boolean;
   group: FlashcardGroup;
   editPages: string[];
-  setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
+  onPagesChange: (pages: string[]) => void;
   onSave: () => void;
   onCancel: () => void;
   saveDisabled?: boolean;
   validationMessage?: string;
-  t: TranslationFn;
 }
 
 export function EditFlashcardDialog({
   visible,
   group,
   editPages,
-  setEditPages,
+  onPagesChange,
   onSave,
   onCancel,
   saveDisabled,
   validationMessage,
-  t,
-}: Props) {
+}: EditFlashcardDialogProps) {
+  const { t } = useI18n();
+
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onCancel} style={dialogStyles.dialog}>
@@ -36,9 +36,8 @@ export function EditFlashcardDialog({
           <EditFlashcardForm
             group={group}
             editPages={editPages}
-            setEditPages={setEditPages}
+            onPagesChange={onPagesChange}
             validationMessage={validationMessage}
-            t={t}
           />
         </Dialog.Content>
         <Dialog.Actions>

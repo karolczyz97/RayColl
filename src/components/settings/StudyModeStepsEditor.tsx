@@ -2,13 +2,13 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Divider, List, Button } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '@/types/models';
-import type { TranslationFn } from '@/i18n';
+import { useI18n, type TranslationFn } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { getModeName } from '@/i18n/modeHelpers';
 import { StepReorderControls } from './StepReorderControls';
 
-interface Props {
+interface StudyModeStepsEditorProps {
   activeMode: StudyMode;
   isDefaultMode: boolean;
   hasCustomSteps: boolean;
@@ -16,8 +16,7 @@ interface Props {
   deleteStep: (mode: StudyMode, index: number) => void;
   addStepToMode: (mode: StudyMode) => void;
   onResetMode: (mode: StudyMode) => void;
-  t: TranslationFn;
-  stepSummary: (step: ModeStep, t: TranslationFn) => string;
+  formatStepSummary: (step: ModeStep, t: TranslationFn) => string;
 }
 
 export function StudyModeStepsEditor({
@@ -28,18 +27,19 @@ export function StudyModeStepsEditor({
   deleteStep,
   addStepToMode,
   onResetMode,
-  t,
-  stepSummary,
-}: Props) {
+  formatStepSummary,
+}: StudyModeStepsEditorProps) {
+  const { t } = useI18n();
+
   return (
     <SectionCard title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}>
         <View style={styles.stepsList}>
           {activeMode.steps.map((step, index) => (
-            <View key={index}>
+            <View key={step.id ?? index}>
               {index > 0 && <Divider style={styles.divider} />}
               <List.Item
                 style={styles.listItem}
-                title={`${index + 1}. ${stepSummary(step, t)}`}
+                title={`${index + 1}. ${formatStepSummary(step, t)}`}
                 right={() => (
                   <StepReorderControls
                     index={index}

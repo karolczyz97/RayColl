@@ -1,5 +1,8 @@
 import { FlashcardGroup, Flashcard } from '@/types/models';
 import { getCardCategory } from '@/srs/srsEngine';
+import { getLocalDateString } from '@/utils/date';
+
+export const MAX_STREAK_DAYS = 365;
 
 export interface CardStats {
   total: number;
@@ -9,17 +12,16 @@ export interface CardStats {
   mastered: number;
 }
 
-export function getLocalDateString(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 export function computeStreak(heatmap: Record<string, number>): number {
   const today = new Date();
   let streak = 0;
-  for (let i = 0; i < 365; i++) {
+
+  const todayKey = getLocalDateString(today);
+  const hasToday = Boolean(heatmap[todayKey]);
+
+  if (hasToday) streak++;
+
+  for (let i = 1; i < MAX_STREAK_DAYS; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = getLocalDateString(d);

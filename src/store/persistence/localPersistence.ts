@@ -7,7 +7,7 @@ import {
   normalizeStoreData,
   normalizeStudyMode,
 } from '@/store/storeDataNormalization';
-import { validateBackupData } from '@/utils/backupValidation';
+import { validateBackupData, validateGroup, validateStudyMode } from '@/utils/backupValidation';
 
 export type { StoreData };
 
@@ -93,13 +93,13 @@ export async function loadLocalData(userId?: string): Promise<StoreData | null> 
         storedGroups,
         'groups',
         normalizeGroup,
-        (group) => validateBackupData({ groups: [group], studyModes: [], activityHeatmap: {} }),
+        validateGroup,
       ),
       studyModes: parseStoredItems(
         storedModes,
         'study modes',
         normalizeStudyMode,
-        (mode) => validateBackupData({ groups: [], studyModes: [mode], activityHeatmap: {} }),
+        validateStudyMode,
       ),
       activityHeatmap: parseStoredHeatmap(storedHeatmap),
     };
@@ -138,7 +138,8 @@ export async function saveLocalData(userId: string | undefined, data: StoreData)
 export async function getSeedVersion(): Promise<number> {
   try {
     const ver = await AsyncStorage.getItem(STORAGE_KEYS.SEED_VERSION);
-    return ver ? Number(ver) : 0;
+    const n = Number(ver);
+    return Number.isNaN(n) ? 0 : n;
   } catch (err) {
     console.error('Failed to read seed version:', err);
     return SEED_VERSION_READ_FAILED;

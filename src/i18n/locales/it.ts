@@ -117,8 +117,11 @@ export const it: Record<string, string> = {
   'stats.overall_progress': 'Progresso generale',
   'stats.cards_count': '{count} carte',
   'stats.day.mon': 'Lun',
+  'stats.day.tue': 'Mar',
   'stats.day.wed': 'Mer',
+  'stats.day.thu': 'Gio',
   'stats.day.fri': 'Ven',
+  'stats.day.sat': 'Sab',
   'stats.day.sun': 'Dom',
 
   // Settings
@@ -197,6 +200,7 @@ export const it: Record<string, string> = {
   'step.listen_and_branch': 'STT pagina {index} (soglia {threshold}%)',
   'step.reveal_on_tap': 'Mostra la pagina successiva al tocco',
   'step.rate': 'Valuta la conoscenza',
+  'step.unknown': 'Passo sconosciuto',
 
   // Step types (labels)
   'step.type.show_page': 'Mostra pagina',

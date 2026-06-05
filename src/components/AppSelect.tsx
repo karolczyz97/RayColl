@@ -1,9 +1,9 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { HelperText, Icon, Menu, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
-import { menuStyles } from '@/theme/menuStyles';
 import { AppMenuItem } from './AppMenuItem';
+import { useMenuAnchor } from '@/hooks/useMenuAnchor';
 
 export interface SelectOption {
   label: string;
@@ -37,8 +37,9 @@ export function AppSelect({
   testID,
 }: AppSelectProps) {
   const theme = useTheme();
-  const [open, setOpen] = useState(false);
-  const [anchorWidth, setAnchorWidth] = useState<number | undefined>(undefined);
+  const { open, setOpen, setAnchorWidth, menuStyle, menuContentStyle } = useMenuAnchor(
+    theme.colors.elevation.level2,
+  );
   const anchorRef = useRef<View>(null);
 
   // Prime layout cache on mount so first Menu open animates from the correct position
@@ -75,17 +76,8 @@ export function AppSelect({
         <Menu
           visible={open}
           onDismiss={() => setOpen(false)}
-          style={[
-            menuStyles.menu,
-            anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-            { transformOrigin: 'top' },
-          ]}
-          contentStyle={[
-            menuStyles.menuContent,
-            { backgroundColor: theme.colors.elevation.level2 },
-            anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-            { transformOrigin: 'top' },
-          ]}
+          style={menuStyle}
+          contentStyle={menuContentStyle}
           anchor={
             <TouchableRipple
               onPress={() => !disabled && setOpen(true)}

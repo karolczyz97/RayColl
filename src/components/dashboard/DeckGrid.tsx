@@ -13,13 +13,13 @@ import {
   getGridItemWidth,
 } from '@/utils/gridLayout';
 
-interface Props {
+interface DeckGridProps {
   baseOrder?: number;
   groups: FlashcardGroup[];
   onModeChange: (groupId: string, modeId: string) => void;
 }
 
-export function DeckGrid({ baseOrder = 0, groups, onModeChange }: Props) {
+export function DeckGrid({ baseOrder = 0, groups, onModeChange }: DeckGridProps) {
   const { width: windowWidth } = useResponsiveLayout();
   const { navWidth } = useNavigationShell();
 

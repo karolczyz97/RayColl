@@ -3,27 +3,26 @@ import { View, StyleSheet } from 'react-native';
 import { Switch, Text, useTheme } from 'react-native-paper';
 import type { FlashcardGroup } from '@/types/models';
 import { getVisiblePageNames } from '@/store/selectors/pages';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 import { TOKENS } from '@/theme/tokens';
 import { useHiddenPagesToggle } from '@/hooks/useHiddenPagesToggle';
 
-interface Props {
+interface EditFlashcardFormProps {
   group: FlashcardGroup;
   editPages: string[];
-  setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
+  onPagesChange: (pages: string[]) => void;
   validationMessage?: string;
-  t: TranslationFn;
 }
 
 export function EditFlashcardForm({
   group,
   editPages,
-  setEditPages,
+  onPagesChange,
   validationMessage,
-  t,
-}: Props) {
+}: EditFlashcardFormProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const { showHidden, setShowHidden } = useHiddenPagesToggle();
 
   const activeCount = group.activePageCount;
@@ -55,11 +54,9 @@ export function EditFlashcardForm({
           label={displayNames[i] || t('import.page_label', { index: i + 1 })}
           value={page}
           onChangeText={(text) => {
-            setEditPages((prev) => {
-              const next = [...prev];
-              next[i] = text;
-              return next;
-            });
+            const next = [...editPages];
+            next[i] = text;
+            onPagesChange(next);
           }}
           style={styles.editInput}
           accessibilityLabel={`Edit page ${i + 1}`}

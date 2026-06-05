@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
 import { getErrorMessage } from '@/utils/errors';
-import { normalizeSttResult, type SttOptions, type SttService } from './sttTypes';
+import { normalizeSttResult, DEFAULT_STT_TIMEOUT_MS, DEFAULT_STT_INACTIVITY_MS, type SttOptions, type SttService } from './sttTypes';
+import { createSttSession } from './sttSessionHelpers';
 
 export class ReactNativeVoiceSttService implements SttService {
   isSupported(): boolean {
@@ -11,23 +12,9 @@ export class ReactNativeVoiceSttService implements SttService {
   startListening(options: SttOptions): Promise<string> {
     return new Promise((resolve, reject) => {
       let finalResult = '';
-      let resolved = false;
-      let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
-      const INACTIVITY_MS = 1500;
-
-      const hardTimeout = setTimeout(async () => {
-        if (!resolved) {
-          try {
-            await Voice.stop();
-          } catch (err) {
-            console.warn('Failed to stop voice recognition after timeout:', getErrorMessage(err));
-          }
-        }
-      }, options.timeoutMs || 15000);
 
       const cleanup = async () => {
-        clearTimeout(hardTimeout);
-        if (inactivityTimer) clearTimeout(inactivityTimer);
+        session.cancelTimers();
         Voice.onSpeechStart = () => {};
         Voice.onSpeechEnd = () => {};
         Voice.onSpeechResults = () => {};
@@ -36,30 +23,37 @@ export class ReactNativeVoiceSttService implements SttService {
       };
 
       const finishWithResult = async (result: string) => {
-        if (resolved) return;
-        resolved = true;
+        if (session.resolved()) return;
+        session.setResolved();
         await cleanup();
         options.onListeningStateChange?.(false);
         resolve(result);
       };
 
-      const resetInactivityTimer = () => {
-        if (inactivityTimer) clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(async () => {
+      const session = createSttSession(
+        options.timeoutMs || DEFAULT_STT_TIMEOUT_MS,
+        DEFAULT_STT_INACTIVITY_MS,
+        async () => {
           try {
             await Voice.stop();
           } catch (err) {
-            console.warn(
-              'Failed to stop voice recognition after inactivity:',
-              getErrorMessage(err),
-            );
+            console.warn('Failed to stop voice recognition after timeout:', getErrorMessage(err));
           }
-        }, INACTIVITY_MS);
-      };
+          await finishWithResult(finalResult);
+        },
+        async () => {
+          try {
+            await Voice.stop();
+          } catch (err) {
+            console.warn('Failed to stop voice recognition after inactivity:', getErrorMessage(err));
+          }
+          await finishWithResult(finalResult);
+        },
+      );
 
       Voice.onSpeechStart = () => {
         options.onListeningStateChange?.(true);
-        resetInactivityTimer();
+        session.resetInactivity();
       };
 
       Voice.onSpeechEnd = () => {
@@ -71,7 +65,7 @@ export class ReactNativeVoiceSttService implements SttService {
           finalResult = normalizeSttResult(e.value[0]);
           options.onPartialResult?.(finalResult);
         }
-        resetInactivityTimer();
+        session.resetInactivity();
       };
 
       Voice.onSpeechPartialResults = (e) => {
@@ -79,11 +73,11 @@ export class ReactNativeVoiceSttService implements SttService {
           finalResult = normalizeSttResult(e.value[0]);
           options.onPartialResult?.(finalResult);
         }
-        resetInactivityTimer();
+        session.resetInactivity();
       };
 
       Voice.onSpeechError = (e) => {
-        if (resolved) return;
+        if (session.resolved()) return;
         if (e.error) {
           console.warn(
             'Speech recognition error:',
@@ -91,7 +85,7 @@ export class ReactNativeVoiceSttService implements SttService {
           );
         }
         cleanup();
-        resolved = true;
+        session.setResolved();
         options.onListeningStateChange?.(false);
         resolve(finalResult || '');
       };

@@ -35,6 +35,46 @@ describe('merge', () => {
       expect(result[0].pages[0]).toBe('cloud');
       expect(result[0].srsState.repetitions).toBe(4);
     });
+
+    it('uses SRS side as content tiebreaker when content timestamps are equal', () => {
+      const localCard = {
+        id: 'c2',
+        pages: ['local-tie', 'page'],
+        srsState: { ...createNewSrsState(), repetitions: 5 },
+        contentUpdatedAt: now,
+        srsUpdatedAt: now,
+      };
+      const cloudCard = {
+        id: 'c2',
+        pages: ['cloud-tie', 'page'],
+        srsState: { ...createNewSrsState(), repetitions: 1 },
+        contentUpdatedAt: now,
+        srsUpdatedAt: 0,
+      };
+      const result = mergeCards([localCard], [cloudCard]);
+      expect(result[0].pages[0]).toBe('local-tie');
+      expect(result[0].srsState.repetitions).toBe(5);
+    });
+
+    it('content tie-breaks to cloud when SRS also tied', () => {
+      const localCard = {
+        id: 'c3',
+        pages: ['local-full-tie', 'page'],
+        srsState: { ...createNewSrsState(), repetitions: 3 },
+        contentUpdatedAt: now,
+        srsUpdatedAt: now,
+      };
+      const cloudCard = {
+        id: 'c3',
+        pages: ['cloud-full-tie', 'page'],
+        srsState: { ...createNewSrsState(), repetitions: 3 },
+        contentUpdatedAt: now,
+        srsUpdatedAt: now,
+      };
+      const result = mergeCards([localCard], [cloudCard]);
+      expect(result[0].pages[0]).toBe('cloud-full-tie');
+      expect(result[0].srsState.repetitions).toBe(3);
+    });
   });
 
   describe('mergeUserData', () => {
@@ -95,55 +135,6 @@ describe('merge', () => {
       expect(merged.groups[0].cards[0].pages[0]).toBe('cloud');
       expect(merged.groups[0].cards[0].srsState.repetitions).toBe(4);
       expect(merged.activityHeatmap['2026-05-27']).toBe(3);
-    });
-
-    it('legacy timestamps (0) yield to cloud on tie', () => {
-      const legacyCard = { id: 'c2', pages: ['legacy', 'card'], srsState: createNewSrsState() };
-      const cloudCard2 = {
-        id: 'c2',
-        pages: ['cloud2', 'card'],
-        srsState: { ...createNewSrsState(), repetitions: 2 },
-        contentUpdatedAt: 0,
-        srsUpdatedAt: 0,
-      };
-
-      const merged = mergeUserData(
-        {
-          groups: [
-            {
-              id: 'g2',
-              name: 'Legacy Deck',
-              cards: [legacyCard],
-              activeModeId: 'classic',
-              studyFilter: DEFAULT_STUDY_FILTER,
-              pageLanguages: ['en-US', 'pl-PL'],
-              pageNames: ['Front', 'Back'],
-              activePageCount: 2,
-            },
-          ],
-          studyModes: [],
-          activityHeatmap: {},
-        },
-        {
-          groups: [
-            {
-              id: 'g2',
-              name: 'Cloud Wins',
-              cards: [cloudCard2],
-              activeModeId: 'classic',
-              studyFilter: DEFAULT_STUDY_FILTER,
-              pageLanguages: ['en-US', 'pl-PL'],
-              pageNames: ['Front', 'Back'],
-              activePageCount: 2,
-            },
-          ],
-          studyModes: [],
-          activityHeatmap: {},
-        },
-      );
-
-      expect(merged.groups[0].name).toBe('Cloud Wins');
-      expect(merged.groups[0].cards[0].pages[0]).toBe('cloud2');
     });
 
     it('tombstone propagation: deleted card stays deleted', () => {
@@ -342,6 +333,54 @@ describe('merge', () => {
       const merged = mergeGroups([localTomb], [cloudLive]);
       expect(merged.length).toBe(1);
       expect(merged[0].deletedAt).toBeTruthy();
+    });
+
+    it('preserves cards when both sides agree group is deleted', () => {
+      const localCard = {
+        id: 'c-kept',
+        pages: ['local', 'page'],
+        srsState: createNewSrsState(),
+        contentUpdatedAt: now - 3000,
+        srsUpdatedAt: 0,
+      };
+      const cloudCard = {
+        id: 'c-kept',
+        pages: ['cloud', 'page'],
+        srsState: { ...createNewSrsState(), repetitions: 2 },
+        contentUpdatedAt: now - 4000,
+        srsUpdatedAt: 0,
+      };
+
+      const localDel = {
+        id: 'g-del',
+        name: 'Deleted Group',
+        cards: [localCard],
+        activeModeId: 'classic',
+        studyFilter: DEFAULT_STUDY_FILTER,
+        pageLanguages: ['en-US'],
+        pageNames: ['Front'],
+        activePageCount: 1,
+        updatedAt: now - 5000,
+        deletedAt: now,
+      };
+      const cloudDel = {
+        id: 'g-del',
+        name: 'Deleted Group Cloud',
+        cards: [cloudCard],
+        activeModeId: 'classic',
+        studyFilter: DEFAULT_STUDY_FILTER,
+        pageLanguages: ['en-US'],
+        pageNames: ['Front'],
+        activePageCount: 1,
+        updatedAt: now - 6000,
+        deletedAt: now - 1000,
+      };
+
+      const merged = mergeGroups([localDel], [cloudDel]);
+      expect(merged.length).toBe(1);
+      expect(merged[0].deletedAt).toBeTruthy();
+      expect(merged[0].cards.length).toBe(1);
+      expect(merged[0].cards[0].id).toBe('c-kept');
     });
   });
 

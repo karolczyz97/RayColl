@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import type { FlashcardGroup } from '@/types/models';
 import type { CardStats } from '@/store/selectors/stats';
 import { computeCardStats } from '@/store/selectors/stats';
@@ -12,11 +12,11 @@ interface DeckProgressListProps {
   groups: FlashcardGroup[];
   overallStats: CardStats;
   totalCards: number;
-  t: TranslationFn;
 }
 
-export function DeckProgressList({ groups, overallStats, totalCards, t }: DeckProgressListProps) {
+export function DeckProgressList({ groups, overallStats, totalCards }: DeckProgressListProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <>

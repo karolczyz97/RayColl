@@ -6,7 +6,11 @@ export function LoadingState() {
   const theme = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Loading"
+    >
       <ActivityIndicator size="large" color={theme.colors.primary} />
     </View>
   );

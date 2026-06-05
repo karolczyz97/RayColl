@@ -43,6 +43,14 @@ describe('localPersistence', () => {
     expect(errorSpy).toHaveBeenCalledWith('Failed to normalize local groups item 0:', expect.any(Error));
   });
 
+  it('returns 0 for a corrupted non-numeric seed version value', async () => {
+    await AsyncStorage.setItem(STORAGE_KEYS.SEED_VERSION, 'abc');
+
+    const version = await getSeedVersion();
+
+    expect(version).toBe(0);
+  });
+
   it('returns a distinct sentinel when seed version cannot be read', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('storage unavailable'));

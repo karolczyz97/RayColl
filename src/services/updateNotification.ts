@@ -26,17 +26,19 @@ export function useUpdateNotification(): UpdateNotificationState {
         const lastSeen = await AsyncStorage.getItem(STORAGE_KEYS.LAST_SEEN_BUILD);
         const current = releaseInfo.webBuild;
 
-        // Save current build immediately — prevents re-showing on subsequent starts
-        await AsyncStorage.setItem(STORAGE_KEYS.LAST_SEEN_BUILD, current);
-
         if (lastSeen === null) {
-          // First run / reinstall / cleared data — no notification
+          // First run / reinstall / cleared data — save baseline, no notification
+          await AsyncStorage.setItem(STORAGE_KEYS.LAST_SEEN_BUILD, current);
           return;
         }
 
         if (lastSeen !== current) {
           setShowSnackbar(true);
         }
+
+        // Save current build after deciding to show notification — prevents
+        // silently losing the notification if the app crashes before show.
+        await AsyncStorage.setItem(STORAGE_KEYS.LAST_SEEN_BUILD, current);
       } catch {
         // AsyncStorage error — treat as first run, no notification
       }

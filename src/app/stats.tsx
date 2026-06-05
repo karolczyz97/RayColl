@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 
 import { safeBack } from '@/utils/navigation';
 import { useTheme } from 'react-native-paper';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import {
@@ -90,14 +90,13 @@ export default function StatsPage() {
             groups={groups}
             overallStats={globalStats}
             totalCards={totalCards}
-            t={t}
           />
         </SectionCard>
       </AnimatedSection>
 
       <AnimatedSection order={2}>
         <SectionCard title={t('stats.heatmap_title')} titleAlign="center">
-          <HeatmapGrid heatmap={activityHeatmap} t={t} />
+          <HeatmapGrid heatmap={activityHeatmap} />
         </SectionCard>
       </AnimatedSection>
     </AppScreen>

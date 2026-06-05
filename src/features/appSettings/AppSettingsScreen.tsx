@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import * as Application from 'expo-application';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
-import { safeBack } from '@/utils/navigation';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
@@ -11,144 +9,49 @@ import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
 import { SectionCard } from '@/components/layout/SectionCard';
-import { useAppTheme, isThemePref } from '@/contexts/ThemeContext';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
-import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { useI18n, type LanguageCode } from '@/i18n';
+import { isThemePref } from '@/contexts/UserPreferencesContext';
+import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
-import { APP_NAME } from '@/constants/app';
-import { releaseInfo } from '@/config/releaseInfo';
 import { ChangelogDialog } from '@/components/feedback/ChangelogDialog';
-
-const LANGUAGE_OPTIONS = [
-  { label: 'Polski', value: 'pl' },
-  { label: 'English', value: 'en' },
-  { label: 'Deutsch', value: 'de' },
-  { label: 'Español', value: 'es' },
-  { label: 'Italiano', value: 'it' },
-] satisfies { label: string; value: LanguageCode }[];
-
-function isLanguageCode(value: string): value is LanguageCode {
-  return LANGUAGE_OPTIONS.some((option) => option.value === value);
-}
+import { LANGUAGE_OPTIONS, isLanguageCode, useAppSettingsController } from './useAppSettingsController';
 
 export function AppSettingsScreen() {
-  const { t, language, setLanguage } = useI18n();
+  const { t } = useI18n();
   const theme = useTheme();
-  const store = useFlashcardStore();
-  const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate } =
-    useAppTheme();
-  const { formMaxWidth } = useResponsiveLayout();
-  const [isImporting, setIsImporting] = useState(false);
-  const [resetVisible, setResetVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const isWeb = Platform.OS === 'web';
-  const apkBuild = Application.nativeBuildVersion;
-  const versionLines = [
-    `v${releaseInfo.appVersion} • build ${releaseInfo.webBuild}`,
-    ...(!isWeb && apkBuild !== null ? [`APK build ${apkBuild}`] : []),
-  ];
-  const [changelogVisible, setChangelogVisible] = useState(false);
+  const {
+    changelogVisible,
+    formMaxWidth,
+    handleBack,
+    handleExport,
+    handleImportFromFile,
+    handleResetConfirm,
+    handleTtsRateChange,
+    isImporting,
+    isLoading,
+    language,
+    resetVisible,
+    setChangelogVisible,
+    setLanguage,
+    setResetVisible,
+    setSnackbarMessage,
+    setThemePref,
+    setUseSystemColors,
+    snackbarMessage,
+    store,
+    themePref,
+    ttsRate,
+    useSystemColors,
+    versionLines,
+  } = useAppSettingsController();
 
-  const handleTtsRateChange = async (rate: number) => {
-    const clampedRate = Math.max(0.5, Math.min(2.0, rate));
-    await setTtsRate(clampedRate);
-  };
-
-  const handleExport = async () => {
-    try {
-      const raw = store.exportState();
-      const parsed = JSON.parse(raw);
-      parsed.exportedAt = new Date().toISOString();
-      const data = JSON.stringify(parsed, null, 2);
-
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}`;
-      const filename = `raycoll-backup-${timestamp}.json`;
-
-      if (Platform.OS === 'web') {
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
-        return;
-      }
-
-      const { File, Paths } = await import('expo-file-system');
-      const { shareAsync, isAvailableAsync } = await import('expo-sharing');
-
-      const file = new File(Paths.cache, filename);
-      file.create({ overwrite: true });
-      file.write(data);
-
-      const sharingAvailable = await isAvailableAsync();
-      if (!sharingAvailable) {
-        setSnackbarMessage(t('app_settings.sharing_unavailable'));
-        return;
-      }
-      await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: `${APP_NAME} Backup` });
-    } catch (error) {
-      console.warn('Export failed:', error);
-      setSnackbarMessage(t('app_settings.export_error'));
-    }
-  };
-
-  const handleImportFromFile = async () => {
-    if (isImporting) return;
-    setIsImporting(true);
-    try {
-      const { getDocumentAsync } = await import('expo-document-picker');
-      const result = await getDocumentAsync({
-        type: ['application/json', 'text/plain'],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled || !result.assets?.length) return;
-
-      const asset = result.assets[0];
-      const content =
-        Platform.OS === 'web' && asset.file
-          ? await asset.file.text()
-          : await (await fetch(asset.uri)).text();
-
-      await store.importState(content);
-      setSnackbarMessage(t('app_settings.import_success'));
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('app_settings.')) {
-        setSnackbarMessage(t(error.message));
-      } else if (error instanceof SyntaxError) {
-        setSnackbarMessage(t('app_settings.import_error'));
-      } else {
-        setSnackbarMessage(error instanceof Error ? error.message : t('app_settings.import_error'));
-      }
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleResetConfirm = async () => {
-    setResetVisible(false);
-    try {
-      await store.resetToDefault();
-      setSnackbarMessage(t('app_settings.reset_success'));
-    } catch {
-      setSnackbarMessage(t('app_settings.reset_error'));
-    }
-  };
-
-  if (store.isLoading) {
+  if (isLoading) {
     return <LoadingState />;
   }
 
   return (
     <AppScreen
       title={t('app_settings.title')}
-      onBack={safeBack}
+      onBack={handleBack}
       maxWidth={formMaxWidth}
     >
       <SyncStatusBanner
@@ -156,7 +59,6 @@ export function AppSettingsScreen() {
         lastSyncError={store.lastSyncError}
         lastPersistenceError={store.lastPersistenceError}
         lastStoreError={store.lastStoreError}
-        t={t}
       />
 
       <AnimatedSection order={0}>
@@ -284,7 +186,7 @@ export function AppSettingsScreen() {
         onPress={() => setChangelogVisible(true)}
         activeOpacity={0.6}
         accessibilityRole="button"
-        accessibilityLabel={t('update.whats_new')}
+        accessibilityLabel={t('update.show_changes')}
       >
         {versionLines.map((line) => (
           <Text

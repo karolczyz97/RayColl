@@ -118,8 +118,11 @@ export const pl: Record<string, string> = {
   'stats.overall_progress': 'Ogólny postęp',
   'stats.cards_count': '{count} fiszek',
   'stats.day.mon': 'Pon',
+  'stats.day.tue': 'Wt',
   'stats.day.wed': 'Śr',
+  'stats.day.thu': 'Czw',
   'stats.day.fri': 'Pią',
+  'stats.day.sat': 'Sob',
   'stats.day.sun': 'Nie',
 
   // Settings
@@ -201,6 +204,7 @@ export const pl: Record<string, string> = {
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
   'step.reveal_on_tap': 'Odkryj kolejną stronę po dotknięciu',
   'step.rate': 'Oceń znajomość fiszki',
+  'step.unknown': 'Nieznany krok',
 
   // Step types (labels)
   'step.type.show_page': 'Pokaż stronę',

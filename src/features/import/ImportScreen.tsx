@@ -2,13 +2,13 @@ import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
 import { safeBack } from '@/utils/navigation';
-import { DeleteFlashcardDialog } from '@/components/browse/DeleteFlashcardDialog';
+import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
 import { POPULAR_LANGS } from '@/constants/languages';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
@@ -49,7 +49,6 @@ export function ImportScreen() {
       }}
       onMovePage={draft.handleMovePage}
       popularLangs={POPULAR_LANGS}
-      t={t}
       minPageCount={draft.rawColumnCount}
       activePageCount={Math.min(draft.pageCount, MAX_VISIBLE_PAGE_COUNT)}
     />
@@ -66,7 +65,6 @@ export function ImportScreen() {
             onRawTextChange={draft.handleTextChange}
             onPickFile={draft.handlePickFile}
             onPaste={draft.handlePaste}
-            t={t}
           />
         </AnimatedSection>
         <AnimatedSection order={1}>{renderConfigCard()}</AnimatedSection>
@@ -79,12 +77,11 @@ export function ImportScreen() {
             group={draft.previewGroup}
             editingId={draft.editingId}
             editPages={draft.editPages}
-            setEditPages={draft.setEditPages}
+            onPagesChange={(pages) => draft.setEditPages(pages)}
             onSave={draft.saveEdit}
             onCancel={draft.cancelEdit}
             onStartEdit={draft.startEdit}
             onDelete={draft.setDeleteCardId}
-            t={t}
           />
         </AnimatedSection>
       ) : null}
@@ -121,11 +118,15 @@ export function ImportScreen() {
         </Button>
       </View>
 
-      <DeleteFlashcardDialog
+      <ActionConfirmDialog
         visible={!!draft.deleteCardId}
         onDismiss={() => draft.setDeleteCardId(null)}
         onConfirm={draft.confirmDeleteCard}
-        t={t}
+        titleKey="browse.delete_card"
+        messageKey="dialog.delete.desc"
+        confirmLabelKey="btn.delete"
+        cancelLabelKey="btn.cancel"
+        destructive
       />
 
       <AppSnackbar

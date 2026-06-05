@@ -1,9 +1,9 @@
 import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
-import { normalizeStudyFilter } from '@/store/storeDataNormalization';
+import { getStoredPageCount, normalizeStudyFilter } from '@/store/storeDataNormalization';
 import { coerceStringArray } from '@/utils/array';
+import { assertStudyModeStep } from '@/utils/backupValidation';
 import { isRecord } from '@/utils/types';
 
-export const FIRESTORE_SCHEMA_VERSION = 2;
 
 export type UserData = StoreData;
 
@@ -20,8 +20,14 @@ export interface FirestoreDeckDoc {
   archivedAt?: number | null;
 }
 
-export interface FirestoreCardDoc extends Flashcard {
-  updatedAt?: unknown;
+export interface FirestoreCardDoc {
+  id: string;
+  pages: string[];
+  srsState: SrsState;
+  contentUpdatedAt?: number;
+  srsUpdatedAt?: number;
+  deletedAt?: number | null;
+  updatedAt?: number;
 }
 
 export interface FirestoreStudyModeDoc {
@@ -30,7 +36,7 @@ export interface FirestoreStudyModeDoc {
   steps: StudyMode['steps'];
   isBuiltIn: boolean;
   builtInSourceId?: string;
-  updatedAt?: unknown;
+  updatedAt?: number;
   deletedAt?: number | null;
 }
 
@@ -146,7 +152,7 @@ export function deserializeDeckDoc(
 
   const pageNames = coerceStringArray(rawData.pageNames);
   const pageLanguages = coerceStringArray(rawData.pageLanguages);
-  const fallbackPageCount = Math.max(pageNames.length, pageLanguages.length, 2);
+  const fallbackPageCount = getStoredPageCount({ cards } as FlashcardGroup, pageNames, pageLanguages);
   const rawActivePageCount = rawData.activePageCount;
   const activePageCount =
     typeof rawActivePageCount === 'number' && Number.isFinite(rawActivePageCount)
@@ -180,8 +186,13 @@ export function deserializeStudyModeDoc(docId: string, rawData: unknown): StudyM
     throw new Error(`Firestore study mode ${docId} is missing steps.`);
   }
 
+  const modeId = typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId;
+  rawData.steps.forEach((step, index) => {
+    assertStudyModeStep(step, modeId, index);
+  });
+
   return {
-    id: typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId,
+    id: modeId,
     name: requireString(rawData.name, 'study mode name'),
     steps: rawData.steps as StudyMode['steps'],
     isBuiltIn: rawData.isBuiltIn === true,

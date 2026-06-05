@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Text } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 import { AppSelect } from '@/components/AppSelect';
@@ -11,20 +11,12 @@ import { TextEntryDialog } from '@/components/dialogs/TextEntryDialog';
 
 type PageConfigEditorMode = 'import' | 'settings';
 
-const SEP_CHAR_LABELS: Record<string, string> = {
-  tab: 'Tab',
-  semicolon: ';',
-  comma: ',',
-  pipe: '|',
-};
-
 interface PageConfigEditorProps {
   mode: PageConfigEditorMode;
   pageCount: number;
   pageNames: string[];
   pageLanguages: string[];
-  popularLangs: { code: string; label: string }[];
-  t: TranslationFn;
+  popularLangs: string[];
   onPageCountChange: (count: number) => void;
   onPageNameChange: (index: number, value: string) => void;
   onPageNameBlur?: (index: number) => void;
@@ -44,7 +36,6 @@ export function PageConfigEditor({
   pageNames,
   pageLanguages,
   popularLangs,
-  t,
   onPageCountChange,
   onPageNameChange,
   onPageNameBlur,
@@ -57,12 +48,13 @@ export function PageConfigEditor({
   minPageCount,
   activePageCount,
 }: PageConfigEditorProps) {
+  const { t } = useI18n();
   const [customDialogVisible, setCustomDialogVisible] = useState(false);
   const [customDraftValue, setCustomDraftValue] = useState('');
 
-  const languageOptions = popularLangs.map((lang) => ({
-    label: t(`lang.${lang.code}`),
-    value: lang.code,
+  const languageOptions = popularLangs.map((code) => ({
+    label: t(`lang.${code}`),
+    value: code,
   }));
 
   const separatorOptions = [
@@ -190,8 +182,6 @@ export function PageConfigEditor({
     </View>
   );
 }
-
-export { SEP_CHAR_LABELS };
 
 const styles = StyleSheet.create({
   container: {

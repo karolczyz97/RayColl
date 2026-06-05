@@ -10,6 +10,7 @@ import { UserMenuHeader } from '@/components/navigation/UserMenuHeader';
 import { getTopBarColors } from '@/theme/semanticColors';
 import { APP_NAME } from '@/constants/app';
 import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
+import { getUserAvatarSource } from '@/utils/userAvatar';
 
 // ─── DashboardBrand ──────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
   const { t } = useI18n();
   const theme = useTheme();
   const { fg } = getTopBarColors(theme);
+  const avatarSource = getUserAvatarSource(user);
 
   return (
     <View style={styles.actionsGroup}>
@@ -72,21 +74,13 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
             >
               <Avatar.Image
                 size={TOKENS.iconSize.lg}
-                source={
-                  user.photoURL
-                    ? { uri: user.photoURL }
-                    : require('../../../assets/images/icon.png')
-                }
+                source={avatarSource}
               />
             </TouchableRipple>
           )}
           header={
             <UserMenuHeader
-              source={
-                user.photoURL
-                  ? { uri: user.photoURL }
-                  : require('../../../assets/images/icon.png')
-              }
+              source={avatarSource}
               displayName={user.displayName}
               email={user.email}
             />

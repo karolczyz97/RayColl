@@ -1,17 +1,17 @@
 import React from 'react';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import type { FlashcardGroup } from '@/types/models';
 import { AppSplitButton } from '@/components/AppSplitButton';
 import { getModeName } from '@/i18n/modeHelpers';
 
-interface Props {
+interface StudyModeMenuButtonProps {
   group: FlashcardGroup;
   onStudy: () => void;
   onModeChange: (modeId: string) => void;
 }
 
-export function StudyModeMenuButton({ group, onStudy, onModeChange }: Props) {
+export function StudyModeMenuButton({ group, onStudy, onModeChange }: StudyModeMenuButtonProps) {
   const store = useFlashcardStore();
   const { t } = useI18n();
 

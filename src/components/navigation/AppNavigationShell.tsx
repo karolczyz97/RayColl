@@ -4,8 +4,8 @@ import { router, usePathname } from 'expo-router';
 import { useTheme } from 'react-native-paper';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
-import { useAppTheme } from '@/contexts/ThemeContext';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
+import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { NavigationShellProvider } from '@/contexts/NavigationShellContext';
@@ -16,7 +16,7 @@ import {
   getActiveDestination,
   type NavigationDestination,
 } from './navigationDestinations';
-import { getIsStudyActive } from '@/features/study/studyGuard';
+import { StudyNavigationGuardProvider } from '@/features/study/StudyNavigationGuardContext';
 
 export function AppNavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -27,6 +27,7 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
   const { railVisible, setRailVisible, railExpanded, setRailExpanded } = useAppTheme();
 
   const [showRailGuard, setShowRailGuard] = useState(false);
+  const [isStudyActive, setStudyActive] = useState(false);
   const pendingNavRef = useRef<NavigationDestination | null>(null);
 
   const canShowPersistentNavigation = responsive.showPersistentNavigation;
@@ -60,13 +61,13 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
   );
 
   const handleNavigate = useCallback((destination: NavigationDestination) => {
-    if (getIsStudyActive()) {
+    if (isStudyActive) {
       pendingNavRef.current = destination;
       setShowRailGuard(true);
       return;
     }
     router.navigate(destination.href);
-  }, []);
+  }, [isStudyActive]);
 
   const confirmRailNavAway = useCallback(() => {
     setShowRailGuard(false);
@@ -93,37 +94,48 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
     void signOut();
   }, [signOut]);
 
+  const studyGuardValue = React.useMemo(
+    () => ({ isStudyActive, setStudyActive }),
+    [isStudyActive],
+  );
+
   if (!showPersistentNavigation) {
-    return <NavigationShellProvider value={contextValue}>{children}</NavigationShellProvider>;
+    return (
+      <StudyNavigationGuardProvider value={studyGuardValue}>
+        <NavigationShellProvider value={contextValue}>{children}</NavigationShellProvider>
+      </StudyNavigationGuardProvider>
+    );
   }
 
   return (
-    <NavigationShellProvider value={contextValue}>
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <NavigationRail
-          expanded={isRailExpanded}
-          activeDestination={activeDestination}
-          user={user}
-          onNavigate={handleNavigate}
-          onImport={handleImport}
-          onLogin={handleLogin}
-          onLogout={handleLogout}
-          onToggleExpanded={() => void setRailExpanded(!railExpanded)}
-          onHide={() => void setRailVisible(false)}
-        />
-        <View style={styles.content}>{children}</View>
-      </View>
+    <StudyNavigationGuardProvider value={studyGuardValue}>
+      <NavigationShellProvider value={contextValue}>
+        <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+          <NavigationRail
+            expanded={isRailExpanded}
+            activeDestination={activeDestination}
+            user={user}
+            onNavigate={handleNavigate}
+            onImport={handleImport}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onToggleExpanded={() => void setRailExpanded(!railExpanded)}
+            onHide={() => void setRailVisible(false)}
+          />
+          <View style={styles.content}>{children}</View>
+        </View>
 
-      <ConfirmDialog
-        visible={showRailGuard}
-        title={t('study.exit_confirm_title')}
-        message={t('study.exit_confirm_message')}
-        confirmLabel={t('study.exit_confirm_btn')}
-        cancelLabel={t('btn.cancel')}
-        onConfirm={confirmRailNavAway}
-        onDismiss={cancelRailNavAway}
-      />
-    </NavigationShellProvider>
+        <ConfirmDialog
+          visible={showRailGuard}
+          title={t('study.exit_confirm_title')}
+          message={t('study.exit_confirm_message')}
+          confirmLabel={t('study.exit_confirm_btn')}
+          cancelLabel={t('btn.cancel')}
+          onConfirm={confirmRailNavAway}
+          onDismiss={cancelRailNavAway}
+        />
+      </NavigationShellProvider>
+    </StudyNavigationGuardProvider>
   );
 }
 

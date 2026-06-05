@@ -37,6 +37,12 @@ jobs:
       - name: Run Tests
         run: npm run test
 
+      - name: Check UI Constraints
+        run: npm run check-ui
+
+      - name: Check Asset References
+        run: npm run check-assets
+
       - name: Validate commit message format
         run: |
           TITLE=$(git log -1 --format=%s)

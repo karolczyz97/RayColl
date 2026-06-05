@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, Menu, Surface, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
-import { menuStyles } from '@/theme/menuStyles';
 import { AppMenuItem } from './AppMenuItem';
+import { useMenuAnchor } from '@/hooks/useMenuAnchor';
 
 export interface SplitButtonOption {
   label: string;
@@ -35,8 +35,9 @@ export function AppSplitButton({
   menuAccessibilityLabel,
 }: AppSplitButtonProps) {
   const theme = useTheme();
-  const [open, setOpen] = useState(false);
-  const [anchorWidth, setAnchorWidth] = useState<number | undefined>(undefined);
+  const { open, setOpen, setAnchorWidth, menuStyle, menuContentStyle } = useMenuAnchor(
+    theme.colors.elevation.level2,
+  );
 
   const buttonColor = disabled ? theme.colors.surfaceVariant : theme.colors.secondaryContainer;
   const textColor = disabled ? theme.colors.onSurfaceVariant : theme.colors.onSecondaryContainer;
@@ -46,17 +47,8 @@ export function AppSplitButton({
     <Menu
       visible={open}
       onDismiss={() => setOpen(false)}
-      style={[
-        menuStyles.menu,
-        anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-        { transformOrigin: 'top' },
-      ]}
-      contentStyle={[
-        menuStyles.menuContent,
-        { backgroundColor: theme.colors.elevation.level2 },
-        anchorWidth ? { width: anchorWidth, maxWidth: anchorWidth } : undefined,
-        { transformOrigin: 'top' },
-      ]}
+      style={menuStyle}
+      contentStyle={menuContentStyle}
       anchor={
         <Surface
           mode="flat"

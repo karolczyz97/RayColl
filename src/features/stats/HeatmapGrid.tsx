@@ -1,18 +1,18 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
-import { getLocalDateString } from '@/store/selectors/stats';
+import { useI18n } from '@/i18n';
+import { getLocalDateString } from '@/utils/date';
 import { getHeatmapColor } from '@/theme/semanticColors';
 import { TOKENS } from '@/theme/tokens';
 
 interface HeatmapGridProps {
   heatmap: Record<string, number>;
-  t: TranslationFn;
 }
 
-export function HeatmapGrid({ heatmap, t }: HeatmapGridProps) {
+export function HeatmapGrid({ heatmap }: HeatmapGridProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   const columnsData = useMemo(() => {
     const columns = 20;
@@ -71,6 +71,8 @@ export function HeatmapGrid({ heatmap, t }: HeatmapGridProps) {
                       styles.gridCell,
                       { backgroundColor: getHeatmapColor(theme, cell.count) },
                     ]}
+                    accessibilityLabel={`${cell.count} reviews on ${cell.date}`}
+                    accessibilityRole="image"
                   />
                 ))}
               </View>

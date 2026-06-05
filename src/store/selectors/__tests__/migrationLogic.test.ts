@@ -1,33 +1,57 @@
-import { shouldTriggerMigration, getGuestHasData } from '../migrationLogic';
+import { describe, it, expect, jest } from '@jest/globals';
+import { shouldTriggerMigration, getGuestHasData } from '../../useStoreBootstrap';
 import type { FlashcardGroup, StudyMode } from '../../../types/models';
 
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected ${String(expected)}, got ${String(actual)}`);
-  }
-}
+jest.mock('@/services/firebase', () => ({
+  onAuthChange: jest.fn(),
+}));
+
+jest.mock('../../persistence/firebasePersistence', () => ({
+  loadCloudData: jest.fn(),
+}));
+
+jest.mock('../../persistence/localPersistence', () => ({
+  getSeedVersion: jest.fn(),
+  loadLocalData: jest.fn(),
+  setSeedVersion: jest.fn(),
+}));
 
 function makeGuestData(groups: FlashcardGroup[]): { groups: FlashcardGroup[]; studyModes: StudyMode[]; activityHeatmap: Record<string, number> } {
   return { groups, studyModes: [], activityHeatmap: {} };
 }
 
-export async function runTests() {
-  console.log('\n--- Running Migration Logic Tests ---');
+describe('migrationLogic', () => {
+  describe('shouldTriggerMigration', () => {
+    it('triggers when no user-local cache and guest has data', () => {
+      expect(shouldTriggerMigration(false, true)).toBe(true);
+    });
 
-  // shouldTriggerMigration
-  assertEqual(shouldTriggerMigration(false, true), true, 'No user-local cache + guest has data → trigger');
-  assertEqual(shouldTriggerMigration(true, true), false, 'Has user-local cache + guest has data → no trigger');
-  assertEqual(shouldTriggerMigration(false, false), false, 'No cache + no guest data → no trigger');
-  assertEqual(shouldTriggerMigration(true, false), false, 'Has cache + no guest data → no trigger');
+    it('does not trigger when user-local cache exists', () => {
+      expect(shouldTriggerMigration(true, true)).toBe(false);
+    });
 
-  // getGuestHasData
-  assertEqual(getGuestHasData(null), false, 'null guest data → false');
-  assertEqual(getGuestHasData(makeGuestData([])), false, 'Empty guest groups → false');
-  assertEqual(
-    getGuestHasData(makeGuestData([{ id: 'g1', name: 'Test', cards: [], activeModeId: '', studyFilter: 'all', pageLanguages: [], pageNames: [], activePageCount: 0 }])),
-    true,
-    'Guest with at least one group → true',
-  );
+    it('does not trigger when no cache and no guest data', () => {
+      expect(shouldTriggerMigration(false, false)).toBe(false);
+    });
 
-  console.log('Migration logic tests passed');
-}
+    it('does not trigger when has cache and no guest data', () => {
+      expect(shouldTriggerMigration(true, false)).toBe(false);
+    });
+  });
+
+  describe('getGuestHasData', () => {
+    it('returns false for null guest data', () => {
+      expect(getGuestHasData(null)).toBe(false);
+    });
+
+    it('returns false for empty guest groups', () => {
+      expect(getGuestHasData(makeGuestData([]))).toBe(false);
+    });
+
+    it('returns true when guest has at least one group', () => {
+      expect(
+        getGuestHasData(makeGuestData([{ id: 'g1', name: 'Test', cards: [], activeModeId: '', studyFilter: 'all', pageLanguages: [], pageNames: [], activePageCount: 0 }])),
+      ).toBe(true);
+    });
+  });
+});

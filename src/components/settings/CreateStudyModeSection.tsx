@@ -1,15 +1,15 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button, Dialog } from 'react-native-paper';
+import { Text, Button, Dialog, Portal } from 'react-native-paper';
 import type { ModeStep } from '@/types/models';
-import type { TranslationFn } from '@/i18n';
+import { useI18n, type TranslationFn } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { dialogStyles } from '@/theme/dialogStyles';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 import { swapElements } from '@/utils/array';
 import { StepReorderControls } from './StepReorderControls';
 
-interface Props {
+interface CreateStudyModeSectionProps {
   visible: boolean;
   onDismiss: () => void;
   newModeName: string;
@@ -19,8 +19,7 @@ interface Props {
   saveCustomMode: () => void;
   setStepDialogOpen: (value: boolean) => void;
   setEditingModeId: (id: string | null) => void;
-  t: TranslationFn;
-  stepSummary: (step: ModeStep, t: TranslationFn) => string;
+  formatStepSummary: (step: ModeStep, t: TranslationFn) => string;
 }
 
 export function CreateStudyModeSection({
@@ -33,57 +32,60 @@ export function CreateStudyModeSection({
   saveCustomMode,
   setStepDialogOpen,
   setEditingModeId,
-  t,
-  stepSummary,
-}: Props) {
+  formatStepSummary,
+}: CreateStudyModeSectionProps) {
+  const { t } = useI18n();
+
   return (
-    <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
-      <Dialog.Title>{t('settings.create_mode_btn')}</Dialog.Title>
-      <Dialog.Content>
-        <AppTextInput
-          label={t('settings.new_mode_name')}
-          value={newModeName}
-          onChangeText={setNewModeName}
-          style={styles.nameInput}
-        />
-        {customSteps.map((step, index) => (
-          <View key={index} style={styles.customStepRow}>
-            <Text style={styles.stepText}>{`${index + 1}. ${stepSummary(step, t)}`}</Text>
-            <StepReorderControls
-              index={index}
-              isFirst={index === 0}
-              isLast={index === customSteps.length - 1}
-              onMoveUp={() => setCustomSteps((steps) => swapElements(steps, index, index - 1))}
-              onMoveDown={() => setCustomSteps((steps) => swapElements(steps, index, index + 1))}
-              onDelete={() => setCustomSteps((steps) => steps.filter((_, i) => i !== index))}
-            />
+    <Portal>
+      <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
+        <Dialog.Title>{t('settings.create_mode_btn')}</Dialog.Title>
+        <Dialog.Content>
+          <AppTextInput
+            label={t('settings.new_mode_name')}
+            value={newModeName}
+            onChangeText={setNewModeName}
+            style={styles.nameInput}
+          />
+          {customSteps.map((step, index) => (
+            <View key={step.id ?? index} style={styles.customStepRow}>
+              <Text style={styles.stepText}>{`${index + 1}. ${formatStepSummary(step, t)}`}</Text>
+              <StepReorderControls
+                index={index}
+                isFirst={index === 0}
+                isLast={index === customSteps.length - 1}
+                onMoveUp={() => setCustomSteps((steps) => swapElements(steps, index, index - 1))}
+                onMoveDown={() => setCustomSteps((steps) => swapElements(steps, index, index + 1))}
+                onDelete={() => setCustomSteps((steps) => steps.filter((_, i) => i !== index))}
+              />
+            </View>
+          ))}
+          <View style={styles.addStepAction}>
+            <Button
+              icon="plus"
+              onPress={() => {
+                setEditingModeId(null);
+                setStepDialogOpen(true);
+              }}
+              accessibilityLabel="Add new step"
+            >
+              {t('settings.add_step_btn')}
+            </Button>
           </View>
-        ))}
-        <View style={styles.addStepAction}>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={onDismiss}>{t('btn.cancel')}</Button>
           <Button
-            icon="plus"
-            onPress={() => {
-              setEditingModeId(null);
-              setStepDialogOpen(true);
-            }}
-            accessibilityLabel="Add new step"
+            mode="contained"
+            onPress={saveCustomMode}
+            disabled={!newModeName.trim() || customSteps.length === 0}
+            accessibilityLabel="Save study mode"
           >
-            {t('settings.add_step_btn')}
+            {t('settings.save_mode_btn')}
           </Button>
-        </View>
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button onPress={onDismiss}>{t('btn.cancel')}</Button>
-        <Button
-          mode="contained"
-          onPress={saveCustomMode}
-          disabled={!newModeName.trim() || customSteps.length === 0}
-          accessibilityLabel="Save study mode"
-        >
-          {t('settings.save_mode_btn')}
-        </Button>
-      </Dialog.Actions>
-    </Dialog>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
   );
 }
 

@@ -116,10 +116,13 @@ export const de: Record<string, string> = {
   'stats.deck_progress': 'Deck-Fortschritt',
   'stats.overall_progress': 'Gesamtfortschritt',
   'stats.cards_count': '{count} Karten',
-  'stats.day.mon': 'Mon',
-  'stats.day.wed': 'Mit',
-  'stats.day.fri': 'Fre',
-  'stats.day.sun': 'Son',
+  'stats.day.mon': 'Mo',
+  'stats.day.tue': 'Di',
+  'stats.day.wed': 'Mi',
+  'stats.day.thu': 'Do',
+  'stats.day.fri': 'Fr',
+  'stats.day.sat': 'Sa',
+  'stats.day.sun': 'So',
 
   // Settings
   'settings.title': 'Deck-Einstellungen: {name}',
@@ -197,6 +200,7 @@ export const de: Record<string, string> = {
   'step.listen_and_branch': 'STT Seite {index} (Schwellenwert {threshold}%)',
   'step.reveal_on_tap': 'Nächste Seite per Tippen aufdecken',
   'step.rate': 'Wissen bewerten',
+  'step.unknown': 'Unbekannter Schritt',
 
   // Step types (labels)
   'step.type.show_page': 'Seite zeigen',

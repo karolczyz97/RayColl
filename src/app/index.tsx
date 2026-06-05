@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { router } from 'expo-router';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { DashboardBrand, DashboardActions } from '@/components/dashboard/DashboardBarContent';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { EmptyDashboardState } from '@/components/dashboard/EmptyDashboardState';

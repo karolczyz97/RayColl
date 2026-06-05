@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Switch, Text, useTheme } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { PageConfigEditor } from '@/components/pageConfig/PageConfigEditor';
 import { TOKENS } from '@/theme/tokens';
@@ -19,8 +19,7 @@ interface ImportConfigCardProps {
   onPageNameChange: (index: number, value: string) => void;
   onPageLanguageChange: (index: number, value: string) => void;
   onMovePage: (index: number, direction: -1 | 1) => void;
-  popularLangs: { code: string; label: string }[];
-  t: TranslationFn;
+  popularLangs: string[];
   minPageCount?: number;
   activePageCount?: number;
 }
@@ -39,11 +38,11 @@ export function ImportConfigCard({
   onPageLanguageChange,
   onMovePage,
   popularLangs,
-  t,
   minPageCount,
   activePageCount,
 }: ImportConfigCardProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <SectionCard title={t('settings.pages_config')}>
@@ -61,7 +60,6 @@ export function ImportConfigCard({
         pageNames={pageNames}
         pageLanguages={pageLanguages}
         popularLangs={popularLangs}
-        t={t}
         onPageCountChange={onPageCountChange}
         onPageNameChange={onPageNameChange}
         onPageLanguageChange={onPageLanguageChange}

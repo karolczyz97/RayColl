@@ -1,11 +1,13 @@
 import { CARD_FILTERS, DEFAULT_STUDY_FILTER, type CardFilter } from '@/constants/cardFilters';
-import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
-import type { Flashcard, FlashcardGroup, StudyMode, StoreData } from '@/types/models';
+import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT, clampActivePageCount } from '@/constants/pages';
+import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
+import { uid } from '@/utils/id';
 import { isRecord } from '@/utils/types';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+const VALID_SRS_STATES: ReadonlySet<SrsState['state']> = new Set([0, 1, 2, 3]);
+
 // Canonical definition lives in constants/cardFilters; re-exported here to keep
 // existing import sites stable.
 export { DEFAULT_STUDY_FILTER };
@@ -38,7 +40,7 @@ export function padPageMetadata(
   return { pageNames: names, pageLanguages: langs };
 }
 
-function getStoredPageCount(group: FlashcardGroup, pageNames: string[], pageLanguages: string[]): number {
+export function getStoredPageCount(group: FlashcardGroup, pageNames: string[], pageLanguages: string[]): number {
   const maxCardPages = Math.max(0, ...group.cards.map((c) => c.pages.length));
   const rawStored = Math.max(pageNames.length, pageLanguages.length, maxCardPages, MIN_PAGE_COUNT);
   return Math.min(rawStored, MAX_STORED_PAGE_COUNT);
@@ -47,6 +49,9 @@ function getStoredPageCount(group: FlashcardGroup, pageNames: string[], pageLang
 function normalizeCard(card: Flashcard): Flashcard {
   return {
     ...card,
+    srsState: VALID_SRS_STATES.has(card.srsState.state)
+      ? card.srsState
+      : { ...card.srsState, state: 0 as SrsState['state'] },
     contentUpdatedAt: card.contentUpdatedAt ?? 0,
     srsUpdatedAt: card.srsUpdatedAt ?? 0,
     deletedAt: card.deletedAt ?? undefined,
@@ -66,10 +71,7 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
       ? rawActivePageCount
       : fallback;
   const maxVisible = Math.min(MAX_VISIBLE_PAGE_COUNT, storedPageCount);
-  const activePageCount = Math.max(
-    MIN_PAGE_COUNT,
-    Math.min(maxVisible, Math.floor(candidate)),
-  );
+  const activePageCount = clampActivePageCount(candidate, maxVisible);
 
   return {
     ...group,
@@ -99,7 +101,7 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
   return {
     id: mode.id,
     name: mode.name,
-    steps: mode.steps,
+    steps: mode.steps.map((step) => (step.id ? step : { ...step, id: uid() })),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,
@@ -133,7 +135,6 @@ export function normalizeStoreData(data: StoreData): StoreData {
     groups: data.groups.map(normalizeGroup),
     studyModes: normalizeStudyModes(data.studyModes),
     activityHeatmap: normalizeActivityHeatmap(data.activityHeatmap),
-    schemaVersion: data.schemaVersion ?? CURRENT_SCHEMA_VERSION,
     lastSyncedAt: data.lastSyncedAt,
   };
 }

@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
-import { useFlashcardStore } from '@/hooks/useFlashcardStore';
+import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { AppCard } from '@/components/AppCard';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
@@ -12,12 +12,12 @@ import { StudyModeMenuButton } from './StudyModeMenuButton';
 import type { FlashcardGroup } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
 
-interface Props {
+interface GroupCardProps {
   group: FlashcardGroup;
   onModeChange: (modeId: string) => void;
 }
 
-export function GroupCard({ group, onModeChange }: Props) {
+export function GroupCard({ group, onModeChange }: GroupCardProps) {
   const store = useFlashcardStore();
   const { t } = useI18n();
   const theme = useTheme();
@@ -59,14 +59,14 @@ export function GroupCard({ group, onModeChange }: Props) {
         <View style={styles.cardActionsRow}>
           <IconButton
             icon="eye-outline"
-            size={20}
+            size={TOKENS.iconSize.sm}
             iconColor={theme.colors.primary}
             onPress={() => router.push(ROUTES.browseDeck(group.id))}
             accessibilityLabel={`Browse cards in deck ${group.name}`}
           />
           <IconButton
             icon="tune"
-            size={20}
+            size={TOKENS.iconSize.sm}
             iconColor={theme.colors.primary}
             onPress={() => router.push(ROUTES.deckSettings(group.id))}
             accessibilityLabel={`Configure settings for deck ${group.name}`}

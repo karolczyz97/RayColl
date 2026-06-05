@@ -28,14 +28,6 @@ export function getDueBgColor(theme: MD3Theme): string {
   return theme.colors.errorContainer;
 }
 
-export function getDangerColor(theme: MD3Theme): string {
-  return theme.colors.error;
-}
-
-export function getDangerBgColor(theme: MD3Theme): string {
-  return theme.colors.errorContainer;
-}
-
 export function getInfoColor(theme: MD3Theme): string {
   return theme.colors.primary;
 }

@@ -7,9 +7,32 @@ import { saveLocalData } from './persistence/localPersistence';
 import { saveCloudData } from './persistence/firebasePersistence';
 import { usePersistenceQueue, type PersistenceSnapshot } from './persistence/persistenceQueue';
 import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
-import { createWebPersistenceHandlers } from './persistence/webLifecycle';
 import { getErrorMessage } from '@/utils/errors';
 import { withTimeout } from '@/utils/withTimeout';
+import { STUDY_REVIEW_FLUSH_THRESHOLD, PERSISTENCE_DEBOUNCE_MS } from '@/constants/app';
+
+export function shouldFlushOnVisibilityChange(visibilityState: string | undefined): boolean {
+  return visibilityState === 'hidden';
+}
+
+export function createWebPersistenceHandlers(
+  flushPersistence: () => Promise<void>,
+  getVisibilityState: () => string | undefined,
+) {
+  const flush = () => {
+    void flushPersistence();
+  };
+
+  return {
+    handleBeforeUnload: flush,
+    handlePageHide: flush,
+    handleVisibilityChange: () => {
+      if (shouldFlushOnVisibilityChange(getVisibilityState())) {
+        flush();
+      }
+    },
+  };
+}
 
 // Cap how long a single local write may block the serialized write chain. If
 // AsyncStorage hangs (e.g. a stuck native lock), the timeout rejects so the
@@ -29,6 +52,18 @@ interface UseStorePersistenceParams {
   setLastSyncError: Dispatch<SetStateAction<string | null>>;
   setLastPersistenceError: Dispatch<SetStateAction<string | null>>;
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
+}
+
+function makeCommitFn<T>(
+  ref: MutableRefObject<T>,
+  setState: Dispatch<SetStateAction<T>>,
+  persist: (options?: PersistOptions) => void,
+): (next: T, options?: PersistOptions) => void {
+  return (next, options) => {
+    ref.current = next;
+    setState(next);
+    persist(options);
+  };
 }
 
 export function useStorePersistence({
@@ -139,7 +174,7 @@ export function useStorePersistence({
   );
 
   const { enqueue: enqueueCloudSnapshot, flush: flushCloudQueue } = usePersistenceQueue({
-    delayMs: 1200,
+    delayMs: PERSISTENCE_DEBOUNCE_MS,
     persistNow: persistCloudSnapshot,
     onSaving: handleQueueSaving,
     onSynced: handleQueueSynced,
@@ -183,7 +218,7 @@ export function useStorePersistence({
           pendingStudySnapshotRef.current = snapshot;
           studyReviewCountRef.current += 1;
 
-          if (studyReviewCountRef.current >= 10) {
+          if (studyReviewCountRef.current >= STUDY_REVIEW_FLUSH_THRESHOLD) {
             studyReviewCountRef.current = 0;
             const reviewSnapshot = pendingStudySnapshotRef.current;
             pendingStudySnapshotRef.current = null;
@@ -252,31 +287,36 @@ export function useStorePersistence({
     };
   }, [flushPersistence]);
 
-  const commitGroups = useCallback(
-    (nextGroups: FlashcardGroup[], options?: PersistOptions) => {
-      groupsRef.current = nextGroups;
-      setGroups(nextGroups);
-      persistCurrentSnapshot(options);
-    },
+  /* eslint-disable react-hooks/refs -- passing ref objects, not accessing .current */
+  const commitGroups = useMemo(
+    () => makeCommitFn(groupsRef, setGroups, persistCurrentSnapshot),
     [groupsRef, persistCurrentSnapshot, setGroups],
   );
 
-  const commitStudyModes = useCallback(
-    (nextStudyModes: StudyMode[], options?: PersistOptions) => {
-      studyModesRef.current = nextStudyModes;
-      setStudyModes(nextStudyModes);
-      persistCurrentSnapshot(options);
-    },
+  const commitStudyModes = useMemo(
+    () => makeCommitFn(studyModesRef, setStudyModes, persistCurrentSnapshot),
     [persistCurrentSnapshot, setStudyModes, studyModesRef],
   );
 
-  const commitHeatmap = useCallback(
-    (nextHeatmap: Record<string, number>, options?: PersistOptions) => {
+  const commitHeatmap = useMemo(
+    () => makeCommitFn(heatmapRef, setHeatmap, persistCurrentSnapshot),
+    [heatmapRef, persistCurrentSnapshot, setHeatmap],
+  );
+  /* eslint-enable react-hooks/refs */
+
+  const commitGroupsAndHeatmap = useCallback(
+    (
+      nextGroups: FlashcardGroup[],
+      nextHeatmap: Record<string, number>,
+      options?: PersistOptions,
+    ) => {
+      groupsRef.current = nextGroups;
       heatmapRef.current = nextHeatmap;
+      setGroups(nextGroups);
       setHeatmap(nextHeatmap);
       persistCurrentSnapshot(options);
     },
-    [heatmapRef, persistCurrentSnapshot, setHeatmap],
+    [groupsRef, heatmapRef, persistCurrentSnapshot, setGroups, setHeatmap],
   );
 
   return useMemo(
@@ -291,6 +331,7 @@ export function useStorePersistence({
       commitGroups,
       commitStudyModes,
       commitHeatmap,
+      commitGroupsAndHeatmap,
     }),
     [
       getCurrentUid,
@@ -303,6 +344,9 @@ export function useStorePersistence({
       commitGroups,
       commitStudyModes,
       commitHeatmap,
+      commitGroupsAndHeatmap,
     ],
   );
 }
+
+export type UseStorePersistenceReturn = ReturnType<typeof useStorePersistence>;

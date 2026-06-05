@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 import type { FlashcardGroup } from '@/types/models';
+import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { computeCardStats } from '@/store/selectors/stats';
@@ -13,13 +14,6 @@ interface StudyFinishedStateProps {
   activeGroup: FlashcardGroup;
   failedCount: number;
   dueCardsCount: number;
-  bravoLabel: string;
-  noDueLabel: string;
-  finishedDescription: string;
-  deckProgressLabel: string;
-  restartFailedLabel: string;
-  restartSessionLabel: string;
-  backToPanelLabel: string;
   onRestartFailed: () => void;
   onRestartSession: () => void;
   onBack: () => void;
@@ -29,18 +23,12 @@ export function StudyFinishedState({
   activeGroup,
   failedCount,
   dueCardsCount,
-  bravoLabel,
-  noDueLabel,
-  finishedDescription,
-  deckProgressLabel,
-  restartFailedLabel,
-  restartSessionLabel,
-  backToPanelLabel,
   onRestartFailed,
   onRestartSession,
   onBack,
 }: StudyFinishedStateProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <View style={styles.finishedContainer}>
@@ -49,18 +37,18 @@ export function StudyFinishedState({
       </Animated.View>
       <Animated.View entering={FadeInUp.springify().delay(150)}>
         <Text variant="headlineLarge" style={styles.bravoTitle}>
-          {bravoLabel}
+          {t('study.bravo')}
         </Text>
       </Animated.View>
       <Animated.View entering={FadeInUp.springify().delay(250)}>
         <Text variant="bodyLarge" style={[styles.finishedDescription, { color: theme.colors.onSurfaceVariant }]}>
-          {dueCardsCount === 0 ? noDueLabel : finishedDescription}
+          {dueCardsCount === 0 ? t('study.no_due') : t('study.finished_desc')}
         </Text>
       </Animated.View>
 
       <Animated.View entering={FadeInUp.springify().delay(350)} style={styles.statsSummary}>
         <Text variant="titleMedium" style={styles.statsTitle}>
-          {deckProgressLabel}
+          {t('stats.deck_progress')}
         </Text>
         <SegmentedProgressBar stats={computeCardStats(activeGroup.cards)} showLegend />
       </Animated.View>
@@ -68,14 +56,14 @@ export function StudyFinishedState({
       <Animated.View entering={FadeInUp.springify().delay(450)} style={styles.actionButtons}>
         {failedCount > 0 ? (
           <Button mode="contained" buttonColor={theme.colors.error} onPress={onRestartFailed} style={styles.actionButton}>
-            {restartFailedLabel} ({failedCount})
+            {t('study.restart_failed')} ({failedCount})
           </Button>
         ) : null}
         <Button mode="contained" onPress={onRestartSession} style={styles.actionButton}>
-          {restartSessionLabel}
+          {t('study.restart_session')}
         </Button>
         <Button mode="outlined" onPress={onBack} style={styles.actionButton}>
-          {backToPanelLabel}
+          {t('study.back_to_panel')}
         </Button>
       </Animated.View>
     </View>

@@ -21,6 +21,7 @@ import {
   addFlashcardAction,
   addFlashcardsBulkAction,
   deleteFlashcardAction,
+  recordActivityAction,
   reviewCardAction,
   updateFlashcardAction,
 } from './actions/cardActions';
@@ -30,19 +31,29 @@ import {
   updateStudyModeAction,
 } from './actions/studyModeActions';
 import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
-import { recordActivityAction } from './actions/activityActions';
 import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
-import { getDueCards as selectDueCards } from './selectors/dueCards';
-import { getGroupProgress as selectGroupProgress } from './selectors/progress';
-import { selectLiveStudyModes } from './selectors/tombstones';
+import {
+  getDueCards as selectDueCards,
+  getGroupProgress as selectGroupProgress,
+} from './selectors/cardSelectors';
+import { selectLiveStudyModes } from './selectors/liveSelectors';
 import { filterLive } from '@/utils/array';
 import { setSeedVersion } from './persistence/localPersistence';
-import type { PersistOptions } from './FlashcardStoreTypes';
-import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from './storeDataNormalization';
+import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
+import { normalizeStoreData } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
 import { captureSnapshot, persistWithRollback } from './rollbackHelper';
-import { parseBackupJson } from './backupImport';
+
+export const IMPORT_STATE_JSON_ERROR = 'app_settings.import_error';
+
+export function parseBackupJson(json: string): unknown {
+  try {
+    return JSON.parse(json);
+  } catch {
+    throw new Error(IMPORT_STATE_JSON_ERROR);
+  }
+}
 
 interface UseStoreActionsParams {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
@@ -50,17 +61,21 @@ interface UseStoreActionsParams {
   heatmapRef: MutableRefObject<Record<string, number>>;
   setGroups: Dispatch<SetStateAction<FlashcardGroup[]>>;
   setHeatmap: Dispatch<SetStateAction<Record<string, number>>>;
-  setSyncStatus: Dispatch<SetStateAction<'idle' | 'loading' | 'saving' | 'syncing' | 'error'>>;
+  setSyncStatus: Dispatch<SetStateAction<SyncStatus>>;
   setLastPersistenceError: Dispatch<SetStateAction<string | null>>;
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
   getCurrentUid: () => string | null;
   applySnapshot: (snapshot: StoreData) => void;
   persistNow: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
-  persistCurrentSnapshot: (options?: PersistOptions) => void;
   flushPersistence: () => Promise<void>;
   commitGroups: (nextGroups: FlashcardGroup[], options?: PersistOptions) => void;
   commitStudyModes: (nextStudyModes: StudyMode[], options?: PersistOptions) => void;
   commitHeatmap: (nextHeatmap: Record<string, number>, options?: PersistOptions) => void;
+  commitGroupsAndHeatmap: (
+    nextGroups: FlashcardGroup[],
+    nextHeatmap: Record<string, number>,
+    options?: PersistOptions,
+  ) => void;
 }
 
 export function useStoreActionsCore({
@@ -75,12 +90,21 @@ export function useStoreActionsCore({
   getCurrentUid,
   applySnapshot,
   persistNow,
-  persistCurrentSnapshot,
   flushPersistence,
   commitGroups,
   commitStudyModes,
   commitHeatmap,
+  commitGroupsAndHeatmap,
 }: UseStoreActionsParams) {
+  const setStoreError = useCallback(
+    (message: string) => {
+      setLastPersistenceError(message);
+      setLastStoreError(message);
+      setSyncStatus('error');
+    },
+    [setLastPersistenceError, setLastStoreError, setSyncStatus],
+  );
+
   const addGroup = useCallback(
     (name: string, languages: string[], pageNames: string[]) => {
       const { nextGroups, newGroupId } = addGroupAction(
@@ -138,9 +162,7 @@ export function useStoreActionsCore({
         await flushPersistence();
       } catch (err) {
         const message = getErrorMessage(err);
-        setLastPersistenceError(message);
-        setLastStoreError(message);
-        setSyncStatus('error');
+        setStoreError(message);
         return { ok: false, error: message };
       }
 
@@ -163,9 +185,7 @@ export function useStoreActionsCore({
         };
       } catch (err) {
         const message = getErrorMessage(err);
-        setLastPersistenceError(message);
-        setLastStoreError(message);
-        setSyncStatus('error');
+        setStoreError(message);
         return { ok: false, error: message };
       }
     },
@@ -177,9 +197,7 @@ export function useStoreActionsCore({
       heatmapRef,
       persistNow,
       setGroups,
-      setLastPersistenceError,
-      setLastStoreError,
-      setSyncStatus,
+      setStoreError,
       studyModesRef,
     ],
   );
@@ -191,35 +209,36 @@ export function useStoreActionsCore({
     [commitGroups, groupsRef],
   );
 
-  // Best-effort: these are invoked fire-and-forget from screens. A failed flush must not
-  // produce an unhandled rejection — the error is already surfaced via syncStatus /
-  // lastPersistenceError / lastSyncError (shown by SyncStatusBanner).
-  const commitGroupsAndFlush = useCallback(
+  // Immediate group ops are invoked fire-and-forget from screens. A failed flush
+  // must not produce an unhandled rejection; surface it through store error state.
+  const commitGroupsImmediate = useCallback(
     async (next: FlashcardGroup[]) => {
       groupsRef.current = next;
       setGroups(next);
       try {
         await flushPersistence();
       } catch (err) {
+        const message = getErrorMessage(err);
+        setStoreError(message);
         console.error('Critical group op persistence failed:', err);
       }
     },
-    [flushPersistence, groupsRef, setGroups],
+    [flushPersistence, groupsRef, setGroups, setStoreError],
   );
 
   const deleteGroup = useCallback(
-    (groupId: string) => commitGroupsAndFlush(deleteGroupAction(groupsRef.current, groupId)),
-    [commitGroupsAndFlush, groupsRef],
+    (groupId: string) => commitGroupsImmediate(deleteGroupAction(groupsRef.current, groupId)),
+    [commitGroupsImmediate, groupsRef],
   );
 
   const archiveGroup = useCallback(
-    (groupId: string) => commitGroupsAndFlush(archiveGroupAction(groupsRef.current, groupId)),
-    [commitGroupsAndFlush, groupsRef],
+    (groupId: string) => commitGroupsImmediate(archiveGroupAction(groupsRef.current, groupId)),
+    [commitGroupsImmediate, groupsRef],
   );
 
   const restoreGroup = useCallback(
-    (groupId: string) => commitGroupsAndFlush(restoreGroupAction(groupsRef.current, groupId)),
-    [commitGroupsAndFlush, groupsRef],
+    (groupId: string) => commitGroupsImmediate(restoreGroupAction(groupsRef.current, groupId)),
+    [commitGroupsImmediate, groupsRef],
   );
 
   const purgeArchives = useCallback(() => {
@@ -284,15 +303,9 @@ export function useStoreActionsCore({
         heatmapRef.current,
       );
 
-      groupsRef.current = nextGroups;
-      heatmapRef.current = nextHeatmap;
-
-      setGroups(nextGroups);
-      setHeatmap(nextHeatmap);
-
-      persistCurrentSnapshot({ cloudMode: 'study' });
+      commitGroupsAndHeatmap(nextGroups, nextHeatmap, { cloudMode: 'study' });
     },
-    [groupsRef, heatmapRef, persistCurrentSnapshot, setGroups, setHeatmap],
+    [commitGroupsAndHeatmap, groupsRef, heatmapRef],
   );
 
   const addFlashcardsBulk = useCallback(
@@ -350,6 +363,7 @@ export function useStoreActionsCore({
       activityHeatmap: {},
     };
 
+    await flushPersistence();
     applySnapshot(seedSnapshot);
 
     await persistWithRollback(
@@ -366,6 +380,7 @@ export function useStoreActionsCore({
     });
   }, [
     applySnapshot,
+    flushPersistence,
     getCurrentUid,
     groupsRef,
     heatmapRef,
@@ -407,7 +422,6 @@ export function useStoreActionsCore({
         groups: exportGroups,
         studyModes: selectLiveStudyModes(studyModesRef.current),
         activityHeatmap: heatmapRef.current,
-        schemaVersion: CURRENT_SCHEMA_VERSION,
       },
       null,
       2,
@@ -419,15 +433,12 @@ export function useStoreActionsCore({
       const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
 
       const data = parseBackupJson(json);
-      if (!validateBackupData(data)) {
-        throw new Error('app_settings.import_error');
-      }
+      validateBackupData(data);
 
       const normalized = normalizeStoreData({
         groups: data.groups,
         studyModes: data.studyModes,
         activityHeatmap: data.activityHeatmap,
-        schemaVersion: data.schemaVersion,
       });
 
       applySnapshot(normalized);

@@ -118,8 +118,11 @@ export const en: Record<string, string> = {
   'stats.overall_progress': 'Overall Progress',
   'stats.cards_count': '{count} cards',
   'stats.day.mon': 'Mon',
+  'stats.day.tue': 'Tue',
   'stats.day.wed': 'Wed',
+  'stats.day.thu': 'Thu',
   'stats.day.fri': 'Fri',
+  'stats.day.sat': 'Sat',
   'stats.day.sun': 'Sun',
 
   // Settings
@@ -201,6 +204,7 @@ export const en: Record<string, string> = {
   'step.listen_and_branch': 'STT page {index} (threshold {threshold}%)',
   'step.reveal_on_tap': 'Reveal next page on tap',
   'step.rate': 'Rate knowledge',
+  'step.unknown': 'Unknown step',
 
   // Step types (labels)
   'step.type.show_page': 'Show page',

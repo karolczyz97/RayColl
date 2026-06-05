@@ -1,4 +1,6 @@
-import { combineRecognizedText, normalizeSttResult, type SttOptions, type SttService } from './sttTypes';
+import { combineRecognizedText, normalizeSttResult, DEFAULT_STT_TIMEOUT_MS, DEFAULT_STT_INACTIVITY_MS, type SttOptions, type SttService } from './sttTypes';
+import { createSttSession } from './sttSessionHelpers';
+import type { BrowserWindowWith } from '@/utils/types';
 
 interface SpeechRecognitionEvent {
   resultIndex: number;
@@ -32,15 +34,9 @@ interface ISpeechRecognition {
 
 type SpeechRecognitionConstructor = new () => ISpeechRecognition;
 
-type BrowserWindowWithSpeechRecognition = Window &
-  typeof globalThis & {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  };
-
 function getWebSpeechRecognition(): SpeechRecognitionConstructor | undefined {
   if (typeof window === 'undefined') return undefined;
-  const speechWindow = window as BrowserWindowWithSpeechRecognition;
+  const speechWindow = window as BrowserWindowWith<'SpeechRecognition' | 'webkitSpeechRecognition', SpeechRecognitionConstructor>;
   return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
 }
 
@@ -67,22 +63,6 @@ export class WebSttService implements SttService {
 
       const finalResults = new Map<number, string>();
       let lastInterimResult = '';
-      let resolved = false;
-      let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
-      const INACTIVITY_MS = 1500;
-
-      const hardTimeout = setTimeout(() => {
-        if (!resolved) this.recognition?.stop();
-      }, options.timeoutMs || 15000);
-
-      const finishWithResult = () => {
-        if (resolved) return;
-        resolved = true;
-        clearTimeout(hardTimeout);
-        if (inactivityTimer) clearTimeout(inactivityTimer);
-        options.onListeningStateChange?.(false);
-        resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));
-      };
 
       const getFinalResultText = () =>
         Array.from(finalResults.entries())
@@ -90,12 +70,20 @@ export class WebSttService implements SttService {
           .map(([, text]) => text)
           .join(' ');
 
-      const resetInactivityTimer = () => {
-        if (inactivityTimer) clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => {
-          this.recognition?.stop();
-        }, INACTIVITY_MS);
+      const finishWithResult = () => {
+        if (session.resolved()) return;
+        session.setResolved();
+        session.cancelTimers();
+        options.onListeningStateChange?.(false);
+        resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));
       };
+
+      const session = createSttSession(
+        options.timeoutMs || DEFAULT_STT_TIMEOUT_MS,
+        DEFAULT_STT_INACTIVITY_MS,
+        () => finishWithResult(),
+        () => finishWithResult(),
+      );
 
       this.recognition.onstart = () => options.onListeningStateChange?.(true);
 
@@ -120,7 +108,7 @@ export class WebSttService implements SttService {
         options.onPartialResult?.(combineRecognizedText(getFinalResultText(), lastInterimResult));
 
         if (hasFinal) {
-          resetInactivityTimer();
+          session.resetInactivity();
         }
       };
 
@@ -129,10 +117,9 @@ export class WebSttService implements SttService {
       };
 
       this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (resolved) return;
-        clearTimeout(hardTimeout);
-        if (inactivityTimer) clearTimeout(inactivityTimer);
-        resolved = true;
+        if (session.resolved()) return;
+        session.cancelTimers();
+        session.setResolved();
         options.onListeningStateChange?.(false);
         if (event.error === 'no-speech' || event.error === 'aborted') {
           resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));

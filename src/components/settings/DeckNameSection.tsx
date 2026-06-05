@@ -1,15 +1,16 @@
 import React from 'react';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 
-interface Props {
+interface DeckNameSectionProps {
   deckName: string;
   onChangeText: (v: string) => void;
   onBlur: () => void;
-  t: TranslationFn;
 }
 
-export function DeckNameSection({ deckName, onChangeText, onBlur, t }: Props) {
+export function DeckNameSection({ deckName, onChangeText, onBlur }: DeckNameSectionProps) {
+  const { t } = useI18n();
+
   return (
     <AppTextInput
       label={t('settings.rename_label')}

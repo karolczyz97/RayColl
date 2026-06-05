@@ -1,7 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 
 import { validateBackupData, type BackupData } from '../backupValidation';
-import { normalizeStoreData, CURRENT_SCHEMA_VERSION } from '../../store/storeDataNormalization';
 import type { FlashcardGroup, StudyMode } from '../../types/models';
 
 function makeValidGroup(): FlashcardGroup {
@@ -52,16 +51,15 @@ function makeValidBackup(): BackupData {
 
 describe('backupValidation', () => {
   it('accepts valid backup', () => {
-    expect(validateBackupData(makeValidBackup())).toBe(true);
+    expect(() => validateBackupData(makeValidBackup())).not.toThrow();
   });
 
   it('accepts backup with optional fields', () => {
     const withOptional: BackupData = {
       ...makeValidBackup(),
-      schemaVersion: 1,
       exportedAt: '2025-06-01T12:00:00.000Z',
     };
-    expect(validateBackupData(withOptional)).toBe(true);
+    expect(() => validateBackupData(withOptional)).not.toThrow();
   });
 
   it('throws on missing groups', () => {
@@ -95,60 +93,12 @@ describe('backupValidation', () => {
     expect(() => validateBackupData({} as BackupData)).toThrow();
   });
 
-  describe('legacy backup normalization', () => {
-    const legacyGroup: FlashcardGroup = {
-      id: 'g2',
-      name: 'Legacy Deck',
-      cards: [
-        {
-          id: 'c2',
-          pages: ['a', 'b'],
-          srsState: {
-            difficulty: 2,
-            stability: 5,
-            repetitions: 0,
-            state: 0,
-            lastReviewTimestamp: 0,
-            nextReviewTimestamp: 0,
-          },
-        },
-      ],
-      activeModeId: 'classic',
-      studyFilter: 'new+review',
-      pageLanguages: ['en-US'],
-      pageNames: ['Front'],
-      activePageCount: 1,
-    };
-    const legacyBackup: BackupData = {
-      groups: [legacyGroup],
-      studyModes: [makeValidMode()],
-      activityHeatmap: {},
-    };
-
-    it('passes validation', () => {
-      expect(validateBackupData(legacyBackup)).toBe(true);
-    });
-
-    it('fills missing timestamps during normalization', () => {
-      const normalized = normalizeStoreData({
-        groups: legacyBackup.groups,
-        studyModes: legacyBackup.studyModes,
-        activityHeatmap: legacyBackup.activityHeatmap,
-      });
-      expect(normalized.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-      expect(normalized.groups[0].updatedAt).toBe(0);
-      expect(normalized.groups[0].cards[0].contentUpdatedAt).toBe(0);
-      expect(normalized.groups[0].cards[0].srsUpdatedAt).toBe(0);
-    });
-  });
-
   describe('export structure contract', () => {
     it('contains all required keys', () => {
-      const exportObj = { groups: [], studyModes: [], activityHeatmap: {}, schemaVersion: 1 };
+      const exportObj = { groups: [], studyModes: [], activityHeatmap: {} };
       expect('groups' in exportObj).toBe(true);
       expect('studyModes' in exportObj).toBe(true);
       expect('activityHeatmap' in exportObj).toBe(true);
-      expect('schemaVersion' in exportObj).toBe(true);
     });
   });
 

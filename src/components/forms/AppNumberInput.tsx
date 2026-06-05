@@ -39,7 +39,9 @@ export function AppNumberInput({
     }
     const parsed = Number(next);
     if (!Number.isFinite(parsed)) return;
-    const clamped = Math.min(max ?? parsed, Math.max(min ?? parsed, parsed));
+    let clamped = parsed;
+    if (min !== undefined) clamped = Math.max(min, clamped);
+    if (max !== undefined) clamped = Math.min(max, clamped);
     onChange(clamped);
   };
 

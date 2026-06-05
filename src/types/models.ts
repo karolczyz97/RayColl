@@ -34,35 +34,40 @@ export interface FlashcardGroup {
 
 export type ModeStep =
   | {
+      id?: string;
       type: 'show_page';
       pageIndex: number;
     }
   | {
+      id?: string;
       type: 'speak_page';
       pageIndex: number;
       extraPauseMs: number;
     }
   | {
+      id?: string;
       type: 'dynamic_pause';
       nextPageIndex: number;
       extraPauseMs: number;
     }
   | {
+      id?: string;
       type: 'wait';
       ms: number;
     }
   | {
+      id?: string;
       type: 'listen_and_branch';
       pageIndex: number;
-      successThreshold: number; // np. 70 (%)
+      successThreshold: number;
       incorrectTtsPageIndex?: number;
     }
   | {
-      // Waits for the user to tap the card, then reveals the next hidden page.
+      id?: string;
       type: 'reveal_on_tap';
     }
   | {
-      // Shows rating buttons for the flashcard and waits for the user's rating.
+      id?: string;
       type: 'rate';
     };
 
@@ -80,6 +85,5 @@ export interface StoreData {
   groups: FlashcardGroup[];
   studyModes: StudyMode[];
   activityHeatmap: Record<string, number>;
-  schemaVersion?: number;
   lastSyncedAt?: number;
 }

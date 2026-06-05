@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { TOKENS } from '@/theme/tokens';
@@ -13,7 +13,6 @@ interface ImportSourceCardProps {
   onRawTextChange: (value: string) => void;
   onPickFile: () => void;
   onPaste?: () => void;
-  t: TranslationFn;
 }
 
 export function ImportSourceCard({
@@ -23,8 +22,9 @@ export function ImportSourceCard({
   onRawTextChange,
   onPickFile,
   onPaste,
-  t,
 }: ImportSourceCardProps) {
+  const { t } = useI18n();
+
   return (
     <SectionCard>
       <AppTextInput

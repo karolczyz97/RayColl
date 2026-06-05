@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   pageLabel: {
     fontSize: TOKENS.typography.size.xxs,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: TOKENS.typography.letterSpacing.wide,
     marginBottom: TOKENS.spacing.sm,
     fontWeight: TOKENS.typography.weight.bold,
   },

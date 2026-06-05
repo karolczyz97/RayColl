@@ -1,45 +1,40 @@
+import { describe, it, expect, jest } from '@jest/globals';
 import {
   createWebPersistenceHandlers,
   shouldFlushOnVisibilityChange,
-} from '../webLifecycle';
+} from '../../useStorePersistence';
 
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected ${String(expected)}, got ${String(actual)}`);
-  }
-}
+jest.mock('../firebasePersistence', () => ({
+  saveCloudData: jest.fn(),
+}));
 
-export async function runTests() {
-  console.log('\n--- Running Web Lifecycle Tests ---');
+jest.mock('../localPersistence', () => ({
+  saveLocalData: jest.fn(),
+}));
 
-  assertEqual(
-    shouldFlushOnVisibilityChange('hidden'),
-    true,
-    'Visibility helper should flush when the page becomes hidden',
-  );
-  assertEqual(
-    shouldFlushOnVisibilityChange('visible'),
-    false,
-    'Visibility helper should ignore visible pages',
-  );
+describe('webLifecycle', () => {
+  it('flushes only when the page becomes hidden', () => {
+    expect(shouldFlushOnVisibilityChange('hidden')).toBe(true);
+    expect(shouldFlushOnVisibilityChange('visible')).toBe(false);
+  });
 
-  let flushCount = 0;
-  let visibilityState = 'visible';
-  const handlers = createWebPersistenceHandlers(
-    async () => {
-      flushCount += 1;
-    },
-    () => visibilityState,
-  );
+  it('flushes on hidden, pagehide and beforeunload', () => {
+    let flushCount = 0;
+    let visibilityState = 'visible';
+    const handlers = createWebPersistenceHandlers(
+      async () => {
+        flushCount += 1;
+      },
+      () => visibilityState,
+    );
 
-  handlers.handleVisibilityChange();
-  assertEqual(flushCount, 0, 'Visibility handler should ignore visible state');
+    handlers.handleVisibilityChange();
+    expect(flushCount).toBe(0);
 
-  visibilityState = 'hidden';
-  handlers.handleVisibilityChange();
-  handlers.handlePageHide();
-  handlers.handleBeforeUnload();
-  assertEqual(flushCount, 3, 'Lifecycle handlers should flush on hidden, pagehide, and beforeunload');
-
-  console.log('Web lifecycle tests passed');
-}
+    visibilityState = 'hidden';
+    handlers.handleVisibilityChange();
+    handlers.handlePageHide();
+    handlers.handleBeforeUnload();
+    expect(flushCount).toBe(3);
+  });
+});

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
-import type { TranslationFn } from '@/i18n';
+import { useI18n } from '@/i18n';
 import { FlashcardList } from '@/features/flashcards/FlashcardList';
 import { EditFlashcardDialog } from '@/components/browse/EditFlashcardDialog';
 import { TOKENS } from '@/theme/tokens';
@@ -12,12 +12,11 @@ interface ImportPreviewSectionProps {
   group: FlashcardGroup;
   editingId: string | null;
   editPages: string[];
-  setEditPages: React.Dispatch<React.SetStateAction<string[]>>;
+  onPagesChange: (pages: string[]) => void;
   onSave: () => void;
   onCancel: () => void;
   onStartEdit: (card: Flashcard) => void;
   onDelete: (cardId: string) => void;
-  t: TranslationFn;
 }
 
 export function ImportPreviewSection({
@@ -25,13 +24,14 @@ export function ImportPreviewSection({
   group,
   editingId,
   editPages,
-  setEditPages,
+  onPagesChange,
   onSave,
   onCancel,
   onStartEdit,
   onDelete,
-  t,
 }: ImportPreviewSectionProps) {
+  const { t } = useI18n();
+
   if (cards.length === 0) {
     return null;
   }
@@ -46,17 +46,15 @@ export function ImportPreviewSection({
         group={group}
         onStartEdit={onStartEdit}
         onDelete={onDelete}
-        t={t}
         scrollEnabled={false}
       />
       <EditFlashcardDialog
         visible={!!editingId}
         group={group}
         editPages={editPages}
-        setEditPages={setEditPages}
+        onPagesChange={onPagesChange}
         onSave={onSave}
         onCancel={onCancel}
-        t={t}
       />
     </View>
   );

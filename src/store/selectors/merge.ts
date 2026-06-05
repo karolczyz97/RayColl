@@ -1,5 +1,5 @@
 import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
-import type { UserData } from '@/services/firebase';
+import type { UserData } from '@/store/persistence/firestoreSchema';
 import { normalizeStoreData } from '@/store/storeDataNormalization';
 import { isBuiltInModeSourceId } from '@/store/seed/seedModes';
 
@@ -89,8 +89,10 @@ export function mergeCards(localCards: Flashcard[], cloudCards: Flashcard[]): Fl
       continue;
     }
 
-    const contentSide = localContentAt > cloudContentAt ? l : c;
     const srsSide = mergeSrsStateNeverRegress(localReps, localSrsAt, cloudReps, cloudSrsAt);
+    const contentSide = localContentAt > cloudContentAt ? l
+      : cloudContentAt > localContentAt ? c
+      : srsSide === 'local' ? l : c;
 
     merged.push({
       id,
@@ -140,9 +142,10 @@ export function mergeGroups(localGroups: FlashcardGroup[], cloudGroups: Flashcar
     const latestEdit = Math.max(localUpdatedAt, cloudUpdatedAt);
 
     if (!isAlive(latestEdit, deletedAt)) {
+      const mergedCards = mergeCards(local.cards, cloud.cards);
       merged.push({
         ...cloud,
-        cards: [],
+        cards: mergedCards,
         deletedAt,
       });
       continue;

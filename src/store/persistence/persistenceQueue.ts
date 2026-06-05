@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { StoreData } from '@/types/models';
 
 export interface PersistenceSnapshot extends StoreData {
@@ -20,13 +20,20 @@ interface PersistenceQueueController {
   dispose: () => void;
 }
 
+export interface PersistenceQueueCallbacks {
+  persistNow: (snapshot: PersistenceSnapshot) => Promise<void>;
+  onSaving?: () => void;
+  onSynced?: () => void;
+  onError?: (error: unknown) => void;
+}
+
 export function createPersistenceQueueController({
   delayMs = 1200,
-  persistNow,
-  onSaving,
-  onSynced,
-  onError,
-}: PersistenceQueueOptions): PersistenceQueueController {
+  callbacksRef,
+}: {
+  delayMs?: number;
+  callbacksRef: { current: PersistenceQueueCallbacks };
+}): PersistenceQueueController {
   let pendingSnapshot: PersistenceSnapshot | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let isDisposed = false;
@@ -46,17 +53,17 @@ export function createPersistenceQueueController({
       while (pendingSnapshot && !isDisposed) {
         const snapshot = pendingSnapshot;
         pendingSnapshot = null;
-        onSaving?.();
+        callbacksRef.current.onSaving?.();
 
         try {
-          await persistNow(snapshot);
+          await callbacksRef.current.persistNow(snapshot);
 
           if (!isDisposed) {
-            onSynced?.();
+            callbacksRef.current.onSynced?.();
           }
         } catch (error) {
           if (!isDisposed) {
-            onError?.(error);
+            callbacksRef.current.onError?.(error);
           }
         }
       }
@@ -100,27 +107,39 @@ export function usePersistenceQueue({
   onSynced,
   onError,
 }: PersistenceQueueOptions) {
-  const controller = useMemo(
-    () =>
-      createPersistenceQueueController({
-        delayMs,
-        persistNow,
-        onSaving,
-        onSynced,
-        onError,
-      }),
-    [delayMs, onError, onSaving, onSynced, persistNow],
-  );
+  const callbacksRef = useRef({ persistNow, onSaving, onSynced, onError });
 
   useEffect(() => {
-    return () => {
-      controller.dispose();
-    };
-  }, [controller]);
+    callbacksRef.current = { persistNow, onSaving, onSynced, onError };
+  });
 
-  return {
-    enqueue: controller.enqueue,
-    flush: controller.flush,
-    cancel: controller.cancel,
-  };
+  const controllerRef = useRef<PersistenceQueueController | null>(null);
+
+  useEffect(() => {
+    if (!controllerRef.current) {
+      controllerRef.current = createPersistenceQueueController({ delayMs, callbacksRef });
+    }
+
+    return () => {
+      controllerRef.current?.dispose();
+      controllerRef.current = null;
+    };
+  }, [delayMs]);
+
+  const enqueue = useCallback(
+    (snapshot: PersistenceSnapshot, options?: { immediate?: boolean }) => {
+      controllerRef.current?.enqueue(snapshot, options);
+    },
+    [],
+  );
+
+  const flush = useCallback(() => {
+    return controllerRef.current?.flush() ?? Promise.resolve();
+  }, []);
+
+  const cancel = useCallback(() => {
+    controllerRef.current?.cancel();
+  }, []);
+
+  return { enqueue, flush, cancel };
 }

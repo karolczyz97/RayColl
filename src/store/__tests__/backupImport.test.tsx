@@ -1,4 +1,4 @@
-import { IMPORT_STATE_JSON_ERROR, parseBackupJson } from '../backupImport';
+import { IMPORT_STATE_JSON_ERROR, parseBackupJson } from '../useStoreActions';
 
 describe('parseBackupJson', () => {
   it('parses valid JSON', () => {

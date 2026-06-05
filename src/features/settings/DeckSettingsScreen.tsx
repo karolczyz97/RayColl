@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Dialog, IconButton, Portal, useTheme } from 'react-native-paper';
+import { Button, IconButton, useTheme } from 'react-native-paper';
 import { getTopBarColors } from '@/theme/semanticColors';
 import { DeckNameSection } from '@/components/settings/DeckNameSection';
 import { StudyScopeSection } from '@/components/settings/StudyScopeSection';
 import { StudyModeSelector } from '@/components/settings/StudyModeSelector';
 import { StudyModeStepsEditor } from '@/components/settings/StudyModeStepsEditor';
 import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
-import { ArchiveDeckDialog } from '@/components/settings/ArchiveDeckDialog';
+import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { AddStepDialog } from '@/components/settings/AddStepDialog';
 import { TOKENS } from '@/theme/tokens';
+import { ARCHIVE_RETENTION_DAYS } from '@/constants/archive';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { PageConfigEditor } from '@/components/pageConfig/PageConfigEditor';
+import { PagesReorderDialog } from './PagesReorderDialog';
 
 export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDeckSettingsController').useDeckSettingsController>) {
   const { fg: topBarFg } = getTopBarColors(useTheme());
@@ -61,7 +63,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     setStepDialogOpen,
     stepDialogOpen,
     stepLabels,
-    stepSummary,
+    formatStepSummary,
     store,
     t,
     updatePageLangValue,
@@ -94,7 +96,6 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             deckName={deckName}
             onChangeText={setDeckName}
             onBlur={handleNameBlur}
-            t={t}
           />
         </SectionCard>
       </AnimatedSection>
@@ -104,7 +105,6 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
           <StudyScopeSection
             studyFilter={activeGroup.studyFilter}
             onFilterChange={onFilterChange}
-            t={t}
           />
         </SectionCard>
       </AnimatedSection>
@@ -117,7 +117,6 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             pageNames={colNames}
             pageLanguages={activeGroup.pageLanguages}
             popularLangs={popularLangs}
-            t={t}
             onPageCountChange={adjustPageCount}
             onPageNameChange={(index, value) => {
               setColNames((prev) => {
@@ -153,7 +152,6 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             activeModeId={activeGroup.activeModeId}
             onModeChange={onModeChange}
             studyModes={store.studyModes}
-            t={t}
             onCreateMode={openCreateModeDialog}
           />
         </SectionCard>
@@ -169,8 +167,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             deleteStep={deleteStep}
             addStepToMode={addStepToMode}
             onResetMode={resetMode}
-            t={t}
-            stepSummary={stepSummary}
+            formatStepSummary={formatStepSummary}
           />
         </AnimatedSection>
       ) : null}
@@ -203,78 +200,56 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         </View>
       )}
 
-      <Portal>
-        <CreateStudyModeSection
-          visible={creatingMode}
-          onDismiss={closeCreateModeDialog}
-          newModeName={newModeName}
-          setNewModeName={setNewModeName}
-          customSteps={customSteps}
-          setCustomSteps={setCustomSteps}
-          saveCustomMode={saveCustomMode}
-          setStepDialogOpen={setStepDialogOpen}
-          setEditingModeId={setEditingModeId}
-          t={t}
-          stepSummary={stepSummary}
-        />
+      <CreateStudyModeSection
+        visible={creatingMode}
+        onDismiss={closeCreateModeDialog}
+        newModeName={newModeName}
+        setNewModeName={setNewModeName}
+        customSteps={customSteps}
+        setCustomSteps={setCustomSteps}
+        saveCustomMode={saveCustomMode}
+        setStepDialogOpen={setStepDialogOpen}
+        setEditingModeId={setEditingModeId}
+        formatStepSummary={formatStepSummary}
+      />
 
-        <AddStepDialog
-          visible={stepDialogOpen}
-          onDismiss={() => setStepDialogOpen(false)}
-          newStepType={newStepType}
-          setNewStepType={setNewStepType}
-          newPageIdx={newPageIdx}
-          pageCount={pageCount}
-          setNewPageIdx={setNewPageIdx}
-          newMs={newMs}
-          setNewMs={setNewMs}
-          newThreshold={newThreshold}
-          setNewThreshold={setNewThreshold}
-          confirmAddStep={confirmAddStep}
-          t={t}
-          stepLabels={stepLabels}
-        />
+      <AddStepDialog
+        visible={stepDialogOpen}
+        onDismiss={() => setStepDialogOpen(false)}
+        newStepType={newStepType}
+        setNewStepType={setNewStepType}
+        newPageIdx={newPageIdx}
+        pageCount={pageCount}
+        setNewPageIdx={setNewPageIdx}
+        newMs={newMs}
+        setNewMs={setNewMs}
+        newThreshold={newThreshold}
+        setNewThreshold={setNewThreshold}
+        confirmAddStep={confirmAddStep}
+        stepLabels={stepLabels}
+      />
 
-      </Portal>
+      <PagesReorderDialog
+        visible={showReorderDialog}
+        onDismiss={() => setShowReorderDialog(false)}
+        activeGroup={activeGroup}
+        colNames={colNames}
+        setColNames={setColNames}
+        popularLangs={popularLangs}
+        handleColBlur={handleColBlur}
+        updatePageLangValue={updatePageLangValue}
+        movePageSettingAll={movePageSettingAll}
+      />
 
-      <Portal>
-        <Dialog visible={showReorderDialog} onDismiss={() => setShowReorderDialog(false)} style={styles.reorderDialog}>
-          <Dialog.Title>{t('settings.reorder_columns')}</Dialog.Title>
-          <Dialog.ScrollArea>
-            <View style={styles.reorderContent}>
-              <PageConfigEditor
-                mode="settings"
-                showCounter={false}
-                pageCount={storedPageCount}
-                pageNames={activeGroup.pageNames}
-                pageLanguages={activeGroup.pageLanguages}
-                popularLangs={popularLangs}
-                t={t}
-                onPageCountChange={() => {}}
-                onPageNameChange={(index, value) => {
-                  setColNames((prev) => {
-                    const next = [...prev];
-                    next[index] = value;
-                    return next;
-                  });
-                }}
-                onPageNameBlur={handleColBlur}
-                onPageLanguageChange={updatePageLangValue}
-                onMovePage={movePageSettingAll}
-              />
-            </View>
-          </Dialog.ScrollArea>
-          <Dialog.Actions>
-            <Button onPress={() => setShowReorderDialog(false)}>{t('btn.cancel')}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-
-      <ArchiveDeckDialog
+      <ActionConfirmDialog
         visible={archiveDialogOpen}
         onDismiss={() => setArchiveDialogOpen(false)}
         onConfirm={handleArchiveGroup}
-        t={t}
+        titleKey="dialog.archive.title"
+        messageKey="dialog.archive.confirm"
+        messageReplacements={{ days: ARCHIVE_RETENTION_DAYS }}
+        confirmLabelKey="btn.archive"
+        cancelLabelKey="btn.cancel"
       />
     </AppScreen>
   );

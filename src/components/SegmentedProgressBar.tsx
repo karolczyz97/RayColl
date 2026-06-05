@@ -83,6 +83,9 @@ function renderStatsMode(
   }
 
   const segments = categoryData.filter((data) => data.count > 0);
+  const a11yLabel = categoryData
+    .map((d) => `${d.label}: ${d.count}`)
+    .join(', ');
 
   const renderLegendItem = (item: (typeof categoryData)[0]) => {
     const isEmpty = item.count === 0;
@@ -138,6 +141,7 @@ function renderStatsMode(
       ) : null}
       <ExpressiveSegmentedProgress
         height={height}
+        accessibilityLabel={a11yLabel}
         segments={segments.map((segment) => ({
           id: segment.category,
           value: segment.count,

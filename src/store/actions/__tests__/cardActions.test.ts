@@ -1,28 +1,15 @@
+import { describe, it, expect } from '@jest/globals';
+
 import { createNewSrsState } from '../../../srs/srsEngine';
 import {
   addFlashcardsBulkAction,
   deleteFlashcardAction,
   reviewCardAction,
-  reviewFlashcardAction,
   updateFlashcardAction,
 } from '../cardActions';
 import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected ${expected}, got ${actual}`);
-  }
-}
-
-function assertOk(condition: boolean, message: string) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-export async function runTests() {
-  console.log('\n--- Running Card Actions Tests ---');
-
+describe('cardActions', () => {
   const originalCard = {
     id: 'c1',
     pages: ['front', 'back'],
@@ -42,91 +29,50 @@ export async function runTests() {
   };
   const groups = [originalGroup];
 
-  // updateFlashcardAction: sets contentUpdatedAt, preserves srsUpdatedAt
-  const updatedCard = {
-    ...originalCard,
-    pages: ['updated front', 'updated back'],
-  };
-  const updatedGroups = updateFlashcardAction(groups, 'g1', updatedCard);
-  assertEqual(originalGroup.cards[0].pages[0], 'front', 'Update action must not mutate the source card pages');
-  assertEqual(updatedGroups[0].cards[0].pages[0], 'updated front', 'Update action should replace the target card');
-  assertOk(
-    (updatedGroups[0].cards[0].contentUpdatedAt ?? 0) > 0,
-    'updateFlashcardAction should set contentUpdatedAt',
-  );
-  assertEqual(
-    updatedGroups[0].cards[0].srsUpdatedAt ?? 0,
-    0,
-    'updateFlashcardAction should NOT change srsUpdatedAt',
-  );
+  describe('updateFlashcardAction', () => {
+    it('sets contentUpdatedAt and preserves srsUpdatedAt', () => {
+      const updatedCard = { ...originalCard, pages: ['updated front', 'updated back'] };
+      const updatedGroups = updateFlashcardAction(groups, 'g1', updatedCard);
 
-  // reviewFlashcardAction: sets srsUpdatedAt, preserves contentUpdatedAt
-  const reviewedCard = {
-    ...originalCard,
-    srsState: { ...originalCard.srsState, repetitions: 1 },
-    contentUpdatedAt: 1000,
-    srsUpdatedAt: 0,
-  };
-  const reviewedGroups = reviewFlashcardAction(groups, 'g1', reviewedCard);
-  assertOk(
-    (reviewedGroups[0].cards[0].srsUpdatedAt ?? 0) > 0,
-    'reviewFlashcardAction should set srsUpdatedAt',
-  );
-  assertEqual(
-    reviewedGroups[0].cards[0].contentUpdatedAt ?? 0,
-    1000,
-    'reviewFlashcardAction should preserve contentUpdatedAt',
-  );
+      expect(originalGroup.cards[0].pages[0]).toBe('front');
+      expect(updatedGroups[0].cards[0].pages[0]).toBe('updated front');
+      expect(updatedGroups[0].cards[0].contentUpdatedAt ?? 0).toBeGreaterThan(0);
+      expect(updatedGroups[0].cards[0].srsUpdatedAt ?? 0).toBe(0);
+    });
+  });
 
-  // deleteFlashcardAction: soft delete
-  const deletedGroups = deleteFlashcardAction(groups, 'g1', 'c1');
-  assertEqual(deletedGroups[0].cards.length, 1, 'Soft-deleted card should remain in the array');
-  assertOk(
-    deletedGroups[0].cards[0].deletedAt != null,
-    'Soft-deleted card must have deletedAt set',
-  );
+  describe('deleteFlashcardAction', () => {
+    it('soft-deletes by setting deletedAt', () => {
+      const deletedGroups = deleteFlashcardAction(groups, 'g1', 'c1');
+      expect(deletedGroups[0].cards.length).toBe(1);
+      expect(deletedGroups[0].cards[0].deletedAt).toBeTruthy();
+    });
+  });
 
-  // addFlashcardsBulkAction: timestamps
-  const bulkGroups = addFlashcardsBulkAction(groups, 'g1', [
-    { id: 'c2', pages: ['one', 'two'], srsState: createNewSrsState() },
-  ]);
-  assertEqual(originalGroup.cards.length, 1, 'Bulk add must not mutate the source cards array');
-  assertEqual(bulkGroups[0].cards.length, 2, 'Bulk add should append the new cards');
-  assertOk(
-    (bulkGroups[0].cards[1].contentUpdatedAt ?? 0) > 0,
-    'Bulk-added cards should have contentUpdatedAt set',
-  );
-  assertEqual(
-    bulkGroups[0].cards[1].srsUpdatedAt ?? 1,
-    0,
-    'Bulk-added cards should have srsUpdatedAt = 0',
-  );
+  describe('addFlashcardsBulkAction', () => {
+    it('appends cards with contentUpdatedAt set', () => {
+      const bulkGroups = addFlashcardsBulkAction(groups, 'g1', [
+        { id: 'c2', pages: ['one', 'two'], srsState: createNewSrsState() },
+      ]);
 
-  // reviewCardAction: atomic bundle — stamps srsUpdatedAt, preserves input srsState, bumps heatmap once
-  const reviewSrsState = { ...originalCard.srsState, repetitions: 3 };
-  const reviewInputCard = { ...originalCard, srsState: reviewSrsState };
-  const heatmapBefore: Record<string, number> = {};
-  const reviewResult = reviewCardAction(groups, 'g1', reviewInputCard, heatmapBefore);
+      expect(originalGroup.cards.length).toBe(1);
+      expect(bulkGroups[0].cards.length).toBe(2);
+      expect(bulkGroups[0].cards[1].contentUpdatedAt ?? 0).toBeGreaterThan(0);
+      expect(bulkGroups[0].cards[1].srsUpdatedAt ?? 0).toBe(0);
+    });
+  });
 
-  assertOk(
-    (reviewResult.nextGroups[0].cards[0].srsUpdatedAt ?? 0) > 0,
-    'reviewCardAction should stamp srsUpdatedAt',
-  );
-  assertEqual(
-    reviewResult.nextGroups[0].cards[0].srsState.repetitions,
-    3,
-    'reviewCardAction must preserve the input srsState (computed in session)',
-  );
-  assertEqual(
-    reviewResult.nextHeatmap[reviewResult.todayKey],
-    1,
-    'reviewCardAction should increment today heatmap exactly once',
-  );
-  assertEqual(
-    Object.keys(heatmapBefore).length,
-    0,
-    'reviewCardAction must not mutate the source heatmap',
-  );
+  describe('reviewCardAction', () => {
+    it('stamps srsUpdatedAt, preserves input srsState, bumps heatmap once', () => {
+      const reviewSrsState = { ...originalCard.srsState, repetitions: 3 };
+      const reviewInputCard = { ...originalCard, srsState: reviewSrsState };
+      const heatmapBefore: Record<string, number> = {};
+      const reviewResult = reviewCardAction(groups, 'g1', reviewInputCard, heatmapBefore);
 
-  console.log('Card actions tests passed');
-}
+      expect(reviewResult.nextGroups[0].cards[0].srsUpdatedAt ?? 0).toBeGreaterThan(0);
+      expect(reviewResult.nextGroups[0].cards[0].srsState.repetitions).toBe(3);
+      expect(reviewResult.nextHeatmap[reviewResult.todayKey]).toBe(1);
+      expect(Object.keys(heatmapBefore).length).toBe(0);
+    });
+  });
+});

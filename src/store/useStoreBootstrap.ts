@@ -11,8 +11,18 @@ import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/loc
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
 import { purgeExpiredArchivesAction } from './actions/groupActions';
-import { shouldTriggerMigration, getGuestHasData } from './selectors/migrationLogic';
 import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
+
+export function shouldTriggerMigration(
+  hasUserLocalCache: boolean,
+  guestHasData: boolean,
+): boolean {
+  return !hasUserLocalCache && guestHasData;
+}
+
+export function getGuestHasData(guestData: StoreData | null): boolean {
+  return (guestData?.groups?.length ?? 0) > 0;
+}
 
 interface UseStoreBootstrapParams {
   user: User | null;
