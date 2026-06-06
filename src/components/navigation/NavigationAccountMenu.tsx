@@ -113,18 +113,17 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.touchTarget.min,
   },
   collapsedLogin: {
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     margin: 0,
   },
   collapsedAnchor: {
-    alignSelf: 'center',
-    alignItems: 'center',
+    alignSelf: 'stretch',
     justifyContent: 'center',
-    minWidth: TOKENS.touchTarget.min,
+    paddingLeft: TOKENS.spacing.sm,
   },
   expandedAnchor: {
-    marginHorizontal: TOKENS.spacing.md,
-    paddingHorizontal: TOKENS.spacing.sm,
+    paddingLeft: TOKENS.spacing.sm,
+    paddingRight: TOKENS.spacing.sm,
     justifyContent: 'center',
   },
   anchorContent: {
