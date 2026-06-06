@@ -48,5 +48,7 @@ export function getGridItemWidth(
   columns: number,
   gap: number,
 ): number {
-  return Math.floor(((containerWidth - gap * (columns - 1)) / columns) * 100) / 100;
+  if (columns <= 0) return 0;
+  const width = (containerWidth - gap * (columns - 1)) / columns;
+  return Math.max(0, Math.floor(width * 100) / 100);
 }

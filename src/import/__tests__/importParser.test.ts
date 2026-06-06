@@ -82,6 +82,18 @@ describe('importParser', () => {
     it('keeps extra columns on individual rows', () => {
       expect(parseCSV('a;b\nc;d;e', 'semicolon', 2)).toEqual([['a', 'b'], ['c', 'd', 'e']]);
     });
+
+    it('supports a multi-character custom separator', () => {
+      expect(parseCSV('front::back\nhello::czesc', '::', 2)).toEqual([
+        ['front', 'back'],
+        ['hello', 'czesc'],
+      ]);
+    });
+
+    it('does not split on a partial multi-character separator', () => {
+      // A lone ":" must not break a field when the separator is "::".
+      expect(parseCSV('a:b::c:d', '::', 2)).toEqual([['a:b', 'c:d']]);
+    });
   });
 
   describe('detectPageCount', () => {

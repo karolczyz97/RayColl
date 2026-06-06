@@ -36,7 +36,7 @@ export function AppFloatingActionButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <View style={[styles.content, extended ? styles.contentExtended : styles.contentIconOnly, contentStyle]}>
+      <View style={[styles.content, extended && styles.contentExtended, contentStyle]}>
         <Icon source={icon} size={TOKENS.iconSize.md} color={theme.colors.onPrimaryContainer} />
         {extended ? (
           <Text
@@ -70,7 +70,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contentIconOnly: {},
   contentExtended: {
     flexDirection: 'row',
     gap: TOKENS.spacing.sm,

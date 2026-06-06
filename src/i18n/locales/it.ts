@@ -31,6 +31,8 @@ export const it: Record<string, string> = {
   'dialog.restore.desc': 'Il mazzo "{name}" tornerà alla lista principale.',
   'btn.archive': 'Archivia',
   'btn.restore': 'Ripristina',
+  'common.ok': 'OK',
+  'a11y.profile_menu': 'Apri il menu del profilo utente',
 
   // Dashboard
   'dashboard.no_groups': 'Nessun mazzo trovato. Clicca su + per aggiungerne uno.',

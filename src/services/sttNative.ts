@@ -13,7 +13,7 @@ export class ReactNativeVoiceSttService implements SttService {
     return new Promise((resolve, reject) => {
       let finalResult = '';
 
-      const cleanup = async () => {
+      const cleanup = () => {
         session.cancelTimers();
         Voice.onSpeechStart = () => {};
         Voice.onSpeechEnd = () => {};
@@ -25,7 +25,7 @@ export class ReactNativeVoiceSttService implements SttService {
       const finishWithResult = async (result: string) => {
         if (session.resolved()) return;
         session.setResolved();
-        await cleanup();
+        cleanup();
         options.onListeningStateChange?.(false);
         resolve(result);
       };

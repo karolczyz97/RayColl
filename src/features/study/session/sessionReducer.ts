@@ -50,6 +50,9 @@ export function sessionReducer(
         sttMatchPercent: 0,
       };
     case 'UPDATE_PARTIAL_STT':
+      // Ignore late partial results that arrive after we've left the listening
+      // state (e.g. a zombie web-speech callback firing post-skip/advance).
+      if (state.status !== 'listening') return state;
       return {
         ...state,
         sttResultText: action.text,

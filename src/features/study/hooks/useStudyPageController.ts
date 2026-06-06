@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
-import type { Flashcard } from '@/types/models';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useStudySession } from '@/hooks/useStudySession';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
@@ -35,8 +34,8 @@ export function useStudyPageController() {
   const steps = useMemo(() => mode?.steps || [], [mode]);
 
   const onCardReviewed = useCallback(
-    (activeGroupId: string, card: Flashcard) => {
-      reviewFlashcard(activeGroupId, card);
+    (activeGroupId: string, cardId: string, rating: number) => {
+      reviewFlashcard(activeGroupId, cardId, rating);
     },
     [reviewFlashcard],
   );
@@ -75,7 +74,7 @@ export function useStudyPageController() {
   const handleBack = useCallback(() => {
     if (sessionState.isSessionFinished) {
       stopSession();
-      void flushPersistence();
+      void flushPersistence().catch(() => {});
       setStudyActive(false);
       safeBack();
       return;
@@ -98,14 +97,14 @@ export function useStudyPageController() {
   useEffect(() => {
     return () => {
       stopSession();
-      void flushPersistence();
+      void flushPersistence().catch(() => {});
       setStudyActive(false);
     };
   }, [flushPersistence, setStudyActive, stopSession]);
 
   useEffect(() => {
     if (sessionState.isSessionFinished) {
-      void flushPersistence();
+      void flushPersistence().catch(() => {});
       setStudyActive(false);
     }
   }, [flushPersistence, sessionState.isSessionFinished, setStudyActive]);

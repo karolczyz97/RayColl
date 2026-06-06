@@ -20,7 +20,7 @@ export function createWebPersistenceHandlers(
   getVisibilityState: () => string | undefined,
 ) {
   const flush = () => {
-    void flushPersistence();
+    void flushPersistence().catch(() => {});
   };
 
   return {
@@ -248,13 +248,17 @@ export function useStorePersistence({
       enqueueCloudSnapshot(snapshot, { immediate: true });
     }
 
-    await flushCloudQueue();
+    // Local-first: a cloud failure must not reject flushPersistence — callers such as
+    // sign-out and offline import must still proceed. The error is surfaced via
+    // syncStatus/lastSyncError and the failed snapshot is retained in the queue for
+    // retry. A local write failure already rejected this promise above.
+    await flushCloudQueue().catch(() => {});
   }, [enqueueCloudSnapshot, flushCloudQueue, getSnapshot, persistLocalSnapshot]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active') {
-        void flushPersistence();
+        void flushPersistence().catch(() => {});
       }
     });
 
@@ -283,7 +287,7 @@ export function useStorePersistence({
 
   useEffect(() => {
     return () => {
-      void flushPersistence();
+      void flushPersistence().catch(() => {});
     };
   }, [flushPersistence]);
 

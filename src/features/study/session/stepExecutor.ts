@@ -2,7 +2,7 @@ import type { MutableRefObject } from 'react';
 import type { Flashcard, FlashcardGroup, ModeStep } from '@/types/models';
 import { mapMatchToRating, matchSpeech } from '@/srs/srsEngine';
 import { playErrorSound, playSuccessSound } from '@/services/audioFeedback';
-import type { StudySkipState } from '@/features/study/hooks/useStudyAudio';
+import type { StudySkipState, SpeechRecognitionOutcome } from '@/features/study/hooks/useStudyAudio';
 import type { SessionAction } from './sessionTypes';
 import { getActivePageIndexes, sleep } from './sessionUtils';
 
@@ -15,7 +15,7 @@ interface StepExecutorContext {
   dispatchIfMounted: (action: SessionAction) => void;
   guardedAwait: <T>(promise: Promise<T>) => Promise<T | undefined>;
   playTts: (text: string, lang: string) => Promise<void>;
-  runSpeechRecognition: (lang: string, timeoutMs: number) => Promise<string>;
+  runSpeechRecognition: (lang: string, timeoutMs: number) => Promise<SpeechRecognitionOutcome>;
   processCardReview: (card: Flashcard, rating: number) => void;
   advanceToNextCard: () => Promise<void>;
   markCardFailed: (card: Flashcard) => void;
@@ -77,8 +77,9 @@ async function executeListenAndBranchStep(
   context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex });
   const lang = group.pageLanguages[step.pageIndex] || 'en-US';
   const softTimeout = Math.max(5000, context.lastTtsDurationRef.current * 3);
-  const recognized =
-    (await context.guardedAwait(context.runSpeechRecognition(lang, softTimeout + 10000))) || '';
+  const result = await context.guardedAwait(
+    context.runSpeechRecognition(lang, softTimeout + 10000),
+  );
   context.skipRef.current.armed = false;
 
   if (context.skipRef.current.requested) {
@@ -91,6 +92,19 @@ async function executeListenAndBranchStep(
     return;
   }
 
+  // STT service failed (mic/permission/network) — not a 0% answer. Reveal the card
+  // and hand control to the user for a manual rating; do NOT auto-record a failed
+  // review or bump the activity heatmap.
+  if (!result || result.status === 'error') {
+    context.dispatchIfMounted({
+      type: 'REVEAL_PAGES',
+      revealedPages: getActivePageIndexes(group),
+    });
+    context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
+    return;
+  }
+
+  const recognized = result.text;
   const original = card.pages[step.pageIndex] || '';
   const percent = matchSpeech(recognized, original);
 

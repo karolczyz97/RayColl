@@ -11,6 +11,7 @@ export interface ImportDraftState {
   pageLangs: string[];
   cards: Flashcard[];
   importError: string;
+  errorDismissed: boolean;
   firstRowIsHeader: boolean;
   rawColumnCount: number;
 }
@@ -25,6 +26,7 @@ export type DraftAction =
   | { type: 'SET_PAGE_LANGS'; value: string[] }
   | { type: 'SET_CARDS'; value: Flashcard[] }
   | { type: 'SET_IMPORT_ERROR'; value: string }
+  | { type: 'DISMISS_IMPORT_ERROR' }
   | { type: 'SET_FIRST_ROW_IS_HEADER'; value: boolean }
   | { type: 'SET_RAW_COLUMN_COUNT'; value: number };
 
@@ -39,6 +41,7 @@ export function createInitialDraftState(): ImportDraftState {
     pageLangs: Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''),
     cards: [],
     importError: '',
+    errorDismissed: false,
     firstRowIsHeader: false,
     rawColumnCount: MIN_PAGE_COUNT,
   };
@@ -63,7 +66,11 @@ export function importDraftReducer(state: ImportDraftState, action: DraftAction)
     case 'SET_CARDS':
       return { ...state, cards: action.value };
     case 'SET_IMPORT_ERROR':
-      return { ...state, importError: action.value };
+      // A fresh error (or clearing it) re-arms snackbar visibility. The snackbar's
+      // own dismissal must not clear `importError` and unblock a stale import.
+      return { ...state, importError: action.value, errorDismissed: false };
+    case 'DISMISS_IMPORT_ERROR':
+      return { ...state, errorDismissed: true };
     case 'SET_FIRST_ROW_IS_HEADER':
       return { ...state, firstRowIsHeader: action.value };
     case 'SET_RAW_COLUMN_COUNT':

@@ -19,7 +19,10 @@ function StudyPageContent() {
   const pendingSystemBackRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: {
+      preventDefault: () => void;
+      data: { action: Parameters<typeof navigation.dispatch>[0] };
+    }) => {
       if (!isStudyActive) return;
       e.preventDefault();
       pendingSystemBackRef.current = () => navigation.dispatch(e.data.action);

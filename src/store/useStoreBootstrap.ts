@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
-import type { FlashcardGroup, StudyMode, StoreData } from '@/types/models';
+import type { FlashcardGroup, StudyMode, StoreData, ModeStep } from '@/types/models';
 import { onAuthChange } from '@/services/firebase';
 import { loadCloudData } from './persistence/firebasePersistence';
 import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
+import { deepEqual } from '@/utils/deepEqual';
 import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
@@ -20,8 +21,27 @@ export function shouldTriggerMigration(
   return !hasUserLocalCache && guestHasData;
 }
 
+function stepsWithoutIds(steps: ModeStep[]): Omit<ModeStep, 'id'>[] {
+  return steps.map(({ id: _id, ...rest }) => rest);
+}
+
+/** A custom mode, or a built-in whose name/steps the user edited, counts as data. */
+function isUserAuthoredMode(mode: StudyMode): boolean {
+  if (!mode.isBuiltIn) return true;
+  const sourceId = mode.builtInSourceId ?? mode.id;
+  const seed = createSeedModes().find(
+    (seedMode) => (seedMode.builtInSourceId ?? seedMode.id) === sourceId,
+  );
+  if (!seed) return true;
+  // Step ids are generated during normalization, so compare without them.
+  return mode.name !== seed.name || !deepEqual(stepsWithoutIds(mode.steps), stepsWithoutIds(seed.steps));
+}
+
 export function getGuestHasData(guestData: StoreData | null): boolean {
-  return (guestData?.groups?.length ?? 0) > 0;
+  if (!guestData) return false;
+  if ((guestData.groups?.length ?? 0) > 0) return true;
+  if (Object.keys(guestData.activityHeatmap ?? {}).length > 0) return true;
+  return (guestData.studyModes ?? []).some(isUserAuthoredMode);
 }
 
 interface UseStoreBootstrapParams {
@@ -70,6 +90,7 @@ export function useStoreBootstrap({
       cloudSynced: boolean,
       cloudLoadFailed: boolean,
     ) {
+      const hadNoLocalGroups = groups.length === 0;
       if (seedVer < SEED_VERSION) {
         if (seedVer === 0 && groups.length === 0) {
           groups = createSeedGroups();
@@ -99,6 +120,13 @@ export function useStoreBootstrap({
           ...(cloudSynced ? { lastSyncedAt: Date.now() } : {}),
         });
         applySnapshot(snapshot);
+        // A signed-in user whose cloud load FAILED and who has no local data is shown
+        // seed decks only as an ephemeral fallback. Persisting them as the user's
+        // local cache would shadow the real (unreachable) cloud data and risk
+        // duplicate seeds on the next successful merge — keep them in memory only.
+        if (cloudLoadFailed && uid !== null && hadNoLocalGroups) {
+          return;
+        }
         if (cloudLoadFailed) {
           // Best-effort local fallback: keep the cloud failure visible via
           // lastSyncError/lastStoreError instead of clearing it here.
@@ -134,12 +162,14 @@ export function useStoreBootstrap({
         let cloudData: StoreData | null = null;
         try {
           cloudData = await loadCloudData(targetUid);
-          setLastSyncError(null);
+          if (active) setLastSyncError(null);
         } catch (err) {
           cloudLoadFailed = true;
-          const message = getErrorMessage(err);
-          setLastSyncError(message);
-          setLastStoreError(message);
+          if (active) {
+            const message = getErrorMessage(err);
+            setLastSyncError(message);
+            setLastStoreError(message);
+          }
         }
 
         if (cloudData) {
@@ -157,7 +187,7 @@ export function useStoreBootstrap({
           // cloudData == null — NEW ACCOUNT
           if (loadedGroups.length === 0) {
             const guestData = await loadLocalData();
-            if (shouldTriggerMigration(false, getGuestHasData(guestData))) {
+            if (active && shouldTriggerMigration(false, getGuestHasData(guestData))) {
               setMigrationPending(true);
               setPendingGuestSnapshot(guestData);
               return;

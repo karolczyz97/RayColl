@@ -154,19 +154,17 @@ describe('useStoreActionsCore persistence behavior', () => {
 
   it('reviews a flashcard through one combined groups+heatmap commit in study cloud mode', () => {
     const { actions, mocks, refs } = renderStoreActions();
-    const reviewedCard = {
-      ...refs.groupsRef.current[0].cards[0],
-      srsState: { ...refs.groupsRef.current[0].cards[0].srsState, repetitions: 1 },
-    };
+    const storedCard = refs.groupsRef.current[0].cards[0];
 
     act(() => {
-      actions.reviewFlashcard('group-1', reviewedCard);
+      actions.reviewFlashcard('group-1', storedCard.id, 3);
     });
 
     expect(mocks.commitGroupsAndHeatmap).toHaveBeenCalledTimes(1);
     const [nextGroups, nextHeatmap, options] = mocks.commitGroupsAndHeatmap.mock.calls[0];
     expect(options).toEqual({ cloudMode: 'study' });
-    expect(nextGroups[0].cards[0].srsState.repetitions).toBe(1);
+    // FSRS is recomputed on the stored card (id + rating), not on a passed-in object.
+    expect(nextGroups[0].cards[0].srsState.repetitions).toBe(storedCard.srsState.repetitions + 1);
     expect(nextGroups[0].cards[0].srsUpdatedAt ?? 0).toBeGreaterThan(0);
     expect(nextHeatmap['2026-06-05']).toBe(1);
   });
@@ -259,18 +257,23 @@ describe('useStoreActionsCore persistence behavior', () => {
     expect(mocks.persistNow).not.toHaveBeenCalled();
   });
 
-  it('surfaces critical group op persistence failures without throwing from fire-and-forget callers', async () => {
+  it('rolls back and rejects when a critical group op fails to persist', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    const { actions, mocks } = renderStoreActions();
+    const { actions, mocks, refs } = renderStoreActions();
+    const originalGroups = refs.groupsRef.current;
     mocks.flushPersistence.mockRejectedValue(new Error('flush failed'));
 
-    await expect(actions.deleteGroup('group-1')).resolves.toBeUndefined();
-    await expect(actions.archiveGroup('group-1')).resolves.toBeUndefined();
-    await expect(actions.restoreGroup('group-1')).resolves.toBeUndefined();
+    await expect(actions.deleteGroup('group-1')).rejects.toThrow('flush failed');
 
+    // The optimistic change was rolled back to the original groups reference.
+    expect(refs.groupsRef.current).toBe(originalGroups);
     expect(mocks.setSyncStatus).toHaveBeenCalledWith('error');
     expect(mocks.setLastPersistenceError).toHaveBeenCalledWith('flush failed');
     expect(mocks.setLastStoreError).toHaveBeenCalledWith('flush failed');
     expect(errorSpy).toHaveBeenCalledWith('Critical group op persistence failed:', expect.any(Error));
+
+    await expect(actions.archiveGroup('group-1')).rejects.toThrow('flush failed');
+    await expect(actions.restoreGroup('group-1')).rejects.toThrow('flush failed');
+    expect(refs.groupsRef.current).toBe(originalGroups);
   });
 });

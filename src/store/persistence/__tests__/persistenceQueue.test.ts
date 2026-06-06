@@ -80,15 +80,17 @@ describe('persistenceQueue', () => {
     expect(sequenceSnapshots).toEqual(['first', 'third']);
   });
 
-  it('invokes onError on failed flush and onSynced on subsequent success', async () => {
+  it('rejects and invokes onError on a failed flush, then syncs a newer snapshot', async () => {
     let shouldFail = true;
     let errorCount = 0;
     let syncedCount = 0;
+    const persisted: string[] = [];
 
     const controller = createPersistenceQueueController({
       delayMs: 10,
       callbacksRef: makeCallbacksRef({
-        persistNow: async () => {
+        persistNow: async (snapshot: PersistenceSnapshot) => {
+          persisted.push(snapshot.groups[0]?.id ?? 'none');
           if (shouldFail) throw new Error('cloud down');
         },
         onError: () => { errorCount += 1; },
@@ -96,15 +98,37 @@ describe('persistenceQueue', () => {
       }),
     });
 
-    controller.enqueue(makeSnapshot('e1'), { immediate: true });
-    await controller.flush();
+    controller.enqueue(makeSnapshot('e1'));
+    await expect(controller.flush()).rejects.toThrow('cloud down');
     expect(errorCount).toBe(1);
     expect(syncedCount).toBe(0);
 
     shouldFail = false;
-    controller.enqueue(makeSnapshot('e2'), { immediate: true });
+    controller.enqueue(makeSnapshot('e2'));
     await controller.flush();
     expect(syncedCount).toBe(1);
-    expect(errorCount).toBe(1);
+    expect(persisted.at(-1)).toBe('e2');
+  });
+
+  it('retries the same retained snapshot when no newer one is enqueued', async () => {
+    let attempts = 0;
+    const persisted: string[] = [];
+
+    const controller = createPersistenceQueueController({
+      delayMs: 10,
+      callbacksRef: makeCallbacksRef({
+        persistNow: async (snapshot: PersistenceSnapshot) => {
+          attempts += 1;
+          if (attempts === 1) throw new Error('transient');
+          persisted.push(snapshot.groups[0]?.id ?? 'none');
+        },
+      }),
+    });
+
+    controller.enqueue(makeSnapshot('retry-me'));
+    await expect(controller.flush()).rejects.toThrow('transient');
+    await controller.flush(); // no re-enqueue: retained snapshot is retried
+    expect(attempts).toBe(2);
+    expect(persisted).toEqual(['retry-me']);
   });
 });

@@ -96,7 +96,7 @@ export function FlashcardListItem({
               value={viewHidden}
               onValueChange={setViewHidden}
               style={styles.switch}
-              accessibilityLabel="Toggle viewing hidden pages"
+              accessibilityLabel={t('browse.show_hidden_pages')}
             />
           </View>
         )}
@@ -139,14 +139,14 @@ export function FlashcardListItem({
               size={TOKENS.iconSize.sm}
               iconColor={theme.colors.primary}
               onPress={onStartEdit}
-              accessibilityLabel="Edit card"
+              accessibilityLabel={t('browse.edit_card')}
             />
             <IconButton
               icon="delete"
               size={TOKENS.iconSize.sm}
               iconColor={theme.colors.error}
               onPress={onDelete}
-              accessibilityLabel="Delete card"
+              accessibilityLabel={t('browse.delete_card')}
             />
           </View>
         )}

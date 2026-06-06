@@ -28,7 +28,10 @@ export function hexToRgba(color: string, alpha: number): string {
     const [, red, green, blue, sourceAlpha] = rgbaMatch;
     const parsedSourceAlpha = sourceAlpha === undefined ? 1 : Number(sourceAlpha);
     const adjustedAlpha = clamp(parsedSourceAlpha * finalAlpha, 0, 1);
-    return `rgba(${red}, ${green}, ${blue}, ${adjustedAlpha})`;
+    const r = clamp(Number(red), 0, 255);
+    const g = clamp(Number(green), 0, 255);
+    const b = clamp(Number(blue), 0, 255);
+    return `rgba(${r}, ${g}, ${b}, ${adjustedAlpha})`;
   }
 
   return `rgba(0, 0, 0, ${finalAlpha})`;

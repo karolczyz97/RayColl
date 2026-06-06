@@ -183,7 +183,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
           icon="archive-arrow-down-outline"
           iconColor={topBarFg}
           onPress={() => setArchiveDialogOpen(true)}
-          accessibilityLabel="Archive deck"
+          accessibilityLabel={t('settings.archive_btn')}
         />
       }
       maxWidth={responsiveLayout.contentMaxWidth}
@@ -277,11 +277,5 @@ const styles = StyleSheet.create({
   reorderButton: {
     alignSelf: 'flex-start',
     marginTop: TOKENS.spacing.sm,
-  },
-  reorderDialog: {
-    maxHeight: '90%',
-  },
-  reorderContent: {
-    minWidth: TOKENS.layout.actionMaxWidth,
   },
 });

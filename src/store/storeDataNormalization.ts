@@ -101,7 +101,11 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
   return {
     id: mode.id,
     name: mode.name,
-    steps: mode.steps.map((step) => (step.id ? step : { ...step, id: uid() })),
+    // Guard against corrupt/legacy records where `steps` isn't an array; an empty
+    // list is normalized rather than crashing the whole load.
+    steps: (Array.isArray(mode.steps) ? mode.steps : []).map((step) =>
+      step.id ? step : { ...step, id: uid() },
+    ),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,

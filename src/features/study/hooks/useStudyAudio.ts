@@ -15,6 +15,15 @@ export interface StudySkipState {
   signalResolve: () => void;
 }
 
+/**
+ * Distinguishes a recognized utterance (even an empty one, which is a legitimate
+ * 0% answer) from a speech-service failure (mic/permission/network), so the caller
+ * can fail the card on the former but offer a manual rating on the latter.
+ */
+export type SpeechRecognitionOutcome =
+  | { status: 'ok'; text: string }
+  | { status: 'error' };
+
 export function useStudyAudio(
   dispatchIfMounted: (action: SessionAction) => void,
   ttsRateRef: MutableRefObject<number>,
@@ -26,8 +35,12 @@ export function useStudyAudio(
     armed: false,
     signalResolve: () => {},
   });
+  // Bumped whenever a recognition run starts or audio is stopped/skipped, so we can
+  // discard partial-result callbacks that belong to a previous (zombie) run.
+  const sttTokenRef = useRef(0);
 
   const stopAudio = useCallback(() => {
+    sttTokenRef.current += 1;
     ttsService.cancel();
     void sttServiceRef.current.stopListening().catch(() => {});
   }, []);
@@ -47,24 +60,28 @@ export function useStudyAudio(
   );
 
   const runSpeechRecognition = useCallback(
-    async (lang: string, timeoutMs: number) => {
+    async (lang: string, timeoutMs: number): Promise<SpeechRecognitionOutcome> => {
+      const token = (sttTokenRef.current += 1);
       playMicOnSound();
-      let recognized = '';
       try {
-        recognized = await sttServiceRef.current.startListening({
+        const text = await sttServiceRef.current.startListening({
           language: lang,
           timeoutMs,
-          onPartialResult: (text) =>
-            dispatchIfMounted({ type: 'UPDATE_PARTIAL_STT', text }),
+          onPartialResult: (partial) => {
+            // Drop partials from a superseded/cancelled run (zombie callback).
+            if (token !== sttTokenRef.current) return;
+            dispatchIfMounted({ type: 'UPDATE_PARTIAL_STT', text: partial });
+          },
           onListeningStateChange: (listening) => {
             if (!listening) playMicOffSound();
           },
         });
+        return { status: 'ok', text };
       } catch (err) {
         console.error('STT Listen Error:', getErrorMessage(err));
         dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.stt' });
+        return { status: 'error' };
       }
-      return recognized;
     },
     [dispatchIfMounted],
   );
@@ -73,6 +90,7 @@ export function useStudyAudio(
     const skip = skipRef.current;
     if (!skip.armed) return;
     skip.requested = true;
+    sttTokenRef.current += 1;
     ttsService.cancel();
     void sttServiceRef.current.stopListening().catch(() => {});
     skip.signalResolve();

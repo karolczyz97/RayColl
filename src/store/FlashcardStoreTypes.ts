@@ -43,7 +43,7 @@ export interface FlashcardStore {
   addFlashcard: (groupId: string, pages: string[]) => string;
   updateFlashcard: (groupId: string, card: Flashcard) => void;
   deleteFlashcard: (groupId: string, cardId: string) => void;
-  reviewFlashcard: (groupId: string, card: Flashcard) => void;
+  reviewFlashcard: (groupId: string, cardId: string, rating: number) => void;
   addStudyMode: (mode: StudyMode) => void;
   updateStudyMode: (mode: StudyMode) => void;
   deleteStudyMode: (modeId: string) => void;

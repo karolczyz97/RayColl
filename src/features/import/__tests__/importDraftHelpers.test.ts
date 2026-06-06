@@ -1,6 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 
 import {
+  buildImportSyncKey,
   getHeaderRowFromText,
   getPreviewRows,
   replaceHeaderRowInText,
@@ -52,6 +53,27 @@ describe('importDraftHelpers', () => {
       expect(
         serializeImportSourceText([['hello', 'czesc']], 'semicolon', 2, true, ['Phrase', 'Translation']),
       ).toBe('Phrase;Translation\nhello;czesc');
+    });
+  });
+
+  describe('buildImportSyncKey', () => {
+    it('changes when text content changes even at the same length', () => {
+      const a = buildImportSyncKey('ab\ncd', 'comma', 2, false);
+      const b = buildImportSyncKey('ba\ncd', 'comma', 2, false);
+      expect(a).not.toBe(b);
+    });
+
+    it('is stable for identical inputs', () => {
+      expect(buildImportSyncKey('ab', 'comma', 2, false)).toBe(
+        buildImportSyncKey('ab', 'comma', 2, false),
+      );
+    });
+
+    it('changes when sep, pageCount, or header flag changes', () => {
+      const base = buildImportSyncKey('ab', 'comma', 2, false);
+      expect(buildImportSyncKey('ab', 'semicolon', 2, false)).not.toBe(base);
+      expect(buildImportSyncKey('ab', 'comma', 3, false)).not.toBe(base);
+      expect(buildImportSyncKey('ab', 'comma', 2, true)).not.toBe(base);
     });
   });
 });

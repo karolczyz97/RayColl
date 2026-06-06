@@ -118,4 +118,28 @@ describe('backupValidation', () => {
     );
   });
 
+  it('throws on non-string card pages', () => {
+    const bad = makeValidBackup();
+    (bad.groups[0].cards[0].pages as unknown[])[0] = 123;
+    expect(() => validateBackupData(bad)).toThrow('must have string pages');
+  });
+
+  it('throws on a non-finite srsState number (Infinity)', () => {
+    const bad = makeValidBackup();
+    (bad.groups[0].cards[0].srsState as unknown as Record<string, unknown>).stability = Infinity;
+    expect(() => validateBackupData(bad)).toThrow();
+  });
+
+  it('throws on successThreshold above 100', () => {
+    const bad = makeValidBackup();
+    bad.studyModes[0].steps.push({ type: 'listen_and_branch', pageIndex: 0, successThreshold: 150 });
+    expect(() => validateBackupData(bad)).toThrow('successThreshold');
+  });
+
+  it('throws on a negative activity heatmap count', () => {
+    const bad = makeValidBackup();
+    bad.activityHeatmap['2025-01-02'] = -3;
+    expect(() => validateBackupData(bad)).toThrow();
+  });
+
 });

@@ -49,6 +49,8 @@ export function createPersistenceQueueController({
   const flush = async () => {
     clearTimer();
 
+    let flushError: unknown = null;
+
     const run = async () => {
       while (pendingSnapshot && !isDisposed) {
         const snapshot = pendingSnapshot;
@@ -62,28 +64,43 @@ export function createPersistenceQueueController({
             callbacksRef.current.onSynced?.();
           }
         } catch (error) {
+          // Keep the failed snapshot so the next flush retries it, unless a newer
+          // snapshot was enqueued while this one was in flight (the newer one wins).
+          if (pendingSnapshot === null) {
+            pendingSnapshot = snapshot;
+          }
           if (!isDisposed) {
             callbacksRef.current.onError?.(error);
           }
+          flushError = error;
+          return;
         }
       }
     };
 
     sequence = sequence.then(run, run);
     await sequence;
+
+    // Propagate so awaiting callers learn the cloud write failed (the snapshot is
+    // retained above for the next retry).
+    if (flushError) {
+      throw flushError;
+    }
   };
 
   const enqueue = (snapshot: PersistenceSnapshot, options?: { immediate?: boolean }) => {
     pendingSnapshot = snapshot;
 
     if (options?.immediate) {
-      void flush();
+      // Fire-and-forget path: errors surface via onError; swallow the rejection so
+      // it doesn't become unhandled. Awaiting callers use flush() directly.
+      void flush().catch(() => {});
       return;
     }
 
     clearTimer();
     timer = setTimeout(() => {
-      void flush();
+      void flush().catch(() => {});
     }, delayMs);
   };
 

@@ -12,7 +12,7 @@ import { useStudyReviewFlow } from '@/features/study/hooks/useStudyReviewFlow';
 export function useStudySession(
   group: FlashcardGroup | null,
   steps: ModeStep[],
-  onCardReviewed: (groupId: string, card: Flashcard) => void,
+  onCardReviewed: (groupId: string, cardId: string, rating: number) => void,
 ) {
   const [state, dispatch] = useReducer(sessionReducer, INITIAL_STUDY_SESSION_STATE);
   const { ttsRate } = useAppTheme();

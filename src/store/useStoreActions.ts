@@ -209,18 +209,24 @@ export function useStoreActionsCore({
     [commitGroups, groupsRef],
   );
 
-  // Immediate group ops are invoked fire-and-forget from screens. A failed flush
-  // must not produce an unhandled rejection; surface it through store error state.
+  // Critical group ops (delete/archive/restore) persist immediately. If the local
+  // write fails, roll the optimistic change back so UI and storage stay consistent,
+  // surface the error, and rethrow so navigating callers can stay put on failure.
   const commitGroupsImmediate = useCallback(
     async (next: FlashcardGroup[]) => {
+      const previousGroups = groupsRef.current;
       groupsRef.current = next;
       setGroups(next);
       try {
         await flushPersistence();
       } catch (err) {
+        groupsRef.current = previousGroups;
+        setGroups(previousGroups);
+        void flushPersistence().catch(() => {});
         const message = getErrorMessage(err);
         setStoreError(message);
         console.error('Critical group op persistence failed:', err);
+        throw err;
       }
     },
     [flushPersistence, groupsRef, setGroups, setStoreError],
@@ -295,11 +301,12 @@ export function useStoreActionsCore({
   );
 
   const reviewFlashcard = useCallback(
-    (groupId: string, card: Flashcard) => {
+    (groupId: string, cardId: string, rating: number) => {
       const { nextGroups, nextHeatmap } = reviewCardAction(
         groupsRef.current,
         groupId,
-        card,
+        cardId,
+        rating,
         heatmapRef.current,
       );
 

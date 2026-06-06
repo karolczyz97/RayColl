@@ -138,11 +138,17 @@ export function useDeckSettingsController() {
     closeCreateModeDialog();
   };
 
-  const handleArchiveGroup = () => {
+  const handleArchiveGroup = async () => {
     if (!activeGroup) return;
-    store.archiveGroup(activeGroup.id);
     setArchiveDialogOpen(false);
-    safeBack();
+    try {
+      await store.archiveGroup(activeGroup.id);
+      safeBack();
+    } catch {
+      // Persist failed and the archive was rolled back; the error is surfaced via
+      // store state. Stay on the screen so the user can retry instead of navigating
+      // away from a deck that is still present.
+    }
   };
 
   return {

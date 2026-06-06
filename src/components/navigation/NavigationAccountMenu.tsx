@@ -63,7 +63,7 @@ export function NavigationAccountMenu({
             styles.anchor,
             expanded ? styles.expandedAnchor : styles.collapsedAnchor,
           ]}
-          accessibilityLabel="Open user profile menu"
+          accessibilityLabel={t('a11y.profile_menu')}
           accessibilityState={{ expanded: visible }}
         >
           <View style={styles.anchorContent}>

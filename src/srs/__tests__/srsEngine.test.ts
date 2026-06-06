@@ -63,6 +63,13 @@ describe('srsEngine', () => {
     it('empty match', () => {
       expect(matchSpeech('', '')).toBe(100);
     });
+
+    it('does not penalize extra recognized words (documents current tolerance)', () => {
+      // Word similarity scores each *expected* word against its best match and ignores
+      // surplus recognized words, so trailing extra words keep a full match. Changing
+      // this scoring is a product decision; this test pins the current behavior.
+      expect(matchSpeech('hello world and then some', 'hello world')).toBe(100);
+    });
   });
 
   describe('mapMatchToRating', () => {
@@ -159,6 +166,16 @@ describe('pageConfig', () => {
       expect(normalized.groups[0].activePageCount).toBe(5);
       expect(normalized.groups[0].pageNames.length).toBe(6);
       expect(normalized.groups[0].pageLanguages.length).toBe(6);
+    });
+
+    it('does not crash when a study mode has non-array steps', () => {
+      const result = normalizeStoreData({
+        groups: [],
+        studyModes: [{ id: 'custom-broken', name: 'Broken', steps: null }],
+        activityHeatmap: {},
+      } as unknown as Parameters<typeof normalizeStoreData>[0]);
+      const broken = result.studyModes.find((mode) => mode.id === 'custom-broken');
+      expect(broken?.steps).toEqual([]);
     });
 
     it('preserves edited built-in mode name but marks isBuiltIn', () => {

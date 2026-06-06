@@ -21,6 +21,19 @@ function isEqual(a: unknown, b: unknown): boolean {
   return deepEqual(a, b);
 }
 
+/**
+ * Drops the in-memory diff baseline. Call on sign-out (and migration cancel) so a
+ * later session does a fresh full load instead of diffing against another user's
+ * (or a stale) snapshot. Pass a userId to clear one entry, or omit to clear all.
+ */
+export function clearCloudSnapshotCache(userId?: string): void {
+  if (userId) {
+    cloudSnapshotCache.delete(userId);
+  } else {
+    cloudSnapshotCache.clear();
+  }
+}
+
 // Eventual consistency: individual entity saves are not batched. If a mid-loop
 // save fails, previously saved entities remain on the server. The cache is only
 // updated on full success, so the next diff-save retries the same target state.

@@ -28,4 +28,11 @@ describe('gridLayout', () => {
     expect(getGridColumns(884, 8, TOKENS.layout.minCardWidth, TOKENS.layout.maxCols, gap)).toBe(3);
     expect(getGridItemWidth(884, 3, gap)).toBe(280);
   });
+
+  it('never returns a negative or NaN item width', () => {
+    // Container narrower than the inter-column gaps would otherwise go negative.
+    expect(getGridItemWidth(10, 3, 50)).toBe(0);
+    // Defensive: zero columns must not divide-by-zero into Infinity/NaN.
+    expect(getGridItemWidth(100, 0, 16)).toBe(0);
+  });
 });

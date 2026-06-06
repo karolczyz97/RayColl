@@ -28,7 +28,7 @@ export function readNextField(text: string, startPos: number, sep: string): { fi
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === sep && !inQuotes) {
+    } else if (!inQuotes && sep && text.startsWith(sep, i)) {
       break;
     } else if (char === '\n' && !inQuotes) {
       break;
@@ -46,6 +46,9 @@ export function resolveSep(keyOrChar: string): string {
 export function parseFullText(text: string, sep: string): string[][] {
   const rows: string[][] = [];
   let currentRow: string[] = [];
+  // Separators may be multiple characters (e.g. a custom "::"); advance past the
+  // whole match, not a single char. Falls back to 1 to avoid a zero-length step.
+  const sepLen = sep.length || 1;
   let pos = 0;
 
   while (pos < text.length) {
@@ -59,8 +62,10 @@ export function parseFullText(text: string, sep: string): string[][] {
         rows.push(currentRow);
       }
       currentRow = [];
+      pos = nextPos + 1;
+    } else {
+      pos = nextPos + sepLen;
     }
-    pos = nextPos + 1;
   }
 
   if (currentRow.some((f) => f.trim())) {

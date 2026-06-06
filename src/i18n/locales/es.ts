@@ -31,6 +31,8 @@ export const es: Record<string, string> = {
   'dialog.restore.desc': 'El mazo "{name}" volverá a la lista principal.',
   'btn.archive': 'Archivar',
   'btn.restore': 'Restaurar',
+  'common.ok': 'OK',
+  'a11y.profile_menu': 'Abrir el menú de perfil de usuario',
 
   // Dashboard
   'dashboard.no_groups': 'No se encontraron barajas. Haz clic en + para añadir una.',

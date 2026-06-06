@@ -130,9 +130,9 @@ export function ImportScreen() {
       />
 
       <AppSnackbar
-        visible={!!draft.importError}
+        visible={!!draft.importError && !draft.errorDismissed}
         message={draft.importError ? t(draft.importError, { max: MAX_STORED_PAGE_COUNT }) : ''}
-        onDismiss={() => draft.setImportError('')}
+        onDismiss={draft.dismissImportError}
       />
     </AppScreen>
   );

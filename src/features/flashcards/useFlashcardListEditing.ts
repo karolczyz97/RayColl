@@ -69,7 +69,6 @@ export function useFlashcardListEditing({
 
   return {
     editingId,
-    setEditingId,
     editPages,
     setEditPages,
     deleteCardId,

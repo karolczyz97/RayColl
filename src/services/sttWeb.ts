@@ -47,6 +47,26 @@ export class WebSttService implements SttService {
     return getWebSpeechRecognition() !== undefined;
   }
 
+  /**
+   * Detaches callbacks and stops the currently-attached recognition, if any.
+   * Detaching before stop() prevents re-entering our own handlers, and clearing the
+   * reference avoids a zombie session holding the microphone after we move on.
+   */
+  private stopActiveRecognition() {
+    const active = this.recognition;
+    if (!active) return;
+    active.onstart = null;
+    active.onresult = null;
+    active.onend = null;
+    active.onerror = null;
+    try {
+      active.stop();
+    } catch {
+      // stop() can throw if recognition never started; safe to ignore.
+    }
+    this.recognition = null;
+  }
+
   startListening(options: SttOptions): Promise<string> {
     return new Promise((resolve, reject) => {
       const SpeechRec = getWebSpeechRecognition();
@@ -55,11 +75,15 @@ export class WebSttService implements SttService {
         return;
       }
 
-      this.recognition = new SpeechRec() as ISpeechRecognition;
-      this.recognition.lang = options.language;
-      this.recognition.interimResults = true;
-      this.recognition.maxAlternatives = 1;
-      this.recognition.continuous = true;
+      // Kill any previous session still holding the mic before starting a new one.
+      this.stopActiveRecognition();
+
+      const recognition = new SpeechRec() as ISpeechRecognition;
+      this.recognition = recognition;
+      recognition.lang = options.language;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.continuous = true;
 
       const finalResults = new Map<number, string>();
       let lastInterimResult = '';
@@ -70,10 +94,27 @@ export class WebSttService implements SttService {
           .map(([, text]) => text)
           .join(' ');
 
+      const teardown = () => {
+        recognition.onstart = null;
+        recognition.onresult = null;
+        recognition.onend = null;
+        recognition.onerror = null;
+        try {
+          recognition.stop();
+        } catch {
+          // Already stopped/ended; ignore.
+        }
+        // Only clear the shared reference if a newer session hasn't replaced it.
+        if (this.recognition === recognition) {
+          this.recognition = null;
+        }
+      };
+
       const finishWithResult = () => {
         if (session.resolved()) return;
         session.setResolved();
         session.cancelTimers();
+        teardown();
         options.onListeningStateChange?.(false);
         resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));
       };
@@ -85,9 +126,9 @@ export class WebSttService implements SttService {
         () => finishWithResult(),
       );
 
-      this.recognition.onstart = () => options.onListeningStateChange?.(true);
+      recognition.onstart = () => options.onListeningStateChange?.(true);
 
-      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const interimParts: string[] = [];
         let hasFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -112,14 +153,15 @@ export class WebSttService implements SttService {
         }
       };
 
-      this.recognition.onend = () => {
+      recognition.onend = () => {
         finishWithResult();
       };
 
-      this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (session.resolved()) return;
-        session.cancelTimers();
         session.setResolved();
+        session.cancelTimers();
+        teardown();
         options.onListeningStateChange?.(false);
         if (event.error === 'no-speech' || event.error === 'aborted') {
           resolve(combineRecognizedText(getFinalResultText(), lastInterimResult));
@@ -128,7 +170,7 @@ export class WebSttService implements SttService {
         }
       };
 
-      this.recognition.start();
+      recognition.start();
     });
   }
 

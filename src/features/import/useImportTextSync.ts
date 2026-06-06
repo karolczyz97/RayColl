@@ -6,7 +6,7 @@ import {
   detectPageCount,
 } from '@/import/importParser';
 import { MAX_STORED_PAGE_COUNT, MIN_PAGE_COUNT } from '@/constants/pages';
-import { getHeaderRowFromText } from './importDraftHelpers';
+import { buildImportSyncKey, getHeaderRowFromText } from './importDraftHelpers';
 import {
   buildCardsFromText,
   detectTextProperties,
@@ -108,7 +108,12 @@ export function useImportTextSync({
 
   const syncDraftFromText = useCallback(
     (text: string, currentSepKey: string, currentPageCount: number) => {
-      const syncKey = `${text.length}|${currentSepKey}|${currentPageCount}|${firstRowIsHeaderRef.current ? '1' : '0'}`;
+      const syncKey = buildImportSyncKey(
+        text,
+        currentSepKey,
+        currentPageCount,
+        firstRowIsHeaderRef.current,
+      );
       if (syncKey === lastSyncedKeyRef.current) return;
       lastSyncedKeyRef.current = syncKey;
 
@@ -190,7 +195,10 @@ export function useImportTextSync({
       const { detectedSep, detectedCount } = detectTextProperties(safeText);
 
       if (detectedCount > MAX_STORED_PAGE_COUNT) {
+        // Block import and clear any stale preview so over-wide data can't be
+        // imported behind the error.
         dispatch({ type: 'SET_IMPORT_ERROR', value: 'import.err.too_many_columns' });
+        dispatch({ type: 'SET_CARDS', value: [] });
         return;
       }
 

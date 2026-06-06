@@ -2,11 +2,12 @@ import React from 'react';
 import { describe, it, jest, expect, beforeEach } from '@jest/globals';
 import { render, waitFor } from '@testing-library/react-native';
 import type { User } from 'firebase/auth';
-import type { StoreData, FlashcardGroup } from '@/types/models';
+import type { StoreData, FlashcardGroup, StudyMode } from '@/types/models';
 import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
-import { useStoreBootstrap } from '../useStoreBootstrap';
+import { useStoreBootstrap, getGuestHasData } from '../useStoreBootstrap';
 import { loadCloudData } from '../persistence/firebasePersistence';
 import { getSeedVersion, loadLocalData } from '../persistence/localPersistence';
+import { createSeedModes } from '../seed/seedModes';
 
 jest.mock('@/services/firebase', () => ({
   onAuthChange: jest.fn(() => () => {}),
@@ -144,5 +145,77 @@ describe('useStoreBootstrap data flow', () => {
     expect(mocks.applySnapshot).not.toHaveBeenCalled();
     expect(mocks.persistNow).not.toHaveBeenCalled();
     expect(mocks.setIsLoading).toHaveBeenCalledWith(false);
+  });
+
+  it('does not cache seed decks for a signed-in user when cloud load fails with no local data', async () => {
+    const mocks = createMocks();
+    jest.mocked(loadLocalData).mockResolvedValue(null);
+    jest.mocked(loadCloudData).mockRejectedValue(new Error('offline'));
+
+    render(<Harness user={{ uid: 'user-1' } as User} mocks={mocks} />);
+
+    await waitFor(() => {
+      expect(mocks.setIsLoading).toHaveBeenCalledWith(false);
+    });
+
+    // Seeds are shown ephemerally but never persisted as the user's local cache.
+    expect(mocks.applySnapshot).toHaveBeenCalledTimes(1);
+    expect(mocks.persistLocalSnapshot).not.toHaveBeenCalled();
+    expect(mocks.persistNow).not.toHaveBeenCalled();
+    expect(mocks.setLastStoreError).toHaveBeenCalledWith('offline');
+  });
+
+  it('triggers migration when the guest has only activity history (no decks)', async () => {
+    const mocks = createMocks();
+    const guestData: StoreData = { groups: [], studyModes: [], activityHeatmap: { '2025-01-01': 2 } };
+    jest.mocked(loadLocalData).mockImplementation(
+      async (uid?: string): Promise<StoreData | null> => (uid ? makeLocalData([]) : guestData),
+    );
+    jest.mocked(loadCloudData).mockResolvedValue(null);
+
+    render(<Harness user={{ uid: 'user-1' } as User} mocks={mocks} />);
+
+    await waitFor(() => {
+      expect(mocks.setMigrationPending).toHaveBeenCalledWith(true);
+    });
+    expect(mocks.setPendingGuestSnapshot).toHaveBeenCalledWith(guestData);
+  });
+});
+
+function makeMode(over: Partial<StudyMode> & Pick<StudyMode, 'id' | 'name'>): StudyMode {
+  return { isBuiltIn: false, steps: [{ type: 'rate' }], ...over };
+}
+
+describe('getGuestHasData', () => {
+  it('returns false for null or empty guest data', () => {
+    expect(getGuestHasData(null)).toBe(false);
+    expect(getGuestHasData({ groups: [], studyModes: [], activityHeatmap: {} })).toBe(false);
+  });
+
+  it('returns true when decks exist', () => {
+    expect(getGuestHasData(makeLocalData([makeGroup()]))).toBe(true);
+  });
+
+  it('returns true when only activity history exists', () => {
+    expect(getGuestHasData({ groups: [], studyModes: [], activityHeatmap: { '2025-01-01': 1 } })).toBe(true);
+  });
+
+  it('returns true for a custom (non-built-in) study mode', () => {
+    expect(
+      getGuestHasData({ groups: [], studyModes: [makeMode({ id: 'x', name: 'Custom' })], activityHeatmap: {} }),
+    ).toBe(true);
+  });
+
+  it('detects a modified built-in mode', () => {
+    const seed = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'rate' }] });
+    jest.mocked(createSeedModes).mockReturnValueOnce([seed]);
+    const modified = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'wait', ms: 500 }] });
+    expect(getGuestHasData({ groups: [], studyModes: [modified], activityHeatmap: {} })).toBe(true);
+  });
+
+  it('returns false for an unmodified built-in mode', () => {
+    const seed = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'rate' }] });
+    jest.mocked(createSeedModes).mockReturnValueOnce([seed]);
+    expect(getGuestHasData({ groups: [], studyModes: [seed], activityHeatmap: {} })).toBe(false);
   });
 });

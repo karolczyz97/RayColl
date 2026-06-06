@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
-import { calculateFsrs } from '@/srs/srsEngine';
 import {
   startReviewAttempt,
   tryMarkCardReviewed,
@@ -17,7 +16,7 @@ interface UseStudyReviewFlowParams {
   groupRef: MutableRefObject<FlashcardGroup | null>;
   stateRef: MutableRefObject<StudySessionState>;
   holdingRef: MutableRefObject<boolean>;
-  onCardReviewedRef: MutableRefObject<(groupId: string, card: Flashcard) => void>;
+  onCardReviewedRef: MutableRefObject<(groupId: string, cardId: string, rating: number) => void>;
   dispatchIfMounted: (action: SessionAction) => void;
   isMountedRef: MutableRefObject<boolean>;
   prepareStartSession: () => void;
@@ -91,8 +90,9 @@ export function useStudyReviewFlow({
       if (
         tryMarkCardReviewed(reviewedAttemptKeysRef.current, sessionAttemptRef.current, card.id)
       ) {
-        const updated: Flashcard = { ...card, srsState: calculateFsrs(card.srsState, rating) };
-        onCardReviewedRef.current(currentGroup.id, updated);
+        // Pass id + rating only; the store recomputes FSRS on the live card so a
+        // stale snapshot can't overwrite edits/deletes made during the session.
+        onCardReviewedRef.current(currentGroup.id, card.id, rating);
       }
     },
     [groupRef, onCardReviewedRef],

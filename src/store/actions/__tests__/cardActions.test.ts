@@ -63,16 +63,39 @@ describe('cardActions', () => {
   });
 
   describe('reviewCardAction', () => {
-    it('stamps srsUpdatedAt, preserves input srsState, bumps heatmap once', () => {
-      const reviewSrsState = { ...originalCard.srsState, repetitions: 3 };
-      const reviewInputCard = { ...originalCard, srsState: reviewSrsState };
+    it('recomputes srsState from the stored card, stamps srsUpdatedAt, bumps heatmap once', () => {
       const heatmapBefore: Record<string, number> = {};
-      const reviewResult = reviewCardAction(groups, 'g1', reviewInputCard, heatmapBefore);
+      const reviewResult = reviewCardAction(groups, 'g1', 'c1', 3, heatmapBefore);
 
-      expect(reviewResult.nextGroups[0].cards[0].srsUpdatedAt ?? 0).toBeGreaterThan(0);
-      expect(reviewResult.nextGroups[0].cards[0].srsState.repetitions).toBe(3);
+      const reviewed = reviewResult.nextGroups[0].cards[0];
+      expect(reviewed.srsUpdatedAt ?? 0).toBeGreaterThan(0);
+      // FSRS ran on the stored card (repetitions 0 -> 1), not on a passed-in snapshot.
+      expect(reviewed.srsState.repetitions).toBe(1);
       expect(reviewResult.nextHeatmap[reviewResult.todayKey]).toBe(1);
       expect(Object.keys(heatmapBefore).length).toBe(0);
+      expect(originalCard.srsState.repetitions).toBe(0); // source not mutated
+    });
+
+    it('preserves live pages/contentUpdatedAt/deletedAt — a stale snapshot cannot clobber them', () => {
+      // Card as currently stored: content edited and soft-deleted *after* a session
+      // snapshot would have been taken. Review must touch only the SRS fields.
+      const liveCard = {
+        id: 'c1',
+        pages: ['edited front', 'edited back'],
+        srsState: { ...createNewSrsState(), repetitions: 2 },
+        contentUpdatedAt: 12345,
+        srsUpdatedAt: 0,
+        deletedAt: 67890,
+      };
+      const liveGroups = [{ ...originalGroup, cards: [liveCard] }];
+
+      const reviewed = reviewCardAction(liveGroups, 'g1', 'c1', 4, {}).nextGroups[0].cards[0];
+
+      expect(reviewed.pages).toEqual(['edited front', 'edited back']);
+      expect(reviewed.contentUpdatedAt).toBe(12345);
+      expect(reviewed.deletedAt).toBe(67890);
+      expect(reviewed.srsState.repetitions).toBe(3); // 2 -> 3
+      expect(reviewed.srsUpdatedAt ?? 0).toBeGreaterThan(0);
     });
   });
 });

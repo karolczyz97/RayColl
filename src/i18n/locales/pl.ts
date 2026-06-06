@@ -33,6 +33,8 @@ export const pl: Record<string, string> = {
   'dialog.restore.desc': 'Zestaw "{name}" wróci do głównej listy.',
   'btn.archive': 'Archiwizuj',
   'btn.restore': 'Przywróć',
+  'common.ok': 'OK',
+  'a11y.profile_menu': 'Otwórz menu profilu użytkownika',
 
   // Dashboard
   'dashboard.no_groups': 'Brak zestawów. Kliknij +, aby dodać.',

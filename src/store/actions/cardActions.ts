@@ -1,5 +1,5 @@
 import { FlashcardGroup, Flashcard } from '@/types/models';
-import { createNewSrsState } from '@/srs/srsEngine';
+import { createNewSrsState, calculateFsrs } from '@/srs/srsEngine';
 import { uid } from '@/utils/id';
 import { getLocalDateString } from '@/utils/date';
 
@@ -58,7 +58,8 @@ export function updateFlashcardAction(
 function reviewFlashcardAction(
   groups: FlashcardGroup[],
   groupId: string,
-  card: Flashcard,
+  cardId: string,
+  rating: number,
 ): FlashcardGroup[] {
   const now = Date.now();
   return groups.map((g) =>
@@ -66,7 +67,9 @@ function reviewFlashcardAction(
       ? {
           ...g,
           cards: g.cards.map((c) =>
-            c.id === card.id ? { ...card, srsUpdatedAt: now } : c,
+            c.id === cardId
+              ? { ...c, srsState: calculateFsrs(c.srsState, rating), srsUpdatedAt: now }
+              : c,
           ),
         }
       : g,
@@ -74,18 +77,20 @@ function reviewFlashcardAction(
 }
 
 /**
- * Atomic review: stamps the card's SRS update time and bumps today's activity heatmap
- * as one unit. The SRS state itself is computed in the study session (needs the rating)
- * and passed in via `card`. Returns `todayKey` so callers/tests can assert the heatmap day.
- * Argument order matches `reviewFlashcardAction(groups, groupId, card)`; heatmap last.
+ * Atomic review: recomputes the card's SRS state from the *currently stored* card
+ * (identified by id) and stamps `srsUpdatedAt`, bumping today's activity heatmap as
+ * one unit. Only `srsState`/`srsUpdatedAt` change, so a stale in-session card snapshot
+ * can never clobber freshly edited `pages`/`contentUpdatedAt` or a `deletedAt` flag.
+ * Returns `todayKey` so callers/tests can assert the heatmap day.
  */
 export function reviewCardAction(
   groups: FlashcardGroup[],
   groupId: string,
-  card: Flashcard,
+  cardId: string,
+  rating: number,
   heatmap: Record<string, number>,
 ): { nextGroups: FlashcardGroup[]; nextHeatmap: Record<string, number>; todayKey: string } {
-  const nextGroups = reviewFlashcardAction(groups, groupId, card);
+  const nextGroups = reviewFlashcardAction(groups, groupId, cardId, rating);
   const { nextHeatmap, todayKey } = recordActivityAction(heatmap);
   return { nextGroups, nextHeatmap, todayKey };
 }

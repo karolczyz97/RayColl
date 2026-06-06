@@ -32,8 +32,11 @@ export function combineRecognizedText(finalText: string, interimText: string): s
   if (!normalizedFinal) return normalizedInterim;
   if (!normalizedInterim) return normalizedFinal;
 
-  const finalLower = normalizedFinal.toLocaleLowerCase();
-  const interimLower = normalizedInterim.toLocaleLowerCase();
+  // Locale-invariant lowercasing: toLocaleLowerCase() would, under a Turkish
+  // locale, map "I" -> "ı" on only one side and break dedup of e.g. "LIMIT"
+  // (final) vs "limit" (interim), duplicating the word in the combined text.
+  const finalLower = normalizedFinal.toLowerCase();
+  const interimLower = normalizedInterim.toLowerCase();
 
   if (interimLower === finalLower || interimLower.startsWith(finalLower)) {
     return normalizedInterim;

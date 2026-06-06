@@ -31,6 +31,8 @@ export const de: Record<string, string> = {
   'dialog.restore.desc': 'Das Deck "{name}" kehrt zur Hauptliste zurück.',
   'btn.archive': 'Archivieren',
   'btn.restore': 'Wiederherstellen',
+  'common.ok': 'OK',
+  'a11y.profile_menu': 'Benutzerprofilmenü öffnen',
 
   // Dashboard
   'dashboard.no_groups': 'Keine Decks gefunden. Klicken Sie auf +, um eines hinzuzufügen.',

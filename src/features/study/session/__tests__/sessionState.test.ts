@@ -106,6 +106,13 @@ describe('sessionReducer', () => {
       expect(partial.sttResultText).toBe('hel');
       expect(partial.status).toBe('listening');
     });
+
+    it('ignores late partials once no longer listening (post-skip/advance zombie callback)', () => {
+      const revealed = { ...INITIAL_STUDY_SESSION_STATE, status: 'revealed' as const, sttResultText: 'final' };
+      const partial = reduce(revealed, { type: 'UPDATE_PARTIAL_STT', text: 'stale partial' });
+      expect(partial).toBe(revealed); // unchanged reference
+      expect(partial.sttResultText).toBe('final');
+    });
   });
 
   describe('END_LISTENING', () => {

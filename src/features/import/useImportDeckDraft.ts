@@ -37,6 +37,7 @@ export function useImportDeckDraft() {
     pageLangs,
     cards,
     importError,
+    errorDismissed,
     firstRowIsHeader,
     rawColumnCount,
   } = state;
@@ -356,6 +357,10 @@ export function useImportDeckDraft() {
     (value: string) => dispatch({ type: 'SET_IMPORT_ERROR', value }),
     [dispatch],
   );
+  const dismissImportError = useCallback(
+    () => dispatch({ type: 'DISMISS_IMPORT_ERROR' }),
+    [dispatch],
+  );
 
   // --- Return (compatible with prior interface) ----------------------------
   return {
@@ -376,6 +381,8 @@ export function useImportDeckDraft() {
     setDeleteCardId,
     importError,
     setImportError,
+    errorDismissed,
+    dismissImportError,
     isImporting,
     isImportBlocked,
     firstRowIsHeader,

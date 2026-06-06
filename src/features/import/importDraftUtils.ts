@@ -6,6 +6,7 @@ import {
   detectSeparator,
 } from '@/import/importParser';
 import { createNewSrsState } from '@/srs/srsEngine';
+import { uid } from '@/utils/id';
 import { getPreviewRows } from './importDraftHelpers';
 import type { Flashcard } from '@/types/models';
 
@@ -68,7 +69,7 @@ export function buildCardsFromText(
   }
 
   return parsedRows.map((row, index) => ({
-    id: existingCards[index]?.id || `import-${Math.random().toString(36).slice(2, 9)}`,
+    id: existingCards[index]?.id || uid(),
     pages: row,
     srsState: createNewSrsState(),
   }));

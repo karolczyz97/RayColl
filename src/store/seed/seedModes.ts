@@ -27,7 +27,11 @@ const SEED_MODES: StudyMode[] = [
 ];
 
 export function createSeedModes(): StudyMode[] {
-  return SEED_MODES;
+  // Return deep clones so callers can't mutate the shared seed definitions.
+  return SEED_MODES.map((mode) => ({
+    ...mode,
+    steps: mode.steps.map((step) => ({ ...step })),
+  }));
 }
 
 const BUILT_IN_SOURCE_IDS = SEED_MODES.map((mode) => mode.builtInSourceId ?? mode.id);

@@ -9,7 +9,9 @@ export interface BackupData {
 }
 
 function assertNumber(value: unknown, message: string): asserts value is number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
+  // Number.isFinite rejects NaN and ±Infinity (and non-numbers); a bare NaN check
+  // would let Infinity slip through into timestamps/counts.
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(message);
   }
 }
@@ -56,6 +58,9 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         step.successThreshold,
         `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`,
       );
+      if (step.successThreshold > 100) {
+        throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
+      }
       if (step.incorrectTtsPageIndex !== undefined) {
         assertNonNegativeNumber(
           step.incorrectTtsPageIndex,
@@ -98,6 +103,9 @@ export function validateCard(card: unknown, groupName: string): void {
   }
   if (!Array.isArray(card.pages)) {
     throw new Error(`Card ${card.id} in group ${groupName} must have a "pages" array.`);
+  }
+  if (!card.pages.every((page) => typeof page === 'string')) {
+    throw new Error(`Card ${card.id} in group ${groupName} must have string pages.`);
   }
   validateSrsState(card.id, groupName, card.srsState);
 }
@@ -169,7 +177,7 @@ export function validateBackupData(data: unknown): asserts data is BackupData {
   }
 
   for (const [date, count] of Object.entries(data.activityHeatmap)) {
-    assertNumber(count, `Activity heatmap entry ${date} must be a number.`);
+    assertNonNegativeNumber(count, `Activity heatmap entry ${date} must be a non-negative number.`);
   }
 
   for (const group of data.groups) {

@@ -69,7 +69,7 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
             <TouchableRipple
               onPress={open}
               style={styles.avatarAnchor}
-              accessibilityLabel="Open user profile menu"
+              accessibilityLabel={t('a11y.profile_menu')}
               accessibilityState={{ expanded: visible }}
             >
               <Avatar.Image
@@ -102,7 +102,7 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
           size={TOKENS.iconSize.md}
           iconColor={fg}
           onPress={onLogin}
-          accessibilityLabel="Log in with Google"
+          accessibilityLabel={t('btn.login')}
         />
       )}
     </View>

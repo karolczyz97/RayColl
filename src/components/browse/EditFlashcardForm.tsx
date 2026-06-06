@@ -43,7 +43,7 @@ export function EditFlashcardForm({
           <Switch
             value={showHidden}
             onValueChange={setShowHidden}
-            accessibilityLabel="Toggle hidden pages visibility"
+            accessibilityLabel={t('browse.show_hidden_pages')}
           />
         </View>
       )}

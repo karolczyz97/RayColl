@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import type { StoreData } from '@/types/models';
 import { signInWithGoogle, signOutUser } from '@/services/firebase';
+import { clearCloudSnapshotCache } from './persistence/firebasePersistence';
 import { createSeedGroups } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { normalizeStoreData } from './storeDataNormalization';
@@ -45,9 +46,12 @@ export function useAuthActions({
   }, [setLastLoginError]);
 
   const signOut = useCallback(async () => {
-    await flushPersistence();
+    const uid = user?.uid ?? undefined;
+    // Best-effort final flush; never block sign-out on a persistence failure.
+    await flushPersistence().catch(() => {});
     await signOutUser();
-  }, [flushPersistence]);
+    clearCloudSnapshotCache(uid);
+  }, [flushPersistence, user]);
 
   const migrateGuestToAccount = useCallback(async () => {
     if (!pendingGuestSnapshot || !user?.uid) return;
@@ -74,10 +78,12 @@ export function useAuthActions({
   }, [user, persistence, setMigrationPending, setPendingGuestSnapshot]);
 
   const dismissMigration = useCallback(async () => {
+    const uid = user?.uid ?? undefined;
     setMigrationPending(false);
     setPendingGuestSnapshot(null);
     await signOutUser();
-  }, [setMigrationPending, setPendingGuestSnapshot]);
+    clearCloudSnapshotCache(uid);
+  }, [setMigrationPending, setPendingGuestSnapshot, user]);
 
   return { signIn, signOut, clearLastLoginError, migrateGuestToAccount, startFreshOnAccount, dismissMigration };
 }

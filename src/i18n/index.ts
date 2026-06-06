@@ -61,7 +61,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       let val = langDict[key] || translations['en'][key] || key;
       if (replacements) {
         Object.entries(replacements).forEach(([k, v]) => {
-          val = val.replace(`{${k}}`, String(v));
+          // split/join replaces every occurrence (String.replace would only do the
+          // first) and avoids regex-special-char issues in the replacement value.
+          val = val.split(`{${k}}`).join(String(v));
         });
       }
       return val;

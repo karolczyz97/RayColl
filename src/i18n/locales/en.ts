@@ -33,6 +33,8 @@ export const en: Record<string, string> = {
   'dialog.restore.desc': 'Deck "{name}" will return to the main list.',
   'btn.archive': 'Archive',
   'btn.restore': 'Restore',
+  'common.ok': 'OK',
+  'a11y.profile_menu': 'Open user profile menu',
 
   // Dashboard
   'dashboard.no_groups': 'No decks found. Click + to add one.',

@@ -100,7 +100,7 @@ function TestHookWrapper({
 }: {
   group: FlashcardGroup | null;
   steps: ModeStep[];
-  onCardReviewed: (groupId: string, card: Flashcard) => void;
+  onCardReviewed: (groupId: string, cardId: string, rating: number) => void;
   hookRef: HookResult;
 }) {
   const hookResult = useStudySession(group, steps, onCardReviewed);
@@ -193,11 +193,40 @@ describe('useStudySession', () => {
     await rateCurrentCard(hookRef, 3);
 
     await waitFor(() => {
-      expect(onCardReviewed).toHaveBeenCalledWith(
-        'g1',
-        expect.objectContaining({ id: 'c1' }),
-      );
+      expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', 3);
     });
+  });
+
+  it('STT service error reveals the card for manual rating without auto-recording a review', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
+      { type: 'rate' },
+    ];
+
+    mockedSttService.startListening.mockImplementationOnce(() =>
+      Promise.reject(new Error('service-failure')),
+    );
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    expect(onCardReviewed).not.toHaveBeenCalled();
+    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
   });
 
   it('rating 1 adds card to failed count', async () => {
