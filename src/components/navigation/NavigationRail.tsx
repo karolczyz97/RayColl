@@ -46,9 +46,9 @@ interface RailItemProps {
 }
 
 /**
- * A single rail destination. The icon is left-anchored at a fixed inset so it
- * stays put when the rail collapses/expands; only the label fades (and the rail
- * width animates), avoiding the icons jumping toward the centre.
+ * A single rail destination. The icon lives in a fixed leading box the width of
+ * the collapsed rail, so it is centred when collapsed and keeps that exact x
+ * when expanded — the icons never slide, only the labels fade.
  */
 function RailItem({
   focusedIcon,
@@ -73,15 +73,17 @@ function RailItem({
       accessibilityLabel={label}
     >
       <View style={styles.itemRow}>
-        <View
-          style={[
-            styles.itemIndicator,
-            { backgroundColor: active ? theme.colors.secondaryContainer : 'transparent' },
-          ]}
-        >
-          <Icon source={icon} size={TOKENS.iconSize.md} color={iconColor} />
+        <View style={styles.leading}>
+          <View
+            style={[
+              styles.itemIndicator,
+              { backgroundColor: active ? theme.colors.secondaryContainer : 'transparent' },
+            ]}
+          >
+            <Icon source={icon} size={TOKENS.iconSize.md} color={iconColor} />
+          </View>
         </View>
-        <Animated.View style={[styles.itemLabelWrap, labelStyle]} pointerEvents="none">
+        <Animated.View style={[styles.labelWrap, labelStyle]} pointerEvents="none">
           <Text variant="labelLarge" numberOfLines={1} style={{ color: labelColor }}>
             {label}
           </Text>
@@ -129,24 +131,28 @@ export function NavigationRail({
       ]}
     >
       <View style={styles.toggleRow}>
-        <IconButton
-          icon="menu"
-          size={TOKENS.iconSize.md}
-          onPress={onToggleExpanded}
-          accessibilityLabel={expanded ? 'Collapse navigation' : 'Expand navigation'}
-          style={styles.toggleButton}
-        />
+        <View style={styles.leading}>
+          <IconButton
+            icon="menu"
+            size={TOKENS.iconSize.md}
+            onPress={onToggleExpanded}
+            accessibilityLabel={expanded ? 'Collapse navigation' : 'Expand navigation'}
+            style={styles.toggleButton}
+          />
+        </View>
       </View>
 
       <View style={styles.brand}>
-        <Avatar.Icon
-          icon="book-open-page-variant"
-          size={TOKENS.touchTarget.compact}
-          style={{ backgroundColor: theme.colors.secondaryContainer }}
-          color={theme.colors.onSecondaryContainer}
-          accessibilityLabel={`${APP_NAME} Logo Icon`}
-        />
-        <Animated.View style={[styles.brandTextWrap, labelAnimatedStyle]} pointerEvents="none">
+        <View style={styles.leading}>
+          <Avatar.Icon
+            icon="book-open-page-variant"
+            size={TOKENS.touchTarget.compact}
+            style={{ backgroundColor: theme.colors.secondaryContainer }}
+            color={theme.colors.onSecondaryContainer}
+            accessibilityLabel={`${APP_NAME} Logo Icon`}
+          />
+        </View>
+        <Animated.View style={[styles.labelWrap, labelAnimatedStyle]} pointerEvents="none">
           <Text variant="titleLarge" numberOfLines={1} style={styles.brandText}>
             {APP_NAME}
           </Text>
@@ -184,10 +190,6 @@ export function NavigationRail({
   );
 }
 
-// Fixed left inset shared by the hamburger, brand logo, and destination icons so
-// nothing shifts horizontally between collapsed and expanded states.
-const ITEM_INSET = TOKENS.spacing.sm;
-
 const styles = StyleSheet.create({
   root: {
     flexShrink: 0,
@@ -195,9 +197,17 @@ const styles = StyleSheet.create({
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingVertical: TOKENS.spacing.md,
   },
+  // Fixed leading column = collapsed rail width. Centres the icon/logo/hamburger
+  // on the collapsed rail's centre line and pins that x across expand/collapse.
+  leading: {
+    width: TOKENS.layout.railWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
   toggleRow: {
-    alignItems: 'flex-start',
-    paddingHorizontal: TOKENS.spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: TOKENS.spacing.xs,
   },
   toggleButton: {
@@ -208,11 +218,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: TOKENS.layout.collapsedRailBrandMinHeight,
     marginBottom: TOKENS.spacing.lg,
-    paddingLeft: ITEM_INSET,
-    gap: TOKENS.spacing.sm,
-  },
-  brandTextWrap: {
-    flex: 1,
   },
   brandText: {
     fontWeight: TOKENS.typography.weight.bold,
@@ -231,8 +236,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: TOKENS.touchTarget.min,
-    paddingLeft: ITEM_INSET,
-    gap: TOKENS.spacing.sm,
   },
   itemIndicator: {
     width: TOKENS.touchTarget.compact,
@@ -240,10 +243,10 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
-  itemLabelWrap: {
+  labelWrap: {
     flex: 1,
+    paddingRight: TOKENS.spacing.md,
   },
   footer: {
     gap: TOKENS.spacing.md,

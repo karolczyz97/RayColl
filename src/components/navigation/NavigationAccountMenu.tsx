@@ -43,13 +43,15 @@ export function NavigationAccountMenu({
     }
 
     return (
-      <IconButton
-        icon="account-circle"
-        size={TOKENS.iconSize.md}
-        onPress={onLogin}
-        accessibilityLabel={t('btn.login')}
-        style={styles.collapsedLogin}
-      />
+      <View style={styles.leading}>
+        <IconButton
+          icon="account-circle"
+          size={TOKENS.iconSize.md}
+          onPress={onLogin}
+          accessibilityLabel={t('btn.login')}
+          style={styles.collapsedLogin}
+        />
+      </View>
     );
   }
 
@@ -60,15 +62,14 @@ export function NavigationAccountMenu({
       renderAnchor={({ open, visible }) => (
         <TouchableRipple
           onPress={open}
-          style={[
-            styles.anchor,
-            expanded ? styles.expandedAnchor : styles.collapsedAnchor,
-          ]}
+          style={styles.anchor}
           accessibilityLabel={t('a11y.profile_menu')}
           accessibilityState={{ expanded: visible }}
         >
           <View style={styles.anchorContent}>
-            <Avatar.Image size={40} source={source} />
+            <View style={styles.leading}>
+              <Avatar.Image size={TOKENS.touchTarget.compact} source={source} />
+            </View>
             {expanded ? (
               <View style={styles.accountText}>
                 <Text variant="labelLarge" numberOfLines={1}>
@@ -109,27 +110,25 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.control.compactHeight,
   },
   anchor: {
-    borderRadius: TOKENS.radius.pill,
+    borderRadius: TOKENS.radius.lg,
     minHeight: TOKENS.touchTarget.min,
+    justifyContent: 'center',
+  },
+  // Matches the rail leading column so the avatar sits on the same centre line
+  // as the destination icons, collapsed and expanded alike.
+  leading: {
+    width: TOKENS.layout.railWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   collapsedLogin: {
-    alignSelf: 'flex-start',
     margin: 0,
-  },
-  collapsedAnchor: {
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    paddingLeft: TOKENS.spacing.sm,
-  },
-  expandedAnchor: {
-    paddingLeft: TOKENS.spacing.sm,
-    paddingRight: TOKENS.spacing.sm,
-    justifyContent: 'center',
   },
   anchorContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TOKENS.spacing.sm,
+    paddingRight: TOKENS.spacing.md,
   },
   accountText: {
     flex: 1,
