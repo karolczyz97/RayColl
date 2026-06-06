@@ -55,9 +55,12 @@ export function DeckGrid({
     const minCardWidth = TOKENS.layout.minCardWidth;
     const maxCols = TOKENS.layout.maxCols;
 
-    const columns = getGridColumns(currentWidth, groups.length, minCardWidth, maxCols, gap);
+    // Column count is driven by the available width (capped at maxCols), not by
+    // the number of decks. This keeps each card at a normal column's width so a
+    // single deck doesn't stretch to fill the whole row.
+    const columns = getGridColumns(currentWidth, maxCols, minCardWidth, maxCols, gap);
     return { cardWidth: getGridItemWidth(currentWidth, columns, gap), columns };
-  }, [currentWidth, gap, groups.length]);
+  }, [currentWidth, gap]);
 
   const widthStyle = useMemo(() => {
     return {

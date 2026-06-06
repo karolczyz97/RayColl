@@ -90,7 +90,7 @@ export default function ArchivePage() {
       <ConfirmDialog
         visible={deleteTarget !== null}
         title={t('dialog.delete_permanent.title')}
-        message={t('dialog.delete_permanent.desc')}
+        message={t('dialog.delete_permanent.desc', { name: deleteTarget?.name ?? '' })}
         confirmLabel={t('btn.delete')}
         cancelLabel={t('btn.cancel')}
         destructive
