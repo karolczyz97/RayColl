@@ -10,6 +10,7 @@ describe('navigationDestinations', () => {
     expect(getActiveDestination('/settings/deck-1')).toBe('dashboard');
 
     expect(getActiveDestination('/stats')).toBe('stats');
+    expect(getActiveDestination('/archive')).toBe('archive');
     expect(getActiveDestination('/app-settings')).toBe('settings');
     expect(getActiveDestination('/import')).toBeNull();
   });

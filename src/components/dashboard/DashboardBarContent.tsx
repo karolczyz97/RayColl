@@ -55,6 +55,13 @@ export function DashboardActions({ user, onLogin, onLogout }: DashboardActionsPr
         accessibilityLabel={t('stats.title')}
       />
       <IconButton
+        icon="archive-outline"
+        size={TOKENS.iconSize.md}
+        iconColor={fg}
+        onPress={() => router.navigate(ROUTES.ARCHIVE)}
+        accessibilityLabel={t('archive.title')}
+      />
+      <IconButton
         icon="cog"
         size={TOKENS.iconSize.md}
         iconColor={fg}

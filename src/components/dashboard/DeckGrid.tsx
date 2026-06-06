@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Platform, View, StyleSheet } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { GroupCard } from './GroupCard';
 import type { FlashcardGroup } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
@@ -16,15 +17,26 @@ import {
 interface DeckGridProps {
   baseOrder?: number;
   groups: FlashcardGroup[];
-  onModeChange: (groupId: string, modeId: string) => void;
+  onModeChange?: (groupId: string, modeId: string) => void;
   /**
    * Remounts the grid (replaying the enter stagger) when it changes. The store
    * bumps it after a background cloud sync that actually changed the decks.
    */
   refreshKey?: number;
+  /**
+   * Custom card renderer. Defaults to the dashboard `GroupCard`; the archive
+   * screen overrides it to render archived-variant cards with restore/delete.
+   */
+  renderItem?: (group: FlashcardGroup) => React.ReactNode;
 }
 
-export function DeckGrid({ baseOrder = 0, groups, onModeChange, refreshKey = 0 }: DeckGridProps) {
+export function DeckGrid({
+  baseOrder = 0,
+  groups,
+  onModeChange,
+  refreshKey = 0,
+  renderItem,
+}: DeckGridProps) {
   const { width: windowWidth } = useResponsiveLayout();
   const { navWidth } = useNavigationShell();
 
@@ -58,14 +70,22 @@ export function DeckGrid({ baseOrder = 0, groups, onModeChange, refreshKey = 0 }
   return (
     <View key={refreshKey} style={[styles.grid, { gap }]}>
       {groups.map((group, index) => (
-        <View key={group.id} style={[styles.gridItem, widthStyle]}>
+        <Animated.View
+          key={group.id}
+          layout={LinearTransition.duration(TOKENS.motion.duration.medium)}
+          style={[styles.gridItem, widthStyle]}
+        >
           <AnimatedSection order={baseOrder + Math.floor(index / columns)}>
-            <GroupCard
-              group={group}
-              onModeChange={(modeId) => onModeChange(group.id, modeId)}
-            />
+            {renderItem ? (
+              renderItem(group)
+            ) : (
+              <GroupCard
+                group={group}
+                onModeChange={(modeId) => onModeChange?.(group.id, modeId)}
+              />
+            )}
           </AnimatedSection>
-        </View>
+        </Animated.View>
       ))}
     </View>
   );

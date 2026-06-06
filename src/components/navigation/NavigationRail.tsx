@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import {
   Avatar,
   Drawer,
@@ -20,18 +21,15 @@ import {
   type TopLevelDestinationKey,
 } from './navigationDestinations';
 import { NavigationAccountMenu } from './NavigationAccountMenu';
-import { AppFloatingActionButton } from '@/components/AppFloatingActionButton';
 
 interface NavigationRailProps {
   expanded: boolean;
   activeDestination: TopLevelDestinationKey | null;
   user: FlashcardStoreState['user'];
   onNavigate: (destination: NavigationDestination) => void;
-  onImport: () => void;
   onLogin: () => void;
   onLogout: () => void;
   onToggleExpanded: () => void;
-  onHide: () => void;
 }
 
 interface CollapsedRailItemProps {
@@ -52,7 +50,6 @@ function CollapsedRailItem({
   const theme = useTheme();
   const icon = active ? focusedIcon : unfocusedIcon;
   const iconColor = active ? theme.colors.onSecondaryContainer : theme.colors.onSurfaceVariant;
-  const labelColor = active ? theme.colors.onSurface : theme.colors.onSurfaceVariant;
 
   return (
     <TouchableRipple
@@ -63,24 +60,15 @@ function CollapsedRailItem({
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
     >
-      <View style={styles.collapsedItemContent}>
-        <View
-          style={[
-            styles.collapsedIconContainer,
-            {
-              backgroundColor: active ? theme.colors.secondaryContainer : 'transparent',
-            },
-          ]}
-        >
-          <Icon source={icon} size={TOKENS.iconSize.md} color={iconColor} />
-        </View>
-        <Text
-          variant="labelMedium"
-          numberOfLines={2}
-          style={[styles.collapsedItemLabel, { color: labelColor }]}
-        >
-          {label}
-        </Text>
+      <View
+        style={[
+          styles.collapsedIconContainer,
+          {
+            backgroundColor: active ? theme.colors.secondaryContainer : 'transparent',
+          },
+        ]}
+      >
+        <Icon source={icon} size={TOKENS.iconSize.md} color={iconColor} />
       </View>
     </TouchableRipple>
   );
@@ -91,26 +79,42 @@ export function NavigationRail({
   activeDestination,
   user,
   onNavigate,
-  onImport,
   onLogin,
   onLogout,
   onToggleExpanded,
-  onHide,
 }: NavigationRailProps) {
   const { t } = useI18n();
   const theme = useTheme();
 
+  // Animate the collapse/expand width change instead of snapping. The sibling
+  // content area follows via flex, so this drives the whole reflow smoothly.
+  const animatedWidthStyle = useAnimatedStyle(() => ({
+    width: withTiming(expanded ? TOKENS.layout.expandedRailWidth : TOKENS.layout.railWidth, {
+      duration: TOKENS.motion.duration.medium,
+    }),
+  }));
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.root,
         {
-          width: expanded ? TOKENS.layout.expandedRailWidth : TOKENS.layout.railWidth,
           backgroundColor: theme.colors.surface,
           borderRightColor: theme.colors.outlineVariant,
         },
+        animatedWidthStyle,
       ]}
     >
+      <View style={[styles.toggleRow, expanded ? styles.toggleRowExpanded : styles.toggleRowCollapsed]}>
+        <IconButton
+          icon="menu"
+          size={TOKENS.iconSize.md}
+          onPress={onToggleExpanded}
+          accessibilityLabel={expanded ? 'Collapse navigation' : 'Expand navigation'}
+          style={styles.toggleButton}
+        />
+      </View>
+
       <View style={[styles.brand, expanded ? styles.brandExpanded : styles.brandCollapsed]}>
         <Avatar.Icon
           icon="book-open-page-variant"
@@ -120,27 +124,10 @@ export function NavigationRail({
           accessibilityLabel={`${APP_NAME} Logo Icon`}
         />
         {expanded ? (
-          <>
-            <Text variant="titleLarge" style={styles.brandText}>
-              {APP_NAME}
-            </Text>
-            <IconButton
-              icon="chevron-left"
-              size={TOKENS.iconSize.sm}
-              onPress={onToggleExpanded}
-              accessibilityLabel="Collapse navigation"
-              style={styles.headerButton}
-            />
-          </>
-        ) : (
-          <IconButton
-            icon="chevron-right"
-            size={TOKENS.iconSize.sm}
-            onPress={onToggleExpanded}
-            accessibilityLabel="Expand navigation"
-            style={styles.collapsedExpandButton}
-          />
-        )}
+          <Text variant="titleLarge" style={styles.brandText}>
+            {APP_NAME}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.destinations}>
@@ -176,23 +163,6 @@ export function NavigationRail({
       </View>
 
       <View style={styles.footer}>
-        <IconButton
-          icon="chevron-left"
-          size={TOKENS.iconSize.sm}
-          onPress={onHide}
-          accessibilityLabel="Hide navigation"
-          style={expanded ? styles.hideButtonExpanded : styles.hideButtonCollapsed}
-        />
-        <AppFloatingActionButton
-          icon="import"
-          label={expanded ? t('import.title') : undefined}
-          onPress={onImport}
-          accessibilityLabel={t('import.title')}
-          style={[
-            styles.importAction,
-            expanded ? styles.importActionExpanded : styles.importActionCollapsed,
-          ]}
-        />
         <NavigationAccountMenu
           user={user}
           expanded={expanded}
@@ -200,15 +170,29 @@ export function NavigationRail({
           onLogout={onLogout}
         />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flexShrink: 0,
+    overflow: 'hidden',
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingVertical: TOKENS.spacing.md,
+  },
+  toggleRow: {
+    marginBottom: TOKENS.spacing.xs,
+  },
+  toggleRowExpanded: {
+    alignItems: 'flex-start',
+    paddingHorizontal: TOKENS.spacing.sm,
+  },
+  toggleRowCollapsed: {
+    alignItems: 'center',
+  },
+  toggleButton: {
+    margin: 0,
   },
   brand: {
     minHeight: TOKENS.layout.collapsedRailBrandMinHeight,
@@ -229,12 +213,6 @@ const styles = StyleSheet.create({
     fontWeight: TOKENS.typography.weight.bold,
     flex: 1,
   },
-  headerButton: {
-    margin: 0,
-  },
-  collapsedExpandButton: {
-    margin: 0,
-  },
   destinations: {
     flex: 1,
     gap: TOKENS.spacing.xs,
@@ -245,13 +223,8 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.layout.collapsedRailItemMinHeight,
     borderRadius: TOKENS.radius.lg,
     overflow: 'hidden',
-  },
-  collapsedItemContent: {
-    minHeight: TOKENS.layout.collapsedRailItemMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: TOKENS.spacing.xs,
-    paddingVertical: TOKENS.spacing.xs,
   },
   collapsedIconContainer: {
     width: TOKENS.layout.collapsedRailIconContainerWidth,
@@ -260,40 +233,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  collapsedItemLabel: {
-    width: TOKENS.layout.collapsedRailItemLabelWidth,
-    textAlign: 'center',
-    lineHeight: TOKENS.layout.collapsedRailItemLabelLineHeight,
-  },
   expandedItem: {
     marginHorizontal: TOKENS.spacing.sm,
   },
   footer: {
     gap: TOKENS.spacing.md,
     alignItems: 'stretch',
-  },
-  hideButtonCollapsed: {
-    alignSelf: 'center',
-    margin: 0,
-  },
-  hideButtonExpanded: {
-    alignSelf: 'flex-end',
-    marginHorizontal: TOKENS.spacing.md,
-    marginVertical: 0,
-  },
-  importAction: {
-    alignSelf: 'center',
-    borderRadius: TOKENS.radius.lg,
-    overflow: 'hidden',
-  },
-  importActionCollapsed: {
-    width: TOKENS.layout.collapsedRailImportActionSize,
-    height: TOKENS.layout.collapsedRailImportActionSize,
-    marginBottom: TOKENS.spacing.xs,
-  },
-  importActionExpanded: {
-    alignSelf: 'stretch',
-    marginHorizontal: TOKENS.spacing.md,
-    minHeight: TOKENS.layout.fabMinHeight,
   },
 });

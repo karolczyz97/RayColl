@@ -243,6 +243,7 @@ function AppContent() {
             <Stack.Screen name="import" />
             <Stack.Screen name="settings/[groupId]" />
             <Stack.Screen name="stats" />
+            <Stack.Screen name="archive" />
             <Stack.Screen name="app-settings" />
           </Stack>
         </AppNavigationShell>

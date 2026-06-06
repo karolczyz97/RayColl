@@ -15,9 +15,6 @@ interface ThemeContextType {
   isThemeLoading: boolean;
   ttsRate: number;
   setTtsRate: (val: number) => Promise<void>;
-  /** Whether the persistent navigation rail is shown on >=600px widths (user preference). */
-  railVisible: boolean;
-  setRailVisible: (val: boolean) => Promise<void>;
   /** Whether the rail is expanded (labels) vs collapsed (icons only). */
   railExpanded: boolean;
   setRailExpanded: (val: boolean) => Promise<void>;
@@ -75,7 +72,6 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const [useSystemColors, setUseSystemColorsState] = useState<boolean>(true); // enabled by default
   const [isThemeLoading, setIsThemeLoading] = useState<boolean>(true);
   const [ttsRate, setTtsRateState] = useState<number>(1.0);
-  const [railVisible, setRailVisibleState] = useState<boolean>(true); // shown by default on >=600px
   const [railExpanded, setRailExpandedState] = useState<boolean>(false); // collapsed by default
 
   useEffect(() => {
@@ -97,11 +93,6 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         const savedTtsRate = settings[STORAGE_KEYS.TTS_RATE];
         if (active && savedTtsRate !== null) {
           setTtsRateState(clampTtsRate(parseFloat(savedTtsRate)));
-        }
-
-        const savedRailVisible = settings[STORAGE_KEYS.NAV_RAIL_VISIBLE];
-        if (active && savedRailVisible !== null) {
-          setRailVisibleState(savedRailVisible === 'true');
         }
 
         const savedRailExpanded = settings[STORAGE_KEYS.NAV_RAIL_EXPANDED];
@@ -142,12 +133,6 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     mapValue: clampTtsRate,
   });
 
-  const setRailVisible = createPreferenceSetter<boolean>({
-    setState: setRailVisibleState,
-    key: STORAGE_KEYS.NAV_RAIL_VISIBLE,
-    serialize: (v) => (v ? 'true' : 'false'),
-  });
-
   const setRailExpanded = createPreferenceSetter<boolean>({
     setState: setRailExpandedState,
     key: STORAGE_KEYS.NAV_RAIL_EXPANDED,
@@ -167,8 +152,6 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         isThemeLoading,
         ttsRate,
         setTtsRate,
-        railVisible,
-        setRailVisible,
         railExpanded,
         setRailExpanded,
       }}

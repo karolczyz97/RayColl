@@ -113,16 +113,14 @@ describe('AppNavigationShell', () => {
     await waitFor(() => expect(AsyncStorage.multiGet).toHaveBeenCalledWith(UI_PREFERENCE_STORAGE_KEYS));
   });
 
-  it('hides the rail and persists the user preference', async () => {
+  it('always shows the rail and offers no hide control on medium+ widths', async () => {
     await renderShell();
 
-    await waitFor(() => expect(screen.getByLabelText('Hide navigation')).toBeOnTheScreen());
-
-    await fireEvent.press(screen.getByLabelText('Hide navigation'));
-
-    await waitFor(() => expect(screen.queryByLabelText('Hide navigation')).toBeNull());
-    expect(screen.getByLabelText('Show navigation')).toBeOnTheScreen();
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_KEYS.NAV_RAIL_VISIBLE, 'false');
+    // The rail is present (its expand control is shown) and can only be
+    // collapsed/expanded — never fully hidden.
+    await waitFor(() => expect(screen.getByLabelText('Expand navigation')).toBeOnTheScreen());
+    expect(screen.queryByLabelText('Hide navigation')).toBeNull();
+    expect(screen.queryByLabelText('Show navigation')).toBeNull();
   });
 
   it('expands the rail and persists the expanded preference', async () => {

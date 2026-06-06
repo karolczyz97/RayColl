@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, IconButton, useTheme } from 'react-native-paper';
+import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
@@ -14,16 +14,32 @@ import { TOKENS } from '@/theme/tokens';
 
 interface GroupCardProps {
   group: FlashcardGroup;
-  onModeChange: (modeId: string) => void;
+  onModeChange?: (modeId: string) => void;
+  /** 'default' renders the dashboard deck card; 'archived' renders the archive variant. */
+  variant?: 'default' | 'archived';
+  /** Archive only: pre-formatted auto-delete countdown line. */
+  expiryLabel?: string;
+  /** Archive only: restore the deck to the main list. */
+  onRestore?: () => void;
+  /** Archive only: permanently delete the deck (tombstone). */
+  onDeletePermanently?: () => void;
 }
 
-export function GroupCard({ group, onModeChange }: GroupCardProps) {
+export function GroupCard({
+  group,
+  onModeChange,
+  variant = 'default',
+  expiryLabel,
+  onRestore,
+  onDeletePermanently,
+}: GroupCardProps) {
   const store = useFlashcardStore();
   const { t } = useI18n();
   const theme = useTheme();
 
-  const dueCount = store.getDueCards(group.id).length;
+  const isArchived = variant === 'archived';
   const cardStats = computeCardStats(group.cards);
+  const dueCount = isArchived ? 0 : store.getDueCards(group.id).length;
 
   return (
     <AppCard
@@ -40,9 +56,11 @@ export function GroupCard({ group, onModeChange }: GroupCardProps) {
             variant="bodyMedium"
             style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}
           >
-            {t('dashboard.cards_count', { count: group.cards.length })}
+            {isArchived
+              ? t('archive.cards_count', { count: group.cards.length })
+              : t('dashboard.cards_count', { count: group.cards.length })}
           </Text>
-          {dueCount > 0 && (
+          {!isArchived && dueCount > 0 && (
             <Fragment>
               <Text variant="bodyMedium" style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}>
                 {' • '}
@@ -54,31 +72,59 @@ export function GroupCard({ group, onModeChange }: GroupCardProps) {
           )}
         </View>
         <SegmentedProgressBar stats={cardStats} />
+        {isArchived && expiryLabel ? (
+          <Text
+            variant="bodySmall"
+            style={[styles.expiryLabel, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {expiryLabel}
+          </Text>
+        ) : null}
       </AppCard.Content>
       <AppCard.Actions style={styles.cardActions}>
-        <View style={styles.cardActionsRow}>
-          <IconButton
-            icon="eye-outline"
-            size={TOKENS.iconSize.sm}
-            iconColor={theme.colors.primary}
-            onPress={() => router.push(ROUTES.browseDeck(group.id))}
-            accessibilityLabel={`Browse cards in deck ${group.name}`}
-          />
-          <IconButton
-            icon="tune"
-            size={TOKENS.iconSize.sm}
-            iconColor={theme.colors.primary}
-            onPress={() => router.push(ROUTES.deckSettings(group.id))}
-            accessibilityLabel={`Configure settings for deck ${group.name}`}
-          />
-          <View style={styles.studyModeAction}>
-            <StudyModeMenuButton
-              group={group}
-              onStudy={() => router.push(ROUTES.studyDeck(group.id))}
-              onModeChange={onModeChange}
-            />
+        {isArchived ? (
+          <View style={styles.archivedActionsRow}>
+            <Button
+              icon="restore"
+              onPress={onRestore}
+              accessibilityLabel={`${t('btn.restore')} ${group.name}`}
+            >
+              {t('btn.restore')}
+            </Button>
+            <Button
+              icon="delete-outline"
+              textColor={theme.colors.error}
+              onPress={onDeletePermanently}
+              accessibilityLabel={`${t('archive.delete_permanently')} ${group.name}`}
+            >
+              {t('archive.delete_permanently')}
+            </Button>
           </View>
-        </View>
+        ) : (
+          <View style={styles.cardActionsRow}>
+            <IconButton
+              icon="eye-outline"
+              size={TOKENS.iconSize.sm}
+              iconColor={theme.colors.primary}
+              onPress={() => router.push(ROUTES.browseDeck(group.id))}
+              accessibilityLabel={`Browse cards in deck ${group.name}`}
+            />
+            <IconButton
+              icon="tune"
+              size={TOKENS.iconSize.sm}
+              iconColor={theme.colors.primary}
+              onPress={() => router.push(ROUTES.deckSettings(group.id))}
+              accessibilityLabel={`Configure settings for deck ${group.name}`}
+            />
+            <View style={styles.studyModeAction}>
+              <StudyModeMenuButton
+                group={group}
+                onStudy={() => router.push(ROUTES.studyDeck(group.id))}
+                onModeChange={(modeId) => onModeChange?.(modeId)}
+              />
+            </View>
+          </View>
+        )}
       </AppCard.Actions>
     </AppCard>
   );
@@ -100,6 +146,9 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontWeight: TOKENS.typography.weight.medium,
   },
+  expiryLabel: {
+    marginTop: TOKENS.spacing.sm,
+  },
   cardActions: {
     paddingHorizontal: TOKENS.spacing.sm,
     paddingVertical: TOKENS.spacing.sm,
@@ -107,6 +156,13 @@ const styles = StyleSheet.create({
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
+    gap: TOKENS.spacing.xs,
+  },
+  archivedActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     width: '100%',
     gap: TOKENS.spacing.xs,
   },

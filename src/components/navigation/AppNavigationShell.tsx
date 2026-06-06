@@ -12,7 +12,6 @@ import { NavigationShellProvider } from '@/contexts/NavigationShellContext';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { NavigationRail } from './NavigationRail';
 import {
-  IMPORT_ACTION_HREF,
   getActiveDestination,
   type NavigationDestination,
 } from './navigationDestinations';
@@ -24,14 +23,15 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
   const { t } = useI18n();
   const responsive = useResponsiveLayout();
   const { user, signIn, signOut } = useFlashcardStore();
-  const { railVisible, setRailVisible, railExpanded, setRailExpanded } = useAppTheme();
+  const { railExpanded, setRailExpanded } = useAppTheme();
 
   const [showRailGuard, setShowRailGuard] = useState(false);
   const [isStudyActive, setStudyActive] = useState(false);
   const pendingNavRef = useRef<NavigationDestination | null>(null);
 
-  const canShowPersistentNavigation = responsive.showPersistentNavigation;
-  const showPersistentNavigation = canShowPersistentNavigation && railVisible;
+  // The rail can no longer be fully hidden — it is always shown on medium+
+  // widths, only collapsed or expanded.
+  const showPersistentNavigation = responsive.showPersistentNavigation;
   const isRailExpanded = showPersistentNavigation && railExpanded;
   const actualNavWidth = showPersistentNavigation
     ? isRailExpanded
@@ -82,10 +82,6 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
     pendingNavRef.current = null;
   }, []);
 
-  const handleImport = React.useCallback(() => {
-    router.push(IMPORT_ACTION_HREF);
-  }, []);
-
   const handleLogin = React.useCallback(() => {
     void signIn();
   }, [signIn]);
@@ -116,11 +112,9 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
             activeDestination={activeDestination}
             user={user}
             onNavigate={handleNavigate}
-            onImport={handleImport}
             onLogin={handleLogin}
             onLogout={handleLogout}
             onToggleExpanded={() => void setRailExpanded(!railExpanded)}
-            onHide={() => void setRailVisible(false)}
           />
           <View style={styles.content}>{children}</View>
         </View>

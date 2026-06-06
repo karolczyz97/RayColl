@@ -48,6 +48,7 @@ export function NavigationAccountMenu({
         size={TOKENS.iconSize.md}
         onPress={onLogin}
         accessibilityLabel={t('btn.login')}
+        style={styles.collapsedLogin}
       />
     );
   }
@@ -67,7 +68,7 @@ export function NavigationAccountMenu({
           accessibilityState={{ expanded: visible }}
         >
           <View style={styles.anchorContent}>
-            <Avatar.Image size={expanded ? 40 : 36} source={source} />
+            <Avatar.Image size={40} source={source} />
             {expanded ? (
               <View style={styles.accountText}>
                 <Text variant="labelLarge" numberOfLines={1}>
@@ -111,7 +112,12 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.pill,
     minHeight: TOKENS.touchTarget.min,
   },
+  collapsedLogin: {
+    alignSelf: 'center',
+    margin: 0,
+  },
   collapsedAnchor: {
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: TOKENS.touchTarget.min,
