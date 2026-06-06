@@ -11,8 +11,14 @@ import { mergeUserData } from './selectors/merge';
 import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
 import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
+import { withTimeout } from '@/utils/withTimeout';
 import { purgeExpiredArchivesAction } from './actions/groupActions';
 import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
+
+// Bound the startup cloud load so a stalled/unreachable Firestore connection
+// cannot hold the spinner hostage. Local data is shown first regardless; on
+// timeout we keep the local cache and surface the error via lastSyncError.
+const CLOUD_LOAD_TIMEOUT_MS = 8000;
 
 export function shouldTriggerMigration(
   hasUserLocalCache: boolean,
@@ -53,6 +59,7 @@ interface UseStoreBootstrapParams {
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
   setMigrationPending: Dispatch<SetStateAction<boolean>>;
   setPendingGuestSnapshot: Dispatch<SetStateAction<StoreData | null>>;
+  bumpSyncRefresh: () => void;
   applySnapshot: (snapshot: StoreData) => void;
   persistLocalSnapshot: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
   persistNow: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
@@ -67,6 +74,7 @@ export function useStoreBootstrap({
   setLastStoreError,
   setMigrationPending,
   setPendingGuestSnapshot,
+  bumpSyncRefresh,
   applySnapshot,
   persistLocalSnapshot,
   persistNow,
@@ -81,87 +89,105 @@ export function useStoreBootstrap({
     let active = true;
     const targetUid = user ? user.uid : null;
 
-    async function finishBootstrap(
+    // Apply first-run seed defaults and purge expired archives. Pure transform —
+    // no persistence side effects, so it is safe to run for both the instant
+    // local render and the post-cloud render.
+    function prepareCollections(
+      groups: FlashcardGroup[],
+      modes: StudyMode[],
+      seedVer: number,
+    ): { groups: FlashcardGroup[]; modes: StudyMode[] } {
+      let nextGroups = groups;
+      let nextModes = modes;
+      if (seedVer < SEED_VERSION) {
+        if (seedVer === 0 && nextGroups.length === 0) {
+          nextGroups = createSeedGroups();
+        }
+        nextModes = normalizeStudyModes(nextModes);
+      }
+      if (nextGroups.length === 0) {
+        nextGroups = createSeedGroups();
+      }
+      if (nextModes.length === 0) {
+        nextModes = createSeedModes();
+      }
+      nextGroups = purgeExpiredArchivesAction(nextGroups, Date.now(), ARCHIVE_RETENTION_MS).groups;
+      return { groups: nextGroups, modes: nextModes };
+    }
+
+    function buildSnapshot(
       groups: FlashcardGroup[],
       modes: StudyMode[],
       heatmap: Record<string, number>,
-      seedVer: number,
-      uid: string | null,
       cloudSynced: boolean,
-      cloudLoadFailed: boolean,
-    ) {
-      const hadNoLocalGroups = groups.length === 0;
-      if (seedVer < SEED_VERSION) {
-        if (seedVer === 0 && groups.length === 0) {
-          groups = createSeedGroups();
-        }
+    ): StoreData {
+      return normalizeStoreData({
+        groups,
+        studyModes: modes,
+        activityHeatmap: heatmap,
+        ...(cloudSynced ? { lastSyncedAt: Date.now() } : {}),
+      });
+    }
 
-        modes = normalizeStudyModes(modes);
-
-        await setSeedVersion(SEED_VERSION).catch((err) => {
-          setLastPersistenceError(getErrorMessage(err));
-        });
-      }
-
-      if (groups.length === 0) {
-        groups = createSeedGroups();
-      }
-      if (modes.length === 0) {
-        modes = createSeedModes();
-      }
-
-      groups = purgeExpiredArchivesAction(groups, Date.now(), ARCHIVE_RETENTION_MS).groups;
-
-      if (active) {
-        const snapshot = normalizeStoreData({
-          groups,
-          studyModes: modes,
-          activityHeatmap: heatmap,
-          ...(cloudSynced ? { lastSyncedAt: Date.now() } : {}),
-        });
-        applySnapshot(snapshot);
-        // A signed-in user whose cloud load FAILED and who has no local data is shown
-        // seed decks only as an ephemeral fallback. Persisting them as the user's
-        // local cache would shadow the real (unreachable) cloud data and risk
-        // duplicate seeds on the next successful merge — keep them in memory only.
-        if (cloudLoadFailed && uid !== null && hadNoLocalGroups) {
-          return;
-        }
-        if (cloudLoadFailed) {
-          // Best-effort local fallback: keep the cloud failure visible via
-          // lastSyncError/lastStoreError instead of clearing it here.
-          await persistLocalSnapshot({ uid, ...snapshot });
-        } else {
-          await persistNow({ uid, ...snapshot });
-        }
-      }
+    // True when the user-visible collections are identical. Ignores lastSyncedAt
+    // so a no-op cloud merge does not trigger a refresh animation.
+    function sameVisibleData(a: StoreData, b: StoreData): boolean {
+      return (
+        deepEqual(a.groups, b.groups) &&
+        deepEqual(a.studyModes, b.studyModes) &&
+        deepEqual(a.activityHeatmap, b.activityHeatmap)
+      );
     }
 
     async function loadData() {
       setIsLoading(true);
       try {
         const seedVer = await getSeedVersion();
-        let loadedGroups: FlashcardGroup[] = [];
-        let loadedModes: StudyMode[] = [];
-        let loadedHeatmap: Record<string, number> = {};
 
         const localCache = await loadLocalData(targetUid || undefined);
-        if (localCache) {
-          loadedGroups = localCache.groups;
-          loadedModes = localCache.studyModes;
-          loadedHeatmap = localCache.activityHeatmap;
+        let loadedGroups: FlashcardGroup[] = localCache?.groups ?? [];
+        let loadedModes: StudyMode[] = localCache?.studyModes ?? [];
+        let loadedHeatmap: Record<string, number> = localCache?.activityHeatmap ?? {};
+        const hadNoLocalGroups = loadedGroups.length === 0;
+
+        // Persist the bumped seed version once, up front (was previously done
+        // inside the now-removed finishBootstrap).
+        if (seedVer < SEED_VERSION) {
+          await setSeedVersion(SEED_VERSION).catch((err) => {
+            setLastPersistenceError(getErrorMessage(err));
+          });
         }
 
+        // Guest: no cloud. Apply + persist locally and we are done.
         if (!targetUid) {
-          await finishBootstrap(loadedGroups, loadedModes, loadedHeatmap, seedVer, null, false, false);
+          const prepared = prepareCollections(loadedGroups, loadedModes, seedVer);
+          const snapshot = buildSnapshot(prepared.groups, prepared.modes, loadedHeatmap, false);
+          if (!active) return;
+          applySnapshot(snapshot);
+          setIsLoading(false);
+          await persistNow({ uid: null, ...snapshot });
           return;
         }
 
+        // Signed in WITH local data → render it immediately (local-first) so the
+        // spinner never waits on the network. Defer persistence to the canonical
+        // post-cloud snapshot below.
+        let shownSnapshot: StoreData | null = null;
+        if (!hadNoLocalGroups) {
+          const prepared = prepareCollections(loadedGroups, loadedModes, seedVer);
+          shownSnapshot = buildSnapshot(prepared.groups, prepared.modes, loadedHeatmap, false);
+          if (!active) return;
+          applySnapshot(shownSnapshot);
+          setIsLoading(false);
+        }
+
+        // Cloud load runs in the background, bounded by a timeout so a stalled
+        // Firestore connection cannot hold startup hostage.
         let cloudLoadFailed = false;
         let cloudSynced = false;
         let cloudData: StoreData | null = null;
         try {
-          cloudData = await loadCloudData(targetUid);
+          cloudData = await withTimeout(loadCloudData(targetUid), CLOUD_LOAD_TIMEOUT_MS, 'Cloud load');
           if (active) setLastSyncError(null);
         } catch (err) {
           cloudLoadFailed = true;
@@ -182,10 +208,10 @@ export function useStoreBootstrap({
           loadedHeatmap = merged.activityHeatmap;
           cloudSynced = true;
         } else if (cloudLoadFailed) {
-          // network error — use user-local cache (already in loaded vars)
+          // network error / timeout — keep the local cache (already shown above)
         } else {
           // cloudData == null — NEW ACCOUNT
-          if (loadedGroups.length === 0) {
+          if (hadNoLocalGroups) {
             const guestData = await loadLocalData();
             if (active && shouldTriggerMigration(false, getGuestHasData(guestData))) {
               setMigrationPending(true);
@@ -195,15 +221,42 @@ export function useStoreBootstrap({
           }
         }
 
-        await finishBootstrap(
-          loadedGroups,
-          loadedModes,
-          loadedHeatmap,
-          seedVer,
-          targetUid,
-          cloudSynced,
-          cloudLoadFailed,
-        );
+        const prepared = prepareCollections(loadedGroups, loadedModes, seedVer);
+        const finalSnapshot = buildSnapshot(prepared.groups, prepared.modes, loadedHeatmap, cloudSynced);
+
+        if (!active) return;
+
+        const cloudChanged =
+          cloudSynced && shownSnapshot !== null && !sameVisibleData(shownSnapshot, finalSnapshot);
+
+        // Re-render only when nothing was shown yet, or the cloud merge actually
+        // changed the visible data; bump the refresh key so the dashboard can
+        // replay its enter animation on a real change.
+        if (shownSnapshot === null || cloudChanged) {
+          applySnapshot(finalSnapshot);
+        }
+        if (cloudChanged) {
+          bumpSyncRefresh();
+        }
+
+        // Data is on screen now — drop the spinner before persisting so the
+        // (un-timed) cloud save can never hold startup hostage.
+        setIsLoading(false);
+
+        // A signed-in user whose cloud load FAILED and who has no local data is
+        // shown seed decks only as an ephemeral fallback. Persisting them as the
+        // user's local cache would shadow the real (unreachable) cloud data and
+        // risk duplicate seeds on the next successful merge — keep them in memory.
+        if (cloudLoadFailed && hadNoLocalGroups) {
+          return;
+        }
+        if (cloudLoadFailed) {
+          // Best-effort local fallback: keep the cloud failure visible via
+          // lastSyncError/lastStoreError instead of clearing it here.
+          await persistLocalSnapshot({ uid: targetUid, ...finalSnapshot });
+        } else {
+          await persistNow({ uid: targetUid, ...finalSnapshot });
+        }
       } catch (err) {
         console.error('Failed to initialize flashcard store:', err);
         setLastStoreError(getErrorMessage(err));
@@ -221,6 +274,7 @@ export function useStoreBootstrap({
     };
   }, [
     applySnapshot,
+    bumpSyncRefresh,
     persistLocalSnapshot,
     persistNow,
     setIsLoading,

@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider, useTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider, useI18n } from '@/i18n';
 import { AppThemeProvider, useAppTheme } from '@/contexts/UserPreferencesContext';
@@ -71,11 +72,23 @@ function getGlobalErrorTitleKey(pathname: string): string | undefined {
   }
 }
 
+// Hard ceiling on how long the web app waits for the icon font before rendering
+// anyway. expo-font preloads it (see useFonts), so this only matters if the font
+// fetch hangs without ever resolving or rejecting — render rather than hold an
+// indefinite splash.
+const ICON_FONT_MAX_WAIT_MS = 4000;
+
 function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
   const { isI18nLoading } = useI18n();
   const { isDark, useSystemColors, isThemeLoading } = useAppTheme();
   const { theme: materialColors } = useMaterial3Theme();
-  const [isIconFontReady, setIsIconFontReady] = React.useState(Platform.OS !== 'web');
+  // Registering the icon font through expo-font (rather than the imperative
+  // loadFont() in an effect) lets the static web export embed a font preload in
+  // the HTML, so the font downloads in parallel with the JS bundle instead of
+  // being requested only after the first client render.
+  const [iconFontLoaded, iconFontError] = useFonts(MaterialCommunityIcons.font);
+  const [iconFontRecovered, setIconFontRecovered] = React.useState(false);
+  const isIconFontReady = Platform.OS !== 'web' || iconFontLoaded || iconFontRecovered;
 
   const theme = React.useMemo(() => {
     return createAppTheme({
@@ -141,30 +154,53 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
     );
   }, [theme.colors.outline]);
 
+  // expo-font preloads the icon font (see useFonts above). If that load fails —
+  // e.g. a cold-CDN hiccup right after a web deploy — retry a few times before
+  // giving up, so a transient failure no longer leaves the app with blank icons
+  // until the user manually reloads.
   React.useEffect(() => {
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== 'web' || !iconFontError || iconFontRecovered) {
       return;
     }
 
     let cancelled = false;
 
-    MaterialCommunityIcons.loadFont()
-      .then(() => {
-        if (!cancelled) {
-          setIsIconFontReady(true);
+    void (async () => {
+      for (let attempt = 1; attempt <= 3 && !cancelled; attempt += 1) {
+        try {
+          await MaterialCommunityIcons.loadFont();
+          if (!cancelled) {
+            setIconFontRecovered(true);
+          }
+          return;
+        } catch (err: unknown) {
+          if (attempt === 3) {
+            console.warn('MaterialCommunityIcons font load failed after retries:', getErrorMessage(err));
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, attempt * 300));
+          }
         }
-      })
-      .catch((err: unknown) => {
-        console.warn('MaterialCommunityIcons font preload failed:', getErrorMessage(err));
-        if (!cancelled) {
-          setIsIconFontReady(true);
-        }
-      });
+      }
+      // Last resort: render without the icon font rather than blocking forever.
+      if (!cancelled) {
+        setIconFontRecovered(true);
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [iconFontError, iconFontRecovered]);
+
+  // Hard cap: render even if the icon font never resolves nor rejects (a hang,
+  // not an error). Prevents an indefinite splash if the font fetch stalls.
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || iconFontLoaded || iconFontRecovered) {
+      return;
+    }
+    const timer = setTimeout(() => setIconFontRecovered(true), ICON_FONT_MAX_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [iconFontLoaded, iconFontRecovered]);
 
   // Hide the splash screen only after settings, translations, and fonts are loaded.
   React.useEffect(() => {

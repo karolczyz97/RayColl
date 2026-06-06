@@ -17,9 +17,14 @@ interface DeckGridProps {
   baseOrder?: number;
   groups: FlashcardGroup[];
   onModeChange: (groupId: string, modeId: string) => void;
+  /**
+   * Remounts the grid (replaying the enter stagger) when it changes. The store
+   * bumps it after a background cloud sync that actually changed the decks.
+   */
+  refreshKey?: number;
 }
 
-export function DeckGrid({ baseOrder = 0, groups, onModeChange }: DeckGridProps) {
+export function DeckGrid({ baseOrder = 0, groups, onModeChange, refreshKey = 0 }: DeckGridProps) {
   const { width: windowWidth } = useResponsiveLayout();
   const { navWidth } = useNavigationShell();
 
@@ -51,7 +56,7 @@ export function DeckGrid({ baseOrder = 0, groups, onModeChange }: DeckGridProps)
   }, [cardWidth]);
 
   return (
-    <View style={[styles.grid, { gap }]}>
+    <View key={refreshKey} style={[styles.grid, { gap }]}>
       {groups.map((group, index) => (
         <View key={group.id} style={[styles.gridItem, widthStyle]}>
           <AnimatedSection order={baseOrder + Math.floor(index / columns)}>

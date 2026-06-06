@@ -24,7 +24,7 @@ export default function Dashboard() {
   const { contentMaxWidth } = useResponsiveLayout();
   const { t } = useI18n();
 
-  const { groups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap, lastLoginError, clearLastLoginError } = store;
+  const { groups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap, lastLoginError, clearLastLoginError, syncRefreshKey } = store;
 
   const handleLogin = async () => {
     try {
@@ -108,7 +108,7 @@ export default function Dashboard() {
           <EmptyDashboardState />
         </AnimatedSection>
       ) : (
-        <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} />
+        <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} refreshKey={syncRefreshKey} />
       )}
 
       <AppSnackbar
