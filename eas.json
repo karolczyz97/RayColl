@@ -27,6 +27,17 @@
         "ABI_FILTER": "arm64-v8a"
       }
     },
+    "production-pixel": {
+      "channel": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "autoIncrement": true
+      },
+      "env": {
+        "ABI_FILTER": "arm64-v8a"
+      }
+    },
     "production": {
       "channel": "production",
       "distribution": "internal",
