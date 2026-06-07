@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
@@ -95,7 +95,7 @@ export function ImportScreen() {
   return (
     <AppScreen
       title={t('import.title')}
-      onBack={safeBack}
+      onBack={navigateUp}
       scroll={false}
       contentStyle={styles.screenContent}
     >

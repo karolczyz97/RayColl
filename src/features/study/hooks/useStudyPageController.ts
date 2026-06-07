@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useStudySession } from '@/hooks/useStudySession';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
@@ -13,7 +13,7 @@ interface UseStudyPageControllerOptions {
 }
 
 export function useStudyPageController({
-  navigateBack = safeBack,
+  navigateBack = navigateUp,
 }: UseStudyPageControllerOptions = {}) {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const store = useFlashcardStore();
@@ -21,7 +21,7 @@ export function useStudyPageController({
   const isNarrow = width < NARROW_CONTROLS_WIDTH;
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const pendingExitNavigationRef = useRef<(() => void) | null>(null);
+  const [endedEarly, setEndedEarly] = useState(false);
 
   const {
     groups,
@@ -52,6 +52,7 @@ export function useStudyPageController({
     handleCardPress,
     startSession,
     stopSession,
+    endSession,
     setHolding,
     restartSession,
     restartFailed,
@@ -84,17 +85,20 @@ export function useStudyPageController({
     [flushPersistence, stopSession],
   );
 
+  // Blocked only while a session is genuinely in progress. Finished sessions and
+  // decks with no due cards fall through to an immediate leave (no dialog).
+  const isExitBlocked = dueCards.length > 0 && !sessionState.isSessionFinished;
+
   const requestExit = useCallback(
     (navigate: () => void = navigateBack) => {
-      if (sessionState.isSessionFinished) {
+      if (!isExitBlocked) {
         leaveStudy(navigate);
         return;
       }
-
-      pendingExitNavigationRef.current = navigate;
+      // Active session → confirm first; on confirm we show the summary (confirmExit).
       setShowExitConfirm(true);
     },
-    [leaveStudy, navigateBack, sessionState.isSessionFinished],
+    [isExitBlocked, leaveStudy, navigateBack],
   );
 
   const handleBack = useCallback(() => {
@@ -103,15 +107,24 @@ export function useStudyPageController({
 
   const confirmExit = useCallback(() => {
     setShowExitConfirm(false);
-    const navigate = pendingExitNavigationRef.current ?? navigateBack;
-    pendingExitNavigationRef.current = null;
-    leaveStudy(navigate);
-  }, [leaveStudy, navigateBack]);
+    setEndedEarly(true);
+    // End the run instead of navigating: StudyFinishedState then renders in place.
+    endSession();
+  }, [endSession]);
 
   const cancelExit = useCallback(() => {
     setShowExitConfirm(false);
-    pendingExitNavigationRef.current = null;
   }, []);
+
+  const handleRestartSession = useCallback(() => {
+    setEndedEarly(false);
+    restartSession();
+  }, [restartSession]);
+
+  const handleRestartFailed = useCallback(() => {
+    setEndedEarly(false);
+    restartFailed();
+  }, [restartFailed]);
 
   useEffect(() => {
     return () => {
@@ -126,8 +139,6 @@ export function useStudyPageController({
     }
   }, [flushPersistence, sessionState.isSessionFinished]);
 
-  const isExitBlocked = dueCards.length > 0 && !sessionState.isSessionFinished;
-
   const sessionProgressItems = useMemo(
     () => buildSessionProgressItems(dueCards, activeGroup?.cards ?? []),
     [activeGroup?.cards, dueCards],
@@ -140,6 +151,7 @@ export function useStudyPageController({
     confirmExit,
     currentCard: dueCards[sessionState.currentCardIndex] || null,
     dueCards,
+    endedEarly,
     failedCount,
     groupId,
     handleBack,
@@ -150,8 +162,8 @@ export function useStudyPageController({
     isExitBlocked,
     isLoading,
     isNarrow,
-    restartFailed,
-    restartSession,
+    restartFailed: handleRestartFailed,
+    restartSession: handleRestartSession,
     requestExit,
     sessionProgressItems,
     sessionState,

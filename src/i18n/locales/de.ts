@@ -71,6 +71,8 @@ export const de: Record<string, string> = {
   'study.exit_confirm_title': 'Lernmodus verlassen?',
   'study.exit_confirm_message': 'Du bist im Lernmodus. Möchtest du wirklich gehen?',
   'study.exit_confirm_btn': 'Verlassen',
+  'study.session_ended_title': 'Sitzung pausiert',
+  'study.session_ended_desc': 'Du hast vor dem Ende beendet. Dein Fortschritt ist gespeichert.',
 
   // Browse
   'browse.search_placeholder': 'Karteikarten suchen...',

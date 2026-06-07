@@ -71,6 +71,8 @@ export const es: Record<string, string> = {
   'study.exit_confirm_title': '¿Salir del modo estudio?',
   'study.exit_confirm_message': 'Estás en modo estudio. ¿Seguro que quieres salir?',
   'study.exit_confirm_btn': 'Salir',
+  'study.session_ended_title': 'Sesión interrumpida',
+  'study.session_ended_desc': 'Saliste antes de terminar. Tu progreso está guardado.',
 
   // Browse
   'browse.search_placeholder': 'Buscar tarjetas...',

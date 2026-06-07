@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -66,7 +66,7 @@ export default function ArchivePage() {
   };
 
   return (
-    <AppScreen title={t('archive.title')} onBack={safeBack} maxWidth={contentMaxWidth}>
+    <AppScreen title={t('archive.title')} onBack={navigateUp} maxWidth={contentMaxWidth}>
       {archivedGroups.length === 0 ? (
         <AnimatedSection order={0}>
           <View style={styles.empty}>

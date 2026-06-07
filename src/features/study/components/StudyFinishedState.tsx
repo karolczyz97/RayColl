@@ -12,6 +12,8 @@ import { TOKENS } from '@/theme/tokens';
 
 interface StudyFinishedStateProps {
   activeGroup: FlashcardGroup;
+  /** True when the user left mid-session (vs reviewing every due card). */
+  endedEarly?: boolean;
   failedCount: number;
   dueCardsCount: number;
   onRestartFailed: () => void;
@@ -21,6 +23,7 @@ interface StudyFinishedStateProps {
 
 export function StudyFinishedState({
   activeGroup,
+  endedEarly = false,
   failedCount,
   dueCardsCount,
   onRestartFailed,
@@ -37,12 +40,16 @@ export function StudyFinishedState({
       </Animated.View>
       <Animated.View entering={FadeInUp.springify().delay(150)}>
         <Text variant="headlineLarge" style={styles.bravoTitle}>
-          {t('study.bravo')}
+          {endedEarly ? t('study.session_ended_title') : t('study.bravo')}
         </Text>
       </Animated.View>
       <Animated.View entering={FadeInUp.springify().delay(250)}>
         <Text variant="bodyLarge" style={[styles.finishedDescription, { color: theme.colors.onSurfaceVariant }]}>
-          {dueCardsCount === 0 ? t('study.no_due') : t('study.finished_desc')}
+          {dueCardsCount === 0
+            ? t('study.no_due')
+            : endedEarly
+              ? t('study.session_ended_desc')
+              : t('study.finished_desc')}
         </Text>
       </Animated.View>
 

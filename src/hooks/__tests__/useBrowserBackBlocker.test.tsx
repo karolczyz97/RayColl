@@ -16,11 +16,11 @@ jest.mock('react-native', () => {
 });
 
 jest.mock('@/utils/navigation', () => ({
-  safeBack: jest.fn(),
+  navigateUp: jest.fn(),
 }));
 
 // eslint-disable-next-line import/first
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 // eslint-disable-next-line import/first
 import {
   createBrowserBackBlockerState,
@@ -28,7 +28,7 @@ import {
   useBrowserBackBlocker,
 } from '../useBrowserBackBlocker';
 
-const mockedSafeBack = safeBack as jest.MockedFunction<typeof safeBack>;
+const mockedNavigateUp = navigateUp as jest.MockedFunction<typeof navigateUp>;
 
 interface FakeHistory {
   back: jest.Mock;
@@ -177,13 +177,13 @@ describe('useBrowserBackBlocker', () => {
     });
 
     expect(historyBack).toHaveBeenCalledTimes(1);
-    expect(mockedSafeBack).not.toHaveBeenCalled();
+    expect(mockedNavigateUp).not.toHaveBeenCalled();
 
     act(() => {
       jest.runOnlyPendingTimers();
     });
 
-    expect(mockedSafeBack).toHaveBeenCalledTimes(1);
+    expect(mockedNavigateUp).toHaveBeenCalledTimes(1);
     historyBack.mockRestore();
   });
 });

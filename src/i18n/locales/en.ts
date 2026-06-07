@@ -73,6 +73,8 @@ export const en: Record<string, string> = {
   'study.exit_confirm_title': 'Leave study mode?',
   'study.exit_confirm_message': 'You are in study mode. Are you sure you want to leave?',
   'study.exit_confirm_btn': 'Leave',
+  'study.session_ended_title': 'Session paused',
+  'study.session_ended_desc': 'You left before finishing. Your progress is saved.',
 
   // Browse
   'browse.search_placeholder': 'Search flashcards...',

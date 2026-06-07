@@ -71,6 +71,8 @@ export const it: Record<string, string> = {
   'study.exit_confirm_title': 'Uscire dalla modalità studio?',
   'study.exit_confirm_message': 'Sei in modalità studio. Vuoi davvero uscire?',
   'study.exit_confirm_btn': 'Esci',
+  'study.session_ended_title': 'Sessione interrotta',
+  'study.session_ended_desc': 'Sei uscito prima di finire. I tuoi progressi sono salvati.',
 
   // Browse
   'browse.search_placeholder': 'Cerca flashcard...',

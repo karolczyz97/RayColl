@@ -183,6 +183,13 @@ export function useStudySession(
     stopAudio();
   }, [stopAudio]);
 
+  // End the run early (e.g. user confirmed exit): stop any audio/STT and mark the
+  // session finished so the summary screen renders in place instead of navigating.
+  const endSession = useCallback(() => {
+    stopSession();
+    dispatchIfMounted({ type: 'FINISH_SESSION' });
+  }, [dispatchIfMounted, stopSession]);
+
   const clearError = useCallback(() => {
     dispatchIfMounted({ type: 'CLEAR_ERROR' });
   }, [dispatchIfMounted]);
@@ -213,6 +220,7 @@ export function useStudySession(
     handleCardPress,
     startSession,
     stopSession,
+    endSession,
     setHolding,
     restartSession,
     restartFailed,

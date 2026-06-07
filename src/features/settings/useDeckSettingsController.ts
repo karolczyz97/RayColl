@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { deepEqual } from '@/utils/deepEqual';
 import type { ModeStep, StudyMode } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
@@ -168,7 +168,7 @@ export function useDeckSettingsController() {
     setArchiveDialogOpen(false);
     try {
       await store.archiveGroup(activeGroup.id);
-      safeBack();
+      navigateUp();
     } catch {
       // Persist failed and the archive was rolled back; the error is surfaced via
       // store state. Stay on the screen so the user can retry instead of navigating
@@ -187,7 +187,7 @@ export function useDeckSettingsController() {
     deckNameError,
     archiveDialogOpen,
     editingModeId,
-    handleBack: safeBack,
+    handleBack: navigateUp,
     handleColBlur,
     handleArchiveGroup,
     handleNameBlur,

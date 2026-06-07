@@ -8,12 +8,12 @@ import { useStudyPageController } from '@/features/study/hooks/useStudyPageContr
 import { useNavigationBlocker } from '@/contexts/NavigationBlockerContext';
 import { useBrowserBackBlocker } from '@/hooks/useBrowserBackBlocker';
 import { useI18n } from '@/i18n';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 
 function StudyPageContent() {
   const navigation = useNavigation();
   const allowNextBeforeRemoveRef = useRef(false);
-  const navigateBackRef = useRef<() => void>(safeBack);
+  const navigateBackRef = useRef<() => void>(navigateUp);
   const navigateBack = useCallback(() => {
     navigateBackRef.current();
   }, []);

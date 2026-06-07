@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 
 export const BROWSER_BACK_BLOCKER_KEY = '__raycollBrowserBackBlocker';
 
@@ -47,7 +47,7 @@ export function useBrowserBackBlocker({
 
   const navigateBack = useCallback(() => {
     if (!canUseBrowserHistory() || !hasBrowserBackBlocker(window.history.state)) {
-      safeBack();
+      navigateUp();
       return;
     }
 
@@ -55,7 +55,7 @@ export function useBrowserBackBlocker({
     window.history.back();
     window.setTimeout(() => {
       skippingControlledPopRef.current = false;
-      safeBack();
+      navigateUp();
     }, 0);
   }, []);
 

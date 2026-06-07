@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import type { SrsCardCategory } from '@/srs/srsEngine';
 import { getCardCategory } from '@/srs/srsEngine';
 import type { Flashcard } from '@/types/models';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { computeCardStats } from '@/store/selectors/stats';
@@ -148,7 +148,7 @@ export function useBrowseController() {
     editingId,
     emptyLabel: t('browse.no_cards'),
     filteredCards,
-    handleBack: safeBack,
+    handleBack: navigateUp,
     isLoading: store.isLoading,
     isReadOnly,
     minPagesMessage: t('browse.min_filled_pages'),

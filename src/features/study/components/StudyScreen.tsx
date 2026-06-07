@@ -20,6 +20,7 @@ interface StudyScreenProps {
   confirmExit: () => void;
   currentCard: Flashcard | null;
   dueCards: Flashcard[];
+  endedEarly: boolean;
   failedCount: number;
   handleBack: () => void;
   handleCardPress: () => void;
@@ -54,6 +55,7 @@ export function StudyScreen({
   confirmExit,
   currentCard,
   dueCards,
+  endedEarly,
   failedCount,
   handleBack,
   handleCardPress,
@@ -100,6 +102,7 @@ export function StudyScreen({
         {isFinished ? (
           <StudyFinishedState
             activeGroup={activeGroup}
+            endedEarly={endedEarly}
             failedCount={failedCount}
             dueCardsCount={dueCards.length}
             onRestartFailed={restartFailed}

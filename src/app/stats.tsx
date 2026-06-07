@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { useTheme } from 'react-native-paper';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
@@ -74,7 +74,7 @@ export default function StatsPage() {
   return (
     <AppScreen
       title={t('stats.title')}
-      onBack={safeBack}
+      onBack={navigateUp}
       maxWidth={formMaxWidth}
     >
       <AnimatedSection order={0}>

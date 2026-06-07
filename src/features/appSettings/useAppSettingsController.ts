@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { readAssetText } from '@/utils/fileReader';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -139,7 +139,7 @@ export function useAppSettingsController() {
   return {
     changelogVisible,
     formMaxWidth,
-    handleBack: safeBack,
+    handleBack: navigateUp,
     handleExport,
     handleImportFromFile,
     handleResetConfirm,

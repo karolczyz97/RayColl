@@ -73,6 +73,8 @@ export const pl: Record<string, string> = {
   'study.exit_confirm_title': 'Opuścić tryb nauki?',
   'study.exit_confirm_message': 'Jesteś w trybie nauki. Na pewno wyjść?',
   'study.exit_confirm_btn': 'Wyjdź',
+  'study.session_ended_title': 'Sesja przerwana',
+  'study.session_ended_desc': 'Wyjście przed końcem. Twój postęp jest zapisany.',
 
   // Browse
   'browse.search_placeholder': 'Szukaj fiszek...',

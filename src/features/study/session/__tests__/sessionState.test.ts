@@ -171,6 +171,17 @@ describe('sessionReducer', () => {
       expect(finished.status).toBe('finished');
       expect(finished.waitingForTap).toBe(false);
     });
+
+    it('forces finished from an in-progress status (early end mid-step)', () => {
+      const finished = reduce(
+        { ...INITIAL_STUDY_SESSION_STATE, status: 'speaking', currentCardIndex: 2, waitingForTap: true },
+        { type: 'FINISH_SESSION' },
+      );
+      expect(finished.status).toBe('finished');
+      expect(finished.waitingForTap).toBe(false);
+      // Position is preserved so the summary reflects where the user stopped.
+      expect(finished.currentCardIndex).toBe(2);
+    });
   });
 
   describe('ADVANCE_CARD', () => {

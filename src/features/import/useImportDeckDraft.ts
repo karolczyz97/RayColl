@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 import { swapElements } from '@/utils/array';
-import { safeBack } from '@/utils/navigation';
+import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSyncedRef } from '@/hooks/useSyncedRef';
@@ -317,7 +317,7 @@ export function useImportDeckDraft() {
       });
 
       if (result.ok) {
-        safeBack();
+        navigateUp();
         return;
       }
 
