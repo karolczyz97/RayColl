@@ -5,7 +5,6 @@ import { safeBack } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useStudySession } from '@/hooks/useStudySession';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
-import { useStudyNavigationGuard } from '@/features/study/StudyNavigationGuardContext';
 
 const NARROW_CONTROLS_WIDTH = 480;
 
@@ -18,7 +17,6 @@ export function useStudyPageController({
 }: UseStudyPageControllerOptions = {}) {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const store = useFlashcardStore();
-  const { setStudyActive } = useStudyNavigationGuard();
   const { width } = useWindowDimensions();
   const isNarrow = width < NARROW_CONTROLS_WIDTH;
 
@@ -73,19 +71,17 @@ export function useStudyPageController({
       if (due.length > 0) {
         startSession(due);
         startedRef.current = groupId;
-        setStudyActive(true);
       }
     }
-  }, [getDueCards, groupId, groups, isLoading, setStudyActive, startSession]);
+  }, [getDueCards, groupId, groups, isLoading, startSession]);
 
   const leaveStudy = useCallback(
     (navigate: () => void) => {
       stopSession();
       void flushPersistence().catch(() => {});
-      setStudyActive(false);
       navigate();
     },
-    [flushPersistence, setStudyActive, stopSession],
+    [flushPersistence, stopSession],
   );
 
   const requestExit = useCallback(
@@ -121,16 +117,16 @@ export function useStudyPageController({
     return () => {
       stopSession();
       void flushPersistence().catch(() => {});
-      setStudyActive(false);
     };
-  }, [flushPersistence, setStudyActive, stopSession]);
+  }, [flushPersistence, stopSession]);
 
   useEffect(() => {
     if (sessionState.isSessionFinished) {
       void flushPersistence().catch(() => {});
-      setStudyActive(false);
     }
-  }, [flushPersistence, sessionState.isSessionFinished, setStudyActive]);
+  }, [flushPersistence, sessionState.isSessionFinished]);
+
+  const isExitBlocked = dueCards.length > 0 && !sessionState.isSessionFinished;
 
   const sessionProgressItems = useMemo(
     () => buildSessionProgressItems(dueCards, activeGroup?.cards ?? []),
@@ -151,6 +147,7 @@ export function useStudyPageController({
     handleRating,
     hasStt: steps.some((step) => step.type === 'listen_and_branch'),
     hasTts: steps.some((step) => step.type === 'speak_page'),
+    isExitBlocked,
     isLoading,
     isNarrow,
     restartFailed,

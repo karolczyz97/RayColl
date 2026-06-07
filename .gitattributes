@@ -9,6 +9,13 @@
 # Binary files
 *.png binary
 *.jpg binary
+*.jpeg binary
 *.gif binary
+*.ico binary
+*.mp3 binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.webp binary
 *.pdf binary
 *.zip binary

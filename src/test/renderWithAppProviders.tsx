@@ -6,8 +6,8 @@ import {
   NavigationShellProvider,
   type NavigationShellContextValue,
 } from '@/contexts/NavigationShellContext';
+import { NavigationBlockerProvider } from '@/contexts/NavigationBlockerContext';
 import { I18nProvider } from '@/i18n';
-import { StudyNavigationGuardProvider } from '@/features/study/StudyNavigationGuardContext';
 import { createAppTheme } from '@/theme/createAppTheme';
 
 const defaultShellContext: NavigationShellContextValue = {
@@ -22,11 +22,9 @@ const defaultShellContext: NavigationShellContextValue = {
 interface TestProvidersProps {
   children: React.ReactNode;
   shellContext?: Partial<NavigationShellContextValue>;
-  /** Initial value for the study navigation guard (defaults to inactive). */
-  studyActive?: boolean;
 }
 
-export function TestProviders({ children, shellContext, studyActive = false }: TestProvidersProps) {
+export function TestProviders({ children, shellContext }: TestProvidersProps) {
   const theme = createAppTheme({
     isDark: false,
     useSystemColors: false,
@@ -41,16 +39,9 @@ export function TestProviders({ children, shellContext, studyActive = false }: T
     <I18nProvider>
       <AppThemeProvider>
         <NavigationShellProvider value={shellValue}>
-          <StudyNavigationGuardProvider
-            value={{
-              isStudyActive: studyActive,
-              requestStudyExit: () => false,
-              setStudyActive: () => undefined,
-              setStudyExitHandler: () => undefined,
-            }}
-          >
+          <NavigationBlockerProvider>
             <PaperProvider theme={theme}>{children}</PaperProvider>
-          </StudyNavigationGuardProvider>
+          </NavigationBlockerProvider>
         </NavigationShellProvider>
       </AppThemeProvider>
     </I18nProvider>

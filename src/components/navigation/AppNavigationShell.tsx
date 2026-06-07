@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useTheme } from 'react-native-paper';
@@ -14,20 +14,26 @@ import {
   type NavigationDestination,
 } from './navigationDestinations';
 import {
-  StudyNavigationGuardProvider,
-  type StudyExitHandler,
-} from '@/features/study/StudyNavigationGuardContext';
+  NavigationBlockerProvider,
+  useNavigationBlockerState,
+} from '@/contexts/NavigationBlockerContext';
 import type { Href } from 'expo-router';
 
 export function AppNavigationShell({ children }: { children: React.ReactNode }) {
+  return (
+    <NavigationBlockerProvider>
+      <AppNavigationShellContent>{children}</AppNavigationShellContent>
+    </NavigationBlockerProvider>
+  );
+}
+
+function AppNavigationShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const theme = useTheme();
   const responsive = useResponsiveLayout();
   const { user, signIn, signOut } = useFlashcardStore();
   const { railExpanded, setRailExpanded } = useAppTheme();
-
-  const [isStudyActive, setStudyActive] = useState(false);
-  const studyExitHandlerRef = useRef<StudyExitHandler | null>(null);
+  const { isNavigationBlocked, requestBlockedNavigation } = useNavigationBlockerState();
 
   // The rail can no longer be fully hidden — it is always shown on medium+
   // widths, only collapsed or expanded.
@@ -60,35 +66,21 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
     ],
   );
 
-  const setStudyExitHandler = useCallback((handler: StudyExitHandler | null) => {
-    studyExitHandlerRef.current = handler;
-  }, []);
-
-  const requestStudyExit = useCallback((navigate: () => void) => {
-    const handler = studyExitHandlerRef.current;
-    if (!handler) {
-      return false;
-    }
-
-    handler(navigate);
-    return true;
-  }, []);
-
   const navigateTo = useCallback((href: Href) => {
     router.navigate(href);
   }, []);
 
   const handleNavigate = useCallback((destination: NavigationDestination) => {
     const navigate = () => navigateTo(destination.href);
-    if (isStudyActive) {
-      if (!requestStudyExit(navigate)) {
-        console.warn('Study navigation guard is active without an exit handler.');
+    if (isNavigationBlocked) {
+      if (!requestBlockedNavigation(navigate)) {
+        console.warn('Navigation blocker is active without a leave handler.');
       }
       return;
     }
 
     navigate();
-  }, [isStudyActive, navigateTo, requestStudyExit]);
+  }, [isNavigationBlocked, navigateTo, requestBlockedNavigation]);
 
   const handleLogin = React.useCallback(() => {
     void signIn();
@@ -98,41 +90,27 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
     void signOut();
   }, [signOut]);
 
-  const studyGuardValue = React.useMemo(
-    () => ({
-      isStudyActive,
-      requestStudyExit,
-      setStudyActive,
-      setStudyExitHandler,
-    }),
-    [isStudyActive, requestStudyExit, setStudyExitHandler],
-  );
-
   if (!showPersistentNavigation) {
     return (
-      <StudyNavigationGuardProvider value={studyGuardValue}>
-        <NavigationShellProvider value={contextValue}>{children}</NavigationShellProvider>
-      </StudyNavigationGuardProvider>
+      <NavigationShellProvider value={contextValue}>{children}</NavigationShellProvider>
     );
   }
 
   return (
-    <StudyNavigationGuardProvider value={studyGuardValue}>
-      <NavigationShellProvider value={contextValue}>
-        <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-          <NavigationRail
-            expanded={isRailExpanded}
-            activeDestination={activeDestination}
-            user={user}
-            onNavigate={handleNavigate}
-            onLogin={handleLogin}
-            onLogout={handleLogout}
-            onToggleExpanded={() => void setRailExpanded(!railExpanded)}
-          />
-          <View style={styles.content}>{children}</View>
-        </View>
-      </NavigationShellProvider>
-    </StudyNavigationGuardProvider>
+    <NavigationShellProvider value={contextValue}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+        <NavigationRail
+          expanded={isRailExpanded}
+          activeDestination={activeDestination}
+          user={user}
+          onNavigate={handleNavigate}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onToggleExpanded={() => void setRailExpanded(!railExpanded)}
+        />
+        <View style={styles.content}>{children}</View>
+      </View>
+    </NavigationShellProvider>
   );
 }
 

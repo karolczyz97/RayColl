@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import { safeBack } from '@/utils/navigation';
 
-export const STUDY_BROWSER_BACK_GUARD_KEY = '__raycollStudyBackGuard';
+export const BROWSER_BACK_BLOCKER_KEY = '__raycollBrowserBackBlocker';
 
 type BrowserHistoryLike = Pick<History, 'back' | 'pushState' | 'state'>;
 
@@ -11,14 +11,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export function hasStudyBrowserBackGuard(state: unknown): boolean {
-  return isRecord(state) && state[STUDY_BROWSER_BACK_GUARD_KEY] === true;
+export function hasBrowserBackBlocker(state: unknown): boolean {
+  return isRecord(state) && state[BROWSER_BACK_BLOCKER_KEY] === true;
 }
 
-export function createStudyBrowserBackGuardState(state: unknown): Record<string, unknown> {
+export function createBrowserBackBlockerState(state: unknown): Record<string, unknown> {
   return {
     ...(isRecord(state) ? state : {}),
-    [STUDY_BROWSER_BACK_GUARD_KEY]: true,
+    [BROWSER_BACK_BLOCKER_KEY]: true,
   };
 }
 
@@ -26,27 +26,27 @@ function canUseBrowserHistory(): boolean {
   return Platform.OS === 'web' && typeof window !== 'undefined';
 }
 
-interface UseStudyBrowserBackGuardOptions {
+interface UseBrowserBackBlockerOptions {
   active: boolean;
   onBackBlocked: () => void;
 }
 
-export function useStudyBrowserBackGuard({
+export function useBrowserBackBlocker({
   active,
   onBackBlocked,
-}: UseStudyBrowserBackGuardOptions): () => void {
+}: UseBrowserBackBlockerOptions): () => void {
   const skippingControlledPopRef = useRef(false);
 
-  const installGuard = useCallback((history: BrowserHistoryLike, href: string) => {
-    if (hasStudyBrowserBackGuard(history.state)) {
+  const installBlocker = useCallback((history: BrowserHistoryLike, href: string) => {
+    if (hasBrowserBackBlocker(history.state)) {
       return;
     }
 
-    history.pushState(createStudyBrowserBackGuardState(history.state), '', href);
+    history.pushState(createBrowserBackBlockerState(history.state), '', href);
   }, []);
 
   const navigateBack = useCallback(() => {
-    if (!canUseBrowserHistory() || !hasStudyBrowserBackGuard(window.history.state)) {
+    if (!canUseBrowserHistory() || !hasBrowserBackBlocker(window.history.state)) {
       safeBack();
       return;
     }
@@ -64,14 +64,14 @@ export function useStudyBrowserBackGuard({
       return undefined;
     }
 
-    installGuard(window.history, window.location.href);
+    installBlocker(window.history, window.location.href);
 
     const handlePopState = () => {
       if (skippingControlledPopRef.current) {
         return;
       }
 
-      installGuard(window.history, window.location.href);
+      installBlocker(window.history, window.location.href);
       onBackBlocked();
     };
 
@@ -79,10 +79,10 @@ export function useStudyBrowserBackGuard({
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [active, installGuard, onBackBlocked]);
+  }, [active, installBlocker, onBackBlocked]);
 
   useEffect(() => {
-    if (active || !canUseBrowserHistory() || !hasStudyBrowserBackGuard(window.history.state)) {
+    if (active || !canUseBrowserHistory() || !hasBrowserBackBlocker(window.history.state)) {
       return;
     }
 

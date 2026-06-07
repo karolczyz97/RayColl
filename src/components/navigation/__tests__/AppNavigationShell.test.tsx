@@ -4,9 +4,9 @@ import { fireEvent, renderAsync, screen, waitFor } from '@testing-library/react-
 import { Text } from 'react-native';
 
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
+import { useNavigationBlocker } from '../../../contexts/NavigationBlockerContext';
 import { useNavigationShell } from '../../../contexts/NavigationShellContext';
 import { AppThemeProvider } from '../../../contexts/UserPreferencesContext';
-import { useStudyNavigationGuard } from '../../../features/study/StudyNavigationGuardContext';
 import { I18nProvider } from '../../../i18n';
 import { UI_PREFERENCE_STORAGE_KEYS, clearUiPreferenceCache } from '../../../storage/uiPreferences';
 import { createAppTheme } from '../../../theme/createAppTheme';
@@ -73,23 +73,17 @@ function ShellSizeProbe() {
   return <Text testID="shell-size">{`${contentWidth}:${navWidth}`}</Text>;
 }
 
-function StudyExitGuardProbe({
+function NavigationBlockerProbe({
   onRequest,
 }: {
   onRequest: (navigate: () => void) => void;
 }) {
-  const { setStudyActive, setStudyExitHandler } = useStudyNavigationGuard();
+  useNavigationBlocker({
+    active: true,
+    requestLeave: onRequest,
+  });
 
-  React.useEffect(() => {
-    setStudyActive(true);
-    setStudyExitHandler(onRequest);
-    return () => {
-      setStudyActive(false);
-      setStudyExitHandler(null);
-    };
-  }, [onRequest, setStudyActive, setStudyExitHandler]);
-
-  return <Text>Study guard active</Text>;
+  return <Text>Navigation blocker active</Text>;
 }
 
 async function renderShell(children?: React.ReactNode) {
@@ -152,10 +146,10 @@ describe('AppNavigationShell', () => {
     expect(screen.queryByLabelText('RayColl Logo Icon')).toBeNull();
   });
 
-  it('routes rail navigation through the active study exit handler', async () => {
+  it('routes rail navigation through the active navigation blocker', async () => {
     const onRequest = jest.fn();
 
-    await renderShell(<StudyExitGuardProbe onRequest={onRequest} />);
+    await renderShell(<NavigationBlockerProbe onRequest={onRequest} />);
 
     await waitFor(() => expect(screen.getByLabelText('Study Statistics')).toBeOnTheScreen());
     await fireEvent.press(screen.getByLabelText('Study Statistics'));

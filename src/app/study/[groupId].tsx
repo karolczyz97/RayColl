@@ -5,14 +5,13 @@ import { GroupNotFound } from '@/components/GroupNotFound';
 import { LoadingState } from '@/components/layout/LoadingState';
 import { StudyScreen } from '@/features/study/components/StudyScreen';
 import { useStudyPageController } from '@/features/study/hooks/useStudyPageController';
-import { useStudyBrowserBackGuard } from '@/features/study/hooks/useStudyBrowserBackGuard';
+import { useNavigationBlocker } from '@/contexts/NavigationBlockerContext';
+import { useBrowserBackBlocker } from '@/hooks/useBrowserBackBlocker';
 import { useI18n } from '@/i18n';
-import { useStudyNavigationGuard } from '@/features/study/StudyNavigationGuardContext';
 import { safeBack } from '@/utils/navigation';
 
 function StudyPageContent() {
   const navigation = useNavigation();
-  const { isStudyActive, setStudyExitHandler } = useStudyNavigationGuard();
   const allowNextBeforeRemoveRef = useRef(false);
   const navigateBackRef = useRef<() => void>(safeBack);
   const navigateBack = useCallback(() => {
@@ -20,20 +19,20 @@ function StudyPageContent() {
   }, []);
 
   const controller = useStudyPageController({ navigateBack });
-  const { requestExit } = controller;
-  const navigateBackWithBrowserGuard = useStudyBrowserBackGuard({
-    active: isStudyActive,
+  const { isExitBlocked, requestExit } = controller;
+  const navigateBackWithBrowserBlocker = useBrowserBackBlocker({
+    active: isExitBlocked,
     onBackBlocked: controller.handleBack,
   });
 
-  useEffect(() => {
-    navigateBackRef.current = navigateBackWithBrowserGuard;
-  }, [navigateBackWithBrowserGuard]);
+  useNavigationBlocker({
+    active: isExitBlocked,
+    requestLeave: requestExit,
+  });
 
   useEffect(() => {
-    setStudyExitHandler(requestExit);
-    return () => setStudyExitHandler(null);
-  }, [requestExit, setStudyExitHandler]);
+    navigateBackRef.current = navigateBackWithBrowserBlocker;
+  }, [navigateBackWithBrowserBlocker]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: {
@@ -45,7 +44,7 @@ function StudyPageContent() {
         return;
       }
 
-      if (!isStudyActive) return;
+      if (!isExitBlocked) return;
       e.preventDefault();
       requestExit(() => {
         allowNextBeforeRemoveRef.current = true;
@@ -53,7 +52,7 @@ function StudyPageContent() {
       });
     });
     return unsubscribe;
-  }, [isStudyActive, navigation, requestExit]);
+  }, [isExitBlocked, navigation, requestExit]);
 
   if (controller.isLoading) {
     return <LoadingState />;

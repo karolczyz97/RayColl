@@ -23,10 +23,10 @@ jest.mock('@/utils/navigation', () => ({
 import { safeBack } from '@/utils/navigation';
 // eslint-disable-next-line import/first
 import {
-  createStudyBrowserBackGuardState,
-  hasStudyBrowserBackGuard,
-  useStudyBrowserBackGuard,
-} from '../useStudyBrowserBackGuard';
+  createBrowserBackBlockerState,
+  hasBrowserBackBlocker,
+  useBrowserBackBlocker,
+} from '../useBrowserBackBlocker';
 
 const mockedSafeBack = safeBack as jest.MockedFunction<typeof safeBack>;
 
@@ -45,7 +45,7 @@ function setHistoryState(state: unknown, path = '/study/group-1') {
   fakeLocation.href = `http://localhost${path}`;
 }
 
-describe('useStudyBrowserBackGuard', () => {
+describe('useBrowserBackBlocker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     listeners = {};
@@ -103,29 +103,29 @@ describe('useStudyBrowserBackGuard', () => {
     jest.useRealTimers();
   });
 
-  it('preserves existing history state when adding the study guard marker', () => {
-    expect(createStudyBrowserBackGuardState({ expo: true })).toEqual({
+  it('preserves existing history state when adding the blocker marker', () => {
+    expect(createBrowserBackBlockerState({ expo: true })).toEqual({
       expo: true,
-      __raycollStudyBackGuard: true,
+      __raycollBrowserBackBlocker: true,
     });
   });
 
-  it('pushes a guarded browser history entry while study is active', () => {
+  it('pushes a guarded browser history entry while active', () => {
     renderHook(() =>
-      useStudyBrowserBackGuard({
+      useBrowserBackBlocker({
         active: true,
         onBackBlocked: jest.fn(),
       }),
     );
 
-    expect(hasStudyBrowserBackGuard(window.history.state)).toBe(true);
+    expect(hasBrowserBackBlocker(window.history.state)).toBe(true);
   });
 
-  it('opens the exit prompt path when browser back emits popstate', () => {
+  it('opens the blocked path when browser back emits popstate', () => {
     const onBackBlocked = jest.fn();
 
     renderHook(() =>
-      useStudyBrowserBackGuard({
+      useBrowserBackBlocker({
         active: true,
         onBackBlocked,
       }),
@@ -138,11 +138,35 @@ describe('useStudyBrowserBackGuard', () => {
     expect(onBackBlocked).toHaveBeenCalledTimes(1);
   });
 
-  it('skips the guard entry before falling back to normal app back navigation', () => {
+  it('reinstalls the blocker so a cancelled browser back can be blocked again', () => {
+    const onBackBlocked = jest.fn();
+
+    renderHook(() =>
+      useBrowserBackBlocker({
+        active: true,
+        onBackBlocked,
+      }),
+    );
+
+    act(() => {
+      setHistoryState({ expo: true });
+      window.dispatchEvent(new Event('popstate'));
+    });
+    act(() => {
+      setHistoryState({ expo: true });
+      window.dispatchEvent(new Event('popstate'));
+    });
+
+    expect(onBackBlocked).toHaveBeenCalledTimes(2);
+    expect(fakeHistory.pushState).toHaveBeenCalledTimes(3);
+    expect(hasBrowserBackBlocker(window.history.state)).toBe(true);
+  });
+
+  it('skips the blocker entry before falling back to normal app back navigation', () => {
     jest.useFakeTimers();
     const historyBack = jest.spyOn(window.history, 'back').mockImplementation(() => undefined);
     const { result } = renderHook(() =>
-      useStudyBrowserBackGuard({
+      useBrowserBackBlocker({
         active: true,
         onBackBlocked: jest.fn(),
       }),
