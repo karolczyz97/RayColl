@@ -7,6 +7,7 @@ import {
   playMicOffSound,
   playMicOnSound,
 } from '@/services/audioFeedback';
+import { playErrorHaptic, playStudyActionHaptic } from '@/services/hapticFeedback';
 import { getErrorMessage } from '@/utils/errors';
 
 export interface StudySkipState {
@@ -62,6 +63,7 @@ export function useStudyAudio(
   const runSpeechRecognition = useCallback(
     async (lang: string, timeoutMs: number): Promise<SpeechRecognitionOutcome> => {
       const token = (sttTokenRef.current += 1);
+      playStudyActionHaptic();
       playMicOnSound();
       try {
         const text = await sttServiceRef.current.startListening({
@@ -78,6 +80,7 @@ export function useStudyAudio(
         });
         return { status: 'ok', text };
       } catch (err) {
+        playErrorHaptic();
         console.error('STT Listen Error:', getErrorMessage(err));
         dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.stt' });
         return { status: 'error' };

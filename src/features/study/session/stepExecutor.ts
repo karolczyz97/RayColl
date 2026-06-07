@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 import type { Flashcard, FlashcardGroup, ModeStep } from '@/types/models';
 import { mapMatchToRating, matchSpeech } from '@/srs/srsEngine';
 import { playErrorSound, playSuccessSound } from '@/services/audioFeedback';
+import { playErrorHaptic, playSuccessHaptic } from '@/services/hapticFeedback';
 import type { StudySkipState, SpeechRecognitionOutcome } from '@/features/study/hooks/useStudyAudio';
 import type { SessionAction } from './sessionTypes';
 import { getActivePageIndexes, sleep } from './sessionUtils';
@@ -118,6 +119,7 @@ async function executeListenAndBranchStep(
 
   if (percent >= step.successThreshold) {
     playSuccessSound();
+    playSuccessHaptic();
     const autoRating = mapMatchToRating(percent);
     await sleep(600);
     if (!context.abortRef.current) {
@@ -128,6 +130,7 @@ async function executeListenAndBranchStep(
   }
 
   playErrorSound();
+  playErrorHaptic();
   context.markCardFailed(card);
 
   context.dispatchIfMounted({

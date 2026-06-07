@@ -12,6 +12,11 @@ import type {
   SessionAction,
   StudySessionState,
 } from '@/features/study/session/sessionTypes';
+import {
+  playCardPeekHaptic,
+  playSelectionHaptic,
+  playStudyActionHaptic,
+} from '@/services/hapticFeedback';
 
 interface UseStudyCardGesturesParams {
   groupRef: MutableRefObject<FlashcardGroup | null>;
@@ -78,6 +83,7 @@ export function useStudyCardGestures({
       );
 
       if (nextHiddenPageIndex === null) {
+        playSelectionHaptic();
         dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
         resumeAfterStep(card, stepIndex + 1);
         return;
@@ -88,6 +94,7 @@ export function useStudyCardGestures({
         nextHiddenPageIndex,
       ]);
       const allRevealed = areAllActivePagesRevealed(currentGroup, nextRevealedPages);
+      playSelectionHaptic();
       dispatchIfMounted({
         type: 'SET_CURRENT_STEP',
         stepIndex,
@@ -103,6 +110,7 @@ export function useStudyCardGestures({
     if (currentState.status === 'revealed' || currentState.status === 'finished') return;
 
     if (skipRef.current.armed) {
+      playStudyActionHaptic();
       dispatchIfMounted({ type: 'PEEK_CLEAR' });
       requestSkip();
     }
@@ -138,6 +146,7 @@ export function useStudyCardGestures({
           if (nextHidden !== null) {
             gesture.peekTimer = setTimeout(() => {
               gesture.hasPeeked = true;
+              playCardPeekHaptic();
               dispatchIfMounted({ type: 'PEEK_SET', pageIndex: nextHidden });
             }, PEEK_HOLD_THRESHOLD_MS);
           }
@@ -163,6 +172,9 @@ export function useStudyCardGestures({
                 stepIndex: currentState.currentStepIndex,
                 revealedPages: nextRevealedPages,
               });
+              if (!currentState.waitingForTap) {
+                playSelectionHaptic();
+              }
             }
           }
           gesture.blockPress = false;

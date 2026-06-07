@@ -114,7 +114,7 @@ Top ryzyka przy refaktoryzacji RayColl. Każde ryzyko ma plan minimalizacji i ja
 
 ## 6. Przypadkowe usunięcie zależności Expo / Paper potrzebnej transitive
 
-**Opis.** `@expo/vector-icons` jest w `dependencies`, ale ESLint (`no-restricted-imports`) blokuje bezpośredni import w `src/`. Pokusa: "skoro nikt nie importuje, można usunąć". Ale Paper / Expo mogą jej wymagać przez natywny autolink lub przez renderowanie ikon font-based. To samo dotyczy `@react-native-voice/voice`, `expo-audio`, `expo-auth-session`, `expo-web-browser`, etc.
+**Opis.** `@expo/vector-icons` jest w `dependencies`, ale ESLint (`no-restricted-imports`) blokuje bezpośredni import w `src/`. Pokusa: "skoro nikt nie importuje, można usunąć". Ale Paper / Expo mogą jej wymagać przez natywny autolink lub przez renderowanie ikon font-based. To samo dotyczy `expo-speech-recognition`, `expo-audio`, `expo-auth-session`, `expo-web-browser`, etc.
 
 **Najbardziej narażone pliki:**
 

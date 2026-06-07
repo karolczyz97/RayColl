@@ -29,7 +29,7 @@ are persisted on-device and can be synced to Firebase when the user signs in.
 - React Native Paper v5 / MD3
 - Firebase Auth and Firestore
 - AsyncStorage
-- expo-speech and `@react-native-voice/voice`
+- expo-speech and `expo-speech-recognition`
 - React Native Reanimated
 
 ## Development

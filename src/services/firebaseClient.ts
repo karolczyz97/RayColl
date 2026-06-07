@@ -6,7 +6,7 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureAuthPersistence } from './secureAuthPersistence';
 
 /**
  * Leaf module that owns Firebase initialization (app / auth / db).
@@ -33,7 +33,7 @@ export const auth = app
   ? Platform.OS === 'web'
     ? getAuth(app)
     : initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage),
+        persistence: getReactNativePersistence(secureAuthPersistence),
       })
   : null;
 

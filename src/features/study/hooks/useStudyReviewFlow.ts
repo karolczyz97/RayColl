@@ -7,6 +7,7 @@ import {
 } from '@/features/study/session/sessionReview';
 import { sleep } from '@/features/study/session/sessionUtils';
 import { useSyncedRef } from '@/hooks/useSyncedRef';
+import { playRatingHaptic } from '@/services/hapticFeedback';
 import type {
   SessionAction,
   StudySessionState,
@@ -120,6 +121,7 @@ export function useStudyReviewFlow({
       if (index >= dueCardsRef.current.length || !groupRef.current) return;
       const card = dueCardsRef.current[index];
       if (!card) return;
+      playRatingHaptic(rating);
       if (rating === 1) {
         markCardFailed(card);
       }

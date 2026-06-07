@@ -46,11 +46,21 @@ module.exports = {
           "imageWidth": 76
         }
       ],
-      "@react-native-voice/voice",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow RayColl to use the microphone for pronunciation practice.",
+          "speechRecognitionPermission": "Allow RayColl to recognize your speech for pronunciation practice.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ],
       "expo-sharing",
       [
         "expo-build-properties",
         {
+          "ios": {
+            "deploymentTarget": "16.4"
+          },
           "android": {
             "enableOnBackInvokedCallback": true,
             ...(abiFilter ? { buildArchs: [abiFilter] } : {})

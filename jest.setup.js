@@ -60,3 +60,43 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('expo-application', () => ({
   nativeBuildVersion: null,
 }));
+
+jest.mock('expo-haptics', () => ({
+  AndroidHaptics: {
+    Confirm: 'confirm',
+    Context_Click: 'context-click',
+    Gesture_Start: 'gesture-start',
+    Reject: 'reject',
+    Segment_Tick: 'segment-tick',
+  },
+  ImpactFeedbackStyle: {
+    Light: 'light',
+  },
+  NotificationFeedbackType: {
+    Error: 'error',
+    Success: 'success',
+    Warning: 'warning',
+  },
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  performAndroidHapticsAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('expo-secure-store', () => {
+  const store = new Map();
+
+  return {
+    AFTER_FIRST_UNLOCK: 'AFTER_FIRST_UNLOCK',
+    deleteItemAsync: jest.fn((key) => {
+      store.delete(key);
+      return Promise.resolve();
+    }),
+    getItemAsync: jest.fn((key) => Promise.resolve(store.get(key) ?? null)),
+    isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+    setItemAsync: jest.fn((key, value) => {
+      store.set(key, value);
+      return Promise.resolve();
+    }),
+  };
+});
