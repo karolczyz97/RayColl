@@ -120,7 +120,10 @@ export function AppScreen({
         style={[
           styles.contentRegion,
           { backgroundColor: theme.colors.background },
-          !isWeb && styles.nativePadding,
+          // scroll=false screens (Browse/Import/Study) own their horizontal
+          // padding via their list/content styles. Applying nativePadding there too
+          // double-padded them on native, making them narrower than scroll screens.
+          !isWeb && scroll && styles.nativePadding,
         ]}
       >
         {body}
