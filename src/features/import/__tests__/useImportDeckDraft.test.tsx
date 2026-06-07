@@ -7,11 +7,7 @@ jest.mock('expo-document-picker', () => ({
   getDocumentAsync: jest.fn(),
 }));
 
-jest.mock('@/store/FlashcardStoreContext', () => ({
-  useFlashcardStore: () => ({
-    importDeck: jest.fn(async () => ({ ok: true })),
-  }),
-}));
+const mockImportDeck = jest.fn(async () => ({ ok: true }));
 
 // eslint-disable-next-line import/first
 import { getActiveSepValue } from '../importDraftUtils';
@@ -19,6 +15,12 @@ import { getActiveSepValue } from '../importDraftUtils';
 import { useImportDeckDraft } from '../useImportDeckDraft';
 
 type Draft = ReturnType<typeof useImportDeckDraft>;
+
+jest.mock('@/store/FlashcardStoreContext', () => ({
+  useFlashcardStore: () => ({
+    importDeck: mockImportDeck,
+  }),
+}));
 
 function Harness({ hookRef }: { hookRef: { current: Draft | null } }) {
   const draft = useImportDeckDraft();
@@ -55,10 +57,13 @@ describe('getActiveSepValue', () => {
 describe('useImportDeckDraft cascade', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    mockImportDeck.mockClear();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
     jest.useRealTimers();
   });
 
@@ -140,5 +145,32 @@ describe('useImportDeckDraft cascade', () => {
 
     expect(hookRef.current!.pageCount).toBe(2);
     expect(hookRef.current!.rawColumnCount).toBe(2);
+  });
+
+  it('shows required errors on blur without showing them on first render', () => {
+    const hookRef = renderDraft();
+
+    expect(hookRef.current!.showNameRequiredError).toBe(false);
+    expect(hookRef.current!.showSourceRequiredError).toBe(false);
+
+    act(() => {
+      hookRef.current!.handleNameBlur();
+      hookRef.current!.handleSourceBlur();
+    });
+
+    expect(hookRef.current!.showNameRequiredError).toBe(true);
+    expect(hookRef.current!.showSourceRequiredError).toBe(true);
+  });
+
+  it('marks required fields and cancels submit when import input is incomplete', async () => {
+    const hookRef = renderDraft();
+
+    await act(async () => {
+      await hookRef.current!.submitImport();
+    });
+
+    expect(hookRef.current!.showNameRequiredError).toBe(true);
+    expect(hookRef.current!.showSourceRequiredError).toBe(true);
+    expect(mockImportDeck).not.toHaveBeenCalled();
   });
 });

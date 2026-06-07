@@ -10,9 +10,9 @@ interface EditFlashcardDialogProps {
   group: FlashcardGroup;
   editPages: string[];
   onPagesChange: (pages: string[]) => void;
+  onPageBlur?: (index: number) => void;
   onSave: () => void;
   onCancel: () => void;
-  saveDisabled?: boolean;
   validationMessage?: string;
 }
 
@@ -21,9 +21,9 @@ export function EditFlashcardDialog({
   group,
   editPages,
   onPagesChange,
+  onPageBlur,
   onSave,
   onCancel,
-  saveDisabled,
   validationMessage,
 }: EditFlashcardDialogProps) {
   const { t } = useI18n();
@@ -37,12 +37,13 @@ export function EditFlashcardDialog({
             group={group}
             editPages={editPages}
             onPagesChange={onPagesChange}
+            onPageBlur={onPageBlur}
             validationMessage={validationMessage}
           />
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onCancel}>{t('btn.cancel')}</Button>
-          <Button mode="contained" onPress={onSave} disabled={saveDisabled}>
+          <Button mode="contained" onPress={onSave}>
             {t('btn.save')}
           </Button>
         </Dialog.Actions>

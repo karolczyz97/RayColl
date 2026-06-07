@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   wrapper: {
     alignSelf: 'center',
     width: '100%',
-    maxWidth: TOKENS.layout.syncBannerMaxWidth,
+    maxWidth: TOKENS.layout.snackbarMaxWidth,
     paddingHorizontal: TOKENS.spacing.lg,
   },
   snackbar: {

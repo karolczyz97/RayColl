@@ -63,6 +63,10 @@ export function ImportScreen() {
             rawText={draft.rawText}
             onNameChange={draft.setName}
             onRawTextChange={draft.handleTextChange}
+            onNameBlur={draft.handleNameBlur}
+            onRawTextBlur={draft.handleSourceBlur}
+            nameError={draft.showNameRequiredError ? t('validation.required') : undefined}
+            rawTextError={draft.showSourceRequiredError ? t('import.validation.source_required') : undefined}
             onPickFile={draft.handlePickFile}
             onPaste={draft.handlePaste}
           />
@@ -109,7 +113,7 @@ export function ImportScreen() {
         <Button
           mode="contained"
           onPress={() => void draft.submitImport()}
-          disabled={!draft.name.trim() || draft.cards.length === 0 || draft.isImporting || draft.isImportBlocked}
+          disabled={draft.isImporting}
           loading={draft.isImporting}
           style={styles.importButton}
           accessibilityLabel="Perform flashcard import button"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button, Dialog, Portal } from 'react-native-paper';
+import { Text, Button, Dialog, HelperText, Portal } from 'react-native-paper';
 import type { ModeStep } from '@/types/models';
 import { useI18n, type TranslationFn } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
@@ -35,18 +35,49 @@ export function CreateStudyModeSection({
   formatStepSummary,
 }: CreateStudyModeSectionProps) {
   const { t } = useI18n();
+  const [nameTouched, setNameTouched] = React.useState(false);
+  const [submitAttempted, setSubmitAttempted] = React.useState(false);
+  const showNameError = (nameTouched || submitAttempted) && !newModeName.trim();
+  const showStepsError = submitAttempted && customSteps.length === 0;
+
+  const resetValidation = () => {
+    setNameTouched(false);
+    setSubmitAttempted(false);
+  };
+
+  const handleSave = () => {
+    setSubmitAttempted(true);
+    if (!newModeName.trim() || customSteps.length === 0) {
+      return;
+    }
+
+    resetValidation();
+    saveCustomMode();
+  };
+
+  const handleDismiss = () => {
+    resetValidation();
+    onDismiss();
+  };
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
+      <Dialog visible={visible} onDismiss={handleDismiss} style={dialogStyles.dialog}>
         <Dialog.Title>{t('settings.create_mode_btn')}</Dialog.Title>
         <Dialog.Content>
           <AppTextInput
             label={t('settings.new_mode_name')}
             value={newModeName}
             onChangeText={setNewModeName}
+            onBlur={() => setNameTouched(true)}
+            error={showNameError}
             style={styles.nameInput}
           />
+          {showNameError ? (
+            <HelperText type="error" visible>
+              {t('validation.required')}
+            </HelperText>
+          ) : null}
           {customSteps.map((step, index) => (
             <View key={step.id ?? index} style={styles.customStepRow}>
               <Text style={styles.stepText}>{`${index + 1}. ${formatStepSummary(step, t)}`}</Text>
@@ -72,13 +103,17 @@ export function CreateStudyModeSection({
               {t('settings.add_step_btn')}
             </Button>
           </View>
+          {showStepsError ? (
+            <HelperText type="error" visible>
+              {t('settings.validation.mode_steps_required')}
+            </HelperText>
+          ) : null}
         </Dialog.Content>
         <Dialog.Actions>
-          <Button onPress={onDismiss}>{t('btn.cancel')}</Button>
+          <Button onPress={handleDismiss}>{t('btn.cancel')}</Button>
           <Button
             mode="contained"
-            onPress={saveCustomMode}
-            disabled={!newModeName.trim() || customSteps.length === 0}
+            onPress={handleSave}
             accessibilityLabel="Save study mode"
           >
             {t('settings.save_mode_btn')}

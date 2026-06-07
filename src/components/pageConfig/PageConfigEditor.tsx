@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { IconButton, Text } from 'react-native-paper';
+import { HelperText, IconButton, Text } from 'react-native-paper';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
@@ -28,6 +28,8 @@ interface PageConfigEditorProps {
   showCounter?: boolean;
   minPageCount?: number;
   activePageCount?: number;
+  pageNameErrors?: boolean[];
+  pageNameErrorMessage?: string;
 }
 
 export function PageConfigEditor({
@@ -47,6 +49,8 @@ export function PageConfigEditor({
   showCounter = true,
   minPageCount,
   activePageCount,
+  pageNameErrors,
+  pageNameErrorMessage,
 }: PageConfigEditorProps) {
   const { t } = useI18n();
   const [customDialogVisible, setCustomDialogVisible] = useState(false);
@@ -142,14 +146,21 @@ export function PageConfigEditor({
             </View>
           ) : null}
 
-          <AppTextInput
-            label={`${t('import.page_label', { index: index + 1 })}${isHidden ? t('import.page_hidden') : ''}`}
-            value={pageNames[index] ?? ''}
-            onChangeText={(value) => onPageNameChange(index, value)}
-            onBlur={onPageNameBlur ? () => onPageNameBlur(index) : undefined}
-            style={styles.pageNameInput}
-            accessibilityLabel={`Edit page ${index + 1} name`}
-          />
+          <View style={styles.pageNameField}>
+            <AppTextInput
+              label={`${t('import.page_label', { index: index + 1 })}${isHidden ? t('import.page_hidden') : ''}`}
+              value={pageNames[index] ?? ''}
+              onChangeText={(value) => onPageNameChange(index, value)}
+              onBlur={onPageNameBlur ? () => onPageNameBlur(index) : undefined}
+              error={!!pageNameErrors?.[index]}
+              accessibilityLabel={`Edit page ${index + 1} name`}
+            />
+            {pageNameErrors?.[index] && pageNameErrorMessage ? (
+              <HelperText type="error" visible>
+                {pageNameErrorMessage}
+              </HelperText>
+            ) : null}
+          </View>
 
           <View style={styles.languageInput}>
             <AppSelect
@@ -176,7 +187,8 @@ export function PageConfigEditor({
           }}
           confirmLabel={t('btn.save')}
           cancelLabel={t('btn.cancel')}
-          disabled={!customDraftValue.trim()}
+          required
+          requiredMessage={t('validation.required')}
         />
       ) : null}
     </View>
@@ -227,7 +239,7 @@ const styles = StyleSheet.create({
     width: TOKENS.touchTarget.compact,
     height: TOKENS.touchTarget.compact,
   },
-  pageNameInput: {
+  pageNameField: {
     flex: 1,
   },
   languageInput: {

@@ -27,6 +27,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     creatingMode,
     customSteps,
     deckName,
+    deckNameError,
     archiveDialogOpen,
     handleColBlur,
     handleArchiveGroup,
@@ -47,6 +48,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     onModeChange,
     openCreateModeDialog,
     pageCount,
+    pageNameErrors,
     popularLangs,
     responsiveLayout,
     saveCustomMode,
@@ -96,6 +98,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
             deckName={deckName}
             onChangeText={setDeckName}
             onBlur={handleNameBlur}
+            errorMessage={deckNameError ? t('validation.required') : undefined}
           />
         </SectionCard>
       </AnimatedSection>
@@ -126,6 +129,8 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
               });
             }}
             onPageNameBlur={handleColBlur}
+            pageNameErrors={pageNameErrors}
+            pageNameErrorMessage={t('validation.required')}
             onPageLanguageChange={updatePageLangValue}
             onMovePage={movePageSetting}
           />
@@ -237,6 +242,8 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         setColNames={setColNames}
         popularLangs={popularLangs}
         handleColBlur={handleColBlur}
+        pageNameErrors={pageNameErrors}
+        pageNameErrorMessage={t('validation.required')}
         updatePageLangValue={updatePageLangValue}
         movePageSettingAll={movePageSettingAll}
       />

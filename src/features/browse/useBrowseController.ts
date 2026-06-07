@@ -22,6 +22,10 @@ export function useBrowseController() {
   const isReadOnly = activeGroup ? (activeGroup.archivedAt ?? 0) > 0 : false;
   const [search, setSearch] = useState('');
   const [activeCategories, setActiveCategories] = useState<SrsCardCategory[]>([]);
+  const [editTouchedPageIndexes, setEditTouchedPageIndexes] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [editSubmitAttempted, setEditSubmitAttempted] = useState(false);
 
   const stats = useMemo(() => {
     return activeGroup
@@ -60,10 +64,10 @@ export function useBrowseController() {
     setEditPages,
     deleteCardId,
     setDeleteCardId,
-    startEdit,
-    startCreate,
-    cancelEdit,
-    saveEdit,
+    startEdit: startEditDraft,
+    startCreate: startCreateDraft,
+    cancelEdit: cancelEditDraft,
+    saveEdit: saveEditDraft,
     confirmDeleteCard,
   } = useFlashcardListEditing({
     pageCount: activeGroup?.activePageCount ?? 0,
@@ -94,6 +98,44 @@ export function useBrowseController() {
     [editPages],
   );
   const canSaveEdit = filledPageCount >= 2;
+  const resetEditValidation = useCallback(() => {
+    setEditTouchedPageIndexes(new Set());
+    setEditSubmitAttempted(false);
+  }, []);
+  const startEdit = useCallback(
+    (card: Flashcard) => {
+      resetEditValidation();
+      startEditDraft(card);
+    },
+    [resetEditValidation, startEditDraft],
+  );
+  const startCreate = useCallback(() => {
+    resetEditValidation();
+    startCreateDraft();
+  }, [resetEditValidation, startCreateDraft]);
+  const cancelEdit = useCallback(() => {
+    resetEditValidation();
+    cancelEditDraft();
+  }, [cancelEditDraft, resetEditValidation]);
+  const saveEdit = useCallback(() => {
+    setEditSubmitAttempted(true);
+    if (!canSaveEdit) {
+      return;
+    }
+
+    saveEditDraft();
+    resetEditValidation();
+  }, [canSaveEdit, resetEditValidation, saveEditDraft]);
+  const markEditPageTouched = useCallback((index: number) => {
+    setEditTouchedPageIndexes((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
+  const showEditValidation = Boolean(
+    editingId && !canSaveEdit && (editSubmitAttempted || editTouchedPageIndexes.size > 0),
+  );
 
   return {
     activeCategories,
@@ -110,10 +152,12 @@ export function useBrowseController() {
     isLoading: store.isLoading,
     isReadOnly,
     minPagesMessage: t('browse.min_filled_pages'),
+    markEditPageTouched,
     saveEdit,
     search,
     setDeleteCardId,
     setEditPages,
+    showEditValidation,
     setSearch,
     startCreate,
     startEdit,

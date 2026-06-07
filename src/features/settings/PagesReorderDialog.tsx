@@ -14,6 +14,8 @@ interface PagesReorderDialogProps {
   setColNames: React.Dispatch<React.SetStateAction<string[]>>;
   popularLangs: string[];
   handleColBlur: (index: number) => void;
+  pageNameErrors?: boolean[];
+  pageNameErrorMessage?: string;
   updatePageLangValue: (index: number, value: string) => void;
   movePageSettingAll: (index: number, direction: -1 | 1) => void;
 }
@@ -26,6 +28,8 @@ export function PagesReorderDialog({
   setColNames,
   popularLangs,
   handleColBlur,
+  pageNameErrors,
+  pageNameErrorMessage,
   updatePageLangValue,
   movePageSettingAll,
 }: PagesReorderDialogProps) {
@@ -42,7 +46,7 @@ export function PagesReorderDialog({
               mode="settings"
               showCounter={false}
               pageCount={storedPageCount}
-              pageNames={activeGroup.pageNames}
+              pageNames={colNames}
               pageLanguages={activeGroup.pageLanguages}
               popularLangs={popularLangs}
               onPageCountChange={() => {}}
@@ -54,6 +58,8 @@ export function PagesReorderDialog({
                 });
               }}
               onPageNameBlur={handleColBlur}
+              pageNameErrors={pageNameErrors}
+              pageNameErrorMessage={pageNameErrorMessage}
               onPageLanguageChange={updatePageLangValue}
               onMovePage={movePageSettingAll}
             />

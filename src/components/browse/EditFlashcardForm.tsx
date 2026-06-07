@@ -12,6 +12,7 @@ interface EditFlashcardFormProps {
   group: FlashcardGroup;
   editPages: string[];
   onPagesChange: (pages: string[]) => void;
+  onPageBlur?: (index: number) => void;
   validationMessage?: string;
 }
 
@@ -19,6 +20,7 @@ export function EditFlashcardForm({
   group,
   editPages,
   onPagesChange,
+  onPageBlur,
   validationMessage,
 }: EditFlashcardFormProps) {
   const theme = useTheme();
@@ -58,6 +60,7 @@ export function EditFlashcardForm({
             next[i] = text;
             onPagesChange(next);
           }}
+          onBlur={() => onPageBlur?.(i)}
           style={styles.editInput}
           accessibilityLabel={`Edit page ${i + 1}`}
         />

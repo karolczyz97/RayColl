@@ -9,6 +9,7 @@ import { EmptyDashboardState } from '@/components/dashboard/EmptyDashboardState'
 import { DeckGrid } from '@/components/dashboard/DeckGrid';
 import { computeStreak, getTotalCardsCount, getTotalDueCardsCount } from '@/store/selectors/stats';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { TOKENS, getTokenMotionEnterDelay } from '@/theme/tokens';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
@@ -22,6 +23,7 @@ import { AppFloatingActionButton } from '@/components/AppFloatingActionButton';
 export default function Dashboard() {
   const store = useFlashcardStore();
   const { contentMaxWidth } = useResponsiveLayout();
+  const { showPersistentNavigation } = useNavigationShell();
   const { t } = useI18n();
 
   const { groups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap, lastLoginError, clearLastLoginError, syncRefreshKey } = store;
@@ -63,13 +65,13 @@ export default function Dashboard() {
     <AppScreen
       maxWidth={contentMaxWidth}
       brand={<DashboardBrand />}
-      right={
+      right={showPersistentNavigation ? null : (
         <DashboardActions
           user={user}
           onLogin={handleLogin}
           onLogout={handleLogout}
         />
-      }
+      )}
       overlay={
         <Animated.View
           entering={ZoomIn.springify().delay(getTokenMotionEnterDelay(3))}

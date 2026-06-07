@@ -34,6 +34,7 @@ export const pl: Record<string, string> = {
   'btn.archive': 'Archiwizuj',
   'btn.restore': 'Przywróć',
   'common.ok': 'OK',
+  'validation.required': 'To pole jest wymagane.',
   'a11y.profile_menu': 'Otwórz menu profilu użytkownika',
 
   // Dashboard
@@ -101,6 +102,7 @@ export const pl: Record<string, string> = {
   'import.first_row_header': 'Pierwsza linia to nagłówki',
   'import.err.too_many_lines': 'Wejście ograniczone do 500 linii.',
   'import.err.too_many_columns': 'Dane wejściowe przekraczają maksymalną liczbę {max} kolumn.',
+  'import.validation.source_required': 'Wklej albo wgraj przynajmniej jedna fiszke.',
   'import.pages_count': 'Strony:',
   'import.page_label': 'Strona {index}',
   'import.import_create_btn': 'Importuj i utwórz grupę',
@@ -149,6 +151,7 @@ export const pl: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Indeks strony (od 0)',
   'settings.dialog.add_step.time': 'Czas (ms)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
+  'settings.validation.mode_steps_required': 'Dodaj przynajmniej jeden krok.',
 
   // App Settings
   'app_settings.title': 'Ustawienia aplikacji',

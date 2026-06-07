@@ -123,7 +123,7 @@ export const TOKENS = {
     // Form
     formSelectWidth: 160,
     // Banners
-    syncBannerMaxWidth: 520,
+    snackbarMaxWidth: 640,
     // Study controls
     studyControlZoneTall: 180,
     studyControlZoneCompact: 80,

@@ -35,17 +35,23 @@ export function useDeckSettingsController() {
   const [editingModeId, setEditingModeId] = useState<string | null>(null);
   const [deckName, setDeckName] = useState('');
   const [colNames, setColNames] = useState<string[]>([]);
+  const [deckNameTouched, setDeckNameTouched] = useState(false);
+  const [touchedPageNameIndexes, setTouchedPageNameIndexes] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     if (!activeGroupId) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- local draft resets only when the active deck changes
     setDeckName(activeGroupName);
+    setDeckNameTouched(false);
   }, [activeGroupId, activeGroupName]);
 
   useEffect(() => {
     if (!activeGroupId || !activeGroupPageNames) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- local draft resets only when the active deck changes
     setColNames(activeGroupPageNames);
+    setTouchedPageNameIndexes(new Set());
   }, [activeGroupId, activeGroupPageNames, pageNamesKey]);
 
   const closeCreateModeDialog = () => {
@@ -57,19 +63,33 @@ export function useDeckSettingsController() {
 
   const handleNameBlur = () => {
     if (!activeGroup) return;
+    setDeckNameTouched(true);
     const trimmed = deckName.trim();
+    if (!trimmed) return;
     if (trimmed && trimmed !== activeGroup.name) {
       store.updateGroup({ ...activeGroup, name: trimmed });
+      setDeckName(trimmed);
     }
   };
 
   const handleColBlur = (index: number) => {
     if (!activeGroup) return;
+    setTouchedPageNameIndexes((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
     const trimmed = colNames[index]?.trim();
+    if (!trimmed) return;
     if (trimmed && trimmed !== activeGroup.pageNames[index]) {
       const nextNames = [...activeGroup.pageNames];
       nextNames[index] = trimmed;
       store.updateGroup({ ...activeGroup, pageNames: nextNames });
+      setColNames((prev) => {
+        const next = [...prev];
+        next[index] = trimmed;
+        return next;
+      });
     }
   };
 
@@ -83,6 +103,11 @@ export function useDeckSettingsController() {
   }, [activeMode]);
   const pageCount = activeGroup?.activePageCount ?? 0;
   const useTwoColumnLayout = isExpandedWindowSize(navigationShell.contentWidth);
+  const deckNameError = deckNameTouched && !deckName.trim();
+  const pageNameErrors = useMemo(
+    () => colNames.map((name, index) => touchedPageNameIndexes.has(index) && !name.trim()),
+    [colNames, touchedPageNameIndexes],
+  );
 
   const stepEditor = useStepEditorController({
     pageCount,
@@ -159,6 +184,7 @@ export function useDeckSettingsController() {
     creatingMode,
     customSteps,
     deckName,
+    deckNameError,
     archiveDialogOpen,
     editingModeId,
     handleBack: safeBack,
@@ -192,6 +218,7 @@ export function useDeckSettingsController() {
       setCreatingMode(true);
     },
     pageCount,
+    pageNameErrors,
     popularLangs: POPULAR_LANGS,
     responsiveLayout,
     saveCustomMode,

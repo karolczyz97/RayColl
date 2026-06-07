@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Dialog, Portal } from 'react-native-paper';
+import { Button, Dialog, HelperText, Portal } from 'react-native-paper';
 import { dialogStyles } from '@/theme/dialogStyles';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 
@@ -16,6 +16,8 @@ interface TextEntryDialogProps {
   multiline?: boolean;
   numberOfLines?: number;
   disabled?: boolean;
+  required?: boolean;
+  requiredMessage?: string;
 }
 
 export function TextEntryDialog({
@@ -31,10 +33,36 @@ export function TextEntryDialog({
   multiline = false,
   numberOfLines,
   disabled = false,
+  required = false,
+  requiredMessage,
 }: TextEntryDialogProps) {
+  const [touched, setTouched] = React.useState(false);
+  const [submitAttempted, setSubmitAttempted] = React.useState(false);
+  const showRequiredError = required && (touched || submitAttempted) && !value.trim();
+
+  const resetValidation = () => {
+    setTouched(false);
+    setSubmitAttempted(false);
+  };
+
+  const handleConfirm = () => {
+    setSubmitAttempted(true);
+    if (disabled || (required && !value.trim())) {
+      return;
+    }
+
+    resetValidation();
+    onConfirm();
+  };
+
+  const handleDismiss = () => {
+    resetValidation();
+    onDismiss();
+  };
+
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
+      <Dialog visible={visible} onDismiss={handleDismiss} style={dialogStyles.dialog}>
         <Dialog.Title>{title}</Dialog.Title>
         <Dialog.Content>
           <AppTextInput
@@ -43,11 +71,18 @@ export function TextEntryDialog({
             placeholder={placeholder}
             value={value}
             onChangeText={onChangeText}
+            onBlur={() => setTouched(true)}
+            error={showRequiredError}
           />
+          {showRequiredError && requiredMessage ? (
+            <HelperText type="error" visible>
+              {requiredMessage}
+            </HelperText>
+          ) : null}
         </Dialog.Content>
         <Dialog.Actions>
-          <Button onPress={onDismiss}>{cancelLabel}</Button>
-          <Button mode="contained" onPress={onConfirm} disabled={disabled}>
+          <Button onPress={handleDismiss}>{cancelLabel}</Button>
+          <Button mode="contained" onPress={handleConfirm}>
             {confirmLabel}
           </Button>
         </Dialog.Actions>

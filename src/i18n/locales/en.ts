@@ -34,6 +34,7 @@ export const en: Record<string, string> = {
   'btn.archive': 'Archive',
   'btn.restore': 'Restore',
   'common.ok': 'OK',
+  'validation.required': 'This field is required.',
   'a11y.profile_menu': 'Open user profile menu',
 
   // Dashboard
@@ -101,6 +102,7 @@ export const en: Record<string, string> = {
   'import.first_row_header': 'First row is header',
   'import.err.too_many_lines': 'Input truncated to 500 lines.',
   'import.err.too_many_columns': 'Input exceeds max allowed {max} columns.',
+  'import.validation.source_required': 'Paste or upload at least one flashcard.',
   'import.pages_count': 'Pages:',
   'import.page_label': 'Page {index}',
   'import.import_create_btn': 'Import & Create Deck',
@@ -149,6 +151,7 @@ export const en: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Page index (starts from 0)',
   'settings.dialog.add_step.time': 'Time (ms)',
   'settings.dialog.add_step.threshold': 'Threshold (%)',
+  'settings.validation.mode_steps_required': 'Add at least one step.',
 
   // App Settings
   'app_settings.title': 'App Settings',

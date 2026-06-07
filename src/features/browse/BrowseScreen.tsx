@@ -23,7 +23,6 @@ export function BrowseScreen() {
   const {
     activeCategories,
     activeGroup,
-    canSaveEdit,
     cardCountLabel,
     confirmDeleteCard,
     deleteCardId,
@@ -34,12 +33,14 @@ export function BrowseScreen() {
     handleBack,
     isLoading,
     isReadOnly,
+    markEditPageTouched,
     minPagesMessage,
     saveEdit,
     search,
     setDeleteCardId,
     setEditPages,
     setSearch,
+    showEditValidation,
     startEdit,
     startCreate,
     cancelEdit,
@@ -139,14 +140,10 @@ export function BrowseScreen() {
           group={activeGroup}
           editPages={editPages}
           onPagesChange={(pages) => setEditPages(pages)}
-          onSave={() => {
-            if (canSaveEdit) {
-              saveEdit();
-            }
-          }}
+          onPageBlur={markEditPageTouched}
+          onSave={saveEdit}
           onCancel={cancelEdit}
-          saveDisabled={!canSaveEdit}
-          validationMessage={!canSaveEdit && editingId ? minPagesMessage : undefined}
+          validationMessage={showEditValidation ? minPagesMessage : undefined}
         />
       )}
     </AppScreen>

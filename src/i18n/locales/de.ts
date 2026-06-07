@@ -32,6 +32,7 @@ export const de: Record<string, string> = {
   'btn.archive': 'Archivieren',
   'btn.restore': 'Wiederherstellen',
   'common.ok': 'OK',
+  'validation.required': 'This field is required.',
   'a11y.profile_menu': 'Benutzerprofilmenü öffnen',
 
   // Dashboard
@@ -100,6 +101,7 @@ export const de: Record<string, string> = {
   'import.first_row_header': 'Erste Zeile ist eine Kopfzeile',
   'import.err.too_many_lines': 'Eingabe auf 500 Zeilen beschränkt.',
   'import.err.too_many_columns': 'Eingabe überschreitet maximal erlaubte {max} Spalten.',
+  'import.validation.source_required': 'Paste or upload at least one flashcard.',
   'import.pages_count': 'Seiten:',
   'import.page_label': 'Seite {index}',
   'import.import_create_btn': 'Importieren & Deck erstellen',
@@ -148,6 +150,7 @@ export const de: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Seitenindex (beginnt bei 0)',
   'settings.dialog.add_step.time': 'Zeit (ms)',
   'settings.dialog.add_step.threshold': 'Schwellenwert (%)',
+  'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
   'app_settings.title': 'App-Einstellungen',
   'app_settings.theme': 'Thema',

@@ -32,6 +32,7 @@ export const es: Record<string, string> = {
   'btn.archive': 'Archivar',
   'btn.restore': 'Restaurar',
   'common.ok': 'OK',
+  'validation.required': 'This field is required.',
   'a11y.profile_menu': 'Abrir el menú de perfil de usuario',
 
   // Dashboard
@@ -100,6 +101,7 @@ export const es: Record<string, string> = {
   'import.first_row_header': 'La primera fila es un encabezado',
   'import.err.too_many_lines': 'Entrada truncada a 500 líneas.',
   'import.err.too_many_columns': 'Los datos exceden el máximo de {max} columnas permitidas.',
+  'import.validation.source_required': 'Paste or upload at least one flashcard.',
   'import.pages_count': 'Páginas:',
   'import.page_label': 'Página {index}',
   'import.import_create_btn': 'Importar y crear baraja',
@@ -148,6 +150,7 @@ export const es: Record<string, string> = {
   'settings.dialog.add_step.page_idx': 'Índice de página (empieza por 0)',
   'settings.dialog.add_step.time': 'Tiempo (ms)',
   'settings.dialog.add_step.threshold': 'Umbral (%)',
+  'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
   'app_settings.title': 'Ajustes de la aplicación',
   'app_settings.theme': 'Tema',

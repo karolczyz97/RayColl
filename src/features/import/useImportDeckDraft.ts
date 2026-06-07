@@ -43,6 +43,9 @@ export function useImportDeckDraft() {
   } = state;
 
   const [isImporting, setIsImporting] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [sourceTouched, setSourceTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   // --- Refs: synced with state for immediate read-after-dispatch ------------
   const firstRowIsHeaderRef = useSyncedRef(firstRowIsHeader);
@@ -293,9 +296,13 @@ export function useImportDeckDraft() {
   }, [applyDetectedText, dispatch]);
 
   const isImportBlocked = importError.startsWith('import.err.');
+  const hasSourceContent = rawText.trim().length > 0 && cards.length > 0;
+  const showNameRequiredError = (nameTouched || submitAttempted) && !name.trim();
+  const showSourceRequiredError = (sourceTouched || submitAttempted) && !hasSourceContent;
 
   const submitImport = useCallback(async () => {
-    if (!name.trim()) return;
+    setSubmitAttempted(true);
+    if (!name.trim() || !hasSourceContent) return;
     if (isImportBlocked) return;
 
     setIsImporting(true);
@@ -323,7 +330,7 @@ export function useImportDeckDraft() {
     } finally {
       setIsImporting(false);
     }
-  }, [cards, dispatch, isImportBlocked, name, pageCount, pageLangs, pageNames, store]);
+  }, [cards, dispatch, hasSourceContent, isImportBlocked, name, pageCount, pageLangs, pageNames, store]);
 
   const previewGroup = useMemo<FlashcardGroup>(
     () => ({
@@ -344,6 +351,12 @@ export function useImportDeckDraft() {
     (value: string) => dispatch({ type: 'SET_NAME', value }),
     [dispatch],
   );
+  const handleNameBlur = useCallback(() => {
+    setNameTouched(true);
+  }, []);
+  const handleSourceBlur = useCallback(() => {
+    setSourceTouched(true);
+  }, []);
   const setPageLangs = useCallback(
     (value: string[] | ((prev: string[]) => string[])) => {
       const resolved =
@@ -366,7 +379,11 @@ export function useImportDeckDraft() {
   return {
     name,
     setName,
+    handleNameBlur,
+    showNameRequiredError,
     rawText,
+    handleSourceBlur,
+    showSourceRequiredError,
     sepKey,
     customSep,
     pageCount,

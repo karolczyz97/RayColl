@@ -29,7 +29,10 @@ jest.mock('react-native-reanimated', () => {
   const animationBuilder = {
     duration: () => animationBuilder,
     delay: () => animationBuilder,
+    damping: () => animationBuilder,
+    mass: () => animationBuilder,
     springify: () => animationBuilder,
+    stiffness: () => animationBuilder,
   };
 
   const Animated = {
