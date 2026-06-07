@@ -61,7 +61,6 @@ export default function Dashboard() {
 
   return (
     <AppScreen
-      kind="home"
       maxWidth={contentMaxWidth}
       brand={<DashboardBrand />}
       right={

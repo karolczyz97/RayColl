@@ -6,28 +6,28 @@ import { useTheme } from 'react-native-paper';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
-import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { NavigationShellProvider } from '@/contexts/NavigationShellContext';
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { NavigationRail } from './NavigationRail';
 import {
   getActiveDestination,
   type NavigationDestination,
 } from './navigationDestinations';
-import { StudyNavigationGuardProvider } from '@/features/study/StudyNavigationGuardContext';
+import {
+  StudyNavigationGuardProvider,
+  type StudyExitHandler,
+} from '@/features/study/StudyNavigationGuardContext';
+import type { Href } from 'expo-router';
 
 export function AppNavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const theme = useTheme();
-  const { t } = useI18n();
   const responsive = useResponsiveLayout();
   const { user, signIn, signOut } = useFlashcardStore();
   const { railExpanded, setRailExpanded } = useAppTheme();
 
-  const [showRailGuard, setShowRailGuard] = useState(false);
   const [isStudyActive, setStudyActive] = useState(false);
-  const pendingNavRef = useRef<NavigationDestination | null>(null);
+  const studyExitHandlerRef = useRef<StudyExitHandler | null>(null);
 
   // The rail can no longer be fully hidden — it is always shown on medium+
   // widths, only collapsed or expanded.
@@ -60,27 +60,35 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
     ],
   );
 
+  const setStudyExitHandler = useCallback((handler: StudyExitHandler | null) => {
+    studyExitHandlerRef.current = handler;
+  }, []);
+
+  const requestStudyExit = useCallback((navigate: () => void) => {
+    const handler = studyExitHandlerRef.current;
+    if (!handler) {
+      return false;
+    }
+
+    handler(navigate);
+    return true;
+  }, []);
+
+  const navigateTo = useCallback((href: Href) => {
+    router.navigate(href);
+  }, []);
+
   const handleNavigate = useCallback((destination: NavigationDestination) => {
+    const navigate = () => navigateTo(destination.href);
     if (isStudyActive) {
-      pendingNavRef.current = destination;
-      setShowRailGuard(true);
+      if (!requestStudyExit(navigate)) {
+        console.warn('Study navigation guard is active without an exit handler.');
+      }
       return;
     }
-    router.navigate(destination.href);
-  }, [isStudyActive]);
 
-  const confirmRailNavAway = useCallback(() => {
-    setShowRailGuard(false);
-    if (pendingNavRef.current) {
-      router.navigate(pendingNavRef.current.href);
-      pendingNavRef.current = null;
-    }
-  }, []);
-
-  const cancelRailNavAway = useCallback(() => {
-    setShowRailGuard(false);
-    pendingNavRef.current = null;
-  }, []);
+    navigate();
+  }, [isStudyActive, navigateTo, requestStudyExit]);
 
   const handleLogin = React.useCallback(() => {
     void signIn();
@@ -91,8 +99,13 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
   }, [signOut]);
 
   const studyGuardValue = React.useMemo(
-    () => ({ isStudyActive, setStudyActive }),
-    [isStudyActive],
+    () => ({
+      isStudyActive,
+      requestStudyExit,
+      setStudyActive,
+      setStudyExitHandler,
+    }),
+    [isStudyActive, requestStudyExit, setStudyExitHandler],
   );
 
   if (!showPersistentNavigation) {
@@ -118,16 +131,6 @@ export function AppNavigationShell({ children }: { children: React.ReactNode }) 
           />
           <View style={styles.content}>{children}</View>
         </View>
-
-        <ConfirmDialog
-          visible={showRailGuard}
-          title={t('study.exit_confirm_title')}
-          message={t('study.exit_confirm_message')}
-          confirmLabel={t('study.exit_confirm_btn')}
-          cancelLabel={t('btn.cancel')}
-          onConfirm={confirmRailNavAway}
-          onDismiss={cancelRailNavAway}
-        />
       </NavigationShellProvider>
     </StudyNavigationGuardProvider>
   );

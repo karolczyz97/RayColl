@@ -9,7 +9,13 @@ import { useStudyNavigationGuard } from '@/features/study/StudyNavigationGuardCo
 
 const NARROW_CONTROLS_WIDTH = 480;
 
-export function useStudyPageController() {
+interface UseStudyPageControllerOptions {
+  navigateBack?: () => void;
+}
+
+export function useStudyPageController({
+  navigateBack = safeBack,
+}: UseStudyPageControllerOptions = {}) {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const store = useFlashcardStore();
   const { setStudyActive } = useStudyNavigationGuard();
@@ -17,6 +23,7 @@ export function useStudyPageController() {
   const isNarrow = width < NARROW_CONTROLS_WIDTH;
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const pendingExitNavigationRef = useRef<(() => void) | null>(null);
 
   const {
     groups,
@@ -71,27 +78,43 @@ export function useStudyPageController() {
     }
   }, [getDueCards, groupId, groups, isLoading, setStudyActive, startSession]);
 
-  const handleBack = useCallback(() => {
-    if (sessionState.isSessionFinished) {
+  const leaveStudy = useCallback(
+    (navigate: () => void) => {
       stopSession();
       void flushPersistence().catch(() => {});
       setStudyActive(false);
-      safeBack();
-      return;
-    }
-    setShowExitConfirm(true);
-  }, [flushPersistence, sessionState.isSessionFinished, setStudyActive, stopSession]);
+      navigate();
+    },
+    [flushPersistence, setStudyActive, stopSession],
+  );
+
+  const requestExit = useCallback(
+    (navigate: () => void = navigateBack) => {
+      if (sessionState.isSessionFinished) {
+        leaveStudy(navigate);
+        return;
+      }
+
+      pendingExitNavigationRef.current = navigate;
+      setShowExitConfirm(true);
+    },
+    [leaveStudy, navigateBack, sessionState.isSessionFinished],
+  );
+
+  const handleBack = useCallback(() => {
+    requestExit(navigateBack);
+  }, [navigateBack, requestExit]);
 
   const confirmExit = useCallback(() => {
     setShowExitConfirm(false);
-    stopSession();
-    void flushPersistence();
-    setStudyActive(false);
-    safeBack();
-  }, [flushPersistence, setStudyActive, stopSession]);
+    const navigate = pendingExitNavigationRef.current ?? navigateBack;
+    pendingExitNavigationRef.current = null;
+    leaveStudy(navigate);
+  }, [leaveStudy, navigateBack]);
 
   const cancelExit = useCallback(() => {
     setShowExitConfirm(false);
+    pendingExitNavigationRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -132,6 +155,7 @@ export function useStudyPageController() {
     isNarrow,
     restartFailed,
     restartSession,
+    requestExit,
     sessionProgressItems,
     sessionState,
     setHolding,

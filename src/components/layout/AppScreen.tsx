@@ -4,12 +4,10 @@ import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TOKENS } from '@/theme/tokens';
 import { getElevationStyle } from '@/theme/elevation';
-import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { AppTopBar } from './AppTopBar';
 import { ScreenContent } from './ScreenContent';
 
 interface AppScreenProps {
-  kind?: 'home' | 'detail';
   title?: string;
   onBack?: () => void;
   /** Right-side slot: action icon(s) for sub-pages or home action cluster. */
@@ -44,7 +42,6 @@ interface AppScreenProps {
  * Native: ScrollView (scroll) or View (no scroll) with horizontal padding.
  */
 export function AppScreen({
-  kind = 'detail',
   title,
   onBack,
   right,
@@ -59,17 +56,8 @@ export function AppScreen({
   headerExtension,
 }: AppScreenProps) {
   const theme = useTheme();
-  const { showPersistentNavigation } = useNavigationShell();
   const isWeb = Platform.OS === 'web';
-  const isHome = kind === 'home';
-  // 'home' (Dashboard): hide bar + overlay when rail is visible (branding shown in rail).
-  // 'detail' (everything else): always show bar with back arrow + title.
-  const hideHomeChrome = isHome && showPersistentNavigation;
-  const effectiveOnBack = hideHomeChrome ? undefined : onBack;
-  const effectiveRight = hideHomeChrome ? undefined : right;
-  const effectiveBrand = hideHomeChrome ? undefined : brand;
-  const effectiveOverlay = hideHomeChrome ? undefined : overlay;
-  const showBar = showBarProp && (isHome ? !hideHomeChrome : true);
+  const showBar = showBarProp;
 
   const screenContent = (
     <ScreenContent maxWidth={maxWidth} fill={!scroll} style={contentStyle}>
@@ -121,9 +109,9 @@ export function AppScreen({
       {showBar ? (
         <AppTopBar
           title={title}
-          onBack={effectiveOnBack}
-          right={effectiveRight}
-          brand={effectiveBrand}
+          onBack={onBack}
+          right={right}
+          brand={brand}
         />
       ) : null}
       {headerExtension}
@@ -136,7 +124,7 @@ export function AppScreen({
         ]}
       >
         {body}
-        {effectiveOverlay}
+        {overlay}
       </View>
     </SafeAreaView>
   );

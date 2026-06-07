@@ -119,7 +119,6 @@ export const TOKENS = {
     collapsedRailItemLabelLineHeight: 14,
     collapsedRailIconContainerWidth: 56,
     collapsedRailIconContainerHeight: 32,
-    collapsedRailBrandMinHeight: 56,
     collapsedRailImportActionSize: 56,
     // Form
     formSelectWidth: 160,

@@ -42,7 +42,12 @@ export function TestProviders({ children, shellContext, studyActive = false }: T
       <AppThemeProvider>
         <NavigationShellProvider value={shellValue}>
           <StudyNavigationGuardProvider
-            value={{ isStudyActive: studyActive, setStudyActive: () => undefined }}
+            value={{
+              isStudyActive: studyActive,
+              requestStudyExit: () => false,
+              setStudyActive: () => undefined,
+              setStudyExitHandler: () => undefined,
+            }}
           >
             <PaperProvider theme={theme}>{children}</PaperProvider>
           </StudyNavigationGuardProvider>
@@ -51,4 +56,3 @@ export function TestProviders({ children, shellContext, studyActive = false }: T
     </I18nProvider>
   );
 }
-

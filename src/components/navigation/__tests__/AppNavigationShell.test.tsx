@@ -6,6 +6,7 @@ import { Text } from 'react-native';
 import { STORAGE_KEYS } from '../../../constants/storageKeys';
 import { useNavigationShell } from '../../../contexts/NavigationShellContext';
 import { AppThemeProvider } from '../../../contexts/UserPreferencesContext';
+import { useStudyNavigationGuard } from '../../../features/study/StudyNavigationGuardContext';
 import { I18nProvider } from '../../../i18n';
 import { UI_PREFERENCE_STORAGE_KEYS, clearUiPreferenceCache } from '../../../storage/uiPreferences';
 import { createAppTheme } from '../../../theme/createAppTheme';
@@ -72,7 +73,26 @@ function ShellSizeProbe() {
   return <Text testID="shell-size">{`${contentWidth}:${navWidth}`}</Text>;
 }
 
-async function renderShell() {
+function StudyExitGuardProbe({
+  onRequest,
+}: {
+  onRequest: (navigate: () => void) => void;
+}) {
+  const { setStudyActive, setStudyExitHandler } = useStudyNavigationGuard();
+
+  React.useEffect(() => {
+    setStudyActive(true);
+    setStudyExitHandler(onRequest);
+    return () => {
+      setStudyActive(false);
+      setStudyExitHandler(null);
+    };
+  }, [onRequest, setStudyActive, setStudyExitHandler]);
+
+  return <Text>Study guard active</Text>;
+}
+
+async function renderShell(children?: React.ReactNode) {
   const theme = createAppTheme({
     isDark: false,
     useSystemColors: false,
@@ -85,6 +105,7 @@ async function renderShell() {
           <AppNavigationShell>
             <AppTopBar title="Dashboard" />
             <ShellSizeProbe />
+            {children}
           </AppNavigationShell>
         </PaperProvider>
       </AppThemeProvider>
@@ -121,6 +142,30 @@ describe('AppNavigationShell', () => {
     await waitFor(() => expect(screen.getByLabelText('Expand navigation')).toBeOnTheScreen());
     expect(screen.queryByLabelText('Hide navigation')).toBeNull();
     expect(screen.queryByLabelText('Show navigation')).toBeNull();
+  });
+
+  it('does not render app branding inside the rail', async () => {
+    await renderShell();
+
+    await waitFor(() => expect(screen.getByLabelText('Expand navigation')).toBeOnTheScreen());
+    expect(screen.queryByText('RayColl')).toBeNull();
+    expect(screen.queryByLabelText('RayColl Logo Icon')).toBeNull();
+  });
+
+  it('routes rail navigation through the active study exit handler', async () => {
+    const onRequest = jest.fn();
+
+    await renderShell(<StudyExitGuardProbe onRequest={onRequest} />);
+
+    await waitFor(() => expect(screen.getByLabelText('Study Statistics')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByLabelText('Study Statistics'));
+
+    expect(onRequest).toHaveBeenCalledTimes(1);
+    expect(global.__expoRouterMock.router.navigate).not.toHaveBeenCalled();
+
+    onRequest.mock.calls[0][0]();
+
+    expect(global.__expoRouterMock.router.navigate).toHaveBeenCalledWith('/stats');
   });
 
   it('expands the rail and persists the expanded preference', async () => {

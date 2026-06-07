@@ -6,7 +6,6 @@ import Animated, {
   type AnimatedStyle,
 } from 'react-native-reanimated';
 import {
-  Avatar,
   Icon,
   IconButton,
   Text,
@@ -16,7 +15,6 @@ import {
 
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
-import { APP_NAME } from '@/constants/app';
 import type { FlashcardStoreState } from '@/store/FlashcardStoreTypes';
 import {
   NAVIGATION_DESTINATIONS,
@@ -142,23 +140,6 @@ export function NavigationRail({
         </View>
       </View>
 
-      <View style={styles.brand}>
-        <View style={styles.leading}>
-          <Avatar.Icon
-            icon="book-open-page-variant"
-            size={TOKENS.touchTarget.compact}
-            style={{ backgroundColor: theme.colors.secondaryContainer }}
-            color={theme.colors.onSecondaryContainer}
-            accessibilityLabel={`${APP_NAME} Logo Icon`}
-          />
-        </View>
-        <Animated.View style={[styles.labelWrap, labelAnimatedStyle]} pointerEvents="none">
-          <Text variant="titleLarge" numberOfLines={1} style={styles.brandText}>
-            {APP_NAME}
-          </Text>
-        </Animated.View>
-      </View>
-
       <View style={styles.destinations}>
         {NAVIGATION_DESTINATIONS.map((destination) => {
           const label = t(destination.labelKey);
@@ -197,7 +178,7 @@ const styles = StyleSheet.create({
     borderRightWidth: StyleSheet.hairlineWidth,
     paddingVertical: TOKENS.spacing.md,
   },
-  // Fixed leading column = collapsed rail width. Centres the icon/logo/hamburger
+  // Fixed leading column = collapsed rail width. Centres icons and the menu
   // on the collapsed rail's centre line and pins that x across expand/collapse.
   leading: {
     width: TOKENS.layout.railWidth,
@@ -212,15 +193,6 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     margin: 0,
-  },
-  brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: TOKENS.layout.collapsedRailBrandMinHeight,
-    marginBottom: TOKENS.spacing.lg,
-  },
-  brandText: {
-    fontWeight: TOKENS.typography.weight.bold,
   },
   destinations: {
     flex: 1,

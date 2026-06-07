@@ -1,48 +1,59 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { GroupNotFound } from '@/components/GroupNotFound';
 import { LoadingState } from '@/components/layout/LoadingState';
 import { StudyScreen } from '@/features/study/components/StudyScreen';
 import { useStudyPageController } from '@/features/study/hooks/useStudyPageController';
+import { useStudyBrowserBackGuard } from '@/features/study/hooks/useStudyBrowserBackGuard';
 import { useI18n } from '@/i18n';
 import { useStudyNavigationGuard } from '@/features/study/StudyNavigationGuardContext';
+import { safeBack } from '@/utils/navigation';
 
 function StudyPageContent() {
-  const controller = useStudyPageController();
   const navigation = useNavigation();
-  const { t } = useI18n();
-  const { isStudyActive } = useStudyNavigationGuard();
+  const { isStudyActive, setStudyExitHandler } = useStudyNavigationGuard();
+  const allowNextBeforeRemoveRef = useRef(false);
+  const navigateBackRef = useRef<() => void>(safeBack);
+  const navigateBack = useCallback(() => {
+    navigateBackRef.current();
+  }, []);
 
-  const [showSystemBackGuard, setShowSystemBackGuard] = useState(false);
-  const pendingSystemBackRef = useRef<(() => void) | null>(null);
+  const controller = useStudyPageController({ navigateBack });
+  const { requestExit } = controller;
+  const navigateBackWithBrowserGuard = useStudyBrowserBackGuard({
+    active: isStudyActive,
+    onBackBlocked: controller.handleBack,
+  });
+
+  useEffect(() => {
+    navigateBackRef.current = navigateBackWithBrowserGuard;
+  }, [navigateBackWithBrowserGuard]);
+
+  useEffect(() => {
+    setStudyExitHandler(requestExit);
+    return () => setStudyExitHandler(null);
+  }, [requestExit, setStudyExitHandler]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: {
       preventDefault: () => void;
       data: { action: Parameters<typeof navigation.dispatch>[0] };
     }) => {
+      if (allowNextBeforeRemoveRef.current) {
+        allowNextBeforeRemoveRef.current = false;
+        return;
+      }
+
       if (!isStudyActive) return;
       e.preventDefault();
-      pendingSystemBackRef.current = () => navigation.dispatch(e.data.action);
-      setShowSystemBackGuard(true);
+      requestExit(() => {
+        allowNextBeforeRemoveRef.current = true;
+        navigation.dispatch(e.data.action);
+      });
     });
     return unsubscribe;
-  }, [isStudyActive, navigation]);
-
-  const confirmSystemBack = useCallback(() => {
-    setShowSystemBackGuard(false);
-    if (pendingSystemBackRef.current) {
-      pendingSystemBackRef.current();
-      pendingSystemBackRef.current = null;
-    }
-  }, []);
-
-  const cancelSystemBack = useCallback(() => {
-    setShowSystemBackGuard(false);
-    pendingSystemBackRef.current = null;
-  }, []);
+  }, [isStudyActive, navigation, requestExit]);
 
   if (controller.isLoading) {
     return <LoadingState />;
@@ -53,18 +64,7 @@ function StudyPageContent() {
   }
 
   return (
-    <>
-      <StudyScreen {...controller} activeGroup={controller.activeGroup} />
-      <ConfirmDialog
-        visible={showSystemBackGuard}
-        title={t('study.exit_confirm_title')}
-        message={t('study.exit_confirm_message')}
-        confirmLabel={t('study.exit_confirm_btn')}
-        cancelLabel={t('btn.cancel')}
-        onConfirm={confirmSystemBack}
-        onDismiss={cancelSystemBack}
-      />
-    </>
+    <StudyScreen {...controller} activeGroup={controller.activeGroup} />
   );
 }
 
