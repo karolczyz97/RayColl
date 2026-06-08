@@ -201,25 +201,24 @@ function shouldUseContinuousRecognition(): boolean {
 
 export async function ensureWebMicrophonePermission(): Promise<void> {
   if (Platform.OS !== 'web') return;
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
 
-  if (navigator?.mediaDevices?.getUserMedia) {
-    try {
-      if (localStorage.getItem('raycoll_mic_permission_granted') === 'true') return;
-    } catch {
-      // localStorage unavailable (private browsing, etc.)
-    }
+  try {
+    if (localStorage.getItem('raycoll_mic_permission_granted') === 'true') return;
+  } catch {
+    // localStorage unavailable (private browsing, etc.)
+  }
 
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      try {
-        localStorage.setItem('raycoll_mic_permission_granted', 'true');
-      } catch {
-        // localStorage unavailable
-      }
+      localStorage.setItem('raycoll_mic_permission_granted', 'true');
     } catch {
-      // User denied or getUserMedia failed; STT will surface its own error
+      // localStorage unavailable
     }
+  } catch {
+    // User denied or getUserMedia failed; STT will surface its own error
   }
 }
 
