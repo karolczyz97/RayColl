@@ -3,6 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 import { createNewSrsState } from '../../../srs/srsEngine';
 import { normalizeStoreData } from '../../storeDataNormalization';
 import {
+  cloneUserData,
   deserializeCardDoc,
   deserializeDeckDoc,
   deserializeStudyModeDoc,
@@ -70,5 +71,30 @@ describe('firestoreSchema', () => {
         srsState: { ...createNewSrsState(), repetitions: '2' },
       }),
     ).toThrow('srsState.repetitions');
+  });
+
+  it('cloneUserData preserves undefined fields', () => {
+    const original = {
+      groups: [
+        {
+          id: '1',
+          name: 'Group 1',
+          cards: [
+            {
+              id: 'c1',
+              pages: ['a'],
+              srsState: { difficulty: 1, stability: 1, repetitions: 0, state: 0, lastReviewTimestamp: 0, nextReviewTimestamp: 0 },
+              deletedAt: undefined,
+            }
+          ],
+          deletedAt: undefined,
+        }
+      ],
+      studyModes: [],
+      activityHeatmap: {},
+    };
+    const cloned = cloneUserData(original);
+    expect(Object.prototype.hasOwnProperty.call(cloned.groups[0], 'deletedAt')).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(cloned.groups[0].cards[0], 'deletedAt')).toBe(true);
   });
 });

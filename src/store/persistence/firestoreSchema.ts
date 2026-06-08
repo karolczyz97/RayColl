@@ -116,7 +116,20 @@ export function serializeStudyModeDoc(mode: StudyMode): FirestoreStudyModeDoc {
 }
 
 export function cloneUserData<T extends UserData>(data: T): T {
-  return JSON.parse(JSON.stringify(data)) as T;
+  function clone(val: unknown): unknown {
+    if (val === null || typeof val !== 'object') {
+      return val;
+    }
+    if (Array.isArray(val)) {
+      return val.map(clone);
+    }
+    const cloned: Record<string, unknown> = {};
+    for (const key of Object.keys(val)) {
+      cloned[key] = clone((val as Record<string, unknown>)[key]);
+    }
+    return cloned;
+  }
+  return clone(data) as T;
 }
 
 export function deserializeCardDoc(docId: string, rawData: unknown): Flashcard {
