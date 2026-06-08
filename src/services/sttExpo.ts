@@ -140,9 +140,7 @@ export class ExpoSttService implements SttService {
           if (Platform.OS === 'web' && event.error === 'not-allowed') {
             try {
               localStorage.removeItem('raycoll_mic_permission_granted');
-            } catch {
-              // localStorage unavailable (private browsing, etc.)
-            }
+            } catch {}
           }
 
           if (shouldResolveRecognitionError(event)) {
@@ -200,25 +198,26 @@ function shouldUseContinuousRecognition(): boolean {
 }
 
 export async function ensureWebMicrophonePermission(): Promise<void> {
-  if (Platform.OS !== 'web') return;
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return;
 
   try {
-    if (localStorage.getItem('raycoll_mic_permission_granted') === 'true') return;
-  } catch {
-    // localStorage unavailable (private browsing, etc.)
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((track) => track.stop());
-    try {
-      localStorage.setItem('raycoll_mic_permission_granted', 'true');
-    } catch {
-      // localStorage unavailable
+    if (localStorage.getItem('raycoll_mic_permission_granted') === 'true') {
+      return;
     }
   } catch {
-    // User denied or getUserMedia failed; STT will surface its own error
+    // Ignore localStorage access restrictions in private mode
+  }
+
+  if (navigator.mediaDevices?.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      try {
+        localStorage.setItem('raycoll_mic_permission_granted', 'true');
+      } catch {}
+    } catch (err) {
+      console.warn('Microphone permission not granted:', err);
+    }
   }
 }
 

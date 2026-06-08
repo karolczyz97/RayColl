@@ -26,6 +26,22 @@ describe('releaseInfo', () => {
     expect(releaseInfo.notes).toEqual([]);
   });
 
+  it('uses the official release fallback when metadata is missing in production mode', () => {
+    delete process.env.EXPO_PUBLIC_RELEASE_JSON;
+    const originalDev = (global as any).__DEV__;
+    (global as any).__DEV__ = false;
+
+    try {
+      const releaseInfo = loadReleaseInfo();
+
+      expect(releaseInfo.webBuild).toBe('production');
+      expect(releaseInfo.commitTitle).toBe('Official Release');
+      expect(releaseInfo.notes).toEqual([]);
+    } finally {
+      (global as any).__DEV__ = originalDev;
+    }
+  });
+
   it('uses the dev release when release metadata is invalid JSON', () => {
     process.env.EXPO_PUBLIC_RELEASE_JSON = '{bad json';
 

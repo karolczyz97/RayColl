@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 export interface ReleaseInfo {
   readonly appVersion: string;
   readonly webBuild: string;
@@ -7,11 +9,13 @@ export interface ReleaseInfo {
   readonly publishedAt: string;
 }
 
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
+
 const DEV_RELEASE: ReleaseInfo = {
-  appVersion: 'dev',
-  webBuild: 'dev',
-  commitSha: 'dev',
-  commitTitle: 'Local development build',
+  appVersion: Constants.expoConfig?.version ?? '1.0.0',
+  webBuild: isDev ? 'dev' : 'production',
+  commitSha: isDev ? 'dev' : 'production',
+  commitTitle: isDev ? 'Local development build' : 'Official Release',
   notes: [],
   publishedAt: new Date().toISOString(),
 };
