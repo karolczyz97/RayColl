@@ -44,16 +44,16 @@ export class ExpoSttService implements SttService {
   async startListening(options: SttOptions): Promise<string> {
     this.finishAndAbortActiveSession();
 
-    if (!this.isSupported()) {
-      options.onListeningStateChange?.(false);
-      throw new Error('STT not supported');
-    }
-
     try {
       await ensurePermissions();
     } catch (err) {
       options.onListeningStateChange?.(false);
       throw err;
+    }
+
+    if (!this.isSupported()) {
+      options.onListeningStateChange?.(false);
+      throw new Error('STT not supported');
     }
 
     return new Promise<string>((resolve, reject) => {
@@ -137,6 +137,14 @@ export class ExpoSttService implements SttService {
             console.warn('Speech recognition error:', event.message || event.error);
           }
 
+          if (Platform.OS === 'web' && event.error === 'not-allowed') {
+            try {
+              localStorage.removeItem('raycoll_mic_permission_granted');
+            } catch {
+              // localStorage unavailable (private browsing, etc.)
+            }
+          }
+
           if (shouldResolveRecognitionError(event)) {
             finishWithResult();
           } else {
@@ -191,8 +199,35 @@ function shouldUseContinuousRecognition(): boolean {
   return !Number.isFinite(androidVersion) || androidVersion > 31;
 }
 
+export async function ensureWebMicrophonePermission(): Promise<void> {
+  if (Platform.OS !== 'web') return;
+
+  if (navigator?.mediaDevices?.getUserMedia) {
+    try {
+      if (localStorage.getItem('raycoll_mic_permission_granted') === 'true') return;
+    } catch {
+      // localStorage unavailable (private browsing, etc.)
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      try {
+        localStorage.setItem('raycoll_mic_permission_granted', 'true');
+      } catch {
+        // localStorage unavailable
+      }
+    } catch {
+      // User denied or getUserMedia failed; STT will surface its own error
+    }
+  }
+}
+
 async function ensurePermissions(): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web') {
+    await ensureWebMicrophonePermission();
+    return;
+  }
 
   const current = await ExpoSpeechRecognitionModule.getPermissionsAsync();
   if (current.granted) return;

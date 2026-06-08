@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -11,6 +11,7 @@ import { ROUTES } from '@/constants/routes';
 import { StudyModeMenuButton } from './StudyModeMenuButton';
 import type { FlashcardGroup } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
+import { ensureWebMicrophonePermission } from '@/services/sttExpo';
 
 interface GroupCardProps {
   group: FlashcardGroup;
@@ -119,7 +120,16 @@ export function GroupCard({
             <View style={styles.studyModeAction}>
               <StudyModeMenuButton
                 group={group}
-                onStudy={() => router.push(ROUTES.studyDeck(group.id))}
+                onStudy={async () => {
+                  if (Platform.OS === 'web') {
+                    const activeMode = store.studyModes.find((m) => m.id === group.activeModeId);
+                    const hasStt = activeMode?.steps.some((step) => step.type === 'listen_and_branch');
+                    if (hasStt) {
+                      await ensureWebMicrophonePermission();
+                    }
+                  }
+                  router.push(ROUTES.studyDeck(group.id));
+                }}
                 onModeChange={(modeId) => onModeChange?.(modeId)}
               />
             </View>

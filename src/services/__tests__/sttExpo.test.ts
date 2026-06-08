@@ -184,7 +184,7 @@ describe('ExpoSttService', () => {
     expect(mod.start).not.toHaveBeenCalled();
   });
 
-  it('rejects before start when recognition is unavailable', async () => {
+  it('rejects before start when recognition is unavailable (permissions checked first)', async () => {
     const onListeningStateChange = jest.fn();
     mod.isRecognitionAvailable.mockReturnValue(false);
 
@@ -193,9 +193,28 @@ describe('ExpoSttService', () => {
     await expect(
       service.startListening({ language: 'en-US', onListeningStateChange }),
     ).rejects.toThrow(/not supported/i);
-    expect(mod.getPermissionsAsync).not.toHaveBeenCalled();
+    expect(mod.getPermissionsAsync).toHaveBeenCalled();
     expect(mod.start).not.toHaveBeenCalled();
     expect(onListeningStateChange).toHaveBeenCalledWith(false);
+  });
+
+  it('grants permission on first request and proceeds to start recognition', async () => {
+    mod.getPermissionsAsync.mockResolvedValue({ granted: false });
+    mod.requestPermissionsAsync.mockResolvedValue({ granted: true });
+
+    const service = new ExpoSttService();
+    const promise = service.startListening({ language: 'en-US' });
+    await flushStart();
+
+    expect(mod.getPermissionsAsync).toHaveBeenCalled();
+    expect(mod.requestPermissionsAsync).toHaveBeenCalled();
+    expect(mod.start).toHaveBeenCalledWith(
+      expect.objectContaining({ lang: 'en-US' }),
+    );
+
+    mod.__emit('result', resultEvent('hello', true));
+    mod.__emit('end');
+    await expect(promise).resolves.toBe('hello');
   });
 
   it('resolves no-speech errors with the captured text', async () => {
@@ -233,5 +252,32 @@ describe('ExpoSttService', () => {
 
     mod.__emit('end');
     await expect(promise).resolves.toBe('');
+  });
+
+  it('clears localStorage flag on web not-allowed error so next start re-prompts', async () => {
+    const storage: Record<string, string> = {};
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      writable: true,
+      value: {
+        getItem: jest.fn((key: string) => storage[key] ?? null),
+        setItem: jest.fn((key: string, value: string) => { storage[key] = value; }),
+        removeItem: jest.fn((key: string) => { delete storage[key]; }),
+      },
+    });
+
+    setPlatform('web', 'any');
+    mod.getPermissionsAsync.mockResolvedValue({ granted: true });
+
+    const service = new ExpoSttService();
+    const promise = service.startListening({ language: 'en-US' });
+    await flushStart();
+
+    mod.__emit('error', { error: 'not-allowed', message: 'Permission denied' });
+
+    await expect(promise).rejects.toThrow(/Permission denied/i);
+    expect(localStorage.removeItem).toHaveBeenCalledWith('raycoll_mic_permission_granted');
+
+    delete (globalThis as Record<string, unknown>).localStorage;
   });
 });
