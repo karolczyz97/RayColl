@@ -198,35 +198,40 @@ describe('useStudySession', () => {
   });
 
   it('STT service error reveals the card for manual rating without auto-recording a review', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-      { type: 'rate' },
-    ];
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const card1 = makeCard('c1', ['hello', 'world']);
+      const group = makeGroup(2, 2, [card1]);
+      const onCardReviewed = jest.fn();
+      const hookRef: HookResult = { current: null };
+      const steps: ModeStep[] = [
+        { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
+        { type: 'rate' },
+      ];
 
-    mockedSttService.startListening.mockImplementationOnce(() =>
-      Promise.reject(new Error('service-failure')),
-    );
+      mockedSttService.startListening.mockImplementationOnce(() =>
+        Promise.reject(new Error('service-failure')),
+      );
 
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
+      render(
+        <TestHookWrapper
+          group={group}
+          steps={steps}
+          onCardReviewed={onCardReviewed}
+          hookRef={hookRef}
+        />,
+      );
 
-    await startSession(hookRef, [card1]);
+      await startSession(hookRef, [card1]);
 
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    });
-    expect(onCardReviewed).not.toHaveBeenCalled();
-    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
+      await waitFor(() => {
+        expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+      });
+      expect(onCardReviewed).not.toHaveBeenCalled();
+      expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('rating 1 adds card to failed count', async () => {
