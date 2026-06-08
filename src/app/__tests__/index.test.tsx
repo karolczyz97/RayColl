@@ -1,6 +1,20 @@
 import React from 'react';
 import { renderAsync, screen } from '@testing-library/react-native';
 
+jest.mock('expo-speech-recognition', () => {
+  const listeners: Record<string, Set<(event: unknown) => void>> = {};
+  const ExpoSpeechRecognitionModule = {
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+    start: jest.fn(),
+    stop: jest.fn(),
+    abort: jest.fn(),
+    isRecognitionAvailable: jest.fn(() => false),
+    getPermissionsAsync: jest.fn(async () => ({ granted: false })),
+    requestPermissionsAsync: jest.fn(async () => ({ granted: false })),
+  };
+  return { ExpoSpeechRecognitionModule };
+});
+
 import Dashboard from '../index';
 import { TestProviders } from '../../test/renderWithAppProviders';
 

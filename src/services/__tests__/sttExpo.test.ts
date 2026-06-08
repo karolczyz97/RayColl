@@ -265,6 +265,20 @@ describe('ExpoSttService', () => {
         removeItem: jest.fn((key: string) => { delete storage[key]; }),
       },
     });
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      writable: true,
+      value: {
+        mediaDevices: {
+          getUserMedia: jest.fn(async () => {
+            const stream = {
+              getTracks: () => [{ stop: jest.fn() }],
+            };
+            return stream;
+          }),
+        },
+      },
+    });
 
     setPlatform('web', 'any');
     mod.getPermissionsAsync.mockResolvedValue({ granted: true });
@@ -279,5 +293,6 @@ describe('ExpoSttService', () => {
     expect(localStorage.removeItem).toHaveBeenCalledWith('raycoll_mic_permission_granted');
 
     delete (globalThis as Record<string, unknown>).localStorage;
+    delete (globalThis as Record<string, unknown>).navigator;
   });
 });
