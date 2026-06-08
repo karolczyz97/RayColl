@@ -11,7 +11,7 @@ export function useArchivePurger(purgeArchives: () => void) {
       purgeRef.current();
     }, ARCHIVE_PURGE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [purgeRef]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
@@ -20,5 +20,5 @@ export function useArchivePurger(purgeArchives: () => void) {
       }
     });
     return () => sub.remove();
-  }, []);
+  }, [purgeRef]);
 }

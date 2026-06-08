@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
+import type { UserData } from '../firestoreSchema';
 
 const mockSaveUserData = jest.fn<Promise<void>, [string, unknown]>();
 const mockLoadUserData = jest.fn<Promise<unknown | null>, [string]>();
@@ -33,9 +35,6 @@ jest.mock('@/store/persistence/firestorePersistence', () => ({
   saveStudyMode: (...args: unknown[]) => (mockSaveStudyMode as (...a: unknown[]) => Promise<void>)(...args),
   touchUserRoot: (...args: unknown[]) => (mockTouchUserRoot as (...a: unknown[]) => Promise<void>)(...args),
 }));
-
-import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
-import type { UserData } from '../firestoreSchema';
 
 const srsState = {
   difficulty: 1,
