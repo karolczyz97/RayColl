@@ -9,7 +9,7 @@ describe('usePersistedState', () => {
   });
 
   it('starts with the fallback value and loading true', () => {
-    const { result } = renderHook(() =>
+    const { result, unmount } = renderHook(() =>
       usePersistedState({
         key: 'test_key',
         parse: (raw) => (raw ? JSON.parse(raw) : 0),
@@ -20,6 +20,7 @@ describe('usePersistedState', () => {
 
     expect(result.current.value).toBe(0);
     expect(result.current.isLoading).toBe(true);
+    unmount();
   });
 
   it('loads the persisted value from AsyncStorage', async () => {
