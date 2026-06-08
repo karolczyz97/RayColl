@@ -1,3 +1,0 @@
-Fixed async unmount warning in usePersistedState test suite
-
-- Manually unmounted usePersistedState hook to prevent state updates after test exits
