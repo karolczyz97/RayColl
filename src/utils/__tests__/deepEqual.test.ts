@@ -27,4 +27,37 @@ describe('deepEqual', () => {
     expect(deepEqual([1, 2, 3], [1, 2, 3])).toBe(true);
     expect(deepEqual([1, 2], { 0: 1, 1: 2 })).toBe(false);
   });
+
+  it('distinguishes present undefined from missing key with real card shape', () => {
+    const withDeletedAt = {
+      id: 'c1',
+      pages: ['front', 'back'],
+      srsState: {
+        difficulty: 1,
+        stability: 1,
+        repetitions: 0,
+        state: 0,
+        lastReviewTimestamp: 0,
+        nextReviewTimestamp: 0,
+      },
+      contentUpdatedAt: 0,
+      srsUpdatedAt: 0,
+      deletedAt: undefined,
+    };
+    const withoutDeletedAt = {
+      id: 'c1',
+      pages: ['front', 'back'],
+      srsState: {
+        difficulty: 1,
+        stability: 1,
+        repetitions: 0,
+        state: 0,
+        lastReviewTimestamp: 0,
+        nextReviewTimestamp: 0,
+      },
+      contentUpdatedAt: 0,
+      srsUpdatedAt: 0,
+    };
+    expect(deepEqual(withDeletedAt, withoutDeletedAt)).toBe(false);
+  });
 });

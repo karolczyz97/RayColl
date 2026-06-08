@@ -47,18 +47,20 @@ export function getStoredPageCount(group: FlashcardGroup, pageNames: string[], p
 }
 
 function normalizeCard(card: Flashcard): Flashcard {
+  const { deletedAt, ...rest } = card;
   return {
-    ...card,
+    ...rest,
     srsState: VALID_SRS_STATES.has(card.srsState.state)
       ? card.srsState
       : { ...card.srsState, state: 0 as SrsState['state'] },
     contentUpdatedAt: card.contentUpdatedAt ?? 0,
     srsUpdatedAt: card.srsUpdatedAt ?? 0,
-    deletedAt: card.deletedAt ?? undefined,
+    ...(deletedAt != null ? { deletedAt } : {}),
   };
 }
 
 export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
+  const { deletedAt, archivedAt, ...groupBase } = group;
   const rawNames = coerceStringArray((group as { pageNames?: unknown }).pageNames);
   const rawLanguages = coerceStringArray((group as { pageLanguages?: unknown }).pageLanguages);
   const storedPageCount = getStoredPageCount(group, rawNames, rawLanguages);
@@ -74,15 +76,15 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
   const activePageCount = clampActivePageCount(candidate, maxVisible);
 
   return {
-    ...group,
+    ...groupBase,
     activePageCount,
     pageNames,
     pageLanguages,
     cards: group.cards.map(normalizeCard),
     studyFilter: normalizeStudyFilter(group.studyFilter),
     updatedAt: (group as { updatedAt?: number }).updatedAt ?? 0,
-    deletedAt: (group as { deletedAt?: number | null }).deletedAt ?? undefined,
-    archivedAt: (group as { archivedAt?: number | null }).archivedAt ?? undefined,
+    ...(deletedAt != null ? { deletedAt } : {}),
+    ...(archivedAt != null ? { archivedAt } : {}),
   };
 }
 
@@ -109,7 +111,7 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,
-    deletedAt: (mode as { deletedAt?: number | null }).deletedAt ?? undefined,
+    ...(mode.deletedAt != null ? { deletedAt: mode.deletedAt } : {}),
   };
 }
 
@@ -139,6 +141,6 @@ export function normalizeStoreData(data: StoreData): StoreData {
     groups: data.groups.map(normalizeGroup),
     studyModes: normalizeStudyModes(data.studyModes),
     activityHeatmap: normalizeActivityHeatmap(data.activityHeatmap),
-    lastSyncedAt: data.lastSyncedAt,
+    ...(data.lastSyncedAt != null ? { lastSyncedAt: data.lastSyncedAt } : {}),
   };
 }

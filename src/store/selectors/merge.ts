@@ -100,7 +100,7 @@ export function mergeCards(localCards: Flashcard[], cloudCards: Flashcard[]): Fl
       srsState: srsSide === 'local' ? l.srsState : c.srsState,
       contentUpdatedAt: contentSide.contentUpdatedAt ?? 0,
       srsUpdatedAt: srsSide === 'local' ? (l.srsUpdatedAt ?? 0) : (c.srsUpdatedAt ?? 0),
-      deletedAt: deletedAt || undefined,
+      ...(deletedAt > 0 ? { deletedAt } : {}),
     });
   }
 
@@ -158,7 +158,7 @@ export function mergeGroups(localGroups: FlashcardGroup[], cloudGroups: Flashcar
       ...winner,
       cards: mergedCards,
       updatedAt: latestEdit,
-      deletedAt: deletedAt || undefined,
+      ...(deletedAt > 0 ? { deletedAt } : {}),
     });
   }
 
@@ -211,7 +211,7 @@ export function mergeStudyModes(
     merged.push({
       ...winner,
       updatedAt: latestEdit,
-      deletedAt: deletedAt || undefined,
+      ...(deletedAt > 0 ? { deletedAt } : {}),
     });
   }
 

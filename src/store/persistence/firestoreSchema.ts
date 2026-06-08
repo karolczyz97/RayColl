@@ -88,7 +88,7 @@ export function serializeDeckDoc(group: FlashcardGroup): FirestoreDeckDoc {
     studyFilter: normalizeStudyFilter(group.studyFilter),
     updatedAt: group.updatedAt,
     ...(group.deletedAt != null ? { deletedAt: group.deletedAt } : {}),
-    archivedAt: group.archivedAt ?? null,
+    ...(group.archivedAt != null ? { archivedAt: group.archivedAt } : {}),
   };
 }
 
@@ -116,7 +116,7 @@ export function serializeStudyModeDoc(mode: StudyMode): FirestoreStudyModeDoc {
 }
 
 export function cloneUserData<T extends UserData>(data: T): T {
-  return JSON.parse(JSON.stringify(data)) as T;
+  return structuredClone(data);
 }
 
 export function deserializeCardDoc(docId: string, rawData: unknown): Flashcard {
@@ -131,13 +131,11 @@ export function deserializeCardDoc(docId: string, rawData: unknown): Flashcard {
     id: typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId,
     pages: rawData.pages.filter((page): page is string => typeof page === 'string'),
     srsState: deserializeSrsState(docId, rawData.srsState),
-    contentUpdatedAt:
-      typeof rawData.contentUpdatedAt === 'number' ? rawData.contentUpdatedAt : undefined,
-    srsUpdatedAt: typeof rawData.srsUpdatedAt === 'number' ? rawData.srsUpdatedAt : undefined,
-    deletedAt:
-      rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
-        ? rawData.deletedAt
-        : undefined,
+    ...(typeof rawData.contentUpdatedAt === 'number' ? { contentUpdatedAt: rawData.contentUpdatedAt } : {}),
+    ...(typeof rawData.srsUpdatedAt === 'number' ? { srsUpdatedAt: rawData.srsUpdatedAt } : {}),
+    ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
+      ? { deletedAt: rawData.deletedAt }
+      : {}),
   };
 }
 
@@ -168,13 +166,11 @@ export function deserializeDeckDoc(
     pageNames,
     activePageCount,
     studyFilter: normalizeStudyFilter(rawData.studyFilter),
-    updatedAt: typeof rawData.updatedAt === 'number' ? rawData.updatedAt : undefined,
-    deletedAt:
-      rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
-        ? rawData.deletedAt
-        : undefined,
-    archivedAt:
-      typeof rawData.archivedAt === 'number' ? rawData.archivedAt : undefined,
+    ...(typeof rawData.updatedAt === 'number' ? { updatedAt: rawData.updatedAt } : {}),
+    ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
+      ? { deletedAt: rawData.deletedAt }
+      : {}),
+    ...(typeof rawData.archivedAt === 'number' ? { archivedAt: rawData.archivedAt } : {}),
   };
 }
 
@@ -197,11 +193,10 @@ export function deserializeStudyModeDoc(docId: string, rawData: unknown): StudyM
     steps: rawData.steps as StudyMode['steps'],
     isBuiltIn: rawData.isBuiltIn === true,
     ...(typeof rawData.builtInSourceId === 'string' ? { builtInSourceId: rawData.builtInSourceId } : {}),
-    updatedAt: typeof rawData.updatedAt === 'number' ? rawData.updatedAt : undefined,
-    deletedAt:
-      rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
-        ? rawData.deletedAt
-        : undefined,
+    ...(typeof rawData.updatedAt === 'number' ? { updatedAt: rawData.updatedAt } : {}),
+    ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
+      ? { deletedAt: rawData.deletedAt }
+      : {}),
   };
 }
 
