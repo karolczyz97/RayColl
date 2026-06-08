@@ -1,8 +1,9 @@
 import React from 'react';
 import { renderAsync, screen } from '@testing-library/react-native';
+import Dashboard from '../index';
+import { TestProviders } from '../../test/renderWithAppProviders';
 
 jest.mock('expo-speech-recognition', () => {
-  const listeners: Record<string, Set<(event: unknown) => void>> = {};
   const ExpoSpeechRecognitionModule = {
     addListener: jest.fn(() => ({ remove: jest.fn() })),
     start: jest.fn(),
@@ -14,9 +15,6 @@ jest.mock('expo-speech-recognition', () => {
   };
   return { ExpoSpeechRecognitionModule };
 });
-
-import Dashboard from '../index';
-import { TestProviders } from '../../test/renderWithAppProviders';
 
 jest.mock('@/store/FlashcardStoreContext', () => ({
   useFlashcardStore: () => ({
