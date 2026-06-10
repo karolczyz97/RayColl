@@ -1,8 +1,16 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { Text } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { AppIcon } from '@/components/AppIcon';
+import { usePulseAnimation } from '@/hooks/usePulseAnimation';
 import { TOKENS } from '@/theme/tokens';
+
+export interface CardAudioIndicator {
+  iconName: string;
+  color: string;
+}
 
 interface CardPageSectionProps {
   pageName: string;
@@ -14,6 +22,9 @@ interface CardPageSectionProps {
   primaryColor: string;
   textColor: string;
   labelColor: string;
+  fontSize: number;
+  audioIndicator?: CardAudioIndicator | null;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export function CardPageSection({
@@ -26,8 +37,12 @@ export function CardPageSection({
   primaryColor,
   textColor,
   labelColor,
+  fontSize,
+  audioIndicator,
+  onLayout,
 }: CardPageSectionProps) {
   const opacity = useSharedValue(isRevealed ? 1 : 0);
+  const pulseStyle = usePulseAnimation(!!audioIndicator);
 
   useEffect(() => {
     opacity.value = withSpring(isRevealed ? 1 : 0, {
@@ -42,14 +57,31 @@ export function CardPageSection({
   }));
 
   return (
-    <View style={[styles.pageRow, hasBorderTop && styles.pageRowBorder, { borderColor }]}>
+    <View
+      onLayout={onLayout}
+      style={[styles.pageRow, hasBorderTop && styles.pageRowBorder, { borderColor }]}
+    >
+      {audioIndicator ? (
+        <Animated.View style={[styles.audioIndicator, pulseStyle]}>
+          <AppIcon name={audioIndicator.iconName} size={TOKENS.iconSize.sm} color={audioIndicator.color} />
+        </Animated.View>
+      ) : null}
       <Text style={[styles.pageLabel, { color: labelColor }]}>{pageName}</Text>
-      <Animated.View style={animatedStyle}>
+      {/* Always render the content so a hidden page reserves its real height —
+          revealing only fades it in (opacity), so the layout never reflows/jumps.
+          Hidden content is removed from the a11y tree so it isn't read aloud. */}
+      <Animated.View
+        style={[styles.cardTextWrapper, animatedStyle]}
+        accessibilityElementsHidden={!isRevealed}
+        importantForAccessibility={isRevealed ? 'auto' : 'no-hide-descendants'}
+      >
         <Text
-          variant="headlineMedium"
-          style={[styles.cardText, { color: isPrimary ? primaryColor : textColor }]}
+          style={[
+            styles.cardText,
+            { color: isPrimary ? primaryColor : textColor, fontSize, lineHeight: Math.round(fontSize * 1.25) },
+          ]}
         >
-          {isRevealed ? pageContent || '-' : ' '}
+          {pageContent || '-'}
         </Text>
       </Animated.View>
     </View>
@@ -58,11 +90,19 @@ export function CardPageSection({
 
 const styles = StyleSheet.create({
   pageRow: {
-    flex: 1,
+    // Grow to split leftover card space evenly between pages when the content
+    // is shorter than the viewport; with overflowing content this is a no-op.
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
     paddingVertical: TOKENS.spacing.md,
+  },
+  audioIndicator: {
+    position: 'absolute',
+    top: TOKENS.spacing.sm,
+    right: TOKENS.spacing.sm,
+    zIndex: 1,
   },
   pageRowBorder: {
     borderTopWidth: 1,
@@ -73,6 +113,9 @@ const styles = StyleSheet.create({
     letterSpacing: TOKENS.typography.letterSpacing.wide,
     marginBottom: TOKENS.spacing.sm,
     fontWeight: TOKENS.typography.weight.bold,
+  },
+  cardTextWrapper: {
+    width: '100%',
   },
   cardText: {
     textAlign: 'center',

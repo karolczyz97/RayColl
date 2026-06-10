@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -26,7 +26,7 @@ export default function Dashboard() {
   const { showPersistentNavigation } = useNavigationShell();
   const { t } = useI18n();
 
-  const { groups, getDueCards, user, signIn, signOut, isLoading, updateGroup, activityHeatmap, lastLoginError, clearLastLoginError, syncRefreshKey } = store;
+  const { groups, studyModes, getDueCards, user, signIn, signOut, isLoading, activityHeatmap, lastLoginError, clearLastLoginError } = store;
 
   const handleLogin = async () => {
     try {
@@ -48,14 +48,6 @@ export default function Dashboard() {
   const cardsCount = useMemo(() => getTotalCardsCount(groups), [groups]);
   const dueCount = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [groups, getDueCards]);
   const streak = useMemo(() => computeStreak(activityHeatmap), [activityHeatmap]);
-
-  const handleModeChange = useCallback(
-    (groupId: string, modeId: string) => {
-      const g = groups.find((x) => x.id === groupId);
-      if (g) updateGroup({ ...g, activeModeId: modeId });
-    },
-    [groups, updateGroup],
-  );
 
   if (isLoading) {
     return <LoadingState />;
@@ -109,7 +101,7 @@ export default function Dashboard() {
           <EmptyDashboardState />
         </AnimatedSection>
       ) : (
-        <DeckGrid groups={groups} onModeChange={handleModeChange} baseOrder={2} refreshKey={syncRefreshKey} />
+        <DeckGrid groups={groups} studyModes={studyModes} baseOrder={2} />
       )}
 
       <AppSnackbar

@@ -59,6 +59,16 @@ describe('filterLive', () => {
     const items = [{ id: '1' }, { deletedAt: null }];
     expect(filterLive(items)).toEqual(items);
   });
+
+  it('returns the same array reference when nothing is tombstoned', () => {
+    const items = [{ id: '1' }, { id: '2', deletedAt: null }];
+    expect(filterLive(items)).toBe(items);
+  });
+
+  it('returns a new array when a tombstone is filtered out', () => {
+    const items = [{ id: '1' }, { id: '2', deletedAt: 1 }];
+    expect(filterLive(items)).not.toBe(items);
+  });
 });
 
 describe('swapElements', () => {

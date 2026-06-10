@@ -1,21 +1,22 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, memo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
-import { useFlashcardStore } from '@/store/FlashcardStoreContext';
+import { useStoreActionsContext } from '@/store/StoreContexts';
 import { useI18n } from '@/i18n';
 import { AppCard } from '@/components/AppCard';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { computeCardStats } from '@/store/selectors/stats';
 import { ROUTES } from '@/constants/routes';
 import { StudyModeMenuButton } from './StudyModeMenuButton';
-import type { FlashcardGroup } from '@/types/models';
+import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
 import { ensureWebMicrophonePermission } from '@/services/sttExpo';
 
 interface GroupCardProps {
   group: FlashcardGroup;
-  onModeChange?: (modeId: string) => void;
+  /** Required for the default (non-archived) variant to render the mode selector. */
+  studyModes?: StudyMode[];
   /** 'default' renders the dashboard deck card; 'archived' renders the archive variant. */
   variant?: 'default' | 'archived';
   /** Archive only: pre-formatted auto-delete countdown line. */
@@ -26,21 +27,21 @@ interface GroupCardProps {
   onDeletePermanently?: () => void;
 }
 
-export function GroupCard({
+export const GroupCard = memo(function GroupCard({
   group,
-  onModeChange,
+  studyModes = [],
   variant = 'default',
   expiryLabel,
   onRestore,
   onDeletePermanently,
 }: GroupCardProps) {
-  const store = useFlashcardStore();
+  const actions = useStoreActionsContext();
   const { t } = useI18n();
   const theme = useTheme();
 
   const isArchived = variant === 'archived';
   const cardStats = computeCardStats(group.cards);
-  const dueCount = isArchived ? 0 : store.getDueCards(group.id).length;
+  const dueCount = isArchived ? 0 : actions.getDueCards(group.id).length;
 
   return (
     <AppCard
@@ -120,9 +121,11 @@ export function GroupCard({
             <View style={styles.studyModeAction}>
               <StudyModeMenuButton
                 group={group}
+                studyModes={studyModes}
+                dueCount={dueCount}
                 onStudy={async () => {
                   if (Platform.OS === 'web') {
-                    const activeMode = store.studyModes.find((m) => m.id === group.activeModeId);
+                    const activeMode = studyModes.find((m) => m.id === group.activeModeId);
                     const hasStt = activeMode?.steps.some((step) => step.type === 'listen_and_branch');
                     if (hasStt) {
                       await ensureWebMicrophonePermission();
@@ -130,7 +133,6 @@ export function GroupCard({
                   }
                   router.push(ROUTES.studyDeck(group.id));
                 }}
-                onModeChange={(modeId) => onModeChange?.(modeId)}
               />
             </View>
           </View>
@@ -138,7 +140,7 @@ export function GroupCard({
       </AppCard.Actions>
     </AppCard>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

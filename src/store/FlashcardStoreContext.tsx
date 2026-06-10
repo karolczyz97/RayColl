@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { useSyncedRef } from '@/hooks/useSyncedRef';
 import type { User } from 'firebase/auth';
 import type { FlashcardGroup, StudyMode, StoreData } from '@/types/models';
@@ -33,7 +33,6 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   const [heatmap, setHeatmap] = useState<Record<string, number>>({});
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [syncRefreshKey, setSyncRefreshKey] = useState(0);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [lastPersistenceError, setLastPersistenceError] = useState<string | null>(null);
@@ -42,8 +41,6 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
 
   const [migrationPending, setMigrationPending] = useState(false);
   const [pendingGuestSnapshot, setPendingGuestSnapshot] = useState<StoreData | null>(null);
-
-  const bumpSyncRefresh = useCallback(() => setSyncRefreshKey((key) => key + 1), []);
 
   const groupsRef = useSyncedRef(groups);
   const studyModesRef = useSyncedRef(studyModes);
@@ -73,7 +70,6 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     setLastStoreError,
     setMigrationPending,
     setPendingGuestSnapshot,
-    bumpSyncRefresh,
     applySnapshot: persistence.applySnapshot,
     persistLocalSnapshot: persistence.persistLocalSnapshot,
     persistNow: persistence.persistNow,
@@ -110,14 +106,20 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
     persistence,
   });
 
+  // Selectors are memoized on their own inputs so unrelated state changes
+  // (syncStatus, errors, heatmap) don't mint new group/mode references —
+  // that would defeat React.memo on consumers like GroupCard.
+  const activeGroups = useMemo(() => selectActiveGroups(groups), [groups]);
+  const archivedGroups = useMemo(() => selectArchivedGroups(groups), [groups]);
+  const liveStudyModes = useMemo(() => selectLiveStudyModes(studyModes), [studyModes]);
+
   const stateValue = useMemo<FlashcardStoreState>(
     () => ({
-      groups: selectActiveGroups(groups),
-      archivedGroups: selectArchivedGroups(groups),
-      studyModes: selectLiveStudyModes(studyModes),
+      groups: activeGroups,
+      archivedGroups,
+      studyModes: liveStudyModes,
       activityHeatmap: heatmap,
       isLoading,
-      syncRefreshKey,
       user,
       syncStatus,
       lastSyncError,
@@ -126,15 +128,15 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       lastLoginError,
     }),
     [
-      groups,
+      activeGroups,
+      archivedGroups,
+      liveStudyModes,
       heatmap,
       isLoading,
       lastPersistenceError,
       lastStoreError,
       lastLoginError,
       lastSyncError,
-      studyModes,
-      syncRefreshKey,
       syncStatus,
       user,
     ],

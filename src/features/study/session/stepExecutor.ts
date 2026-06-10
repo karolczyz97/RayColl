@@ -9,6 +9,9 @@ import { getActivePageIndexes, sleep } from './sessionUtils';
 
 interface StepExecutorContext {
   abortRef: MutableRefObject<boolean>;
+  // Bumped on pause/resume/restart. A step chain captures the epoch when it starts;
+  // a mismatch means the chain was superseded and must die without side effects.
+  runEpochRef: MutableRefObject<number>;
   activeStepsRef: MutableRefObject<ModeStep[]>;
   groupRef: MutableRefObject<FlashcardGroup | null>;
   skipRef: MutableRefObject<StudySkipState>;
@@ -24,12 +27,16 @@ interface StepExecutorContext {
   executeNext: (card: Flashcard, stepIndex: number) => Promise<void>;
 }
 
+type StepRunContext = StepExecutorContext & {
+  isStale: () => boolean;
+};
+
 async function continueIfActive(
   card: Flashcard,
   stepIndex: number,
-  context: StepExecutorContext,
+  context: StepRunContext,
 ) {
-  if (!context.abortRef.current) {
+  if (!context.isStale()) {
     await context.executeNext(card, stepIndex);
   }
 }
@@ -39,13 +46,17 @@ async function executeSpeakPageStep(
   stepIndex: number,
   step: Extract<ModeStep, { type: 'speak_page' }>,
   group: FlashcardGroup,
-  context: StepExecutorContext,
+  context: StepRunContext,
 ) {
   context.skipRef.current.armed = true;
-  context.dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
+  context.dispatchIfMounted({ type: 'START_SPEAKING', stepIndex, pageIndex: step.pageIndex });
   await context.guardedAwait(
     context.playTts(card.pages[step.pageIndex] || '', group.pageLanguages[step.pageIndex] || 'en-US'),
   );
+  if (context.isStale()) {
+    context.dispatchIfMounted({ type: 'END_SPEAKING' });
+    return;
+  }
   if (!context.skipRef.current.requested && step.extraPauseMs > 0) {
     await context.guardedAwait(sleep(step.extraPauseMs));
   }
@@ -58,7 +69,7 @@ async function executeTimedWaitStep(
   card: Flashcard,
   stepIndex: number,
   waitMs: number,
-  context: StepExecutorContext,
+  context: StepRunContext,
 ) {
   context.skipRef.current.armed = true;
   context.dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
@@ -72,16 +83,20 @@ async function executeListenAndBranchStep(
   stepIndex: number,
   step: Extract<ModeStep, { type: 'listen_and_branch' }>,
   group: FlashcardGroup,
-  context: StepExecutorContext,
+  context: StepRunContext,
 ) {
   context.skipRef.current.armed = true;
-  context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex });
+  context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex, pageIndex: step.pageIndex });
   const lang = group.pageLanguages[step.pageIndex] || 'en-US';
   const softTimeout = Math.max(5000, context.lastTtsDurationRef.current * 3);
   const result = await context.guardedAwait(
     context.runSpeechRecognition(lang, softTimeout + 10000),
   );
   context.skipRef.current.armed = false;
+
+  // Superseded run (pause/restart): drop the result without failing the card,
+  // revealing pages, or playing feedback.
+  if (context.isStale()) return;
 
   if (context.skipRef.current.requested) {
     context.dispatchIfMounted({
@@ -116,13 +131,14 @@ async function executeListenAndBranchStep(
   });
 
   await sleep(1200);
+  if (context.isStale()) return;
 
   if (percent >= step.successThreshold) {
     playSuccessSound();
     playSuccessHaptic();
     const autoRating = mapMatchToRating(percent);
     await sleep(600);
-    if (!context.abortRef.current) {
+    if (!context.isStale()) {
       context.processCardReview(card, autoRating);
       await context.advanceToNextCard();
     }
@@ -140,7 +156,11 @@ async function executeListenAndBranchStep(
 
   context.skipRef.current.armed = true;
   if (step.incorrectTtsPageIndex !== undefined) {
-    context.dispatchIfMounted({ type: 'START_SPEAKING', stepIndex });
+    context.dispatchIfMounted({
+      type: 'START_SPEAKING',
+      stepIndex,
+      pageIndex: step.incorrectTtsPageIndex,
+    });
     const correctionStart = Date.now();
     await context.guardedAwait(
       context.playTts(
@@ -164,7 +184,7 @@ async function executeListenAndBranchStep(
     return;
   }
 
-  if (!context.abortRef.current) {
+  if (!context.isStale()) {
     context.processCardReview(card, 1);
     await context.advanceToNextCard();
   }
@@ -173,8 +193,14 @@ async function executeListenAndBranchStep(
 export async function executeStudyStep(
   card: Flashcard,
   stepIndex: number,
-  context: StepExecutorContext,
+  executorContext: StepExecutorContext,
 ) {
+  const epoch = executorContext.runEpochRef.current;
+  const context: StepRunContext = {
+    ...executorContext,
+    isStale: () =>
+      executorContext.abortRef.current || executorContext.runEpochRef.current !== epoch,
+  };
   const currentGroup = context.groupRef.current;
   const currentSteps = context.activeStepsRef.current;
 

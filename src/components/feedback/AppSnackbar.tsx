@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Snackbar } from 'react-native-paper';
+import { Portal, Snackbar } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
 import { useI18n } from '@/i18n';
 
@@ -21,16 +21,18 @@ export function AppSnackbar({
 }: AppSnackbarProps) {
   const { t } = useI18n();
   return (
-    <Snackbar
-      visible={visible}
-      onDismiss={onDismiss}
-      duration={duration}
-      action={{ label: actionLabel ?? t('common.ok'), onPress: onDismiss }}
-      wrapperStyle={styles.wrapper}
-      style={styles.snackbar}
-    >
-      {message}
-    </Snackbar>
+    <Portal>
+      <Snackbar
+        visible={visible}
+        onDismiss={onDismiss}
+        duration={duration}
+        action={{ label: actionLabel ?? t('common.ok'), onPress: onDismiss }}
+        wrapperStyle={styles.wrapper}
+        style={styles.snackbar}
+      >
+        {message}
+      </Snackbar>
+    </Portal>
   );
 }
 

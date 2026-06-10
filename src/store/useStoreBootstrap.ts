@@ -16,8 +16,9 @@ import { purgeExpiredArchivesAction } from './actions/groupActions';
 import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
 
 // Bound the startup cloud load so a stalled/unreachable Firestore connection
-// cannot hold the spinner hostage. Local data is shown first regardless; on
-// timeout we keep the local cache and surface the error via lastSyncError.
+// cannot hold the spinner hostage. Signed-in startup waits for the cloud so the
+// first render is already the merged, canonical data; on timeout/error we fall
+// back to the local cache and surface the error via lastSyncError.
 const CLOUD_LOAD_TIMEOUT_MS = 8000;
 
 export function shouldTriggerMigration(
@@ -39,7 +40,7 @@ function isUserAuthoredMode(mode: StudyMode): boolean {
     (seedMode) => (seedMode.builtInSourceId ?? seedMode.id) === sourceId,
   );
   if (!seed) return true;
-  // Step ids are generated during normalization, so compare without them.
+  // Step ids are stripped during normalization, so compare without them.
   return mode.name !== seed.name || !deepEqual(stepsWithoutIds(mode.steps), stepsWithoutIds(seed.steps));
 }
 
@@ -59,7 +60,6 @@ interface UseStoreBootstrapParams {
   setLastStoreError: Dispatch<SetStateAction<string | null>>;
   setMigrationPending: Dispatch<SetStateAction<boolean>>;
   setPendingGuestSnapshot: Dispatch<SetStateAction<StoreData | null>>;
-  bumpSyncRefresh: () => void;
   applySnapshot: (snapshot: StoreData) => void;
   persistLocalSnapshot: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
   persistNow: (snapshot: StoreData & { uid: string | null }) => Promise<void>;
@@ -74,7 +74,6 @@ export function useStoreBootstrap({
   setLastStoreError,
   setMigrationPending,
   setPendingGuestSnapshot,
-  bumpSyncRefresh,
   applySnapshot,
   persistLocalSnapshot,
   persistNow,
@@ -90,8 +89,7 @@ export function useStoreBootstrap({
     const targetUid = user ? user.uid : null;
 
     // Apply first-run seed defaults and purge expired archives. Pure transform —
-    // no persistence side effects, so it is safe to run for both the instant
-    // local render and the post-cloud render.
+    // no persistence side effects.
     function prepareCollections(
       groups: FlashcardGroup[],
       modes: StudyMode[],
@@ -129,16 +127,6 @@ export function useStoreBootstrap({
       });
     }
 
-    // True when the user-visible collections are identical. Ignores lastSyncedAt
-    // so a no-op cloud merge does not trigger a refresh animation.
-    function sameVisibleData(a: StoreData, b: StoreData): boolean {
-      return (
-        deepEqual(a.groups, b.groups) &&
-        deepEqual(a.studyModes, b.studyModes) &&
-        deepEqual(a.activityHeatmap, b.activityHeatmap)
-      );
-    }
-
     async function loadData() {
       setIsLoading(true);
       try {
@@ -169,20 +157,9 @@ export function useStoreBootstrap({
           return;
         }
 
-        // Signed in WITH local data → render it immediately (local-first) so the
-        // spinner never waits on the network. Defer persistence to the canonical
-        // post-cloud snapshot below.
-        let shownSnapshot: StoreData | null = null;
-        if (!hadNoLocalGroups) {
-          const prepared = prepareCollections(loadedGroups, loadedModes, seedVer);
-          shownSnapshot = buildSnapshot(prepared.groups, prepared.modes, loadedHeatmap, false);
-          if (!active) return;
-          applySnapshot(shownSnapshot);
-          setIsLoading(false);
-        }
-
-        // Cloud load runs in the background, bounded by a timeout so a stalled
-        // Firestore connection cannot hold startup hostage.
+        // Signed in → wait for the cloud (bounded by the timeout) so the first
+        // render already shows the merged, canonical data. On failure/timeout
+        // the local cache below is shown instead and the error is surfaced.
         let cloudLoadFailed = false;
         let cloudSynced = false;
         let cloudData: StoreData | null = null;
@@ -226,18 +203,7 @@ export function useStoreBootstrap({
 
         if (!active) return;
 
-        const cloudChanged =
-          cloudSynced && shownSnapshot !== null && !sameVisibleData(shownSnapshot, finalSnapshot);
-
-        // Re-render only when nothing was shown yet, or the cloud merge actually
-        // changed the visible data; bump the refresh key so the dashboard can
-        // replay its enter animation on a real change.
-        if (shownSnapshot === null || cloudChanged) {
-          applySnapshot(finalSnapshot);
-        }
-        if (cloudChanged) {
-          bumpSyncRefresh();
-        }
+        applySnapshot(finalSnapshot);
 
         // Data is on screen now — drop the spinner before persisting so the
         // (un-timed) cloud save can never hold startup hostage.
@@ -274,7 +240,6 @@ export function useStoreBootstrap({
     };
   }, [
     applySnapshot,
-    bumpSyncRefresh,
     persistLocalSnapshot,
     persistNow,
     setIsLoading,

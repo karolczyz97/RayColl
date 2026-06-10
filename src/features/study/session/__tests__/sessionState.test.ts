@@ -79,21 +79,29 @@ describe('sessionReducer', () => {
   });
 
   describe('START_SPEAKING / END_SPEAKING', () => {
-    it('sets speaking status and stepIndex, END_SPEAKING returns to idle', () => {
-      const speaking = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_SPEAKING', stepIndex: 3 });
+    it('sets speaking status, stepIndex and audio page, END_SPEAKING returns to idle', () => {
+      const speaking = reduce(INITIAL_STUDY_SESSION_STATE, {
+        type: 'START_SPEAKING',
+        stepIndex: 3,
+        pageIndex: 1,
+      });
       expect(speaking.status).toBe('speaking');
       expect(speaking.currentStepIndex).toBe(3);
-      expect(reduce(speaking, { type: 'END_SPEAKING' }).status).toBe('idle');
+      expect(speaking.audioPageIndex).toBe(1);
+      const ended = reduce(speaking, { type: 'END_SPEAKING' });
+      expect(ended.status).toBe('idle');
+      expect(ended.audioPageIndex).toBeNull();
     });
   });
 
   describe('START_LISTENING', () => {
-    it('sets listening status and clears partial text / match percent', () => {
+    it('sets listening status, audio page and clears partial text / match percent', () => {
       const listening = reduce(
         { ...INITIAL_STUDY_SESSION_STATE, sttResultText: 'stale', sttMatchPercent: 80 },
-        { type: 'START_LISTENING', stepIndex: 2 },
+        { type: 'START_LISTENING', stepIndex: 2, pageIndex: 0 },
       );
       expect(listening.status).toBe('listening');
+      expect(listening.audioPageIndex).toBe(0);
       expect(listening.sttResultText).toBe('');
       expect(listening.sttMatchPercent).toBe(0);
     });
@@ -101,7 +109,7 @@ describe('sessionReducer', () => {
 
   describe('UPDATE_PARTIAL_STT', () => {
     it('updates text while keeping listening status', () => {
-      const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2 });
+      const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2, pageIndex: 0 });
       const partial = reduce(listening, { type: 'UPDATE_PARTIAL_STT', text: 'hel' });
       expect(partial.sttResultText).toBe('hel');
       expect(partial.status).toBe('listening');
@@ -116,10 +124,11 @@ describe('sessionReducer', () => {
   });
 
   describe('END_LISTENING', () => {
-    it('sets checking status and stores text / match percent', () => {
-      const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2 });
+    it('sets checking status, clears audio page and stores text / match percent', () => {
+      const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2, pageIndex: 0 });
       const checked = reduce(listening, { type: 'END_LISTENING', text: 'hello', matchPercent: 92 });
       expect(checked.status).toBe('checking');
+      expect(checked.audioPageIndex).toBeNull();
       expect(checked.sttResultText).toBe('hello');
       expect(checked.sttMatchPercent).toBe(92);
     });

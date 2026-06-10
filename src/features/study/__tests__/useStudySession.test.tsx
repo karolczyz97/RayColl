@@ -461,6 +461,135 @@ describe('useStudySession', () => {
     }
   });
 
+  it('pauseSession stops audio and resumeSession replays the current card from its first step', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'speak_page', pageIndex: 0, extraPauseMs: 0 },
+      { type: 'rate' },
+    ];
+
+    // TTS hangs until cancelled, like a long utterance.
+    mockedTtsService.speak.mockImplementationOnce(() => new Promise<void>(() => {}));
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
+    });
+    expect(mockedTtsService.speak).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      hookRef.current!.pauseSession();
+    });
+
+    expect(ttsService.cancel).toHaveBeenCalled();
+
+    await act(async () => {
+      hookRef.current!.resumeSession();
+    });
+    await flushQueuedSessionWork();
+
+    // Replayed from step 0: TTS spoken again, then the rate step shows ratings.
+    expect(mockedTtsService.speak).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
+  });
+
+  it('a paused listen step drops its result without failing or revealing the card', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
+      { type: 'rate' },
+    ];
+
+    let resolveListen: (text: string) => void = () => {};
+    mockedSttService.startListening.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveListen = resolve;
+        }),
+    );
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.isSttListening).toBe(true);
+    });
+
+    act(() => {
+      hookRef.current!.pauseSession();
+    });
+
+    // The pending recognition settles after the pause (e.g. stopListening flushes it).
+    await act(async () => {
+      resolveListen('hello');
+    });
+    await flushQueuedSessionWork();
+
+    expect(onCardReviewed).not.toHaveBeenCalled();
+    expect(hookRef.current!.failedCount).toBe(0);
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
+    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
+  });
+
+  it('pauseSession is a no-op while rating buttons are shown', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={makeSteps()}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+
+    await act(async () => {
+      hookRef.current!.pauseSession();
+      hookRef.current!.resumeSession();
+    });
+    await flushQueuedSessionWork();
+
+    // Manual rating state must survive the dialog round-trip untouched.
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
+  });
+
   it('getFreshCards returns current card state from group', async () => {
     const card1 = makeCard('c1', ['old']);
     const freshCard1 = makeCard('c1', ['fresh']);

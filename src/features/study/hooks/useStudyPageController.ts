@@ -53,6 +53,8 @@ export function useStudyPageController({
     startSession,
     stopSession,
     endSession,
+    pauseSession,
+    resumeSession,
     setHolding,
     restartSession,
     restartFailed,
@@ -96,9 +98,11 @@ export function useStudyPageController({
         return;
       }
       // Active session → confirm first; on confirm we show the summary (confirmExit).
+      // Freeze the run while the dialog is up, otherwise TTS/timers keep advancing cards.
+      pauseSession();
       setShowExitConfirm(true);
     },
-    [isExitBlocked, leaveStudy, navigateBack],
+    [isExitBlocked, leaveStudy, navigateBack, pauseSession],
   );
 
   const handleBack = useCallback(() => {
@@ -114,7 +118,9 @@ export function useStudyPageController({
 
   const cancelExit = useCallback(() => {
     setShowExitConfirm(false);
-  }, []);
+    // Back to studying: replay the current card from its first step.
+    resumeSession();
+  }, [resumeSession]);
 
   const handleRestartSession = useCallback(() => {
     setEndedEarly(false);
@@ -157,8 +163,6 @@ export function useStudyPageController({
     handleBack,
     handleCardPress,
     handleRating,
-    hasStt: steps.some((step) => step.type === 'listen_and_branch'),
-    hasTts: steps.some((step) => step.type === 'speak_page'),
     isExitBlocked,
     isLoading,
     isNarrow,

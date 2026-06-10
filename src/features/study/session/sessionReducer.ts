@@ -10,6 +10,7 @@ export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
   sttResultText: '',
   sttMatchPercent: 0,
   waitingForTap: false,
+  audioPageIndex: null,
   errorMsg: undefined,
 };
 
@@ -35,17 +36,20 @@ export function sessionReducer(
         ...state,
         status: 'speaking',
         currentStepIndex: action.stepIndex,
+        audioPageIndex: action.pageIndex,
       };
     case 'END_SPEAKING':
       return {
         ...state,
         status: 'idle',
+        audioPageIndex: null,
       };
     case 'START_LISTENING':
       return {
         ...state,
         status: 'listening',
         currentStepIndex: action.stepIndex,
+        audioPageIndex: action.pageIndex,
         sttResultText: '',
         sttMatchPercent: 0,
       };
@@ -61,6 +65,7 @@ export function sessionReducer(
       return {
         ...state,
         status: 'checking',
+        audioPageIndex: null,
         sttResultText: action.text,
         sttMatchPercent: action.matchPercent,
       };

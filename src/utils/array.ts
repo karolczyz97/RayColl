@@ -11,7 +11,11 @@ export function padArray<T>(arr: T[], targetLength: number, fillValue: T): T[] {
 }
 
 export function filterLive<T extends { deletedAt?: number | null }>(items: T[]): T[] {
-  return items.filter((item) => item.deletedAt == null);
+  // Reference-stable: when nothing is tombstoned, return the input array as-is.
+  // Selectors rely on this so unchanged data keeps its identity (React.memo).
+  return items.some((item) => item.deletedAt != null)
+    ? items.filter((item) => item.deletedAt == null)
+    : items;
 }
 
 export function swapElements<T>(arr: T[], i: number, j: number): T[] {

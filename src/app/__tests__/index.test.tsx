@@ -29,7 +29,6 @@ jest.mock('@/store/FlashcardStoreContext', () => ({
     lastSyncError: null,
     signIn: jest.fn(),
     signOut: jest.fn(),
-    syncRefreshKey: 0,
     syncStatus: 'idle',
     updateGroup: jest.fn(),
     user: null,

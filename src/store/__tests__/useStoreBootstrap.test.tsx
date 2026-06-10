@@ -63,7 +63,6 @@ function createMocks() {
     setLastStoreError: jest.fn(),
     setMigrationPending: jest.fn(),
     setPendingGuestSnapshot: jest.fn(),
-    bumpSyncRefresh: jest.fn(),
     applySnapshot: jest.fn<(snapshot: StoreData) => void>(),
     persistLocalSnapshot: jest.fn<() => Promise<void>>(() => Promise.resolve()),
     persistNow: jest.fn<() => Promise<void>>(() => Promise.resolve()),
@@ -82,7 +81,6 @@ function Harness({ user, mocks }: { user: User | null; mocks: Mocks }) {
     setLastStoreError: mocks.setLastStoreError,
     setMigrationPending: mocks.setMigrationPending,
     setPendingGuestSnapshot: mocks.setPendingGuestSnapshot,
-    bumpSyncRefresh: mocks.bumpSyncRefresh,
     applySnapshot: mocks.applySnapshot,
     persistLocalSnapshot: mocks.persistLocalSnapshot,
     persistNow: mocks.persistNow,
@@ -184,7 +182,7 @@ describe('useStoreBootstrap data flow', () => {
     expect(mocks.setPendingGuestSnapshot).toHaveBeenCalledWith(guestData);
   });
 
-  it('renders local data immediately and does not re-render when the cloud is unchanged', async () => {
+  it('waits for the cloud before rendering for a signed-in user', async () => {
     const mocks = createMocks();
     jest.mocked(loadLocalData).mockResolvedValue(makeLocalData([makeGroup()]));
 
@@ -198,23 +196,24 @@ describe('useStoreBootstrap data flow', () => {
 
     render(<Harness user={{ uid: 'user-1' } as User} mocks={mocks} />);
 
-    // Local snapshot shown and spinner cleared before the cloud settles.
+    // Nothing is shown while the cloud load is pending — no flash of stale data.
     await waitFor(() => {
-      expect(mocks.applySnapshot).toHaveBeenCalledTimes(1);
+      expect(jest.mocked(loadCloudData)).toHaveBeenCalledTimes(1);
     });
-    expect(mocks.setIsLoading).toHaveBeenCalledWith(false);
-    expect(mocks.applySnapshot.mock.calls[0][0].groups).toHaveLength(1);
+    expect(mocks.applySnapshot).not.toHaveBeenCalled();
+    expect(mocks.setIsLoading).not.toHaveBeenCalledWith(false);
 
-    // Cloud returns identical data: no second render, no refresh bump.
+    // Cloud settles → exactly one render with the merged data.
     resolveCloud(makeLocalData([makeGroup()]));
     await waitFor(() => {
       expect(mocks.persistNow).toHaveBeenCalledTimes(1);
     });
     expect(mocks.applySnapshot).toHaveBeenCalledTimes(1);
-    expect(mocks.bumpSyncRefresh).not.toHaveBeenCalled();
+    expect(mocks.applySnapshot.mock.calls[0][0].groups).toHaveLength(1);
+    expect(mocks.setIsLoading).toHaveBeenCalledWith(false);
   });
 
-  it('re-renders and flags a refresh when the cloud load adds a deck', async () => {
+  it('renders the merged result once when the cloud adds a deck', async () => {
     const mocks = createMocks();
     jest.mocked(loadLocalData).mockResolvedValue(makeLocalData([makeGroup('local-deck')]));
     jest.mocked(loadCloudData).mockResolvedValue(
@@ -224,10 +223,9 @@ describe('useStoreBootstrap data flow', () => {
     render(<Harness user={{ uid: 'user-1' } as User} mocks={mocks} />);
 
     await waitFor(() => {
-      expect(mocks.applySnapshot).toHaveBeenCalledTimes(2);
+      expect(mocks.applySnapshot).toHaveBeenCalledTimes(1);
     });
-    expect(mocks.bumpSyncRefresh).toHaveBeenCalledTimes(1);
-    expect(mocks.applySnapshot.mock.calls[1][0].groups).toHaveLength(2);
+    expect(mocks.applySnapshot.mock.calls[0][0].groups).toHaveLength(2);
     expect(mocks.persistNow).toHaveBeenCalledTimes(1);
   });
 

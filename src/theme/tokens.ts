@@ -36,6 +36,14 @@ export const TOKENS = {
       lg: 20,
       xl: 24,
     },
+    // Adaptive headline sizes for study card content. The card text steps down
+    // through these tiers as the content grows, then the card scrolls.
+    studyCardSize: {
+      full: 28,
+      long: 24,
+      longer: 20,
+      min: 18,
+    },
     weight: {
       regular: '400' as const,
       medium: '500' as const,
@@ -124,11 +132,6 @@ export const TOKENS = {
     formSelectWidth: 160,
     // Banners
     snackbarMaxWidth: 640,
-    // Study controls
-    studyControlZoneTall: 180,
-    studyControlZoneCompact: 80,
-    sttTextWrapperHeight: 80,
-    audioIconsRowHeight: 60,
   },
   emptyState: {
     accentWidth: 112,

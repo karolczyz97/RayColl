@@ -13,6 +13,8 @@ const mockSession = {
   startSession: jest.fn(),
   stopSession: jest.fn(),
   endSession: jest.fn(),
+  pauseSession: jest.fn(),
+  resumeSession: jest.fn(),
   setHolding: jest.fn(),
   restartSession: jest.fn(),
   restartFailed: jest.fn(),
@@ -68,6 +70,8 @@ describe('useStudyPageController — exit flow', () => {
     expect(result.current.showExitConfirm).toBe(true);
     expect(navigateBack).not.toHaveBeenCalled();
     expect(mockSession.endSession).not.toHaveBeenCalled();
+    // The run must freeze while the dialog is up.
+    expect(mockSession.pauseSession).toHaveBeenCalledTimes(1);
   });
 
   it('confirming exit ends the session for the summary, without navigating', () => {
@@ -79,6 +83,7 @@ describe('useStudyPageController — exit flow', () => {
     act(() => result.current.confirmExit());
 
     expect(mockSession.endSession).toHaveBeenCalledTimes(1);
+    expect(mockSession.resumeSession).not.toHaveBeenCalled();
     expect(result.current.showExitConfirm).toBe(false);
     expect(result.current.endedEarly).toBe(true);
     expect(navigateBack).not.toHaveBeenCalled();
@@ -94,6 +99,8 @@ describe('useStudyPageController — exit flow', () => {
     expect(result.current.showExitConfirm).toBe(false);
     expect(result.current.endedEarly).toBe(false);
     expect(mockSession.endSession).not.toHaveBeenCalled();
+    // Cancelling resumes the paused run.
+    expect(mockSession.resumeSession).toHaveBeenCalledTimes(1);
   });
 
   it('leaves immediately (no dialog) when the session is already finished', () => {

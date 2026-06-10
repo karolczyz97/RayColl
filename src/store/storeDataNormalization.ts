@@ -1,9 +1,8 @@
 import { CARD_FILTERS, DEFAULT_STUDY_FILTER, type CardFilter } from '@/constants/cardFilters';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT, clampActivePageCount } from '@/constants/pages';
-import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
+import type { Flashcard, FlashcardGroup, ModeStep, SrsState, StudyMode, StoreData } from '@/types/models';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
-import { uid } from '@/utils/id';
 import { isRecord } from '@/utils/types';
 
 const VALID_SRS_STATES: ReadonlySet<SrsState['state']> = new Set([0, 1, 2, 3]);
@@ -105,9 +104,9 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     name: mode.name,
     // Guard against corrupt/legacy records where `steps` isn't an array; an empty
     // list is normalized rather than crashing the whole load.
-    steps: (Array.isArray(mode.steps) ? mode.steps : []).map((step) =>
-      step.id ? step : { ...step, id: uid() },
-    ),
+    // Step IDs are only used as React keys (with ?? index fallback) — stripping
+    // them keeps normalization idempotent so deepEqual across data sources works.
+    steps: (Array.isArray(mode.steps) ? mode.steps : []).map(({ id: _id, ...step }) => step as ModeStep),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,

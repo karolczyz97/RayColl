@@ -4,7 +4,6 @@ import { Button, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
-import { usePulseAnimation } from '@/hooks/usePulseAnimation';
 import {
   getDueBgColor,
   getDueColor,
@@ -19,10 +18,6 @@ type RatingTone = 'danger' | 'warning' | 'primary' | 'success';
 
 interface StudyControlsProps {
   isNarrow: boolean;
-  hasTts: boolean;
-  hasStt: boolean;
-  isTtsPlaying: boolean;
-  isSttListening: boolean;
   showRatingButtons: boolean;
   sttResultText: string;
   sttMatchPercent: number;
@@ -39,10 +34,6 @@ interface RatingButtonProps {
 
 export function StudyControls({
   isNarrow,
-  hasTts,
-  hasStt,
-  isTtsPlaying,
-  isSttListening,
   showRatingButtons,
   sttResultText,
   sttMatchPercent,
@@ -50,8 +41,6 @@ export function StudyControls({
 }: StudyControlsProps) {
   const theme = useTheme();
   const { t } = useI18n();
-  const ttsIconStyle = usePulseAnimation(isTtsPlaying);
-  const sttIconStyle = usePulseAnimation(isSttListening);
   const getButtonText = (key: string) => {
     if (isNarrow) return '';
     return t(key).split(' (')[0];
@@ -124,8 +113,31 @@ export function StudyControls({
     );
   };
 
+  // Absolute overlay anchored to the bottom of the study area. `box-none` lets
+  // taps fall through the empty space to the card underneath; only the result
+  // chip and rating buttons capture touches. Nothing is reserved when idle.
   return (
-    <View style={[styles.bottomControlZone, { height: hasTts || hasStt ? TOKENS.layout.studyControlZoneTall : TOKENS.layout.studyControlZoneCompact }]}> 
+    <View style={styles.overlay} pointerEvents="box-none">
+      {sttResultText ? (
+        <Animated.View
+          entering={FadeIn.duration(TOKENS.motion.duration.short)}
+          pointerEvents="none"
+          style={[styles.sttResultBox, { backgroundColor: theme.colors.surfaceVariant }]}
+        >
+          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            {t('study.recognized')}
+          </Text>
+          <Text variant="bodyLarge" style={styles.recognizedText}>
+            {sttResultText}
+          </Text>
+          {sttMatchPercent > 0 ? (
+            <Text variant="labelSmall" style={[styles.matchPercentText, { color: matchColor }]}>
+              {t('study.match_percent', { percent: sttMatchPercent })}
+            </Text>
+          ) : null}
+        </Animated.View>
+      ) : null}
+
       {showRatingButtons ? (
         <Animated.View entering={FadeIn.springify()} style={styles.ratingButtonsRow}>
           {renderRatingButton({
@@ -157,61 +169,25 @@ export function StudyControls({
             tone: 'success',
           })}
         </Animated.View>
-      ) : hasTts || hasStt ? (
-        <View style={styles.feedbackContainer}>
-          <View style={styles.sttTextWrapper}>
-            {sttResultText ? (
-              <View style={[styles.sttResultBox, { backgroundColor: theme.colors.surfaceVariant }]}>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {t('study.recognized')}
-                </Text>
-                <Text variant="bodyLarge" style={styles.recognizedText}>
-                  {sttResultText}
-                </Text>
-                {sttMatchPercent > 0 ? (
-                  <Text variant="labelSmall" style={[styles.matchPercentText, { color: matchColor }]}>
-                    {t('study.match_percent', { percent: sttMatchPercent })}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.audioIconsRow}>
-            {hasTts ? (
-              <Animated.View style={[styles.iconWrapper, ttsIconStyle]}>
-                <AppIcon
-                  name="volume-high"
-                  size={TOKENS.iconSize.lg}
-                  color={isTtsPlaying ? theme.colors.primary : theme.colors.outline}
-                />
-              </Animated.View>
-            ) : null}
-            {hasStt ? (
-              <Animated.View style={[styles.iconWrapper, sttIconStyle]}>
-                <AppIcon
-                  name="microphone"
-                  size={TOKENS.iconSize.lg}
-                  color={isSttListening ? getDueColor(theme) : theme.colors.outline}
-                />
-              </Animated.View>
-            ) : null}
-          </View>
-        </View>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bottomControlZone: {
-    justifyContent: 'center',
-    marginTop: TOKENS.spacing.lg,
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    gap: TOKENS.spacing.md,
   },
   ratingButtonsRow: {
     flexDirection: 'row',
     gap: TOKENS.spacing.sm,
     width: '100%',
+    maxWidth: TOKENS.layout.studyCardMaxWidth,
   },
   rateButton: {
     flex: 1,
@@ -222,36 +198,15 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     paddingRight: 0,
   },
-  feedbackContainer: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  sttTextWrapper: {
-    height: TOKENS.layout.sttTextWrapperHeight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   sttResultBox: {
     padding: TOKENS.spacing.md,
     borderRadius: TOKENS.radius.lg,
     width: '100%',
+    maxWidth: TOKENS.layout.studyCardMaxWidth,
     alignItems: 'center',
   },
   recognizedText: {
     fontWeight: TOKENS.typography.weight.bold,
-  },
-  audioIconsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: TOKENS.spacing.xxl,
-    height: TOKENS.layout.audioIconsRowHeight,
-  },
-  iconWrapper: {
-    width: TOKENS.touchTarget.min,
-    height: TOKENS.touchTarget.min,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   matchPercentText: {
     fontWeight: TOKENS.typography.weight.bold,

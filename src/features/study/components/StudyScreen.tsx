@@ -25,8 +25,6 @@ interface StudyScreenProps {
   handleBack: () => void;
   handleCardPress: () => void;
   handleRating: (rating: number) => void;
-  hasStt: boolean;
-  hasTts: boolean;
   isNarrow: boolean;
   restartFailed: () => void;
   restartSession: () => void;
@@ -36,6 +34,7 @@ interface StudyScreenProps {
     revealedPages: number[];
     peekedPageIndex: number | null;
     waitingForTap: boolean;
+    audioPageIndex: number | null;
     showRatingButtons: boolean;
     isTtsPlaying: boolean;
     isSttListening: boolean;
@@ -60,8 +59,6 @@ export function StudyScreen({
   handleBack,
   handleCardPress,
   handleRating,
-  hasStt,
-  hasTts,
   isNarrow,
   restartFailed,
   restartSession,
@@ -118,15 +115,19 @@ export function StudyScreen({
               peekedPageIndex={sessionState.peekedPageIndex}
               showRatingButtons={sessionState.showRatingButtons}
               waitingForTap={sessionState.waitingForTap}
+              audioPageIndex={sessionState.audioPageIndex}
+              audioMode={
+                sessionState.isTtsPlaying
+                  ? 'speaking'
+                  : sessionState.isSttListening
+                    ? 'listening'
+                    : null
+              }
               onCardPress={handleCardPress}
               onHoldingChange={setHolding}
             />
             <StudyControls
               isNarrow={isNarrow}
-              hasTts={hasTts}
-              hasStt={hasStt}
-              isTtsPlaying={sessionState.isTtsPlaying}
-              isSttListening={sessionState.isSttListening}
               showRatingButtons={sessionState.showRatingButtons}
               sttResultText={sessionState.sttResultText}
               sttMatchPercent={sessionState.sttMatchPercent}

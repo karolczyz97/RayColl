@@ -73,6 +73,20 @@ describe('tombstones', () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('g1');
     });
+
+    it('preserves the group reference when no card is tombstoned (memo identity)', () => {
+      const cleanGroup = { ...group, cards: [liveCard] };
+      const result = selectActiveGroups([cleanGroup]);
+      expect(result[0]).toBe(cleanGroup);
+    });
+
+    it('clones the group only when a tombstoned card is filtered out', () => {
+      const result = selectActiveGroups([group]);
+      expect(result[0]).not.toBe(group);
+      expect(result[0].cards).toEqual([liveCard]);
+      // Input is left untouched.
+      expect(group.cards).toHaveLength(2);
+    });
   });
 
   describe('selectArchivedGroups', () => {

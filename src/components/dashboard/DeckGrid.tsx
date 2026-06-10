@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Platform, View, StyleSheet } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { GroupCard } from './GroupCard';
-import type { FlashcardGroup } from '@/types/models';
+import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
@@ -17,12 +17,8 @@ import {
 interface DeckGridProps {
   baseOrder?: number;
   groups: FlashcardGroup[];
-  onModeChange?: (groupId: string, modeId: string) => void;
-  /**
-   * Remounts the grid (replaying the enter stagger) when it changes. The store
-   * bumps it after a background cloud sync that actually changed the decks.
-   */
-  refreshKey?: number;
+  /** Passed to the default GroupCard renderer; not needed when renderItem is provided. */
+  studyModes?: StudyMode[];
   /**
    * Custom card renderer. Defaults to the dashboard `GroupCard`; the archive
    * screen overrides it to render archived-variant cards with restore/delete.
@@ -33,8 +29,7 @@ interface DeckGridProps {
 export function DeckGrid({
   baseOrder = 0,
   groups,
-  onModeChange,
-  refreshKey = 0,
+  studyModes,
   renderItem,
 }: DeckGridProps) {
   const { width: windowWidth } = useResponsiveLayout();
@@ -71,7 +66,7 @@ export function DeckGrid({
   }, [cardWidth]);
 
   return (
-    <View key={refreshKey} style={[styles.grid, { gap }]}>
+    <View style={[styles.grid, { gap }]}>
       {groups.map((group, index) => (
         <Animated.View
           key={group.id}
@@ -82,10 +77,7 @@ export function DeckGrid({
             {renderItem ? (
               renderItem(group)
             ) : (
-              <GroupCard
-                group={group}
-                onModeChange={(modeId) => onModeChange?.(group.id, modeId)}
-              />
+              <GroupCard group={group} studyModes={studyModes} />
             )}
           </AnimatedSection>
         </Animated.View>

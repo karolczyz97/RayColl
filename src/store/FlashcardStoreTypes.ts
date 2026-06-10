@@ -17,12 +17,6 @@ export interface FlashcardStore {
   studyModes: StudyMode[];
   activityHeatmap: Record<string, number>;
   isLoading: boolean;
-  /**
-   * Increments when a background cloud load finishes and actually changed the
-   * visible data, so the dashboard can replay its enter animation once. Stays
-   * constant when the cloud merge was a no-op (avoids gratuitous motion).
-   */
-  syncRefreshKey: number;
   user: User | null;
   syncStatus: SyncStatus;
   lastSyncError: string | null;
@@ -73,7 +67,6 @@ export type FlashcardStoreState = Pick<
   | 'studyModes'
   | 'activityHeatmap'
   | 'isLoading'
-  | 'syncRefreshKey'
   | 'user'
   | 'syncStatus'
   | 'lastSyncError'
