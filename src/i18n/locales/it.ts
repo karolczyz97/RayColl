@@ -17,7 +17,7 @@ export const it: Record<string, string> = {
   'auth.migration.migrate_btn': 'Trasferisci sull\'account',
   'auth.migration.fresh_btn': 'Ricominciare da zero',
   'auth.error.not_configured': 'Accesso non configurato. L\'app funziona in modalità locale.',
-  'auth.error.state_mismatch': 'Errore di sicurezza. Riprova.',
+  'auth.error.play_services': 'I servizi Google Play non sono disponibili o non sono aggiornati. Aggiornali e riprova.',
   'auth.error.no_token': 'Nessun token di accesso ricevuto. Riprova.',
   'auth.error.invalid_token': 'Token di accesso non valido. Riprova.',
   'auth.error.login_failed': 'Accesso fallito. Riprova.',

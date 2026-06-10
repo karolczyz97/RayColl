@@ -17,7 +17,7 @@ export const de: Record<string, string> = {
   'auth.migration.migrate_btn': 'Auf Konto übertragen',
   'auth.migration.fresh_btn': 'Neu beginnen',
   'auth.error.not_configured': 'Anmeldung ist nicht konfiguriert. Die App läuft im lokalen Modus.',
-  'auth.error.state_mismatch': 'Sicherheitsfehler. Bitte erneut versuchen.',
+  'auth.error.play_services': 'Google Play-Dienste sind nicht verfügbar oder veraltet. Bitte aktualisieren und erneut versuchen.',
   'auth.error.no_token': 'Kein Anmeldetoken erhalten. Bitte erneut versuchen.',
   'auth.error.invalid_token': 'Ungültiges Anmeldetoken. Bitte erneut versuchen.',
   'auth.error.login_failed': 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',

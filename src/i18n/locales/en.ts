@@ -17,7 +17,7 @@ export const en: Record<string, string> = {
   'auth.migration.migrate_btn': 'Transfer to account',
   'auth.migration.fresh_btn': 'Start fresh',
   'auth.error.not_configured': 'Sign-in is not configured. The app works in local mode.',
-  'auth.error.state_mismatch': 'Security error. Please try again.',
+  'auth.error.play_services': 'Google Play Services are unavailable or outdated. Please update them and try again.',
   'auth.error.no_token': 'No login token received. Please try again.',
   'auth.error.invalid_token': 'Invalid login token. Please try again.',
   'auth.error.login_failed': 'Login failed. Please try again.',

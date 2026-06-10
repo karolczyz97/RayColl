@@ -17,7 +17,7 @@ export const es: Record<string, string> = {
   'auth.migration.migrate_btn': 'Transferir a la cuenta',
   'auth.migration.fresh_btn': 'Empezar desde cero',
   'auth.error.not_configured': 'Inicio de sesión no configurado. La app funciona en modo local.',
-  'auth.error.state_mismatch': 'Error de seguridad. Inténtalo de nuevo.',
+  'auth.error.play_services': 'Los servicios de Google Play no están disponibles o están desactualizados. Actualízalos e inténtalo de nuevo.',
   'auth.error.no_token': 'No se recibió token de inicio de sesión. Inténtalo de nuevo.',
   'auth.error.invalid_token': 'Token de inicio de sesión no válido. Inténtalo de nuevo.',
   'auth.error.login_failed': 'Error de inicio de sesión. Inténtalo de nuevo.',

@@ -17,7 +17,7 @@ export const pl: Record<string, string> = {
   'auth.migration.migrate_btn': 'Przenieś na konto',
   'auth.migration.fresh_btn': 'Zacznij od nowa',
   'auth.error.not_configured': 'Logowanie nie jest skonfigurowane. Aplikacja działa w trybie lokalnym.',
-  'auth.error.state_mismatch': 'Błąd bezpieczeństwa. Spróbuj ponownie.',
+  'auth.error.play_services': 'Usługi Google Play są niedostępne lub nieaktualne. Zaktualizuj je i spróbuj ponownie.',
   'auth.error.no_token': 'Brak tokena logowania. Spróbuj ponownie.',
   'auth.error.invalid_token': 'Token logowania nieprawidłowy. Spróbuj ponownie.',
   'auth.error.login_failed': 'Logowanie nie powiodło się. Spróbuj ponownie.',
