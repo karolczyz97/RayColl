@@ -128,6 +128,7 @@ export function StudyScreen({
             />
             <StudyControls
               isNarrow={isNarrow}
+              isListening={sessionState.isSttListening}
               showRatingButtons={sessionState.showRatingButtons}
               sttResultText={sessionState.sttResultText}
               sttMatchPercent={sessionState.sttMatchPercent}

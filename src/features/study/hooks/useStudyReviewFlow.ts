@@ -57,17 +57,6 @@ export function useStudyReviewFlow({
     [syncFailedCount],
   );
 
-  const unmarkCardFailed = useCallback(
-    (cardId: string) => {
-      const previousLength = failedCardsRef.current.length;
-      failedCardsRef.current = failedCardsRef.current.filter((card) => card.id !== cardId);
-      if (failedCardsRef.current.length !== previousLength) {
-        syncFailedCount();
-      }
-    },
-    [syncFailedCount],
-  );
-
   const startSession = useCallback(
     (cards: Flashcard[]) => {
       prepareStartSession();
@@ -170,6 +159,5 @@ export function useStudyReviewFlow({
     restartSession,
     restartFailed,
     markCardFailed,
-    unmarkCardFailed,
   };
 }

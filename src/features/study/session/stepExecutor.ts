@@ -7,6 +7,8 @@ import type { StudySkipState, SpeechRecognitionOutcome } from '@/features/study/
 import type { SessionAction } from './sessionTypes';
 import { getActivePageIndexes, sleep } from './sessionUtils';
 
+const CORRECTION_INTERRUPT_PAUSE_MS = 2000;
+
 interface StepExecutorContext {
   abortRef: MutableRefObject<boolean>;
   // Bumped on pause/resume/restart. A step chain captures the epoch when it starts;
@@ -16,6 +18,7 @@ interface StepExecutorContext {
   groupRef: MutableRefObject<FlashcardGroup | null>;
   skipRef: MutableRefObject<StudySkipState>;
   lastTtsDurationRef: MutableRefObject<number>;
+  lastPartialTextRef: MutableRefObject<string>;
   dispatchIfMounted: (action: SessionAction) => void;
   guardedAwait: <T>(promise: Promise<T>) => Promise<T | undefined>;
   playTts: (text: string, lang: string) => Promise<void>;
@@ -23,7 +26,6 @@ interface StepExecutorContext {
   processCardReview: (card: Flashcard, rating: number) => void;
   advanceToNextCard: () => Promise<void>;
   markCardFailed: (card: Flashcard) => void;
-  unmarkCardFailed: (cardId: string) => void;
   executeNext: (card: Flashcard, stepIndex: number) => Promise<void>;
 }
 
@@ -89,28 +91,34 @@ async function executeListenAndBranchStep(
   context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex, pageIndex: step.pageIndex });
   const lang = group.pageLanguages[step.pageIndex] || 'en-US';
   const softTimeout = Math.max(5000, context.lastTtsDurationRef.current * 3);
-  const result = await context.guardedAwait(
-    context.runSpeechRecognition(lang, softTimeout + 10000),
-  );
+  const recognitionPromise = context.runSpeechRecognition(lang, softTimeout + 10000);
+  const result = await context.guardedAwait(recognitionPromise);
   context.skipRef.current.armed = false;
 
-  // Superseded run (pause/restart): drop the result without failing the card,
-  // revealing pages, or playing feedback.
   if (context.isStale()) return;
 
   if (context.skipRef.current.requested) {
-    context.dispatchIfMounted({
-      type: 'END_LISTENING',
-      text: '',
-      matchPercent: 0,
-    });
-    await continueIfActive(card, stepIndex + 1, context);
+    const late = await Promise.race([
+      recognitionPromise.catch(() => undefined),
+      sleep(700).then(() => undefined),
+    ]);
+    const harvested = late?.status === 'ok' ? late.text : context.lastPartialTextRef.current;
+
+    if (context.isStale()) return;
+
+    if (!harvested) {
+      context.dispatchIfMounted({ type: 'END_LISTENING', text: '', matchPercent: 0 });
+      await continueIfActive(card, stepIndex + 1, context);
+      return;
+    }
+
+    const original = card.pages[step.pageIndex] || '';
+    const percent = matchSpeech(harvested, original);
+    context.dispatchIfMounted({ type: 'END_LISTENING', text: harvested, matchPercent: percent });
+    await evaluateRecognition(card, stepIndex, step, group, percent, context, true);
     return;
   }
 
-  // STT service failed (mic/permission/network) — not a 0% answer. Reveal the card
-  // and hand control to the user for a manual rating; do NOT auto-record a failed
-  // review or bump the activity heatmap.
   if (!result || result.status === 'error') {
     context.dispatchIfMounted({
       type: 'REVEAL_PAGES',
@@ -130,18 +138,37 @@ async function executeListenAndBranchStep(
     matchPercent: percent,
   });
 
-  await sleep(1200);
-  if (context.isStale()) return;
+  await evaluateRecognition(card, stepIndex, step, group, percent, context, false);
+}
+
+async function evaluateRecognition(
+  card: Flashcard,
+  stepIndex: number,
+  step: Extract<ModeStep, { type: 'listen_and_branch' }>,
+  group: FlashcardGroup,
+  percent: number,
+  context: StepRunContext,
+  fromSkip: boolean,
+) {
+  if (!fromSkip) {
+    context.skipRef.current.requested = false;
+    context.skipRef.current.armed = true;
+    await context.guardedAwait(sleep(1200));
+    context.skipRef.current.armed = false;
+    if (context.isStale()) return;
+  }
 
   if (percent >= step.successThreshold) {
     playSuccessSound();
     playSuccessHaptic();
+    context.skipRef.current.requested = false;
+    context.skipRef.current.armed = true;
+    await context.guardedAwait(sleep(600));
+    context.skipRef.current.armed = false;
+    if (context.isStale()) return;
     const autoRating = mapMatchToRating(percent);
-    await sleep(600);
-    if (!context.isStale()) {
-      context.processCardReview(card, autoRating);
-      await context.advanceToNextCard();
-    }
+    context.processCardReview(card, autoRating);
+    await context.advanceToNextCard();
     return;
   }
 
@@ -154,6 +181,7 @@ async function executeListenAndBranchStep(
     revealedPages: getActivePageIndexes(group),
   });
 
+  context.skipRef.current.requested = false;
   context.skipRef.current.armed = true;
   if (step.incorrectTtsPageIndex !== undefined) {
     context.dispatchIfMounted({
@@ -170,19 +198,19 @@ async function executeListenAndBranchStep(
     );
     const correctionDuration = Date.now() - correctionStart;
     context.dispatchIfMounted({ type: 'END_SPEAKING' });
-    if (!context.skipRef.current.requested) {
-      await context.guardedAwait(sleep(correctionDuration * 2));
-    }
+
+    const wasTtsCut = context.skipRef.current.requested;
+    context.skipRef.current.requested = false;
+    context.skipRef.current.armed = true;
+
+    const pauseMs = wasTtsCut ? CORRECTION_INTERRUPT_PAUSE_MS : correctionDuration * 2;
+    await context.guardedAwait(sleep(pauseMs));
   } else {
+    context.skipRef.current.requested = false;
+    context.skipRef.current.armed = true;
     await context.guardedAwait(sleep(2000));
   }
   context.skipRef.current.armed = false;
-
-  if (context.skipRef.current.requested) {
-    context.unmarkCardFailed(card.id);
-    await continueIfActive(card, stepIndex + 1, context);
-    return;
-  }
 
   if (!context.isStale()) {
     context.processCardReview(card, 1);

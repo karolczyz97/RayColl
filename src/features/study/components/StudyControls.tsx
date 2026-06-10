@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
 import {
@@ -18,11 +18,14 @@ type RatingTone = 'danger' | 'warning' | 'primary' | 'success';
 
 interface StudyControlsProps {
   isNarrow: boolean;
+  isListening: boolean;
   showRatingButtons: boolean;
   sttResultText: string;
   sttMatchPercent: number;
   onRate: (rating: number) => void;
 }
+
+const STT_RESULT_HIDE_MS = 4000;
 
 interface RatingButtonProps {
   iconName: string;
@@ -34,6 +37,7 @@ interface RatingButtonProps {
 
 export function StudyControls({
   isNarrow,
+  isListening,
   showRatingButtons,
   sttResultText,
   sttMatchPercent,
@@ -41,6 +45,30 @@ export function StudyControls({
 }: StudyControlsProps) {
   const theme = useTheme();
   const { t } = useI18n();
+  const [visible, setVisible] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useLayoutEffect(() => {
+    if (sttResultText) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVisible(true);
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      if (!isListening) {
+        hideTimerRef.current = setTimeout(() => {
+          setVisible(false);
+        }, STT_RESULT_HIDE_MS);
+      }
+    }
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+    };
+  }, [sttResultText, sttMatchPercent, isListening]);
   const getButtonText = (key: string) => {
     if (isNarrow) return '';
     return t(key).split(' (')[0];
@@ -118,9 +146,10 @@ export function StudyControls({
   // chip and rating buttons capture touches. Nothing is reserved when idle.
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      {sttResultText ? (
+      {visible ? (
         <Animated.View
           entering={FadeIn.duration(TOKENS.motion.duration.short)}
+          exiting={FadeOut.duration(TOKENS.motion.duration.short)}
           pointerEvents="none"
           style={[styles.sttResultBox, { backgroundColor: theme.colors.surfaceVariant }]}
         >

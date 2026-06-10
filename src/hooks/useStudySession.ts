@@ -45,6 +45,7 @@ export function useStudySession(
     stopAudio,
     lastTtsDurationRef,
     skipRef,
+    lastPartialTextRef,
   } = useStudyAudio(dispatchIfMounted, ttsRateRef);
 
   const prepareStartSession = useCallback(() => {
@@ -65,7 +66,6 @@ export function useStudySession(
     restartSession,
     restartFailed,
     markCardFailed,
-    unmarkCardFailed,
   } = useStudyReviewFlow({
     groupRef,
     stateRef,
@@ -116,7 +116,7 @@ export function useStudySession(
         processCardReview,
         advanceToNextCard,
         markCardFailed,
-        unmarkCardFailed,
+        lastPartialTextRef,
         executeNext: async (nextCard, nextStepIndex) => {
           await executeStepRef.current?.(nextCard, nextStepIndex);
         },
@@ -127,13 +127,13 @@ export function useStudySession(
       dispatchIfMounted,
       groupRef,
       guardedAwait,
+      lastPartialTextRef,
       lastTtsDurationRef,
       markCardFailed,
       playTts,
       processCardReview,
       runSpeechRecognition,
       skipRef,
-      unmarkCardFailed,
     ],
   );
 
