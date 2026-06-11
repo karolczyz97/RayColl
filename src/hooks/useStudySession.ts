@@ -21,6 +21,8 @@ export function useStudySession(
   // Generation counter for step chains; see runEpochRef in stepExecutor.ts.
   const runEpochRef = useRef(0);
   const pausedRef = useRef(false);
+  // Wynik ostatniego kroku "sprawdź wymowę" (listen_and_check) na bieżącej karcie.
+  const lastCheckPassedRef = useRef<boolean | null>(null);
   const isMountedRef = useRef(true);
   const holdingRef = useRef(false);
   const groupRef = useSyncedRef(group);
@@ -105,6 +107,7 @@ export function useStudySession(
       await executeStudyStep(card, stepIndex, {
         abortRef,
         runEpochRef,
+        lastCheckPassedRef,
         activeStepsRef,
         groupRef,
         skipRef,

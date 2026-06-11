@@ -154,6 +154,10 @@ export const en: Record<string, string> = {
   'settings.dialog.add_step.time': 'Time (ms)',
   'settings.dialog.add_step.pause_multiplier': 'Dynamic pause (×, 0–5)',
   'settings.dialog.add_step.threshold': 'Threshold (%)',
+  'settings.dialog.add_step.condition': 'Condition',
+  'step.condition.always': 'Always',
+  'step.condition.correct': 'If correct',
+  'step.condition.wrong': 'If wrong',
   'settings.validation.mode_steps_required': 'Add at least one step.',
 
   // App Settings
@@ -210,6 +214,7 @@ export const en: Record<string, string> = {
   'step.dynamic_pause': 'Dynamic pause (page {index}, ×{multiplier})',
   'step.wait': 'Wait {ms}ms',
   'step.listen_and_branch': 'STT page {index} (threshold {threshold}%)',
+  'step.listen_and_check': 'Check speech p. {index}, no rating (threshold {threshold}%)',
   'step.reveal_on_tap': 'Reveal next page on tap',
   'step.rate': 'Rate knowledge',
   'step.next_card': 'Go to next card (no rating)',
@@ -221,6 +226,7 @@ export const en: Record<string, string> = {
   'step.type.dynamic_pause': 'Dynamic pause',
   'step.type.wait': 'Wait (ms)',
   'step.type.listen_and_branch': 'Verify speech (STT)',
+  'step.type.listen_and_check': 'Check speech (STT, no rating)',
   'step.type.reveal_on_tap': 'Reveal on tap',
   'step.type.rate': 'Rate knowledge',
   'step.type.next_card': 'Next card (no rating)',

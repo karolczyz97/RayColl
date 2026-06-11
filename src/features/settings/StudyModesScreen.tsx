@@ -1,25 +1,64 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Divider, IconButton, List } from 'react-native-paper';
+import { Button, Divider, IconButton, List } from 'react-native-paper';
 import { router } from 'expo-router';
-import type { StudyMode } from '@/types/models';
+import type { ModeStep, StudyMode } from '@/types/models';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { getModeName } from '@/i18n/modeHelpers';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { navigateUp } from '@/utils/navigation';
+import { uid } from '@/utils/id';
 import { ROUTES } from '@/constants/routes';
+import { MAX_VISIBLE_PAGE_COUNT } from '@/constants/pages';
 import { TOKENS } from '@/theme/tokens';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
+import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
+import { AddStepDialog } from '@/components/settings/AddStepDialog';
+import { formatStepSummary } from './studyModeUtils';
+import { useStepEditorController } from './useStepEditorController';
 
 export function StudyModesScreen() {
   const { t } = useI18n();
   const store = useFlashcardStore();
   const { contentMaxWidth } = useResponsiveLayout();
   const [modeToDelete, setModeToDelete] = useState<StudyMode | null>(null);
+
+  const [creatingMode, setCreatingMode] = useState(false);
+  const [newModeName, setNewModeName] = useState('');
+  const [customSteps, setCustomSteps] = useState<ModeStep[]>([]);
+  const [editingModeId, setEditingModeId] = useState<string | null>(null);
+
+  const stepEditor = useStepEditorController({
+    // Tryby są globalne (nie znamy talii), więc strony można wskazać do limitu aplikacji.
+    pageCount: MAX_VISIBLE_PAGE_COUNT,
+    creatingMode,
+    editingModeId,
+    customSteps,
+    setCustomSteps,
+    setEditingModeId,
+  });
+
+  const closeCreateModeDialog = () => {
+    setCreatingMode(false);
+    setEditingModeId(null);
+    setCustomSteps([]);
+    setNewModeName('');
+  };
+
+  const saveCustomMode = () => {
+    if (!newModeName.trim() || customSteps.length === 0) return;
+    store.addStudyMode({
+      id: uid(),
+      name: newModeName.trim(),
+      steps: customSteps,
+      isBuiltIn: false,
+    });
+    closeCreateModeDialog();
+  };
 
   const handleDeleteConfirm = () => {
     if (modeToDelete) {
@@ -59,8 +98,54 @@ export function StudyModesScreen() {
               />
             </View>
           ))}
+          <View style={styles.footer}>
+            <Button
+              icon="plus"
+              mode="text"
+              onPress={() => {
+                setEditingModeId(null);
+                setCreatingMode(true);
+              }}
+              accessibilityLabel={t('settings.create_mode_btn')}
+            >
+              {t('settings.create_mode_btn')}
+            </Button>
+          </View>
         </SectionCard>
       </AnimatedSection>
+
+      <CreateStudyModeSection
+        visible={creatingMode}
+        onDismiss={closeCreateModeDialog}
+        newModeName={newModeName}
+        setNewModeName={setNewModeName}
+        customSteps={customSteps}
+        setCustomSteps={setCustomSteps}
+        saveCustomMode={saveCustomMode}
+        setStepDialogOpen={stepEditor.setStepDialogOpen}
+        setEditingModeId={setEditingModeId}
+        formatStepSummary={formatStepSummary}
+      />
+
+      <AddStepDialog
+        visible={stepEditor.stepDialogOpen}
+        onDismiss={() => stepEditor.setStepDialogOpen(false)}
+        newStepType={stepEditor.newStepType}
+        setNewStepType={stepEditor.setNewStepType}
+        newPageIdx={stepEditor.newPageIdx}
+        pageCount={MAX_VISIBLE_PAGE_COUNT}
+        setNewPageIdx={stepEditor.setNewPageIdx}
+        newMs={stepEditor.newMs}
+        setNewMs={stepEditor.setNewMs}
+        newPauseMultiplier={stepEditor.newPauseMultiplier}
+        setNewPauseMultiplier={stepEditor.setNewPauseMultiplier}
+        newThreshold={stepEditor.newThreshold}
+        setNewThreshold={stepEditor.setNewThreshold}
+        newCondition={stepEditor.newCondition}
+        setNewCondition={stepEditor.setNewCondition}
+        confirmAddStep={stepEditor.confirmAddStep}
+        stepLabels={stepEditor.stepLabels}
+      />
 
       <ConfirmDialog
         visible={!!modeToDelete}
@@ -86,5 +171,9 @@ const styles = StyleSheet.create({
   itemActions: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  footer: {
+    flexDirection: 'row',
+    marginTop: TOKENS.spacing.sm,
   },
 });

@@ -45,6 +45,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     newPageIdx,
     newStepType,
     newThreshold,
+    newCondition,
     onFilterChange,
     onModeChange,
     openCreateModeDialog,
@@ -64,6 +65,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     setNewPageIdx,
     setNewStepType,
     setNewThreshold,
+    setNewCondition,
     setStepDialogOpen,
     stepDialogOpen,
     stepLabels,
@@ -236,6 +238,8 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         setNewPauseMultiplier={setNewPauseMultiplier}
         newThreshold={newThreshold}
         setNewThreshold={setNewThreshold}
+        newCondition={newCondition}
+        setNewCondition={setNewCondition}
         confirmAddStep={confirmAddStep}
         stepLabels={stepLabels}
       />

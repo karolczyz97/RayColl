@@ -20,6 +20,13 @@ export function getModeCustomization(mode: StudyMode): {
 }
 
 export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
+  const body = formatStepBody(step, t);
+  if (step.condition === 'correct') return `${t('step.condition.correct')}: ${body}`;
+  if (step.condition === 'wrong') return `${t('step.condition.wrong')}: ${body}`;
+  return body;
+}
+
+function formatStepBody(step: ModeStep, t: TranslationFn): string {
   switch (step.type) {
     case 'show_page':
       return t('step.show_page', { index: step.pageIndex + 1 });
@@ -31,6 +38,11 @@ export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
       return t('step.wait', { ms: step.ms });
     case 'listen_and_branch':
       return t('step.listen_and_branch', {
+        index: step.pageIndex + 1,
+        threshold: step.successThreshold,
+      });
+    case 'listen_and_check':
+      return t('step.listen_and_check', {
         index: step.pageIndex + 1,
         threshold: step.successThreshold,
       });

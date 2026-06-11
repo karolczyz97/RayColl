@@ -154,6 +154,10 @@ export const pl: Record<string, string> = {
   'settings.dialog.add_step.time': 'Czas (ms)',
   'settings.dialog.add_step.pause_multiplier': 'Pauza dynamiczna (×, 0–5)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
+  'settings.dialog.add_step.condition': 'Warunek',
+  'step.condition.always': 'Zawsze',
+  'step.condition.correct': 'Jeśli dobrze',
+  'step.condition.wrong': 'Jeśli źle',
   'settings.validation.mode_steps_required': 'Dodaj przynajmniej jeden krok.',
 
   // App Settings
@@ -210,6 +214,7 @@ export const pl: Record<string, string> = {
   'step.dynamic_pause': 'Pauza dyn. (str. {index}, ×{multiplier})',
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
+  'step.listen_and_check': 'Sprawdź wymowę str. {index}, bez oceny (próg {threshold}%)',
   'step.reveal_on_tap': 'Odkryj kolejną stronę po dotknięciu',
   'step.rate': 'Oceń znajomość fiszki',
   'step.next_card': 'Przejdź do kolejnej karty (bez oceny)',
@@ -221,6 +226,7 @@ export const pl: Record<string, string> = {
   'step.type.dynamic_pause': 'Pauza dynamiczna',
   'step.type.wait': 'Odczekaj (ms)',
   'step.type.listen_and_branch': 'Weryfikuj wymowę (STT)',
+  'step.type.listen_and_check': 'Sprawdź wymowę (STT, bez oceny)',
   'step.type.reveal_on_tap': 'Odkryj po dotknięciu',
   'step.type.rate': 'Oceń znajomość',
   'step.type.next_card': 'Kolejna karta (bez oceny)',

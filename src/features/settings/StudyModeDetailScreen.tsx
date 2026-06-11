@@ -82,6 +82,8 @@ export function StudyModeDetailScreen() {
         setNewPauseMultiplier={stepEditor.setNewPauseMultiplier}
         newThreshold={stepEditor.newThreshold}
         setNewThreshold={stepEditor.setNewThreshold}
+        newCondition={stepEditor.newCondition}
+        setNewCondition={stepEditor.setNewCondition}
         confirmAddStep={stepEditor.confirmAddStep}
         stepLabels={stepEditor.stepLabels}
       />

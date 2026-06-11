@@ -7,6 +7,7 @@ import { TOKENS } from '@/theme/tokens';
 import { dialogStyles } from '@/theme/dialogStyles';
 import { AppNumberInput } from '@/components/forms/AppNumberInput';
 import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
+import type { StepCondition } from '@/types/models';
 
 interface AddStepDialogProps {
   visible: boolean;
@@ -22,6 +23,8 @@ interface AddStepDialogProps {
   setNewPauseMultiplier: (multiplier: number) => void;
   newThreshold: number;
   setNewThreshold: (threshold: number) => void;
+  newCondition: 'always' | StepCondition;
+  setNewCondition: (condition: 'always' | StepCondition) => void;
   confirmAddStep: () => void;
   stepLabels: Record<string, string>;
 }
@@ -40,11 +43,18 @@ export function AddStepDialog({
   setNewPauseMultiplier,
   newThreshold,
   setNewThreshold,
+  newCondition,
+  setNewCondition,
   confirmAddStep,
   stepLabels,
 }: AddStepDialogProps) {
   const { t } = useI18n();
   const stepOptions = Object.entries(stepLabels).map(([key, label]) => ({ label, value: key }));
+  const conditionOptions = [
+    { label: t('step.condition.always'), value: 'always' },
+    { label: t('step.condition.correct'), value: 'correct' },
+    { label: t('step.condition.wrong'), value: 'wrong' },
+  ];
 
   return (
     <Portal>
@@ -94,7 +104,7 @@ export function AddStepDialog({
             />
           )}
 
-          {newStepType === 'listen_and_branch' && (
+          {(newStepType === 'listen_and_branch' || newStepType === 'listen_and_check') && (
             <AppNumberInput
               label={t('settings.dialog.add_step.threshold')}
               value={newThreshold}
@@ -104,6 +114,18 @@ export function AddStepDialog({
               accessibilityLabel="Success threshold input"
             />
           )}
+
+          <AppSelect
+            label={t('settings.dialog.add_step.condition')}
+            value={newCondition}
+            options={conditionOptions}
+            onChange={(value) => {
+              if (value === 'always' || value === 'correct' || value === 'wrong') {
+                setNewCondition(value);
+              }
+            }}
+            accessibilityLabel="Select step condition"
+          />
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onDismiss}>{t('btn.cancel')}</Button>

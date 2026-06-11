@@ -14,6 +14,8 @@ interface StepExecutorContext {
   // Bumped on pause/resume/restart. A step chain captures the epoch when it starts;
   // a mismatch means the chain was superseded and must die without side effects.
   runEpochRef: MutableRefObject<number>;
+  // Wynik ostatniego kroku listen_and_check na bieżącej karcie (null = brak).
+  lastCheckPassedRef: MutableRefObject<boolean | null>;
   activeStepsRef: MutableRefObject<ModeStep[]>;
   groupRef: MutableRefObject<FlashcardGroup | null>;
   skipRef: MutableRefObject<StudySkipState>;
@@ -148,6 +150,60 @@ async function executeListenAndBranchStep(
   await evaluateRecognition(card, stepIndex, step, group, percent, context, false);
 }
 
+async function executeListenAndCheckStep(
+  card: Flashcard,
+  stepIndex: number,
+  step: Extract<ModeStep, { type: 'listen_and_check' }>,
+  group: FlashcardGroup,
+  context: StepRunContext,
+) {
+  context.skipRef.current.armed = true;
+  context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex, pageIndex: step.pageIndex });
+  const lang = group.pageLanguages[step.pageIndex] || 'en-US';
+  const softTimeout = Math.max(5000, context.lastTtsDurationRef.current * 3);
+  const recognitionPromise = context.runSpeechRecognition(lang, softTimeout + 10000);
+  const result = await context.guardedAwait(recognitionPromise);
+  context.skipRef.current.armed = false;
+
+  if (context.isStale()) return;
+
+  let recognized = '';
+  if (context.skipRef.current.requested) {
+    // Tap = fast-forward: zbierz spóźniony/częściowy wynik zamiast go odrzucać.
+    const late = await Promise.race([
+      recognitionPromise.catch(() => undefined),
+      sleep(700).then(() => undefined),
+    ]);
+    recognized = late?.status === 'ok' ? late.text : context.lastPartialTextRef.current;
+    if (context.isStale()) return;
+  } else if (result?.status === 'ok') {
+    recognized = result.text;
+  }
+
+  const original = card.pages[step.pageIndex] || '';
+  const percent = recognized ? matchSpeech(recognized, original) : 0;
+  const passed = percent >= step.successThreshold;
+  context.lastCheckPassedRef.current = passed;
+  context.dispatchIfMounted({ type: 'END_LISTENING', text: recognized, matchPercent: percent });
+
+  if (passed) {
+    playSuccessSound();
+    playSuccessHaptic();
+  } else {
+    playErrorSound();
+    playErrorHaptic();
+  }
+
+  // Krótka pauza, żeby wynik był widoczny (jak w listen_and_branch).
+  context.skipRef.current.requested = false;
+  context.skipRef.current.armed = true;
+  await context.guardedAwait(sleep(1200));
+  context.skipRef.current.armed = false;
+  if (context.isStale()) return;
+
+  await continueIfActive(card, stepIndex + 1, context);
+}
+
 async function evaluateRecognition(
   card: Flashcard,
   stepIndex: number,
@@ -242,12 +298,28 @@ export async function executeStudyStep(
   context.skipRef.current.requested = false;
   context.skipRef.current.armed = false;
 
+  // Nowa karta zaczyna bez wyniku sprawdzenia wymowy.
+  if (stepIndex === 0) {
+    context.lastCheckPassedRef.current = null;
+  }
+
   if (context.abortRef.current || !currentGroup || stepIndex >= currentSteps.length) {
     context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
     return;
   }
 
   const step = currentSteps[stepIndex];
+
+  // Krok warunkowy wykonuje się tylko przy pasującym wyniku ostatniego
+  // "sprawdź wymowę"; bez sprawdzenia (null) kroki warunkowe są pomijane.
+  if (step.condition) {
+    const passed = context.lastCheckPassedRef.current;
+    const conditionMet = step.condition === 'correct' ? passed === true : passed === false;
+    if (!conditionMet) {
+      await continueIfActive(card, stepIndex + 1, context);
+      return;
+    }
+  }
 
   switch (step.type) {
     case 'show_page':
@@ -284,6 +356,10 @@ export async function executeStudyStep(
 
     case 'listen_and_branch':
       await executeListenAndBranchStep(card, stepIndex, step, currentGroup, context);
+      break;
+
+    case 'listen_and_check':
+      await executeListenAndCheckStep(card, stepIndex, step, currentGroup, context);
       break;
 
     default: {

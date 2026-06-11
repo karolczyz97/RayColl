@@ -204,6 +204,7 @@ export function useDeckSettingsController() {
     newPageIdx: stepEditor.newPageIdx,
     newStepType: stepEditor.newStepType,
     newThreshold: stepEditor.newThreshold,
+    newCondition: stepEditor.newCondition,
     onFilterChange: (filter: CardFilter) => {
       if (!activeGroup) return;
       store.updateGroup({ ...activeGroup, studyFilter: filter });
@@ -233,6 +234,7 @@ export function useDeckSettingsController() {
     setNewPageIdx: stepEditor.setNewPageIdx,
     setNewStepType: stepEditor.setNewStepType,
     setNewThreshold: stepEditor.setNewThreshold,
+    setNewCondition: stepEditor.setNewCondition,
     setStepDialogOpen: stepEditor.setStepDialogOpen,
     stepDialogOpen: stepEditor.stepDialogOpen,
     stepLabels: stepEditor.stepLabels,

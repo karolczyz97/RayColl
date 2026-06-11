@@ -86,6 +86,16 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         );
       }
       return;
+    case 'listen_and_check':
+      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.successThreshold,
+        `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`,
+      );
+      if (step.successThreshold > 100) {
+        throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
+      }
+      return;
     case 'reveal_on_tap':
     case 'rate':
     case 'next_card':

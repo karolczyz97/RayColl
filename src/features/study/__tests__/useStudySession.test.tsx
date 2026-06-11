@@ -489,6 +489,79 @@ describe('useStudySession', () => {
     expect(onCardReviewed).not.toHaveBeenCalled();
   });
 
+  it('listen_and_check passes: "if correct" step runs, "if wrong" step is skipped, no rating', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
+      // "jeśli źle" nie powinno się wykonać (TTS by się odpalił)
+      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 0, condition: 'wrong' },
+      // "jeśli dobrze" kończy kartę bez oceny
+      { type: 'next_card', condition: 'correct' },
+      { type: 'rate' },
+    ];
+
+    mockedSttService.startListening.mockImplementationOnce(() => Promise.resolve('hello'));
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(
+      () => {
+        expect(hookRef.current!.sessionState.status).toBe('finished');
+      },
+      { timeout: 5000 },
+    );
+    expect(onCardReviewed).not.toHaveBeenCalled();
+    expect(mockedTtsService.speak).not.toHaveBeenCalled();
+  });
+
+  it('listen_and_check fails: "if wrong" step runs and rating panel is reached', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
+      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 0, condition: 'wrong' },
+      { type: 'next_card', condition: 'correct' },
+      { type: 'rate' },
+    ];
+
+    mockedSttService.startListening.mockImplementationOnce(() => Promise.resolve('zzz'));
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(
+      () => {
+        expect(hookRef.current!.sessionState.status).toBe('revealed');
+      },
+      { timeout: 5000 },
+    );
+    // "jeśli źle": TTS strony 1 został odtworzony, karta czeka na ocenę
+    expect(mockedTtsService.speak).toHaveBeenCalledTimes(1);
+    expect(onCardReviewed).not.toHaveBeenCalled();
+  });
+
   it('pauseSession stops audio and resumeSession replays the current card from its first step', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { ModeStep, StudyMode } from '@/types/models';
+import type { ModeStep, StepCondition, StudyMode } from '@/types/models';
 import { swapElements } from '@/utils/array';
 import { uid } from '@/utils/id';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -31,13 +31,11 @@ export function useStepEditorController({
   const [newMs, setNewMs] = useState(500);
   const [newPauseMultiplier, setNewPauseMultiplier] = useState(1);
   const [newThreshold, setNewThreshold] = useState(70);
+  const [newCondition, setNewCondition] = useState<'always' | StepCondition>('always');
 
   const moveStep = (mode: StudyMode, index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= mode.steps.length) return;
-    // `next_card` zawsze zostaje ostatni — nie da się go przesunąć ani wepchnąć
-    // innego kroku za niego.
-    if (mode.steps[index].type === 'next_card' || mode.steps[target].type === 'next_card') return;
     store.updateStudyMode({ ...mode, steps: swapElements(mode.steps, index, target) });
   };
 
@@ -83,6 +81,9 @@ export function useStepEditorController({
       case 'listen_and_branch':
         step = { id: uid(), type: 'listen_and_branch', pageIndex: safePageIdx, successThreshold: newThreshold };
         break;
+      case 'listen_and_check':
+        step = { id: uid(), type: 'listen_and_check', pageIndex: safePageIdx, successThreshold: newThreshold };
+        break;
       case 'reveal_on_tap':
         step = { id: uid(), type: 'reveal_on_tap' };
         break;
@@ -96,29 +97,23 @@ export function useStepEditorController({
         return;
     }
 
-    // `next_card` jest zawsze ostatni: nowe kroki wchodzą przed niego,
-    // a drugiego `next_card` nie da się dodać.
-    const appendStep = (steps: ModeStep[]): ModeStep[] => {
-      const hasNextCard = steps.some((existing) => existing.type === 'next_card');
-      if (step.type === 'next_card' && hasNextCard) return steps;
-      if (hasNextCard) {
-        const lastIndex = steps.length - 1;
-        return [...steps.slice(0, lastIndex), step, steps[lastIndex]];
-      }
-      return [...steps, step];
-    };
+    if (newCondition !== 'always') {
+      step = { ...step, condition: newCondition };
+    }
 
     if (editingModeId && !creatingMode) {
       const mode = store.studyModes.find((item) => item.id === editingModeId);
       if (mode) {
-        store.updateStudyMode({ ...mode, steps: appendStep(mode.steps) });
+        store.updateStudyMode({ ...mode, steps: [...mode.steps, step] });
       }
     } else {
-      setCustomSteps(appendStep(customSteps));
+      setCustomSteps([...customSteps, step]);
     }
 
     setStepDialogOpen(false);
     setEditingModeId(null);
+    // Warunek nie jest "lepki" — kolejny krok domyślnie wykonuje się zawsze.
+    setNewCondition('always');
   };
 
   const stepLabels = useMemo<Record<string, string>>(
@@ -130,6 +125,7 @@ export function useStepEditorController({
       dynamic_pause: t('step.type.dynamic_pause'),
       wait: t('step.type.wait'),
       listen_and_branch: t('step.type.listen_and_branch'),
+      listen_and_check: t('step.type.listen_and_check'),
       next_card: t('step.type.next_card'),
     }),
     [t],
@@ -148,6 +144,8 @@ export function useStepEditorController({
     setNewPauseMultiplier,
     newThreshold,
     setNewThreshold,
+    newCondition,
+    setNewCondition,
     moveStep,
     deleteStep,
     addStepToMode,

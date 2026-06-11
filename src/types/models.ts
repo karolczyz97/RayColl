@@ -32,51 +32,62 @@ export interface FlashcardGroup {
   archivedAt?: number | null;
 }
 
-export type ModeStep =
-  | {
-      id?: string;
-      type: 'show_page';
-      pageIndex: number;
-    }
-  | {
-      id?: string;
-      type: 'speak_page';
-      pageIndex: number;
-      // Pauza po TTS = N × czas odsłuchania tej strony (0–5; 0 = bez pauzy).
-      pauseMultiplier: number;
-    }
-  | {
-      id?: string;
-      type: 'dynamic_pause';
-      nextPageIndex: number;
-      // Pauza = N × szacowany czas odsłuchania następnej strony (0–5).
-      pauseMultiplier: number;
-    }
-  | {
-      id?: string;
-      type: 'wait';
-      ms: number;
-    }
-  | {
-      id?: string;
-      type: 'listen_and_branch';
-      pageIndex: number;
-      successThreshold: number;
-      incorrectTtsPageIndex?: number;
-    }
-  | {
-      id?: string;
-      type: 'reveal_on_tap';
-    }
-  | {
-      id?: string;
-      type: 'rate';
-    }
-  | {
-      // Kończy kartę bez oceny SRS (tryb osłuchowy); zawsze ostatni krok trybu.
-      id?: string;
-      type: 'next_card';
-    };
+/** Warunek wykonania kroku względem ostatniego sprawdzenia wymowy (listen_and_check). */
+export type StepCondition = 'correct' | 'wrong';
+
+interface ModeStepBase {
+  id?: string;
+  // Krok z warunkiem wykonuje się tylko, gdy ostatni krok "sprawdź wymowę"
+  // na tej karcie zakończył się odpowiednio dobrze/źle; inaczej jest pomijany.
+  condition?: StepCondition;
+}
+
+export type ModeStep = ModeStepBase &
+  (
+    | {
+        type: 'show_page';
+        pageIndex: number;
+      }
+    | {
+        type: 'speak_page';
+        pageIndex: number;
+        // Pauza po TTS = N × czas odsłuchania tej strony (0–5; 0 = bez pauzy).
+        pauseMultiplier: number;
+      }
+    | {
+        type: 'dynamic_pause';
+        nextPageIndex: number;
+        // Pauza = N × szacowany czas odsłuchania następnej strony (0–5).
+        pauseMultiplier: number;
+      }
+    | {
+        type: 'wait';
+        ms: number;
+      }
+    | {
+        type: 'listen_and_branch';
+        pageIndex: number;
+        successThreshold: number;
+        incorrectTtsPageIndex?: number;
+      }
+    | {
+        // Sprawdza wymowę i zapisuje wynik (dobrze/źle) bez oceny SRS;
+        // wynik sterują krokami z `condition`.
+        type: 'listen_and_check';
+        pageIndex: number;
+        successThreshold: number;
+      }
+    | {
+        type: 'reveal_on_tap';
+      }
+    | {
+        type: 'rate';
+      }
+    | {
+        // Kończy kartę bez oceny SRS (tryb osłuchowy).
+        type: 'next_card';
+      }
+  );
 
 export interface StudyMode {
   id: string;

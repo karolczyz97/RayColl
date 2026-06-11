@@ -135,16 +135,29 @@ describe('normalizeStudyMode', () => {
     ]);
   });
 
-  it('moves next_card to the end and deduplicates it', () => {
+  it('keeps next_card wherever the user placed it', () => {
     const steps = [
       { type: 'next_card' },
       { type: 'show_page', pageIndex: 0 },
-      { type: 'next_card' },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps }));
     expect(normalized.steps).toEqual([
-      { type: 'show_page', pageIndex: 0 },
       { type: 'next_card' },
+      { type: 'show_page', pageIndex: 0 },
+    ]);
+  });
+
+  it('preserves valid step conditions and drops invalid ones', () => {
+    const steps = [
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1, condition: 'correct' },
+      { type: 'next_card', condition: 'wrong' },
+      { type: 'show_page', pageIndex: 0, condition: 'nonsense' },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps }));
+    expect(normalized.steps).toEqual([
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1, condition: 'correct' },
+      { type: 'next_card', condition: 'wrong' },
+      { type: 'show_page', pageIndex: 0 },
     ]);
   });
 

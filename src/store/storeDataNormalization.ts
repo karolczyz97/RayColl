@@ -1,6 +1,6 @@
 import { CARD_FILTERS, DEFAULT_STUDY_FILTER, type CardFilter } from '@/constants/cardFilters';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT, clampActivePageCount } from '@/constants/pages';
-import type { Flashcard, FlashcardGroup, ModeStep, SrsState, StudyMode, StoreData } from '@/types/models';
+import type { Flashcard, FlashcardGroup, ModeStep, SrsState, StepCondition, StudyMode, StoreData } from '@/types/models';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
 import { isRecord } from '@/utils/types';
@@ -105,9 +105,17 @@ function normalizePauseMultiplier(step: ModeStep, legacyZeroMeans: 0 | 1): numbe
   return Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(multiplier)));
 }
 
+// Nieznane wartości warunku (np. z uszkodzonego backupu) są usuwane.
+function normalizeStepCondition(step: ModeStep): { condition?: StepCondition } {
+  const raw = (step as { condition?: unknown }).condition;
+  return raw === 'correct' || raw === 'wrong' ? { condition: raw } : {};
+}
+
 function normalizeModeStep(step: ModeStep): ModeStep {
+  const base = normalizeStepCondition(step);
   if (step.type === 'speak_page') {
     return {
+      ...base,
       type: 'speak_page',
       pageIndex: step.pageIndex,
       pauseMultiplier: normalizePauseMultiplier(step, 0),
@@ -115,19 +123,17 @@ function normalizeModeStep(step: ModeStep): ModeStep {
   }
   if (step.type === 'dynamic_pause') {
     return {
+      ...base,
       type: 'dynamic_pause',
       nextPageIndex: step.nextPageIndex,
       pauseMultiplier: normalizePauseMultiplier(step, 1),
     };
   }
+  if ('condition' in step && base.condition === undefined) {
+    const { condition: _invalid, ...rest } = step;
+    return rest;
+  }
   return step;
-}
-
-// `next_card` kończy kartę, więc kroki po nim byłyby nieosiągalne — wymuszamy
-// pojedyncze wystąpienie na końcu listy.
-function enforceTrailingNextCard(steps: ModeStep[]): ModeStep[] {
-  if (!steps.some((step) => step.type === 'next_card')) return steps;
-  return [...steps.filter((step) => step.type !== 'next_card'), { type: 'next_card' }];
 }
 
 export function normalizeStudyMode(mode: StudyMode): StudyMode {
@@ -149,10 +155,8 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     // list is normalized rather than crashing the whole load.
     // Step IDs are only used as React keys (with ?? index fallback) — stripping
     // them keeps normalization idempotent so deepEqual across data sources works.
-    steps: enforceTrailingNextCard(
-      (Array.isArray(mode.steps) ? mode.steps : []).map(({ id: _id, ...step }) =>
-        normalizeModeStep(step as ModeStep),
-      ),
+    steps: (Array.isArray(mode.steps) ? mode.steps : []).map(({ id: _id, ...step }) =>
+      normalizeModeStep(step as ModeStep),
     ),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
