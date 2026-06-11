@@ -23,6 +23,7 @@ export const es: Record<string, string> = {
   'auth.error.login_failed': 'Error de inicio de sesión. Inténtalo de nuevo.',
   'sync.status.saving': 'Guardando cambios...',
   'sync.status.syncing': 'Sincronizando cambios...',
+  'sync.status.offline': 'Modo sin conexión — los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.',
   'dialog.delete.title': '¿Estás seguro?',
   'dialog.delete.desc': 'Esta acción no se puede deshacer.',
   'dialog.delete_permanent.title': '¿Eliminar permanentemente?',

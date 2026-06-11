@@ -23,6 +23,7 @@ export const en: Record<string, string> = {
   'auth.error.login_failed': 'Login failed. Please try again.',
   'sync.status.saving': 'Saving changes...',
   'sync.status.syncing': 'Syncing changes...',
+  'sync.status.offline': 'Offline mode — changes are saved on this device and will sync when you\'re back online.',
   'dialog.delete.title': 'Are you sure?',
   'dialog.delete.desc': 'This action cannot be undone.',
   'dialog.delete_permanent.title': 'Delete permanently?',

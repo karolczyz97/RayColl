@@ -23,6 +23,7 @@ export const de: Record<string, string> = {
   'auth.error.login_failed': 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   'sync.status.saving': 'Änderungen werden gespeichert...',
   'sync.status.syncing': 'Änderungen werden synchronisiert...',
+  'sync.status.offline': 'Offline-Modus — Änderungen werden auf diesem Gerät gespeichert und synchronisiert, sobald du wieder online bist.',
   'dialog.delete.title': 'Sind Sie sicher?',
   'dialog.delete.desc': 'Diese Aktion kann nicht rückgängig gemacht werden.',
   'dialog.delete_permanent.title': 'Endgültig löschen?',

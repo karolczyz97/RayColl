@@ -23,6 +23,7 @@ export const pl: Record<string, string> = {
   'auth.error.login_failed': 'Logowanie nie powiodło się. Spróbuj ponownie.',
   'sync.status.saving': 'Zapisywanie zmian...',
   'sync.status.syncing': 'Synchronizowanie zmian...',
+  'sync.status.offline': 'Tryb offline — zmiany są zapisywane na tym urządzeniu i zsynchronizują się po odzyskaniu połączenia.',
   'dialog.delete.title': 'Czy na pewno?',
   'dialog.delete.desc': 'Tej operacji nie można cofnąć.',
   'dialog.delete_permanent.title': 'Usunąć trwale?',

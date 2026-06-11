@@ -23,6 +23,7 @@ export const it: Record<string, string> = {
   'auth.error.login_failed': 'Accesso fallito. Riprova.',
   'sync.status.saving': 'Salvataggio delle modifiche...',
   'sync.status.syncing': 'Sincronizzazione delle modifiche...',
+  'sync.status.offline': 'Modalità offline — le modifiche vengono salvate su questo dispositivo e verranno sincronizzate quando tornerai online.',
   'dialog.delete.title': 'Sei sicuro?',
   'dialog.delete.desc': 'Questa azione non può essere annullata.',
   'dialog.delete_permanent.title': 'Eliminare permanentemente?',
