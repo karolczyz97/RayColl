@@ -21,6 +21,8 @@ export const it: Record<string, string> = {
   'auth.error.no_token': 'Nessun token di accesso ricevuto. Riprova.',
   'auth.error.invalid_token': 'Token di accesso non valido. Riprova.',
   'auth.error.login_failed': 'Accesso fallito. Riprova.',
+  'sync.status.saving': 'Salvataggio delle modifiche...',
+  'sync.status.syncing': 'Sincronizzazione delle modifiche...',
   'dialog.delete.title': 'Sei sicuro?',
   'dialog.delete.desc': 'Questa azione non può essere annullata.',
   'dialog.delete_permanent.title': 'Eliminare permanentemente?',

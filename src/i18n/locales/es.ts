@@ -21,6 +21,8 @@ export const es: Record<string, string> = {
   'auth.error.no_token': 'No se recibió token de inicio de sesión. Inténtalo de nuevo.',
   'auth.error.invalid_token': 'Token de inicio de sesión no válido. Inténtalo de nuevo.',
   'auth.error.login_failed': 'Error de inicio de sesión. Inténtalo de nuevo.',
+  'sync.status.saving': 'Guardando cambios...',
+  'sync.status.syncing': 'Sincronizando cambios...',
   'dialog.delete.title': '¿Estás seguro?',
   'dialog.delete.desc': 'Esta acción no se puede deshacer.',
   'dialog.delete_permanent.title': '¿Eliminar permanentemente?',

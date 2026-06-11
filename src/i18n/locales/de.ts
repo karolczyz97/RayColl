@@ -21,6 +21,8 @@ export const de: Record<string, string> = {
   'auth.error.no_token': 'Kein Anmeldetoken erhalten. Bitte erneut versuchen.',
   'auth.error.invalid_token': 'Ungültiges Anmeldetoken. Bitte erneut versuchen.',
   'auth.error.login_failed': 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+  'sync.status.saving': 'Änderungen werden gespeichert...',
+  'sync.status.syncing': 'Änderungen werden synchronisiert...',
   'dialog.delete.title': 'Sind Sie sicher?',
   'dialog.delete.desc': 'Diese Aktion kann nicht rückgängig gemacht werden.',
   'dialog.delete_permanent.title': 'Endgültig löschen?',

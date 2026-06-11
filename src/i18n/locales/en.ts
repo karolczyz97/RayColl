@@ -21,6 +21,8 @@ export const en: Record<string, string> = {
   'auth.error.no_token': 'No login token received. Please try again.',
   'auth.error.invalid_token': 'Invalid login token. Please try again.',
   'auth.error.login_failed': 'Login failed. Please try again.',
+  'sync.status.saving': 'Saving changes...',
+  'sync.status.syncing': 'Syncing changes...',
   'dialog.delete.title': 'Are you sure?',
   'dialog.delete.desc': 'This action cannot be undone.',
   'dialog.delete_permanent.title': 'Delete permanently?',

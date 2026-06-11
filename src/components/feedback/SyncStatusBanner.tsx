@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Portal, Snackbar, useTheme } from 'react-native-paper';
 import { useI18n } from '@/i18n';
+import { useDelayedVisibility } from '@/hooks/useDelayedVisibility';
 import type { SyncStatus } from '@/store/FlashcardStoreTypes';
 import { TOKENS } from '@/theme/tokens';
 
@@ -21,26 +22,29 @@ export function SyncStatusBanner({
   const theme = useTheme();
   const { t } = useI18n();
   const errorMessage = lastStoreError || lastSyncError || lastPersistenceError;
-  const getLabel = (key: string, fallback: string) => {
-    const translated = t(key);
-    return translated && translated !== key ? translated : fallback;
-  };
 
-  if (!errorMessage && syncStatus === 'idle') {
+  // Progress states only appear when an operation is genuinely slow: the
+  // banner waits before showing and, once shown, holds long enough to read.
+  // Sub-second background saves/flushes never reach the screen.
+  const isBusy = syncStatus === 'saving' || syncStatus === 'syncing';
+  const showProgress = useDelayedVisibility(isBusy);
+  // Latch the label so it stays correct during the minimum-visible hold
+  // after syncStatus has already returned to 'idle'. State is adjusted
+  // during render (the React-documented pattern for derived state).
+  const [latchedBusy, setLatchedBusy] = useState<'saving' | 'syncing'>('saving');
+  if ((syncStatus === 'saving' || syncStatus === 'syncing') && latchedBusy !== syncStatus) {
+    setLatchedBusy(syncStatus);
+  }
+
+  if (!errorMessage && !showProgress) {
     return null;
   }
 
   const statusText = errorMessage
     ? errorMessage
-    : syncStatus === 'syncing'
-      ? getLabel('sync.status.syncing', 'Syncing changes...')
-      : syncStatus === 'saving'
-        ? getLabel('sync.status.saving', 'Saving changes...')
-        : null;
-
-  if (!statusText) {
-    return null;
-  }
+    : latchedBusy === 'syncing'
+      ? t('sync.status.syncing')
+      : t('sync.status.saving');
 
   const isError = !!errorMessage || syncStatus === 'error';
 

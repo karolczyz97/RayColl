@@ -21,6 +21,8 @@ export const pl: Record<string, string> = {
   'auth.error.no_token': 'Brak tokena logowania. Spróbuj ponownie.',
   'auth.error.invalid_token': 'Token logowania nieprawidłowy. Spróbuj ponownie.',
   'auth.error.login_failed': 'Logowanie nie powiodło się. Spróbuj ponownie.',
+  'sync.status.saving': 'Zapisywanie zmian...',
+  'sync.status.syncing': 'Synchronizowanie zmian...',
   'dialog.delete.title': 'Czy na pewno?',
   'dialog.delete.desc': 'Tej operacji nie można cofnąć.',
   'dialog.delete_permanent.title': 'Usunąć trwale?',
