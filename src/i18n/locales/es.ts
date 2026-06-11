@@ -151,7 +151,7 @@ export const es: Record<string, string> = {
   'settings.dialog.add_step.type': 'Tipo',
   'settings.dialog.add_step.page_idx': 'Página (desde 1)',
   'settings.dialog.add_step.time': 'Tiempo (ms)',
-  'settings.dialog.add_step.pause_multiplier': 'Pausa tras TTS (× tiempo de escucha, 0–5)',
+  'settings.dialog.add_step.pause_multiplier': 'Pausa dinámica (×, 0–5)',
   'settings.dialog.add_step.threshold': 'Umbral (%)',
   'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
@@ -203,7 +203,7 @@ export const es: Record<string, string> = {
   // Steps
   'step.show_page': 'Mostrar página {index}',
   'step.speak_page': 'TTS página {index} (pausa ×{multiplier})',
-  'step.dynamic_pause': 'Pausa dinámica (pág. {index})',
+  'step.dynamic_pause': 'Pausa dinámica (pág. {index}, ×{multiplier})',
   'step.wait': 'Esperar {ms}ms',
   'step.listen_and_branch': 'STT página {index} (umbral {threshold}%)',
   'step.reveal_on_tap': 'Revelar la siguiente página al tocar',

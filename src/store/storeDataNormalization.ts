@@ -90,23 +90,35 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
 export const MAX_PAUSE_MULTIPLIER = 5;
 
 // Migracja kroków z legacy `extraPauseMs` (stała pauza w ms) na `pauseMultiplier`
-// (wielokrotność czasu odsłuchu): dawna pauza > 0 → ×1, brak pauzy → ×0.
+// (wielokrotność czasu odsłuchu): dawna pauza > 0 → ×1, brak pauzy → ×0
+// (dla dynamic_pause brak/0 → ×1, bo sama pauza zawsze trwała 1× odsłuch).
+function normalizePauseMultiplier(step: ModeStep, legacyZeroMeans: 0 | 1): number {
+  const raw = step as { pauseMultiplier?: unknown; extraPauseMs?: unknown };
+  let multiplier: number;
+  if (typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)) {
+    multiplier = raw.pauseMultiplier;
+  } else if (typeof raw.extraPauseMs === 'number' && Number.isFinite(raw.extraPauseMs)) {
+    multiplier = raw.extraPauseMs > 0 ? 1 : legacyZeroMeans;
+  } else {
+    multiplier = 1;
+  }
+  return Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(multiplier)));
+}
+
 function normalizeModeStep(step: ModeStep): ModeStep {
   if (step.type === 'speak_page') {
-    const raw = step as { pauseMultiplier?: unknown; extraPauseMs?: unknown };
-    let multiplier: number;
-    if (typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)) {
-      multiplier = raw.pauseMultiplier;
-    } else if (typeof raw.extraPauseMs === 'number' && Number.isFinite(raw.extraPauseMs)) {
-      multiplier = raw.extraPauseMs > 0 ? 1 : 0;
-    } else {
-      multiplier = 1;
-    }
-    multiplier = Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(multiplier)));
-    return { type: 'speak_page', pageIndex: step.pageIndex, pauseMultiplier: multiplier };
+    return {
+      type: 'speak_page',
+      pageIndex: step.pageIndex,
+      pauseMultiplier: normalizePauseMultiplier(step, 0),
+    };
   }
   if (step.type === 'dynamic_pause') {
-    return { type: 'dynamic_pause', nextPageIndex: step.nextPageIndex };
+    return {
+      type: 'dynamic_pause',
+      nextPageIndex: step.nextPageIndex,
+      pauseMultiplier: normalizePauseMultiplier(step, 1),
+    };
   }
   return step;
 }

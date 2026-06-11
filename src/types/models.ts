@@ -49,6 +49,8 @@ export type ModeStep =
       id?: string;
       type: 'dynamic_pause';
       nextPageIndex: number;
+      // Pauza = N × szacowany czas odsłuchania następnej strony (0–5).
+      pauseMultiplier: number;
     }
   | {
       id?: string;

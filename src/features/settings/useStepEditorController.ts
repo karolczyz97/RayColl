@@ -66,9 +66,11 @@ export function useStepEditorController({
         step = { id: uid(), type: 'speak_page', pageIndex: safePageIdx, pauseMultiplier: safeMultiplier };
         break;
       }
-      case 'dynamic_pause':
-        step = { id: uid(), type: 'dynamic_pause', nextPageIndex: safePageIdx };
+      case 'dynamic_pause': {
+        const safeMultiplier = Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(newPauseMultiplier)));
+        step = { id: uid(), type: 'dynamic_pause', nextPageIndex: safePageIdx, pauseMultiplier: safeMultiplier };
         break;
+      }
       case 'wait':
         step = { id: uid(), type: 'wait', ms: newMs };
         break;

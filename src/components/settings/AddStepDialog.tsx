@@ -73,7 +73,7 @@ export function AddStepDialog({
               />
             )}
 
-          {newStepType === 'speak_page' && (
+          {(newStepType === 'speak_page' || newStepType === 'dynamic_pause') && (
             <AppNumberInput
               label={t('settings.dialog.add_step.pause_multiplier')}
               value={newPauseMultiplier}

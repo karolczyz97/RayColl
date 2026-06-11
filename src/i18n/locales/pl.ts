@@ -152,7 +152,7 @@ export const pl: Record<string, string> = {
   'settings.dialog.add_step.type': 'Typ',
   'settings.dialog.add_step.page_idx': 'Strona (od 1)',
   'settings.dialog.add_step.time': 'Czas (ms)',
-  'settings.dialog.add_step.pause_multiplier': 'Pauza po TTS (× czas odsłuchu, 0–5)',
+  'settings.dialog.add_step.pause_multiplier': 'Pauza dynamiczna (×, 0–5)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
   'settings.validation.mode_steps_required': 'Dodaj przynajmniej jeden krok.',
 
@@ -207,7 +207,7 @@ export const pl: Record<string, string> = {
   // Steps
   'step.show_page': 'Pokaż stronę {index}',
   'step.speak_page': 'TTS strona {index} (pauza ×{multiplier})',
-  'step.dynamic_pause': 'Pauza dyn. (str. {index})',
+  'step.dynamic_pause': 'Pauza dyn. (str. {index}, ×{multiplier})',
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
   'step.reveal_on_tap': 'Odkryj kolejną stronę po dotknięciu',

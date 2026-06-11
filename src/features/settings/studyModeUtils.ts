@@ -8,7 +8,7 @@ export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
     case 'speak_page':
       return t('step.speak_page', { index: step.pageIndex + 1, multiplier: step.pauseMultiplier });
     case 'dynamic_pause':
-      return t('step.dynamic_pause', { index: step.nextPageIndex + 1 });
+      return t('step.dynamic_pause', { index: step.nextPageIndex + 1, multiplier: step.pauseMultiplier });
     case 'wait':
       return t('step.wait', { ms: step.ms });
     case 'listen_and_branch':

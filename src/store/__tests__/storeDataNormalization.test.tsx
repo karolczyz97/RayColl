@@ -148,11 +148,17 @@ describe('normalizeStudyMode', () => {
     ]);
   });
 
-  it('drops legacy extraPauseMs from dynamic_pause steps', () => {
+  it('migrates dynamic_pause to pauseMultiplier (legacy extraPauseMs dropped, missing -> 1)', () => {
     const legacySteps = [
       { type: 'dynamic_pause', nextPageIndex: 1, extraPauseMs: 500 },
+      { type: 'dynamic_pause', nextPageIndex: 0 },
+      { type: 'dynamic_pause', nextPageIndex: 2, pauseMultiplier: 3 },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps: legacySteps }));
-    expect(normalized.steps).toEqual([{ type: 'dynamic_pause', nextPageIndex: 1 }]);
+    expect(normalized.steps).toEqual([
+      { type: 'dynamic_pause', nextPageIndex: 1, pauseMultiplier: 1 },
+      { type: 'dynamic_pause', nextPageIndex: 0, pauseMultiplier: 1 },
+      { type: 'dynamic_pause', nextPageIndex: 2, pauseMultiplier: 3 },
+    ]);
   });
 });

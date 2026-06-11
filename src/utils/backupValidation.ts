@@ -54,6 +54,12 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         step.nextPageIndex,
         `Step ${index + 1} in study mode ${modeId} has invalid nextPageIndex.`,
       );
+      if (step.pauseMultiplier !== undefined) {
+        assertNonNegativeNumber(
+          step.pauseMultiplier,
+          `Step ${index + 1} in study mode ${modeId} has invalid pauseMultiplier.`,
+        );
+      }
       if (step.extraPauseMs !== undefined) {
         assertNonNegativeNumber(
           step.extraPauseMs,

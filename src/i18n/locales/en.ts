@@ -152,7 +152,7 @@ export const en: Record<string, string> = {
   'settings.dialog.add_step.type': 'Type',
   'settings.dialog.add_step.page_idx': 'Page (starts at 1)',
   'settings.dialog.add_step.time': 'Time (ms)',
-  'settings.dialog.add_step.pause_multiplier': 'Pause after TTS (× listening time, 0–5)',
+  'settings.dialog.add_step.pause_multiplier': 'Dynamic pause (×, 0–5)',
   'settings.dialog.add_step.threshold': 'Threshold (%)',
   'settings.validation.mode_steps_required': 'Add at least one step.',
 
@@ -207,7 +207,7 @@ export const en: Record<string, string> = {
   // Steps
   'step.show_page': 'Show page {index}',
   'step.speak_page': 'TTS page {index} (pause ×{multiplier})',
-  'step.dynamic_pause': 'Dynamic pause (page {index})',
+  'step.dynamic_pause': 'Dynamic pause (page {index}, ×{multiplier})',
   'step.wait': 'Wait {ms}ms',
   'step.listen_and_branch': 'STT page {index} (threshold {threshold}%)',
   'step.reveal_on_tap': 'Reveal next page on tap',

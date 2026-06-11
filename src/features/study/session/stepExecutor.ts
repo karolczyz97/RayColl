@@ -274,7 +274,7 @@ export async function executeStudyStep(
 
     case 'dynamic_pause': {
       const text = card.pages[step.nextPageIndex] || '';
-      await executeTimedWaitStep(card, stepIndex, text.length * 60, context);
+      await executeTimedWaitStep(card, stepIndex, text.length * 60 * step.pauseMultiplier, context);
       break;
     }
 
