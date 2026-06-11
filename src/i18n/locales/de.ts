@@ -221,6 +221,16 @@ export const de: Record<string, string> = {
   'step.type.rate': 'Wissen bewerten',
   'step.type.next_card': 'Nächste Karte (ohne Bewertung)',
 
+  // Study modes screen
+  'app_settings.study_modes': 'Lernmodi',
+  'app_settings.study_modes.desc': 'Lernmodi bearbeiten oder löschen',
+  'study_modes.title': 'Lernmodi',
+  'study_modes.steps_count': 'Schritte: {count}',
+  'study_modes.built_in': 'integriert',
+  'study_modes.name_label': 'Modusname',
+  'study_modes.delete_title': 'Modus löschen',
+  'study_modes.delete_message': 'Modus „{name}" löschen? Decks, die ihn verwenden, nutzen wieder den Standardmodus.',
+
   // Study Filters
   'filter.new_review': 'Neue + Fällige zur Überprüfung',
   'filter.new': 'Neu',

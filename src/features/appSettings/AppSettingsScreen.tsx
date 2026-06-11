@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
+import { Button, List, SegmentedButtons, Text, useTheme } from 'react-native-paper';
+import { router } from 'expo-router';
+import { ROUTES } from '@/constants/routes';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
@@ -147,6 +149,21 @@ export function AppSettingsScreen() {
       </AnimatedSection>
 
       <AnimatedSection order={4}>
+        <SectionCard>
+          <List.Item
+            style={styles.linkItem}
+            title={t('app_settings.study_modes')}
+            description={t('app_settings.study_modes.desc')}
+            left={(props) => <List.Icon {...props} icon="school-outline" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => router.navigate(ROUTES.STUDY_MODES)}
+            accessibilityRole="button"
+            accessibilityLabel={t('app_settings.study_modes')}
+          />
+        </SectionCard>
+      </AnimatedSection>
+
+      <AnimatedSection order={5}>
         <SectionCard title={t('app_settings.export_import')}>
           <View style={styles.actionButtonsRow}>
             <Button
@@ -170,7 +187,7 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection order={5}>
+      <AnimatedSection order={6}>
         <SectionCard title={t('app_settings.danger_zone')} danger>
           <Text variant="bodySmall" style={styles.mutedText}>
             {t('app_settings.reset_confirm')}
@@ -223,6 +240,10 @@ export function AppSettingsScreen() {
 const styles = StyleSheet.create({
   segmentedButtons: {
     width: '100%',
+  },
+  linkItem: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   mutedText: {
     marginBottom: TOKENS.spacing.md,

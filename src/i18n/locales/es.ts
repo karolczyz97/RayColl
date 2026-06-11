@@ -221,6 +221,16 @@ export const es: Record<string, string> = {
   'step.type.rate': 'Evaluar conocimiento',
   'step.type.next_card': 'Siguiente tarjeta (sin valoración)',
 
+  // Study modes screen
+  'app_settings.study_modes': 'Modos de estudio',
+  'app_settings.study_modes.desc': 'Edita o elimina los modos de estudio',
+  'study_modes.title': 'Modos de estudio',
+  'study_modes.steps_count': 'Pasos: {count}',
+  'study_modes.built_in': 'integrado',
+  'study_modes.name_label': 'Nombre del modo',
+  'study_modes.delete_title': 'Eliminar modo',
+  'study_modes.delete_message': '¿Eliminar el modo "{name}"? Los mazos que lo usan volverán al modo predeterminado.',
+
   // Study Filters
   'filter.new_review': 'Nuevas + pendientes de repaso',
   'filter.new': 'Nueva',

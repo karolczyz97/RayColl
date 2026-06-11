@@ -1,5 +1,23 @@
-import type { ModeStep } from '@/types/models';
+import type { ModeStep, StudyMode } from '@/types/models';
 import type { TranslationFn } from '@/i18n';
+import { createSeedModes } from '@/store/seed/seedModes';
+import { deepEqual } from '@/utils/deepEqual';
+
+/** Czy tryb jest wbudowany i czy jego kroki odbiegają od seedów (można je zresetować). */
+export function getModeCustomization(mode: StudyMode): {
+  isDefaultMode: boolean;
+  hasCustomSteps: boolean;
+} {
+  const sourceId = mode.isBuiltIn ? mode.builtInSourceId : undefined;
+  if (!sourceId) {
+    return { isDefaultMode: false, hasCustomSteps: false };
+  }
+  const seed = createSeedModes().find((seedMode) => seedMode.id === sourceId);
+  return {
+    isDefaultMode: true,
+    hasCustomSteps: seed ? !deepEqual(seed.steps, mode.steps) : false,
+  };
+}
 
 export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
   switch (step.type) {

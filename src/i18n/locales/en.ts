@@ -225,6 +225,16 @@ export const en: Record<string, string> = {
   'step.type.rate': 'Rate knowledge',
   'step.type.next_card': 'Next card (no rating)',
 
+  // Study modes screen
+  'app_settings.study_modes': 'Study modes',
+  'app_settings.study_modes.desc': 'Edit or delete study modes',
+  'study_modes.title': 'Study modes',
+  'study_modes.steps_count': 'Steps: {count}',
+  'study_modes.built_in': 'built-in',
+  'study_modes.name_label': 'Mode name',
+  'study_modes.delete_title': 'Delete mode',
+  'study_modes.delete_message': 'Delete mode "{name}"? Decks using it will fall back to the default mode.',
+
   // Study Filters
   'filter.new_review': 'New + due for review',
   'filter.new': 'New',

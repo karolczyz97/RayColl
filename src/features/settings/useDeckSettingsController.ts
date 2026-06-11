@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { navigateUp } from '@/utils/navigation';
-import { deepEqual } from '@/utils/deepEqual';
 import type { ModeStep, StudyMode } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { POPULAR_LANGS } from '@/constants/languages';
 import { uid } from '@/utils/id';
-import { createSeedModes } from '@/store/seed/seedModes';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { isExpandedWindowSize } from '@/utils/windowSizeClass';
-import { formatStepSummary } from './studyModeUtils';
+import { formatStepSummary, getModeCustomization } from './studyModeUtils';
 import { reorderDeckPages } from './deckPageReorder';
 import { useStepEditorController } from './useStepEditorController';
 
@@ -94,13 +92,13 @@ export function useDeckSettingsController() {
   };
 
   const activeMode = store.studyModes.find((mode) => mode.id === activeGroup?.activeModeId) ?? null;
-  const isDefaultMode = Boolean(activeMode?.isBuiltIn && activeMode.builtInSourceId);
-  const hasCustomSteps = useMemo(() => {
-    if (!activeMode?.isBuiltIn || !activeMode.builtInSourceId) return false;
-    const seed = createSeedModes().find((mode) => mode.id === activeMode.builtInSourceId);
-    if (!seed) return false;
-    return !deepEqual(seed.steps, activeMode.steps);
-  }, [activeMode]);
+  const { isDefaultMode, hasCustomSteps } = useMemo(
+    () =>
+      activeMode
+        ? getModeCustomization(activeMode)
+        : { isDefaultMode: false, hasCustomSteps: false },
+    [activeMode],
+  );
   const pageCount = activeGroup?.activePageCount ?? 0;
   const useTwoColumnLayout = isExpandedWindowSize(navigationShell.contentWidth);
   const deckNameError = deckNameTouched && !deckName.trim();
@@ -247,5 +245,6 @@ export function useDeckSettingsController() {
     deleteStep: stepEditor.deleteStep,
     addStepToMode: stepEditor.addStepToMode,
     resetMode: stepEditor.resetMode,
+    renameMode: stepEditor.renameMode,
   };
 }

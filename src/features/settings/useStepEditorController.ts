@@ -54,6 +54,12 @@ export function useStepEditorController({
     store.resetStudyMode(mode.id);
   };
 
+  const renameMode = (mode: StudyMode, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === mode.name) return;
+    store.updateStudyMode({ ...mode, name: trimmed });
+  };
+
   const confirmAddStep = () => {
     let step: ModeStep;
     const safePageIdx = Math.max(0, Math.min(pageCount - 1, Math.trunc(newPageIdx)));
@@ -146,6 +152,7 @@ export function useStepEditorController({
     deleteStep,
     addStepToMode,
     resetMode,
+    renameMode,
     confirmAddStep,
     stepLabels,
   };

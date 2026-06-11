@@ -245,6 +245,8 @@ function AppContent() {
             <Stack.Screen name="stats" />
             <Stack.Screen name="archive" />
             <Stack.Screen name="app-settings" />
+            <Stack.Screen name="study-modes/index" />
+            <Stack.Screen name="study-modes/[modeId]" />
           </Stack>
         </AppNavigationShell>
       </View>

@@ -225,6 +225,16 @@ export const pl: Record<string, string> = {
   'step.type.rate': 'Oceń znajomość',
   'step.type.next_card': 'Kolejna karta (bez oceny)',
 
+  // Study modes screen
+  'app_settings.study_modes': 'Tryby nauki',
+  'app_settings.study_modes.desc': 'Edytuj lub usuń tryby nauki',
+  'study_modes.title': 'Tryby nauki',
+  'study_modes.steps_count': 'Kroki: {count}',
+  'study_modes.built_in': 'wbudowany',
+  'study_modes.name_label': 'Nazwa trybu',
+  'study_modes.delete_title': 'Usuń tryb',
+  'study_modes.delete_message': 'Usunąć tryb „{name}"? Talie, które go używają, wrócą do trybu domyślnego.',
+
   // Study Filters
   'filter.new_review': 'Nowe + Powtórki',
   'filter.new': 'Nowe',

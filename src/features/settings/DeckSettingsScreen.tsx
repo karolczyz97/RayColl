@@ -5,7 +5,7 @@ import { getTopBarColors } from '@/theme/semanticColors';
 import { DeckNameSection } from '@/components/settings/DeckNameSection';
 import { StudyScopeSection } from '@/components/settings/StudyScopeSection';
 import { StudyModeSelector } from '@/components/settings/StudyModeSelector';
-import { StudyModeStepsEditor } from '@/components/settings/StudyModeStepsEditor';
+import { StudyModeEditor } from '@/components/settings/StudyModeEditor';
 import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { AddStepDialog } from '@/components/settings/AddStepDialog';
@@ -76,6 +76,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     deleteStep,
     addStepToMode,
     resetMode,
+    renameMode,
     handleBack,
   } = controller;
 
@@ -166,14 +167,15 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
 
       {activeMode ? (
         <AnimatedSection order={sectionOrder.modeEditor}>
-          <StudyModeStepsEditor
-            activeMode={activeMode}
+          <StudyModeEditor
+            mode={activeMode}
             isDefaultMode={isDefaultMode}
             hasCustomSteps={hasCustomSteps}
             moveStep={moveStep}
             deleteStep={deleteStep}
             addStepToMode={addStepToMode}
             onResetMode={resetMode}
+            onRenameMode={renameMode}
             formatStepSummary={formatStepSummary}
           />
         </AnimatedSection>

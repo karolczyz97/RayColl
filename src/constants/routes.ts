@@ -6,6 +6,11 @@ export const ROUTES = {
   IMPORT: '/import',
   STATS: '/stats',
   ARCHIVE: '/archive',
+  STUDY_MODES: '/study-modes',
+  studyMode: (modeId: string): Href => ({
+    pathname: '/study-modes/[modeId]',
+    params: { modeId },
+  }),
   browseDeck: (groupId: string): Href => ({
     pathname: '/browse/[groupId]',
     params: { groupId },
