@@ -1,16 +1,24 @@
 import React from 'react';
 import { describe, it, jest, expect, beforeEach } from '@jest/globals';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, act, waitFor } from '@testing-library/react-native';
 import type { User } from 'firebase/auth';
 import type { StoreData, FlashcardGroup, StudyMode } from '@/types/models';
 import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
 import { useStoreBootstrap, getGuestHasData } from '../useStoreBootstrap';
 import { loadCloudData } from '../persistence/firebasePersistence';
 import { getSeedVersion, loadLocalData } from '../persistence/localPersistence';
+import { onAuthChange } from '@/services/firebase';
 import { createSeedModes } from '../seed/seedModes';
 
+// Default mock: fires the callback synchronously with null (mirrors the
+// "unconfigured Firebase" contract from src/services/firebase.ts:78-84 and
+// the native auth-persistence path that emits without a network round-trip).
+// This ensures authResolved=true on mount so existing tests are unaffected.
 jest.mock('@/services/firebase', () => ({
-  onAuthChange: jest.fn(() => () => {}),
+  onAuthChange: jest.fn((cb: (u: User | null) => void) => {
+    cb(null);
+    return () => {};
+  }),
 }));
 
 jest.mock('../persistence/firebasePersistence', () => ({
@@ -242,6 +250,51 @@ describe('useStoreBootstrap data flow', () => {
       expect(mocks.setIsLoading).toHaveBeenCalledWith(false);
     });
     expect(mocks.applySnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start loading data before the first auth emission', async () => {
+    // Withhold the auth callback to simulate a slow auth-state restoration.
+    jest.mocked(onAuthChange).mockImplementationOnce(() => () => {});
+    const mocks = createMocks();
+    jest.mocked(loadLocalData).mockResolvedValue(makeLocalData([makeGroup()]));
+
+    render(<Harness user={null} mocks={mocks} />);
+
+    // Give React time to flush any synchronous effects.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(loadLocalData).not.toHaveBeenCalled();
+    expect(mocks.setIsLoading).not.toHaveBeenCalledWith(false);
+  });
+
+  it('loads exactly once after the first auth emission', async () => {
+    let fireAuth!: (user: User | null) => void;
+    jest.mocked(onAuthChange).mockImplementationOnce((cb) => {
+      fireAuth = cb;
+      return () => {};
+    });
+    const mocks = createMocks();
+    jest.mocked(loadLocalData).mockResolvedValue(makeLocalData([makeGroup()]));
+
+    render(<Harness user={null} mocks={mocks} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mocks.applySnapshot).not.toHaveBeenCalled();
+
+    // Fire the first auth emission (null = guest).
+    await act(async () => {
+      fireAuth(null);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mocks.applySnapshot).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.setIsLoading).toHaveBeenCalledWith(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
 import type { FlashcardGroup, StudyMode, StoreData, ModeStep } from '@/types/models';
@@ -78,14 +78,23 @@ export function useStoreBootstrap({
   persistLocalSnapshot,
   persistNow,
 }: UseStoreBootstrapParams) {
+  // Gate the data load on the first auth state emission. onAuthChange always fires:
+  // synchronously (with null) when Firebase is unconfigured, and from local auth
+  // persistence (no network required) on native otherwise. This prevents the app
+  // from briefly showing seed/guest decks before the persisted sign-in is restored.
+  const [authResolved, setAuthResolved] = useState(false);
+
   useEffect(() => {
     return onAuthChange((nextUser) => {
       if (__DEV__) console.log(`[auth-debug] onAuthChange uid=${nextUser?.uid ?? 'null'}`);
       setUser(nextUser);
+      setAuthResolved(true); // React 18 batches both setStates → one re-render
     });
   }, [setUser]);
 
   useEffect(() => {
+    if (!authResolved) return; // spinner stays up until auth state is known
+
     let active = true;
     const targetUid = user ? user.uid : null;
 
@@ -242,6 +251,7 @@ export function useStoreBootstrap({
       active = false;
     };
   }, [
+    authResolved,
     applySnapshot,
     persistLocalSnapshot,
     persistNow,
