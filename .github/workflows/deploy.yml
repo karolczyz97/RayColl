@@ -16,8 +16,6 @@ jobs:
   deploy-web:
     name: 🌐 Build & Deploy Web → Firebase Hosting
     runs-on: ubuntu-latest
-    outputs:
-      release_json: ${{ steps.release.outputs.release_json }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -70,11 +68,6 @@ jobs:
             printf '%s\n' "$RELEASE_JSON"
             echo 'EOF'
           } >> "$GITHUB_ENV"
-          {
-            echo 'release_json<<EOF'
-            printf '%s\n' "$RELEASE_JSON"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
 
       - name: Build Web App (Expo export)
         run: npx expo export --platform web
@@ -185,10 +178,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Restore release metadata from job 1
-        env:
-          RELEASE_JSON: ${{ needs.deploy-web.outputs.release_json }}
+      # Metadane generujemy ponownie zamiast przekazywać outputem między jobami —
+      # GitHub potrafi pominąć output ("may contain secret") i OTA leciało bez
+      # changeloga ("Official Release"). Ten sam commit i run => identyczne dane.
+      - name: Generate release metadata
         run: |
+          RELEASE_JSON=$(node scripts/release-metadata.mjs)
           {
             echo 'EXPO_PUBLIC_RELEASE_JSON<<EOF'
             printf '%s\n' "$RELEASE_JSON"
