@@ -41,18 +41,32 @@ export async function signInWithGoogle(): Promise<User | null> {
     }
   }
 
-  const idToken = await signInWithGoogleNative();
-  if (idToken === null) return null;
-
+  // Android delivers the sign-in Activity result (and the follow-up Firebase
+  // network callback) through the batched native->JS queue, which can sit
+  // unflushed until the next touch event — the account picker closes and
+  // nothing happens until the user taps the screen
+  // (react-native-google-signin#522, firebase-js-sdk#2700). A ticking timer
+  // forces the queue to flush so sign-in completes without interaction.
+  const keepAlive = setInterval(() => {}, 250);
   try {
-    const credential = GoogleAuthProvider.credential(idToken);
-    const userCredential = await signInWithCredential(auth, credential);
-    return userCredential.user;
-  } catch (err: unknown) {
-    if (err instanceof Error && /invalid_id_token|auth/i.test(err.message)) {
-      throw new Error('auth.error.invalid_token');
+    const idToken = await signInWithGoogleNative();
+    if (idToken === null) return null;
+
+    try {
+      if (__DEV__) console.log('[auth-debug] signInWithCredential start');
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      if (__DEV__) console.log(`[auth-debug] signInWithCredential resolved uid=${userCredential.user.uid}`);
+      return userCredential.user;
+    } catch (err: unknown) {
+      if (__DEV__) console.log(`[auth-debug] signInWithCredential threw: ${err instanceof Error ? err.message : String(err)}`);
+      if (err instanceof Error && /invalid_id_token|auth/i.test(err.message)) {
+        throw new Error('auth.error.invalid_token');
+      }
+      throw err;
     }
-    throw err;
+  } finally {
+    clearInterval(keepAlive);
   }
 }
 

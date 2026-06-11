@@ -8,7 +8,7 @@ const SEED_MODES: StudyMode[] = [
     builtInSourceId: 'classic',
     steps: [
       { type: 'show_page', pageIndex: 0 },
-      { type: 'speak_page', pageIndex: 0, extraPauseMs: 0 },
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 0 },
       { type: 'reveal_on_tap' },
       { type: 'rate' },
     ],
@@ -20,7 +20,7 @@ const SEED_MODES: StudyMode[] = [
     builtInSourceId: 'listen-speak',
     steps: [
       { type: 'show_page', pageIndex: 0 },
-      { type: 'speak_page', pageIndex: 0, extraPauseMs: 0 },
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 0 },
       { type: 'listen_and_branch', pageIndex: 1, successThreshold: 70, incorrectTtsPageIndex: 1 },
     ],
   },

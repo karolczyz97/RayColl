@@ -34,20 +34,32 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
       return;
     case 'speak_page':
       assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
-      assertNonNegativeNumber(
-        step.extraPauseMs,
-        `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
-      );
+      // Nowe backupy mają pauseMultiplier, stare extraPauseMs — oba opcjonalne
+      // (normalizacja przy imporcie mapuje legacy pole i uzupełnia braki).
+      if (step.pauseMultiplier !== undefined) {
+        assertNonNegativeNumber(
+          step.pauseMultiplier,
+          `Step ${index + 1} in study mode ${modeId} has invalid pauseMultiplier.`,
+        );
+      }
+      if (step.extraPauseMs !== undefined) {
+        assertNonNegativeNumber(
+          step.extraPauseMs,
+          `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
+        );
+      }
       return;
     case 'dynamic_pause':
       assertNonNegativeNumber(
         step.nextPageIndex,
         `Step ${index + 1} in study mode ${modeId} has invalid nextPageIndex.`,
       );
-      assertNonNegativeNumber(
-        step.extraPauseMs,
-        `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
-      );
+      if (step.extraPauseMs !== undefined) {
+        assertNonNegativeNumber(
+          step.extraPauseMs,
+          `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
+        );
+      }
       return;
     case 'wait':
       assertNonNegativeNumber(step.ms, `Step ${index + 1} in study mode ${modeId} has invalid ms.`);
@@ -70,6 +82,7 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
       return;
     case 'reveal_on_tap':
     case 'rate':
+    case 'next_card':
       return;
     default:
       throw new Error(`Step ${index + 1} in study mode ${modeId} has an unsupported type.`);

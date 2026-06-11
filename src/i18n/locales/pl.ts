@@ -150,8 +150,9 @@ export const pl: Record<string, string> = {
   'settings.save_mode_btn': 'Zapisz tryb',
   'settings.dialog.add_step.title': 'Dodaj krok',
   'settings.dialog.add_step.type': 'Typ',
-  'settings.dialog.add_step.page_idx': 'Indeks strony (od 0)',
+  'settings.dialog.add_step.page_idx': 'Strona (od 1)',
   'settings.dialog.add_step.time': 'Czas (ms)',
+  'settings.dialog.add_step.pause_multiplier': 'Pauza po TTS (× czas odsłuchu, 0–5)',
   'settings.dialog.add_step.threshold': 'Próg (%)',
   'settings.validation.mode_steps_required': 'Dodaj przynajmniej jeden krok.',
 
@@ -205,12 +206,13 @@ export const pl: Record<string, string> = {
 
   // Steps
   'step.show_page': 'Pokaż stronę {index}',
-  'step.speak_page': 'TTS strona {index} (+{pause}ms)',
-  'step.dynamic_pause': 'Pauza dyn. (str. {index}, +{pause}ms)',
+  'step.speak_page': 'TTS strona {index} (pauza ×{multiplier})',
+  'step.dynamic_pause': 'Pauza dyn. (str. {index})',
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
   'step.reveal_on_tap': 'Odkryj kolejną stronę po dotknięciu',
   'step.rate': 'Oceń znajomość fiszki',
+  'step.next_card': 'Przejdź do kolejnej karty (bez oceny)',
   'step.unknown': 'Nieznany krok',
 
   // Step types (labels)
@@ -221,6 +223,7 @@ export const pl: Record<string, string> = {
   'step.type.listen_and_branch': 'Weryfikuj wymowę (STT)',
   'step.type.reveal_on_tap': 'Odkryj po dotknięciu',
   'step.type.rate': 'Oceń znajomość',
+  'step.type.next_card': 'Kolejna karta (bez oceny)',
 
   // Study Filters
   'filter.new_review': 'Nowe + Powtórki',

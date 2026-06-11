@@ -149,8 +149,9 @@ export const de: Record<string, string> = {
   'settings.save_mode_btn': 'Modus speichern',
   'settings.dialog.add_step.title': 'Schritt hinzufügen',
   'settings.dialog.add_step.type': 'Typ',
-  'settings.dialog.add_step.page_idx': 'Seitenindex (beginnt bei 0)',
+  'settings.dialog.add_step.page_idx': 'Seite (ab 1)',
   'settings.dialog.add_step.time': 'Zeit (ms)',
+  'settings.dialog.add_step.pause_multiplier': 'Pause nach TTS (× Hördauer, 0–5)',
   'settings.dialog.add_step.threshold': 'Schwellenwert (%)',
   'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
@@ -201,12 +202,13 @@ export const de: Record<string, string> = {
 
   // Steps
   'step.show_page': 'Zeige Seite {index}',
-  'step.speak_page': 'TTS Seite {index} (+{pause}ms)',
-  'step.dynamic_pause': 'Dynamische Pause (Seite {index}, +{pause}ms)',
+  'step.speak_page': 'TTS Seite {index} (Pause ×{multiplier})',
+  'step.dynamic_pause': 'Dynamische Pause (Seite {index})',
   'step.wait': 'Warte {ms}ms',
   'step.listen_and_branch': 'STT Seite {index} (Schwellenwert {threshold}%)',
   'step.reveal_on_tap': 'Nächste Seite per Tippen aufdecken',
   'step.rate': 'Wissen bewerten',
+  'step.next_card': 'Zur nächsten Karte (ohne Bewertung)',
   'step.unknown': 'Unbekannter Schritt',
 
   // Step types (labels)
@@ -217,6 +219,7 @@ export const de: Record<string, string> = {
   'step.type.listen_and_branch': 'Sprache überprüfen (STT)',
   'step.type.reveal_on_tap': 'Per Tippen aufdecken',
   'step.type.rate': 'Wissen bewerten',
+  'step.type.next_card': 'Nächste Karte (ohne Bewertung)',
 
   // Study Filters
   'filter.new_review': 'Neue + Fällige zur Überprüfung',

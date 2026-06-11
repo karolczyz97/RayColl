@@ -41,6 +41,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     moveStep,
     newModeName,
     newMs,
+    newPauseMultiplier,
     newPageIdx,
     newStepType,
     newThreshold,
@@ -59,6 +60,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     setEditingModeId,
     setNewModeName,
     setNewMs,
+    setNewPauseMultiplier,
     setNewPageIdx,
     setNewStepType,
     setNewThreshold,
@@ -228,6 +230,8 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
         setNewPageIdx={setNewPageIdx}
         newMs={newMs}
         setNewMs={setNewMs}
+        newPauseMultiplier={newPauseMultiplier}
+        setNewPauseMultiplier={setNewPauseMultiplier}
         newThreshold={newThreshold}
         setNewThreshold={setNewThreshold}
         confirmAddStep={confirmAddStep}

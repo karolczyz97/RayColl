@@ -6,9 +6,9 @@ export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
     case 'show_page':
       return t('step.show_page', { index: step.pageIndex + 1 });
     case 'speak_page':
-      return t('step.speak_page', { index: step.pageIndex + 1, pause: step.extraPauseMs });
+      return t('step.speak_page', { index: step.pageIndex + 1, multiplier: step.pauseMultiplier });
     case 'dynamic_pause':
-      return t('step.dynamic_pause', { index: step.nextPageIndex + 1, pause: step.extraPauseMs });
+      return t('step.dynamic_pause', { index: step.nextPageIndex + 1 });
     case 'wait':
       return t('step.wait', { ms: step.ms });
     case 'listen_and_branch':
@@ -20,6 +20,8 @@ export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
       return t('step.reveal_on_tap');
     case 'rate':
       return t('step.rate');
+    case 'next_card':
+      return t('step.next_card');
 
     default: {
       void (step as never);

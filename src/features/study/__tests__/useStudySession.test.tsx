@@ -311,7 +311,7 @@ describe('useStudySession', () => {
     const onCardReviewed = jest.fn();
     const hookRef: HookResult = { current: null };
     const steps: ModeStep[] = [
-      { type: 'speak_page', pageIndex: 0, extraPauseMs: 10000 },
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 5 },
       { type: 'rate' },
     ];
 
@@ -461,13 +461,41 @@ describe('useStudySession', () => {
     }
   });
 
+  it('next_card step advances through all cards without recording any rating', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const card2 = makeCard('c2', ['foo', 'bar']);
+    const group = makeGroup(2, 2, [card1, card2]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'next_card' },
+    ];
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1, card2]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.status).toBe('finished');
+    });
+    expect(onCardReviewed).not.toHaveBeenCalled();
+  });
+
   it('pauseSession stops audio and resumeSession replays the current card from its first step', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);
     const onCardReviewed = jest.fn();
     const hookRef: HookResult = { current: null };
     const steps: ModeStep[] = [
-      { type: 'speak_page', pageIndex: 0, extraPauseMs: 0 },
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 0 },
       { type: 'rate' },
     ];
 

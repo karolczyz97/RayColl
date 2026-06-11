@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { dialogStyles } from '@/theme/dialogStyles';
 import { AppNumberInput } from '@/components/forms/AppNumberInput';
+import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
 
 interface AddStepDialogProps {
   visible: boolean;
@@ -17,6 +18,8 @@ interface AddStepDialogProps {
   setNewPageIdx: (idx: number) => void;
   newMs: number;
   setNewMs: (ms: number) => void;
+  newPauseMultiplier: number;
+  setNewPauseMultiplier: (multiplier: number) => void;
   newThreshold: number;
   setNewThreshold: (threshold: number) => void;
   confirmAddStep: () => void;
@@ -33,6 +36,8 @@ export function AddStepDialog({
   setNewPageIdx,
   newMs,
   setNewMs,
+  newPauseMultiplier,
+  setNewPauseMultiplier,
   newThreshold,
   setNewThreshold,
   confirmAddStep,
@@ -56,20 +61,30 @@ export function AddStepDialog({
 
           {newStepType !== 'wait' &&
             newStepType !== 'reveal_on_tap' &&
-            newStepType !== 'rate' && (
+            newStepType !== 'rate' &&
+            newStepType !== 'next_card' && (
               <AppNumberInput
                 label={t('settings.dialog.add_step.page_idx')}
-                value={newPageIdx}
-                onChange={setNewPageIdx}
-                min={0}
-                max={Math.max(0, pageCount - 1)}
-                accessibilityLabel="Page index input"
+                value={newPageIdx + 1}
+                onChange={(page) => setNewPageIdx(page - 1)}
+                min={1}
+                max={Math.max(1, pageCount)}
+                accessibilityLabel="Page number input"
               />
             )}
 
-          {(newStepType === 'speak_page' ||
-            newStepType === 'dynamic_pause' ||
-            newStepType === 'wait') && (
+          {newStepType === 'speak_page' && (
+            <AppNumberInput
+              label={t('settings.dialog.add_step.pause_multiplier')}
+              value={newPauseMultiplier}
+              onChange={setNewPauseMultiplier}
+              min={0}
+              max={MAX_PAUSE_MULTIPLIER}
+              accessibilityLabel="Pause multiplier input"
+            />
+          )}
+
+          {newStepType === 'wait' && (
             <AppNumberInput
               label={t('settings.dialog.add_step.time')}
               value={newMs}

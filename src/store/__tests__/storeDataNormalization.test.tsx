@@ -108,4 +108,51 @@ describe('normalizeStudyMode', () => {
     expect('deletedAt' in normalized).toBe(true);
     expect(normalized.deletedAt).toBe(7777);
   });
+
+  it('migrates legacy speak_page extraPauseMs to pauseMultiplier (>0 -> 1, 0 -> 0)', () => {
+    const legacySteps = [
+      { type: 'speak_page', pageIndex: 0, extraPauseMs: 500 },
+      { type: 'speak_page', pageIndex: 1, extraPauseMs: 0 },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps: legacySteps }));
+    expect(normalized.steps).toEqual([
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1 },
+      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 0 },
+    ]);
+  });
+
+  it('defaults missing speak_page pauseMultiplier to 1 and clamps to 0–5', () => {
+    const steps = [
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 9 },
+      { type: 'speak_page', pageIndex: 2, pauseMultiplier: -3 },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps }));
+    expect(normalized.steps).toEqual([
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1 },
+      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 5 },
+      { type: 'speak_page', pageIndex: 2, pauseMultiplier: 0 },
+    ]);
+  });
+
+  it('moves next_card to the end and deduplicates it', () => {
+    const steps = [
+      { type: 'next_card' },
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'next_card' },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps }));
+    expect(normalized.steps).toEqual([
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'next_card' },
+    ]);
+  });
+
+  it('drops legacy extraPauseMs from dynamic_pause steps', () => {
+    const legacySteps = [
+      { type: 'dynamic_pause', nextPageIndex: 1, extraPauseMs: 500 },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps: legacySteps }));
+    expect(normalized.steps).toEqual([{ type: 'dynamic_pause', nextPageIndex: 1 }]);
+  });
 });

@@ -42,13 +42,13 @@ export type ModeStep =
       id?: string;
       type: 'speak_page';
       pageIndex: number;
-      extraPauseMs: number;
+      // Pauza po TTS = N × czas odsłuchania tej strony (0–5; 0 = bez pauzy).
+      pauseMultiplier: number;
     }
   | {
       id?: string;
       type: 'dynamic_pause';
       nextPageIndex: number;
-      extraPauseMs: number;
     }
   | {
       id?: string;
@@ -69,6 +69,11 @@ export type ModeStep =
   | {
       id?: string;
       type: 'rate';
+    }
+  | {
+      // Kończy kartę bez oceny SRS (tryb osłuchowy); zawsze ostatni krok trybu.
+      id?: string;
+      type: 'next_card';
     };
 
 export interface StudyMode {

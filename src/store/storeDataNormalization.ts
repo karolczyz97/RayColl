@@ -87,6 +87,37 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
   };
 }
 
+export const MAX_PAUSE_MULTIPLIER = 5;
+
+// Migracja kroków z legacy `extraPauseMs` (stała pauza w ms) na `pauseMultiplier`
+// (wielokrotność czasu odsłuchu): dawna pauza > 0 → ×1, brak pauzy → ×0.
+function normalizeModeStep(step: ModeStep): ModeStep {
+  if (step.type === 'speak_page') {
+    const raw = step as { pauseMultiplier?: unknown; extraPauseMs?: unknown };
+    let multiplier: number;
+    if (typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)) {
+      multiplier = raw.pauseMultiplier;
+    } else if (typeof raw.extraPauseMs === 'number' && Number.isFinite(raw.extraPauseMs)) {
+      multiplier = raw.extraPauseMs > 0 ? 1 : 0;
+    } else {
+      multiplier = 1;
+    }
+    multiplier = Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(multiplier)));
+    return { type: 'speak_page', pageIndex: step.pageIndex, pauseMultiplier: multiplier };
+  }
+  if (step.type === 'dynamic_pause') {
+    return { type: 'dynamic_pause', nextPageIndex: step.nextPageIndex };
+  }
+  return step;
+}
+
+// `next_card` kończy kartę, więc kroki po nim byłyby nieosiągalne — wymuszamy
+// pojedyncze wystąpienie na końcu listy.
+function enforceTrailingNextCard(steps: ModeStep[]): ModeStep[] {
+  if (!steps.some((step) => step.type === 'next_card')) return steps;
+  return [...steps.filter((step) => step.type !== 'next_card'), { type: 'next_card' }];
+}
+
 export function normalizeStudyMode(mode: StudyMode): StudyMode {
   const rawMode = mode as StudyMode & {
     isBuiltIn?: unknown;
@@ -106,7 +137,11 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     // list is normalized rather than crashing the whole load.
     // Step IDs are only used as React keys (with ?? index fallback) — stripping
     // them keeps normalization idempotent so deepEqual across data sources works.
-    steps: (Array.isArray(mode.steps) ? mode.steps : []).map(({ id: _id, ...step }) => step as ModeStep),
+    steps: enforceTrailingNextCard(
+      (Array.isArray(mode.steps) ? mode.steps : []).map(({ id: _id, ...step }) =>
+        normalizeModeStep(step as ModeStep),
+      ),
+    ),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,

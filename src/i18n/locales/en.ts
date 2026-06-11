@@ -150,8 +150,9 @@ export const en: Record<string, string> = {
   'settings.save_mode_btn': 'Save mode',
   'settings.dialog.add_step.title': 'Add step',
   'settings.dialog.add_step.type': 'Type',
-  'settings.dialog.add_step.page_idx': 'Page index (starts from 0)',
+  'settings.dialog.add_step.page_idx': 'Page (starts at 1)',
   'settings.dialog.add_step.time': 'Time (ms)',
+  'settings.dialog.add_step.pause_multiplier': 'Pause after TTS (× listening time, 0–5)',
   'settings.dialog.add_step.threshold': 'Threshold (%)',
   'settings.validation.mode_steps_required': 'Add at least one step.',
 
@@ -205,12 +206,13 @@ export const en: Record<string, string> = {
 
   // Steps
   'step.show_page': 'Show page {index}',
-  'step.speak_page': 'TTS page {index} (+{pause}ms)',
-  'step.dynamic_pause': 'Dynamic pause (page {index}, +{pause}ms)',
+  'step.speak_page': 'TTS page {index} (pause ×{multiplier})',
+  'step.dynamic_pause': 'Dynamic pause (page {index})',
   'step.wait': 'Wait {ms}ms',
   'step.listen_and_branch': 'STT page {index} (threshold {threshold}%)',
   'step.reveal_on_tap': 'Reveal next page on tap',
   'step.rate': 'Rate knowledge',
+  'step.next_card': 'Go to next card (no rating)',
   'step.unknown': 'Unknown step',
 
   // Step types (labels)
@@ -221,6 +223,7 @@ export const en: Record<string, string> = {
   'step.type.listen_and_branch': 'Verify speech (STT)',
   'step.type.reveal_on_tap': 'Reveal on tap',
   'step.type.rate': 'Rate knowledge',
+  'step.type.next_card': 'Next card (no rating)',
 
   // Study Filters
   'filter.new_review': 'New + due for review',

@@ -149,8 +149,9 @@ export const es: Record<string, string> = {
   'settings.save_mode_btn': 'Guardar modo',
   'settings.dialog.add_step.title': 'Añadir paso',
   'settings.dialog.add_step.type': 'Tipo',
-  'settings.dialog.add_step.page_idx': 'Índice de página (empieza por 0)',
+  'settings.dialog.add_step.page_idx': 'Página (desde 1)',
   'settings.dialog.add_step.time': 'Tiempo (ms)',
+  'settings.dialog.add_step.pause_multiplier': 'Pausa tras TTS (× tiempo de escucha, 0–5)',
   'settings.dialog.add_step.threshold': 'Umbral (%)',
   'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
@@ -201,12 +202,13 @@ export const es: Record<string, string> = {
 
   // Steps
   'step.show_page': 'Mostrar página {index}',
-  'step.speak_page': 'TTS página {index} (+{pause}ms)',
-  'step.dynamic_pause': 'Pausa dinámica (pág. {index}, +{pause}ms)',
+  'step.speak_page': 'TTS página {index} (pausa ×{multiplier})',
+  'step.dynamic_pause': 'Pausa dinámica (pág. {index})',
   'step.wait': 'Esperar {ms}ms',
   'step.listen_and_branch': 'STT página {index} (umbral {threshold}%)',
   'step.reveal_on_tap': 'Revelar la siguiente página al tocar',
   'step.rate': 'Evaluar conocimiento',
+  'step.next_card': 'Pasar a la siguiente tarjeta (sin valoración)',
   'step.unknown': 'Paso desconocido',
 
   // Step types (labels)
@@ -217,6 +219,7 @@ export const es: Record<string, string> = {
   'step.type.listen_and_branch': 'Verificar voz (STT)',
   'step.type.reveal_on_tap': 'Revelar al tocar',
   'step.type.rate': 'Evaluar conocimiento',
+  'step.type.next_card': 'Siguiente tarjeta (sin valoración)',
 
   // Study Filters
   'filter.new_review': 'Nuevas + pendientes de repaso',

@@ -1,6 +1,16 @@
 import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin';
+import { AppState } from 'react-native';
 
 let configured = false;
+
+// TEMP diagnostics for the "picker dismisses but nothing happens" bug. Remove once diagnosed.
+function authDebug(message: string): void {
+  if (__DEV__) {
+    console.log(
+      `[auth-debug ${new Date().toISOString().slice(11, 23)} app=${AppState.currentState}] ${message}`,
+    );
+  }
+}
 
 export async function signInWithGoogleNative(): Promise<string | null> {
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
@@ -31,7 +41,11 @@ export async function signInWithGoogleNative(): Promise<string | null> {
   }
 
   try {
+    authDebug('GoogleSignin.signIn() start');
     const response = await GoogleSignin.signIn();
+    authDebug(
+      `GoogleSignin.signIn() resolved type=${response.type} hasIdToken=${!!response.data?.idToken}`,
+    );
 
     if (response.type === 'cancelled') {
       return null;
@@ -44,6 +58,7 @@ export async function signInWithGoogleNative(): Promise<string | null> {
 
     return idToken;
   } catch (err: unknown) {
+    authDebug(`GoogleSignin.signIn() threw: ${err instanceof Error ? err.message : String(err)}`);
     if (err instanceof Error && err.message.startsWith('auth.error.')) {
       throw err;
     }

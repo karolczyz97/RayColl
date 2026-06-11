@@ -80,6 +80,7 @@ export function useStoreBootstrap({
 }: UseStoreBootstrapParams) {
   useEffect(() => {
     return onAuthChange((nextUser) => {
+      if (__DEV__) console.log(`[auth-debug] onAuthChange uid=${nextUser?.uid ?? 'null'}`);
       setUser(nextUser);
     });
   }, [setUser]);
@@ -128,6 +129,7 @@ export function useStoreBootstrap({
     }
 
     async function loadData() {
+      if (__DEV__) console.log(`[auth-debug] bootstrap loadData start uid=${targetUid ?? 'null'}`);
       setIsLoading(true);
       try {
         const seedVer = await getSeedVersion();
@@ -227,6 +229,7 @@ export function useStoreBootstrap({
         console.error('Failed to initialize flashcard store:', err);
         setLastStoreError(getErrorMessage(err));
       } finally {
+        if (__DEV__) console.log(`[auth-debug] bootstrap loadData done uid=${targetUid ?? 'null'} active=${active}`);
         if (active) {
           setIsLoading(false);
         }

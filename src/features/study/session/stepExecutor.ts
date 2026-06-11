@@ -52,15 +52,22 @@ async function executeSpeakPageStep(
 ) {
   context.skipRef.current.armed = true;
   context.dispatchIfMounted({ type: 'START_SPEAKING', stepIndex, pageIndex: step.pageIndex });
+  const pageText = card.pages[step.pageIndex] || '';
   await context.guardedAwait(
-    context.playTts(card.pages[step.pageIndex] || '', group.pageLanguages[step.pageIndex] || 'en-US'),
+    context.playTts(pageText, group.pageLanguages[step.pageIndex] || 'en-US'),
   );
   if (context.isStale()) {
     context.dispatchIfMounted({ type: 'END_SPEAKING' });
     return;
   }
-  if (!context.skipRef.current.requested && step.extraPauseMs > 0) {
-    await context.guardedAwait(sleep(step.extraPauseMs));
+  if (!context.skipRef.current.requested && step.pauseMultiplier > 0) {
+    // Pauza = N × czas odsłuchu strony; zmierzony czas TTS, a gdy go brak
+    // (błąd TTS), ta sama estymata co w kroku dynamic_pause.
+    const listenDuration =
+      context.lastTtsDurationRef.current > 0
+        ? context.lastTtsDurationRef.current
+        : pageText.length * 60;
+    await context.guardedAwait(sleep(listenDuration * step.pauseMultiplier));
   }
   context.dispatchIfMounted({ type: 'END_SPEAKING' });
 
@@ -256,13 +263,18 @@ export async function executeStudyStep(
       context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
       break;
 
+    case 'next_card':
+      // Tryb osłuchowy: karta kończy się bez oceny — SRS zostaje nietknięty.
+      await context.advanceToNextCard();
+      break;
+
     case 'speak_page':
       await executeSpeakPageStep(card, stepIndex, step, currentGroup, context);
       break;
 
     case 'dynamic_pause': {
       const text = card.pages[step.nextPageIndex] || '';
-      await executeTimedWaitStep(card, stepIndex, text.length * 60 + (step.extraPauseMs || 0), context);
+      await executeTimedWaitStep(card, stepIndex, text.length * 60, context);
       break;
     }
 
