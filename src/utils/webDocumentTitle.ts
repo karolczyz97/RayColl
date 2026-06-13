@@ -16,8 +16,7 @@ export function getWebDocumentTitle(
   studyModes: StudyMode[],
   t: TranslationFn,
 ): string {
-  const pageTitle = getPageTitle(pathname, groups, studyModes, t);
-  return pageTitle === APP_NAME ? APP_NAME : `${pageTitle} | ${APP_NAME}`;
+  return getPageTitle(pathname, groups, studyModes, t);
 }
 
 function getPageTitle(

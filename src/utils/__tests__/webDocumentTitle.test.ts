@@ -47,21 +47,19 @@ const modes = [
 
 describe('getWebDocumentTitle', () => {
   it('uses a readable title for dashboard instead of leaving the URL as the tab label', () => {
-    expect(getWebDocumentTitle('/', groups, modes, t)).toBe('Dashboard | RayColl');
+    expect(getWebDocumentTitle('/', groups, modes, t)).toBe('Dashboard');
   });
 
   it('uses deck context for dynamic deck routes', () => {
     expect(getWebDocumentTitle('/browse/deck-1', groups, modes, t)).toBe(
-      'German - Browse cards | RayColl',
+      'German - Browse cards',
     );
     expect(getWebDocumentTitle('/settings/deck-1', groups, modes, t)).toBe(
-      'Deck Settings: German | RayColl',
+      'Deck Settings: German',
     );
   });
 
   it('uses the study mode name for mode detail routes', () => {
-    expect(getWebDocumentTitle('/study-modes/custom', groups, modes, t)).toBe(
-      'Listening | RayColl',
-    );
+    expect(getWebDocumentTitle('/study-modes/custom', groups, modes, t)).toBe('Listening');
   });
 });

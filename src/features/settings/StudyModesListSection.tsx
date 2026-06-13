@@ -6,26 +6,20 @@ import type { ModeStep, StudyMode } from '@/types/models';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { getModeName } from '@/i18n/modeHelpers';
-import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { navigateUp } from '@/utils/navigation';
 import { uid } from '@/utils/id';
 import { ROUTES } from '@/constants/routes';
 import { MAX_VISIBLE_PAGE_COUNT } from '@/constants/pages';
 import { TOKENS } from '@/theme/tokens';
-import { AppScreen } from '@/components/layout/AppScreen';
-import { AnimatedSection } from '@/components/layout/AnimatedSection';
-import { SectionCard } from '@/components/layout/SectionCard';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
 import { AddStepDialog } from '@/components/settings/AddStepDialog';
 import { formatStepSummary } from './studyModeUtils';
 import { useStepEditorController } from './useStepEditorController';
 
-export function StudyModesScreen() {
+export function StudyModesListSection() {
   const { t } = useI18n();
   const theme = useTheme();
   const store = useFlashcardStore();
-  const { formMaxWidth } = useResponsiveLayout();
   const [modeToDelete, setModeToDelete] = useState<StudyMode | null>(null);
 
   const [creatingMode, setCreatingMode] = useState(false);
@@ -34,7 +28,6 @@ export function StudyModesScreen() {
   const [editingModeId, setEditingModeId] = useState<string | null>(null);
 
   const stepEditor = useStepEditorController({
-    // Tryby są globalne (nie znamy talii), więc strony można wskazać do limitu aplikacji.
     pageCount: MAX_VISIBLE_PAGE_COUNT,
     creatingMode,
     editingModeId,
@@ -69,54 +62,50 @@ export function StudyModesScreen() {
   };
 
   return (
-    <AppScreen title={t('study_modes.title')} onBack={navigateUp} maxWidth={formMaxWidth}>
-      <AnimatedSection order={0}>
-        <SectionCard>
-          <View style={styles.modeList}>
-            {store.studyModes.map((mode, index) => (
-              <View key={mode.id}>
-                {index > 0 && <Divider />}
-                <List.Item
-                  style={styles.listItem}
-                  title={getModeName(t, mode.id, mode.name)}
-                  description={
-                    t('study_modes.steps_count', { count: mode.steps.length }) +
-                    (mode.isBuiltIn ? ` · ${t('study_modes.built_in')}` : '')
-                  }
-                  onPress={() => router.navigate(ROUTES.studyMode(mode.id))}
-                  right={() => (
-                    <View style={styles.itemActions}>
-                      {!mode.isBuiltIn && (
-                        <IconButton
-                          icon="delete-outline"
-                          size={TOKENS.iconSize.md}
-                          iconColor={theme.colors.error}
-                          onPress={() => setModeToDelete(mode)}
-                          accessibilityLabel={t('study_modes.delete_title')}
-                        />
-                      )}
-                      <List.Icon icon="chevron-right" />
-                    </View>
+    <>
+      <View style={styles.modeList}>
+        {store.studyModes.map((mode, index) => (
+          <View key={mode.id}>
+            {index > 0 && <Divider />}
+            <List.Item
+              style={styles.listItem}
+              title={getModeName(t, mode.id, mode.name)}
+              description={
+                t('study_modes.steps_count', { count: mode.steps.length }) +
+                (mode.isBuiltIn ? ` - ${t('study_modes.built_in')}` : '')
+              }
+              onPress={() => router.navigate(ROUTES.studyMode(mode.id))}
+              right={() => (
+                <View style={styles.itemActions}>
+                  {!mode.isBuiltIn && (
+                    <IconButton
+                      icon="delete-outline"
+                      size={TOKENS.iconSize.md}
+                      iconColor={theme.colors.error}
+                      onPress={() => setModeToDelete(mode)}
+                      accessibilityLabel={t('study_modes.delete_title')}
+                    />
                   )}
-                />
-              </View>
-            ))}
+                  <List.Icon icon="chevron-right" />
+                </View>
+              )}
+            />
           </View>
-          <View style={styles.footer}>
-            <Button
-              icon="plus"
-              mode="text"
-              onPress={() => {
-                setEditingModeId(null);
-                setCreatingMode(true);
-              }}
-              accessibilityLabel={t('settings.create_mode_btn')}
-            >
-              {t('settings.create_mode_btn')}
-            </Button>
-          </View>
-        </SectionCard>
-      </AnimatedSection>
+        ))}
+      </View>
+      <View style={styles.footer}>
+        <Button
+          icon="plus"
+          mode="text"
+          onPress={() => {
+            setEditingModeId(null);
+            setCreatingMode(true);
+          }}
+          accessibilityLabel={t('settings.create_mode_btn')}
+        >
+          {t('settings.create_mode_btn')}
+        </Button>
+      </View>
 
       <CreateStudyModeSection
         visible={creatingMode}
@@ -163,7 +152,7 @@ export function StudyModesScreen() {
         cancelLabel={t('btn.cancel')}
         destructive
       />
-    </AppScreen>
+    </>
   );
 }
 

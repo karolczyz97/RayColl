@@ -62,7 +62,7 @@ module.exports = {
             "deploymentTarget": "16.4"
           },
           "android": {
-            "enableOnBackInvokedCallback": true,
+            // android:enableOnBackInvokedCallback is set by android.predictiveBackGestureEnabled (app.config.js:31)
             ...(abiFilter ? { buildArchs: [abiFilter] } : {})
           }
         }

@@ -20,7 +20,7 @@ export function StudyModeDetailScreen() {
   const { modeId } = useLocalSearchParams<{ modeId: string }>();
   const { t } = useI18n();
   const store = useFlashcardStore();
-  const { contentMaxWidth } = useResponsiveLayout();
+  const { formMaxWidth } = useResponsiveLayout();
   const [editingModeId, setEditingModeId] = useState<string | null>(null);
   // Ekran edytuje istniejący tryb — tryb „szkicu" z dialogu tworzenia nie występuje.
   const setNoDraftSteps = useCallback(() => {}, []);
@@ -40,7 +40,7 @@ export function StudyModeDetailScreen() {
   if (!mode) {
     // Tryb mógł zostać właśnie usunięty — pokaż pusty ekran z powrotem.
     return (
-      <AppScreen title={t('study_modes.title')} onBack={navigateUp} maxWidth={contentMaxWidth}>
+      <AppScreen title={t('study_modes.title')} onBack={navigateUp} maxWidth={formMaxWidth}>
         {null}
       </AppScreen>
     );
@@ -52,7 +52,7 @@ export function StudyModeDetailScreen() {
     <AppScreen
       title={getModeName(t, mode.id, mode.name)}
       onBack={navigateUp}
-      maxWidth={contentMaxWidth}
+      maxWidth={formMaxWidth}
     >
       <AnimatedSection order={0}>
         <StudyModeEditor

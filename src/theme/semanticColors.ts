@@ -3,6 +3,21 @@ import { SrsCardCategory } from '@/srs/srsEngine';
 import { hexToRgba } from './colorUtils';
 import { TOKENS } from './tokens';
 
+const SRS_STATUS_COLORS = {
+  light: {
+    new: { color: '#5f6368', bg: '#eceff1' },
+    learning: { color: TOKENS.colors.warning, bg: TOKENS.colors.warningBg },
+    review: { color: '#2d6cdf', bg: '#dbeafe' },
+    mastered: { color: '#0f7b55', bg: '#d7f7e7' },
+  },
+  dark: {
+    new: { color: '#c4c7c5', bg: '#323539' },
+    learning: { color: '#ffd180', bg: '#4a3000' },
+    review: { color: '#9ec5ff', bg: '#173a75' },
+    mastered: { color: '#7ee2b8', bg: '#063f2c' },
+  },
+} as const;
+
 export function getSuccessColor(theme: MD3Theme): string {
   // Tertiary is green in our theme, representing success
   return theme.colors.tertiary;
@@ -65,28 +80,5 @@ export function getReviewStatusColor(
   theme: MD3Theme,
   category: SrsCardCategory,
 ): { color: string; bg: string } {
-  switch (category) {
-    case 'new':
-      return {
-        color: getInfoColor(theme),
-        bg: getInfoBgColor(theme),
-      };
-    case 'learning':
-      // W toku -> purple (secondary)
-      return {
-        color: getSecondaryColor(theme),
-        bg: getSecondaryBgColor(theme),
-      };
-    case 'review':
-      // Review -> orange (warning)
-      return {
-        color: getWarningColor(theme),
-        bg: getWarningBgColor(theme),
-      };
-    case 'mastered':
-      return {
-        color: getSuccessColor(theme),
-        bg: getSuccessBgColor(theme),
-      };
-  }
+  return SRS_STATUS_COLORS[theme.dark ? 'dark' : 'light'][category];
 }

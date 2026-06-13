@@ -1,8 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
-import { router } from 'expo-router';
-import { ROUTES } from '@/constants/routes';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
 import { AppSelect } from '@/components/AppSelect';
@@ -14,6 +12,7 @@ import { isThemePref } from '@/contexts/UserPreferencesContext';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { ChangelogDialog } from '@/components/feedback/ChangelogDialog';
+import { StudyModesListSection } from '@/features/settings/StudyModesListSection';
 import {
   LANGUAGE_OPTIONS,
   isLanguageCode,
@@ -149,16 +148,7 @@ export function AppSettingsScreen() {
           <Text variant="bodyMedium" style={styles.mutedText}>
             {t('app_settings.study_modes.desc')}
           </Text>
-          <View style={styles.sectionActionRow}>
-            <Button
-              mode="contained-tonal"
-              icon="chevron-right"
-              onPress={() => router.navigate(ROUTES.STUDY_MODES)}
-              accessibilityLabel={t('app_settings.study_modes')}
-            >
-              {t('app_settings.study_modes.open')}
-            </Button>
-          </View>
+          <StudyModesListSection />
         </SectionCard>
       </AnimatedSection>
 
@@ -231,9 +221,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-  },
-  sectionActionRow: {
-    flexDirection: 'row',
   },
   versionFooter: {
     alignSelf: 'flex-end',

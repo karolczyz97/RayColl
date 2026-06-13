@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
+// usePreventRemove isn't re-exported from the expo-router entry, but the ExperimentalStack
+// (Stack v5) this app uses is built around it: it drives each screen's native
+// preventNativeDismiss, the only reliable way to intercept Android's native back gesture on
+// this stack. Imported from the bundled react-navigation core since there's no public alias.
+import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 import { GroupNotFound } from '@/components/GroupNotFound';
 import { LoadingState } from '@/components/layout/LoadingState';
@@ -12,7 +17,6 @@ import { navigateUp } from '@/utils/navigation';
 
 function StudyPageContent() {
   const navigation = useNavigation();
-  const allowNextBeforeRemoveRef = useRef(false);
   const navigateBackRef = useRef<() => void>(navigateUp);
   const navigateBack = useCallback(() => {
     navigateBackRef.current();
@@ -34,24 +38,30 @@ function StudyPageContent() {
     navigateBackRef.current = navigateBackWithBrowserBlocker;
   }, [navigateBackWithBrowserBlocker]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e: {
-      preventDefault: () => void;
-      data: { action: Parameters<typeof navigation.dispatch>[0] };
-    }) => {
-      if (allowNextBeforeRemoveRef.current) {
-        allowNextBeforeRemoveRef.current = false;
-        return;
-      }
+  // Intercept Android's native back/gesture while a session is in progress. Setting
+  // preventRemove flips the screen's native preventNativeDismiss so the gesture can't pop the
+  // screen out from under us; requestExit then surfaces the confirmation dialog (confirming
+  // ends the session in place). The old `beforeRemove` listener couldn't do this — native-stack
+  // dismissed the screen before JS could preventDefault, bypassing the dialog and desyncing
+  // navigation state.
+  usePreventRemove(isExitBlocked, () => {
+    requestExit();
+  });
 
-      if (!isExitBlocked) return;
-      e.preventDefault();
-      requestExit(() => {
-        allowNextBeforeRemoveRef.current = true;
-        navigation.dispatch(e.data.action);
-      });
+  // usePreventRemove blocks the native swipe-back, but the experimental stack reports a *blocked*
+  // swipe as a 'gestureCancel' event rather than invoking the callback above (which only fires
+  // for JS-driven removals). Without this an edge-swipe is silently swallowed with no dialog, so
+  // bridge it to the same confirm flow as the in-app back button. useNavigation()'s base typing
+  // doesn't surface this stack-specific event, hence the cast.
+  useEffect(() => {
+    if (!isExitBlocked) return;
+    const addGestureListener = navigation.addListener as unknown as (
+      type: 'gestureCancel',
+      callback: () => void,
+    ) => () => void;
+    return addGestureListener('gestureCancel', () => {
+      requestExit();
     });
-    return unsubscribe;
   }, [isExitBlocked, navigation, requestExit]);
 
   if (controller.isLoading) {

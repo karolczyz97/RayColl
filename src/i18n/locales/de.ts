@@ -245,7 +245,6 @@ export const de: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Lernmodi',
   'app_settings.study_modes.desc': 'Lernmodi bearbeiten oder löschen',
-  'app_settings.study_modes.open': 'Lernmodi öffnen',
   'study_modes.title': 'Lernmodi',
   'study_modes.steps_count': 'Schritte: {count}',
   'study_modes.built_in': 'integriert',

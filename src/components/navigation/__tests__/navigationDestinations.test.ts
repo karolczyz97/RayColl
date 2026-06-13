@@ -12,6 +12,7 @@ describe('navigationDestinations', () => {
     expect(getActiveDestination('/stats')).toBe('stats');
     expect(getActiveDestination('/archive')).toBe('archive');
     expect(getActiveDestination('/app-settings')).toBe('settings');
+    expect(getActiveDestination('/study-modes/custom')).toBe('settings');
     expect(getActiveDestination('/import')).toBeNull();
   });
 });

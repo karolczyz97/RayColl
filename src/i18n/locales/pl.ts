@@ -247,7 +247,6 @@ export const pl: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Tryby nauki',
   'app_settings.study_modes.desc': 'Edytuj lub usuń tryby nauki',
-  'app_settings.study_modes.open': 'Otwórz tryby nauki',
   'study_modes.title': 'Tryby nauki',
   'study_modes.steps_count': 'Kroki: {count}',
   'study_modes.built_in': 'wbudowany',

@@ -257,7 +257,6 @@ function AppContent() {
             <Stack.Screen name="stats" options={{ title: t('stats.title') }} />
             <Stack.Screen name="archive" options={{ title: t('archive.title') }} />
             <Stack.Screen name="app-settings" options={{ title: t('app_settings.title') }} />
-            <Stack.Screen name="study-modes/index" options={{ title: t('study_modes.title') }} />
             <Stack.Screen
               name="study-modes/[modeId]"
               options={{ title: t('route.study_mode_detail') }}

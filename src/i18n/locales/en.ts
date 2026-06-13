@@ -246,7 +246,6 @@ export const en: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Study modes',
   'app_settings.study_modes.desc': 'Edit or delete study modes',
-  'app_settings.study_modes.open': 'Open study modes',
   'study_modes.title': 'Study modes',
   'study_modes.steps_count': 'Steps: {count}',
   'study_modes.built_in': 'built-in',

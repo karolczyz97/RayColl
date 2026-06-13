@@ -52,7 +52,12 @@ export function getActiveDestination(pathname: string): TopLevelDestinationKey |
     return 'archive';
   }
 
-  if (pathname === ROUTES.APP_SETTINGS || pathname.startsWith(`${ROUTES.APP_SETTINGS}/`)) {
+  if (
+    pathname === ROUTES.APP_SETTINGS ||
+    pathname.startsWith(`${ROUTES.APP_SETTINGS}/`) ||
+    pathname === ROUTES.STUDY_MODES ||
+    pathname.startsWith(`${ROUTES.STUDY_MODES}/`)
+  ) {
     return 'settings';
   }
 
