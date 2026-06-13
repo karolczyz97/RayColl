@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { Flashcard, FlashcardGroup, StudyMode, StoreData } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
+import type { CardOrder } from '@/constants/cardOrder';
 import type { ImportDeckPayload, ImportDeckResult } from '@/import/importDeck';
 import { validateImportDeckPayload } from '@/import/importDeck';
 import { validateBackupData } from '@/utils/backupValidation';
@@ -14,6 +15,7 @@ import {
   restoreGroupAction,
   setActiveStudyModeAction,
   setStudyFilterAction,
+  setCardOrderAction,
   setVisiblePageCountAction,
   updateGroupAction,
 } from './actions/groupActions';
@@ -174,7 +176,11 @@ export function useStoreActionsCore({
           applySnapshot,
           persistNow,
           previousSnapshot,
-          { groups: nextGroups, studyModes: previousSnapshot.studyModes, activityHeatmap: previousSnapshot.activityHeatmap },
+          {
+            groups: nextGroups,
+            studyModes: previousSnapshot.studyModes,
+            activityHeatmap: previousSnapshot.activityHeatmap,
+          },
           currentUid,
           'Import deck',
         );
@@ -270,6 +276,13 @@ export function useStoreActionsCore({
     [commitGroups, groupsRef],
   );
 
+  const setCardOrder = useCallback(
+    (groupId: string, order: CardOrder) => {
+      commitGroups(setCardOrderAction(groupsRef.current, groupId, order));
+    },
+    [commitGroups, groupsRef],
+  );
+
   const setActiveStudyMode = useCallback(
     (groupId: string, modeId: string) => {
       commitGroups(setActiveStudyModeAction(groupsRef.current, groupId, modeId));
@@ -352,12 +365,14 @@ export function useStoreActionsCore({
       const seed = createSeedModes().find((mode) => mode.id === sourceId);
       if (!seed) return;
 
-      commitStudyModes(updateStudyModeAction(studyModesRef.current, {
-        ...seed,
-        id: currentMode.id,
-        isBuiltIn: true,
-        builtInSourceId: sourceId,
-      }));
+      commitStudyModes(
+        updateStudyModeAction(studyModesRef.current, {
+          ...seed,
+          id: currentMode.id,
+          isBuiltIn: true,
+          builtInSourceId: sourceId,
+        }),
+      );
     },
     [commitStudyModes, studyModesRef],
   );
@@ -405,7 +420,7 @@ export function useStoreActionsCore({
     (groupId: string): Flashcard[] => {
       const group = groupsRef.current.find((item) => item.id === groupId);
       if (!group) return [];
-      return selectDueCards(group.cards, group.studyFilter);
+      return selectDueCards(group.cards, group.studyFilter, group.cardOrder);
     },
     [groupsRef],
   );
@@ -489,6 +504,7 @@ export function useStoreActionsCore({
       importState,
       setVisiblePageCount,
       setStudyFilter,
+      setCardOrder,
       setActiveStudyMode,
     }),
     [
@@ -517,6 +533,7 @@ export function useStoreActionsCore({
       importState,
       setVisiblePageCount,
       setStudyFilter,
+      setCardOrder,
       setActiveStudyMode,
     ],
   );

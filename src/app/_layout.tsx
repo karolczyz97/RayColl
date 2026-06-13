@@ -10,13 +10,14 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider, useI18n } from '@/i18n';
 import { AppThemeProvider, useAppTheme } from '@/contexts/UserPreferencesContext';
-import { FlashcardStoreProvider } from '@/store/FlashcardStoreContext';
+import { FlashcardStoreProvider, useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { createAppTheme } from '@/theme/createAppTheme';
 import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 import { UpdateNotification } from '@/components/feedback/UpdateNotification';
 import { AppNavigationShell } from '@/components/navigation/AppNavigationShell';
 import { hexToRgba } from '@/theme/colorUtils';
 import { getErrorMessage } from '@/utils/errors';
+import { getWebDocumentTitle } from '@/utils/webDocumentTitle';
 
 function logSplashScreenError(action: string, error: unknown) {
   console.warn(`Splash screen ${action} failed:`, getErrorMessage(error));
@@ -230,7 +231,15 @@ function AppContent() {
   const theme = useTheme();
   const pathname = usePathname();
   const { t } = useI18n();
+  const { groups, studyModes } = useFlashcardStore();
   const globalErrorTitleKey = getGlobalErrorTitleKey(pathname);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+    document.title = getWebDocumentTitle(pathname, groups, studyModes, t);
+  }, [groups, pathname, studyModes, t]);
 
   const content = (
     <AppErrorBoundary

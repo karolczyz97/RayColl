@@ -1,9 +1,9 @@
 import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
 import { getStoredPageCount, normalizeStudyFilter } from '@/store/storeDataNormalization';
+import { normalizeCardOrder } from '@/constants/cardOrder';
 import { coerceStringArray } from '@/utils/array';
 import { assertStudyModeStep } from '@/utils/backupValidation';
 import { isRecord } from '@/utils/types';
-
 
 export type UserData = StoreData;
 
@@ -15,6 +15,7 @@ export interface FirestoreDeckDoc {
   pageNames: string[];
   activePageCount?: number;
   studyFilter?: FlashcardGroup['studyFilter'];
+  cardOrder?: FlashcardGroup['cardOrder'];
   updatedAt?: number;
   deletedAt?: number | null;
   archivedAt?: number | null;
@@ -65,7 +66,10 @@ function deserializeSrsState(docId: string, value: unknown): Flashcard['srsState
     difficulty: requireFiniteNumber(value.difficulty, `srsState.difficulty for card ${docId}`),
     stability: requireFiniteNumber(value.stability, `srsState.stability for card ${docId}`),
     repetitions: requireFiniteNumber(value.repetitions, `srsState.repetitions for card ${docId}`),
-    state: requireFiniteNumber(value.state, `srsState.state for card ${docId}`) as SrsState['state'],
+    state: requireFiniteNumber(
+      value.state,
+      `srsState.state for card ${docId}`,
+    ) as SrsState['state'],
     lastReviewTimestamp: requireFiniteNumber(
       value.lastReviewTimestamp,
       `srsState.lastReviewTimestamp for card ${docId}`,
@@ -86,6 +90,7 @@ export function serializeDeckDoc(group: FlashcardGroup): FirestoreDeckDoc {
     pageNames: group.pageNames,
     activePageCount: group.activePageCount,
     studyFilter: normalizeStudyFilter(group.studyFilter),
+    cardOrder: normalizeCardOrder(group.cardOrder),
     updatedAt: group.updatedAt,
     ...(group.deletedAt != null ? { deletedAt: group.deletedAt } : {}),
     ...(group.archivedAt != null ? { archivedAt: group.archivedAt } : {}),
@@ -131,7 +136,9 @@ export function deserializeCardDoc(docId: string, rawData: unknown): Flashcard {
     id: typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId,
     pages: rawData.pages.filter((page): page is string => typeof page === 'string'),
     srsState: deserializeSrsState(docId, rawData.srsState),
-    ...(typeof rawData.contentUpdatedAt === 'number' ? { contentUpdatedAt: rawData.contentUpdatedAt } : {}),
+    ...(typeof rawData.contentUpdatedAt === 'number'
+      ? { contentUpdatedAt: rawData.contentUpdatedAt }
+      : {}),
     ...(typeof rawData.srsUpdatedAt === 'number' ? { srsUpdatedAt: rawData.srsUpdatedAt } : {}),
     ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
       ? { deletedAt: rawData.deletedAt }
@@ -150,7 +157,11 @@ export function deserializeDeckDoc(
 
   const pageNames = coerceStringArray(rawData.pageNames);
   const pageLanguages = coerceStringArray(rawData.pageLanguages);
-  const fallbackPageCount = getStoredPageCount({ cards } as FlashcardGroup, pageNames, pageLanguages);
+  const fallbackPageCount = getStoredPageCount(
+    { cards } as FlashcardGroup,
+    pageNames,
+    pageLanguages,
+  );
   const rawActivePageCount = rawData.activePageCount;
   const activePageCount =
     typeof rawActivePageCount === 'number' && Number.isFinite(rawActivePageCount)
@@ -166,6 +177,7 @@ export function deserializeDeckDoc(
     pageNames,
     activePageCount,
     studyFilter: normalizeStudyFilter(rawData.studyFilter),
+    cardOrder: normalizeCardOrder(rawData.cardOrder),
     ...(typeof rawData.updatedAt === 'number' ? { updatedAt: rawData.updatedAt } : {}),
     ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
       ? { deletedAt: rawData.deletedAt }
@@ -182,7 +194,8 @@ export function deserializeStudyModeDoc(docId: string, rawData: unknown): StudyM
     throw new Error(`Firestore study mode ${docId} is missing steps.`);
   }
 
-  const modeId = typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId;
+  const modeId =
+    typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId;
   rawData.steps.forEach((step, index) => {
     assertStudyModeStep(step, modeId, index);
   });
@@ -192,7 +205,9 @@ export function deserializeStudyModeDoc(docId: string, rawData: unknown): StudyM
     name: requireString(rawData.name, 'study mode name'),
     steps: rawData.steps as StudyMode['steps'],
     isBuiltIn: rawData.isBuiltIn === true,
-    ...(typeof rawData.builtInSourceId === 'string' ? { builtInSourceId: rawData.builtInSourceId } : {}),
+    ...(typeof rawData.builtInSourceId === 'string'
+      ? { builtInSourceId: rawData.builtInSourceId }
+      : {}),
     ...(typeof rawData.updatedAt === 'number' ? { updatedAt: rawData.updatedAt } : {}),
     ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
       ? { deletedAt: rawData.deletedAt }

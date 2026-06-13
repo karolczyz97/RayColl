@@ -151,6 +151,10 @@ export const es: Record<string, string> = {
   'settings.reorder_columns': 'Reordenar columnas',
   'settings.active_mode': 'Modo de estudio activo',
   'settings.study_scope': 'Alcance del estudio',
+  'settings.card_order': 'Orden de tarjetas',
+  'settings.card_order.sequential': 'En orden',
+  'settings.card_order.random': 'Aleatorio',
+  'settings.card_order.hardest': 'Más difíciles primero',
   'settings.which_cards': 'Qué tarjetas estudiar',
   'settings.mode_steps': 'Pasos del Modo "{name}"',
   'settings.add_step_btn': 'Añadir paso',
@@ -184,7 +188,12 @@ export const es: Record<string, string> = {
   'app_settings.export_error': 'Export fallido.',
   'app_settings.import_success': '¡Import completado!',
   'app_settings.import_error': 'Import fallido.',
+  'app_settings.reset_success': 'Datos restablecidos.',
+  'app_settings.reset_error': 'No se pudo restablecer. Tus datos no se modificaron.',
   'app_settings.sharing_unavailable': 'Compartir no disponible en este dispositivo.',
+  'app_settings.reset_btn': 'Restablecer aplicación',
+  'app_settings.reset_confirm':
+    '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
   'app_settings.dynamic_colors.desc':
@@ -236,6 +245,7 @@ export const es: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Modos de estudio',
   'app_settings.study_modes.desc': 'Edita o elimina los modos de estudio',
+  'app_settings.study_modes.open': 'Abrir modos de estudio',
   'study_modes.title': 'Modos de estudio',
   'study_modes.steps_count': 'Pasos: {count}',
   'study_modes.built_in': 'integrado',
@@ -266,6 +276,9 @@ export const es: Record<string, string> = {
   'browse.tooltip.repetitions': 'Repeticiones: {count}',
   'browse.tooltip.review_in': 'Repaso en: {time}',
   'browse.delete_card': 'Eliminar tarjeta',
+
+  // Danger zone in App Settings
+  'app_settings.danger_zone': 'Zona de peligro',
 
   // Update notification
   'update.updated': 'App actualizada',

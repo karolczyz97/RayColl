@@ -12,7 +12,11 @@ import { StoreActionsContext, StoreStateContext } from './StoreContexts';
 import { useStorePersistence } from './useStorePersistence';
 import { useStoreBootstrap } from './useStoreBootstrap';
 import { useStoreActionsCore } from './useStoreActions';
-import { selectActiveGroups, selectArchivedGroups, selectLiveStudyModes } from './selectors/liveSelectors';
+import {
+  selectActiveGroups,
+  selectArchivedGroups,
+  selectLiveStudyModes,
+} from './selectors/liveSelectors';
 import { MigrationDialog } from '@/components/dialogs/MigrationDialog';
 import { useArchivePurger } from './useArchivePurger';
 import { useAuthActions } from './useAuthActions';
@@ -171,6 +175,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       exportState: actions.exportState,
       setVisiblePageCount: actions.setVisiblePageCount,
       setStudyFilter: actions.setStudyFilter,
+      setCardOrder: actions.setCardOrder,
       setActiveStudyMode: actions.setActiveStudyMode,
       addFlashcardsBulk: actions.addFlashcardsBulk,
       clearLastLoginError: auth.clearLastLoginError,

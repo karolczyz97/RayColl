@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
+import type { CardOrder } from '@/constants/cardOrder';
 import type { ImportDeckPayload, ImportDeckResult } from '@/import/importDeck';
 
 export type SyncStatus = 'idle' | 'loading' | 'saving' | 'syncing' | 'error';
@@ -56,6 +57,7 @@ export interface FlashcardStore {
   exportState: () => string;
   setVisiblePageCount: (groupId: string, count: number) => void;
   setStudyFilter: (groupId: string, filter: CardFilter) => void;
+  setCardOrder: (groupId: string, order: CardOrder) => void;
   setActiveStudyMode: (groupId: string, modeId: string) => void;
   addFlashcardsBulk: (groupId: string, cards: Flashcard[]) => void;
 }

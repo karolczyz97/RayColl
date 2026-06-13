@@ -151,6 +151,10 @@ export const it: Record<string, string> = {
   'settings.reorder_columns': 'Riordina colonne',
   'settings.active_mode': 'Modalità di studio attiva',
   'settings.study_scope': 'Ambito di studio',
+  'settings.card_order': 'Ordine delle carte',
+  'settings.card_order.sequential': 'In ordine',
+  'settings.card_order.random': 'Casuale',
+  'settings.card_order.hardest': 'Più difficili prima',
   'settings.which_cards': 'Quali carte studiare',
   'settings.mode_steps': 'Passaggi della Modalità "{name}"',
   'settings.add_step_btn': 'Aggiungi passaggio',
@@ -184,7 +188,12 @@ export const it: Record<string, string> = {
   'app_settings.export_error': 'Esportazione non riuscita.',
   'app_settings.import_success': 'Import completato!',
   'app_settings.import_error': 'Import non riuscito.',
+  'app_settings.reset_success': 'Dati ripristinati.',
+  'app_settings.reset_error': 'Ripristino non riuscito. I tuoi dati non sono stati modificati.',
   'app_settings.sharing_unavailable': 'Condivisione non disponibile su questo dispositivo.',
+  'app_settings.reset_btn': 'Ripristina app',
+  'app_settings.reset_confirm':
+    "Sei sicuro di voler ripristinare l'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.",
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colori dinamici del sistema',
   'app_settings.dynamic_colors.desc':
@@ -236,6 +245,7 @@ export const it: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Modalità di studio',
   'app_settings.study_modes.desc': 'Modifica o elimina le modalità di studio',
+  'app_settings.study_modes.open': 'Apri modalità di studio',
   'study_modes.title': 'Modalità di studio',
   'study_modes.steps_count': 'Passaggi: {count}',
   'study_modes.built_in': 'integrata',
@@ -266,6 +276,9 @@ export const it: Record<string, string> = {
   'browse.tooltip.repetitions': 'Ripetizioni: {count}',
   'browse.tooltip.review_in': 'Ripasso tra: {time}',
   'browse.delete_card': 'Elimina flashcard',
+
+  // Danger zone in App Settings
+  'app_settings.danger_zone': 'Zona di pericolo',
 
   // Update notification
   'update.updated': 'App aggiornata',

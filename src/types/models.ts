@@ -1,4 +1,5 @@
 import type { CardFilter } from '@/constants/cardFilters';
+import type { CardOrder } from '@/constants/cardOrder';
 
 export interface SrsState {
   difficulty: number; // Difficulty (1-10)
@@ -24,6 +25,7 @@ export interface FlashcardGroup {
   cards: Flashcard[];
   activeModeId: string;
   studyFilter: CardFilter;
+  cardOrder?: CardOrder;
   pageLanguages: string[]; // tagi BCP-47 dla stron
   pageNames: string[]; // e.g. ['Word', 'Translation', 'Example']
   activePageCount: number; // liczba widocznych/aktywnych stron

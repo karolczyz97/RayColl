@@ -1,4 +1,9 @@
-import { normalizeStoreData, normalizeGroup, normalizeStudyMode } from '../storeDataNormalization';
+import {
+  DEFAULT_CARD_ORDER,
+  normalizeStoreData,
+  normalizeGroup,
+  normalizeStudyMode,
+} from '../storeDataNormalization';
 import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
 
 describe('normalizeStoreData', () => {
@@ -85,6 +90,13 @@ describe('normalizeGroup', () => {
     expect('archivedAt' in normalized).toBe(true);
     expect(normalized.archivedAt).toBe(8888);
   });
+
+  it('normalizes missing or invalid cardOrder to the default', () => {
+    expect(normalizeGroup(makeGroup()).cardOrder).toBe(DEFAULT_CARD_ORDER);
+    expect(normalizeGroup(makeGroup({ cardOrder: 'broken' as never })).cardOrder).toBe(
+      DEFAULT_CARD_ORDER,
+    );
+  });
 });
 
 describe('normalizeStudyMode', () => {
@@ -141,10 +153,7 @@ describe('normalizeStudyMode', () => {
       { type: 'show_page', pageIndex: 0 },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps }));
-    expect(normalized.steps).toEqual([
-      { type: 'next_card' },
-      { type: 'show_page', pageIndex: 0 },
-    ]);
+    expect(normalized.steps).toEqual([{ type: 'next_card' }, { type: 'show_page', pageIndex: 0 }]);
   });
 
   it('preserves valid step conditions and drops invalid ones', () => {

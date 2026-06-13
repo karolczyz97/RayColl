@@ -1,6 +1,15 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { setVisiblePageCountAction, deleteGroupAction, updateGroupAction, archiveGroupAction, restoreGroupAction, purgeExpiredArchivesAction } from '../groupActions';
+import {
+  setVisiblePageCountAction,
+  deleteGroupAction,
+  updateGroupAction,
+  archiveGroupAction,
+  restoreGroupAction,
+  purgeExpiredArchivesAction,
+  setCardOrderAction,
+} from '../groupActions';
+import { CARD_ORDERS } from '@/constants/cardOrder';
 import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 import { createNewSrsState } from '../../../srs/srsEngine';
 
@@ -8,9 +17,7 @@ describe('groupActions', () => {
   const group = {
     id: 'g1',
     name: 'Deck',
-    cards: [
-      { id: 'c1', pages: ['front', 'back', 'extra'], srsState: createNewSrsState() },
-    ],
+    cards: [{ id: 'c1', pages: ['front', 'back', 'extra'], srsState: createNewSrsState() }],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
     pageLanguages: ['en-US', 'pl-PL', 'en-US'],
@@ -66,9 +73,7 @@ describe('groupActions', () => {
       };
       const uiGroup = {
         ...group,
-        cards: [
-          { id: 'c1', pages: ['updated', 'b', 'c'], srsState: createNewSrsState() },
-        ],
+        cards: [{ id: 'c1', pages: ['updated', 'b', 'c'], srsState: createNewSrsState() }],
       };
       const updated = updateGroupAction([canonGroup], uiGroup)[0];
       expect(updated.cards.length).toBe(2);
@@ -119,7 +124,11 @@ describe('groupActions', () => {
 
     it('skips already-deleted groups', () => {
       const now = Date.now();
-      const alreadyDeleted = { ...group, archivedAt: now - 20 * 24 * 60 * 60 * 1000, deletedAt: now };
+      const alreadyDeleted = {
+        ...group,
+        archivedAt: now - 20 * 24 * 60 * 60 * 1000,
+        deletedAt: now,
+      };
       const result = purgeExpiredArchivesAction([alreadyDeleted], now, 14 * 24 * 60 * 60 * 1000);
       expect(result.changed).toBe(false);
       expect(result.groups[0].deletedAt).toBe(now);
@@ -129,6 +138,14 @@ describe('groupActions', () => {
       const now = Date.now();
       const result = purgeExpiredArchivesAction([group], now, 14 * 24 * 60 * 60 * 1000);
       expect(result.changed).toBe(false);
+    });
+  });
+
+  describe('setCardOrderAction', () => {
+    it('updates card order and bumps updatedAt', () => {
+      const updated = setCardOrderAction([group], 'g1', CARD_ORDERS.hardest)[0];
+      expect(updated.cardOrder).toBe(CARD_ORDERS.hardest);
+      expect(updated.updatedAt).toBeGreaterThan(0);
     });
   });
 });

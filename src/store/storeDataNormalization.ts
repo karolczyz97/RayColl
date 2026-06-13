@@ -1,6 +1,20 @@
 import { CARD_FILTERS, DEFAULT_STUDY_FILTER, type CardFilter } from '@/constants/cardFilters';
-import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT, clampActivePageCount } from '@/constants/pages';
-import type { Flashcard, FlashcardGroup, ModeStep, SrsState, StepCondition, StudyMode, StoreData } from '@/types/models';
+import { DEFAULT_CARD_ORDER, normalizeCardOrder } from '@/constants/cardOrder';
+import {
+  MIN_PAGE_COUNT,
+  MAX_VISIBLE_PAGE_COUNT,
+  MAX_STORED_PAGE_COUNT,
+  clampActivePageCount,
+} from '@/constants/pages';
+import type {
+  Flashcard,
+  FlashcardGroup,
+  ModeStep,
+  SrsState,
+  StepCondition,
+  StudyMode,
+  StoreData,
+} from '@/types/models';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
 import { isRecord } from '@/utils/types';
@@ -10,6 +24,7 @@ const VALID_SRS_STATES: ReadonlySet<SrsState['state']> = new Set([0, 1, 2, 3]);
 // Canonical definition lives in constants/cardFilters; re-exported here to keep
 // existing import sites stable.
 export { DEFAULT_STUDY_FILTER };
+export { DEFAULT_CARD_ORDER };
 const VALID_STUDY_FILTERS = new Set<CardFilter>(Object.values(CARD_FILTERS));
 
 export function normalizeStudyFilter(filter: unknown): CardFilter {
@@ -39,7 +54,11 @@ export function padPageMetadata(
   return { pageNames: names, pageLanguages: langs };
 }
 
-export function getStoredPageCount(group: FlashcardGroup, pageNames: string[], pageLanguages: string[]): number {
+export function getStoredPageCount(
+  group: FlashcardGroup,
+  pageNames: string[],
+  pageLanguages: string[],
+): number {
   const maxCardPages = Math.max(0, ...group.cards.map((c) => c.pages.length));
   const rawStored = Math.max(pageNames.length, pageLanguages.length, maxCardPages, MIN_PAGE_COUNT);
   return Math.min(rawStored, MAX_STORED_PAGE_COUNT);
@@ -81,6 +100,7 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
     pageLanguages,
     cards: group.cards.map(normalizeCard),
     studyFilter: normalizeStudyFilter(group.studyFilter),
+    cardOrder: normalizeCardOrder(group.cardOrder),
     updatedAt: (group as { updatedAt?: number }).updatedAt ?? 0,
     ...(deletedAt != null ? { deletedAt } : {}),
     ...(archivedAt != null ? { archivedAt } : {}),

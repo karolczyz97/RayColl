@@ -1,5 +1,6 @@
 import { FlashcardGroup, Flashcard } from '@/types/models';
 import { CardFilter } from '@/constants/cardFilters';
+import { DEFAULT_CARD_ORDER, normalizeCardOrder, type CardOrder } from '@/constants/cardOrder';
 import { MAX_VISIBLE_PAGE_COUNT, clampActivePageCount } from '@/constants/pages';
 import { DEFAULT_STUDY_FILTER, padPageMetadata } from '@/store/storeDataNormalization';
 import { uid } from '@/utils/id';
@@ -17,6 +18,7 @@ function createGroupObject(
     cards,
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: DEFAULT_CARD_ORDER,
     pageLanguages: languages,
     pageNames,
     activePageCount: clampActivePageCount(pageNames.length, MAX_VISIBLE_PAGE_COUNT),
@@ -61,16 +63,12 @@ export function deleteGroupAction(groups: FlashcardGroup[], groupId: string): Fl
 
 export function archiveGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
   const now = Date.now();
-  return groups.map((g) =>
-    g.id === groupId ? { ...g, archivedAt: now, updatedAt: now } : g
-  );
+  return groups.map((g) => (g.id === groupId ? { ...g, archivedAt: now, updatedAt: now } : g));
 }
 
 export function restoreGroupAction(groups: FlashcardGroup[], groupId: string): FlashcardGroup[] {
   const now = Date.now();
-  return groups.map((g) =>
-    g.id === groupId ? { ...g, archivedAt: null, updatedAt: now } : g
-  );
+  return groups.map((g) => (g.id === groupId ? { ...g, archivedAt: null, updatedAt: now } : g));
 }
 
 export function purgeExpiredArchivesAction(
@@ -100,7 +98,11 @@ export function setVisiblePageCountAction(
   const clampedCount = clampActivePageCount(count, MAX_VISIBLE_PAGE_COUNT);
   return groups.map((g) => {
     if (g.id !== groupId) return g;
-    const { pageNames, pageLanguages } = padPageMetadata(g.pageNames, g.pageLanguages, clampedCount);
+    const { pageNames, pageLanguages } = padPageMetadata(
+      g.pageNames,
+      g.pageLanguages,
+      clampedCount,
+    );
     return {
       ...g,
       activePageCount: clampedCount,
@@ -118,6 +120,16 @@ export function setStudyFilterAction(
 ): FlashcardGroup[] {
   const now = Date.now();
   return groups.map((g) => (g.id === groupId ? { ...g, studyFilter: filter, updatedAt: now } : g));
+}
+
+export function setCardOrderAction(
+  groups: FlashcardGroup[],
+  groupId: string,
+  order: CardOrder,
+): FlashcardGroup[] {
+  const now = Date.now();
+  const cardOrder = normalizeCardOrder(order);
+  return groups.map((g) => (g.id === groupId ? { ...g, cardOrder, updatedAt: now } : g));
 }
 
 export function setActiveStudyModeAction(

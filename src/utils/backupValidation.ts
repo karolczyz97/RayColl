@@ -1,4 +1,5 @@
 import type { FlashcardGroup, StudyMode } from '@/types/models';
+import { normalizeCardOrder } from '@/constants/cardOrder';
 import { isRecord } from './types';
 
 export interface BackupData {
@@ -30,10 +31,16 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
 
   switch (step.type) {
     case 'show_page':
-      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.pageIndex,
+        `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
+      );
       return;
     case 'speak_page':
-      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.pageIndex,
+        `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
+      );
       // Nowe backupy mają pauseMultiplier, stare extraPauseMs — oba opcjonalne
       // (normalizacja przy imporcie mapuje legacy pole i uzupełnia braki).
       if (step.pauseMultiplier !== undefined) {
@@ -71,7 +78,10 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
       assertNonNegativeNumber(step.ms, `Step ${index + 1} in study mode ${modeId} has invalid ms.`);
       return;
     case 'listen_and_branch':
-      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.pageIndex,
+        `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
+      );
       assertNonNegativeNumber(
         step.successThreshold,
         `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`,
@@ -87,7 +97,10 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
       }
       return;
     case 'listen_and_check':
-      assertNonNegativeNumber(step.pageIndex, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(
+        step.pageIndex,
+        `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
+      );
       assertNonNegativeNumber(
         step.successThreshold,
         `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`,
@@ -109,9 +122,18 @@ export function validateSrsState(cardId: string, groupName: string, srsState: un
   if (!isRecord(srsState)) {
     throw new Error(`Card ${cardId} in group ${groupName} is missing a valid "srsState" object.`);
   }
-  assertNumber(srsState.difficulty, `Card ${cardId} in group ${groupName} has an invalid difficulty.`);
-  assertNumber(srsState.stability, `Card ${cardId} in group ${groupName} has an invalid stability.`);
-  assertNumber(srsState.repetitions, `Card ${cardId} in group ${groupName} has invalid repetitions.`);
+  assertNumber(
+    srsState.difficulty,
+    `Card ${cardId} in group ${groupName} has an invalid difficulty.`,
+  );
+  assertNumber(
+    srsState.stability,
+    `Card ${cardId} in group ${groupName} has an invalid stability.`,
+  );
+  assertNumber(
+    srsState.repetitions,
+    `Card ${cardId} in group ${groupName} has invalid repetitions.`,
+  );
   assertNumber(srsState.state, `Card ${cardId} in group ${groupName} has invalid state.`);
   assertNumber(
     srsState.lastReviewTimestamp,
@@ -160,6 +182,9 @@ export function validateGroup(group: unknown): void {
   }
   if (typeof group.activeModeId !== 'string') {
     throw new Error(`Group with ID ${group.id} must have an active study mode.`);
+  }
+  if (group.cardOrder !== undefined && normalizeCardOrder(group.cardOrder) !== group.cardOrder) {
+    throw new Error(`Group with ID ${group.id} has an invalid card order.`);
   }
   for (const card of group.cards) {
     validateCard(card, group.name);

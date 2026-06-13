@@ -1,9 +1,15 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TOKENS } from '@/theme/tokens';
-import { getElevationStyle } from '@/theme/elevation';
 import { AppTopBar } from './AppTopBar';
 import { ScreenContent } from './ScreenContent';
 
@@ -75,15 +81,7 @@ export function AppScreen({
         className="raycoll-stable-scrollbar"
         contentContainerStyle={styles.webScrollContent}
       >
-        <View
-          style={[
-            styles.webCard,
-            { backgroundColor: theme.colors.surface },
-            getElevationStyle(TOKENS.elevation.level3, theme.colors.shadow, Platform.OS),
-          ]}
-        >
-          {screenContent}
-        </View>
+        {screenContent}
       </ScrollView>
     );
   } else if (isWeb && !scroll) {
@@ -102,18 +100,8 @@ export function AppScreen({
   }
 
   return (
-    <SafeAreaView
-      edges={edges}
-      style={[styles.root, { backgroundColor: theme.colors.background }]}
-    >
-      {showBar ? (
-        <AppTopBar
-          title={title}
-          onBack={onBack}
-          right={right}
-          brand={brand}
-        />
-      ) : null}
+    <SafeAreaView edges={edges} style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      {showBar ? <AppTopBar title={title} onBack={onBack} right={right} brand={brand} /> : null}
       {headerExtension}
 
       <View
@@ -147,15 +135,9 @@ const styles = StyleSheet.create({
   // Web scroll content: centers the card horizontally, with vertical breathing room.
   webScrollContent: {
     alignItems: 'center',
+    paddingHorizontal: TOKENS.spacing.lg,
     paddingTop: TOKENS.spacing.md,
     paddingBottom: TOKENS.spacing.xxl * 2,
-  },
-  // Web card: centered visual container (max 1200px, surface, rounded, shadow).
-  webCard: {
-    width: '100%',
-    maxWidth: TOKENS.layout.maxWidth,
-    paddingHorizontal: TOKENS.spacing.lg,
-    borderRadius: TOKENS.radius.xl,
   },
   nativeScrollContent: {
     paddingBottom: TOKENS.spacing.xxl * 2,

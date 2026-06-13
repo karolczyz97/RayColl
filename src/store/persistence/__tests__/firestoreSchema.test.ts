@@ -3,11 +3,13 @@ import { describe, it, expect } from '@jest/globals';
 import { createNewSrsState } from '../../../srs/srsEngine';
 import { normalizeStoreData } from '../../storeDataNormalization';
 import { deepEqual } from '../../../utils/deepEqual';
+import { CARD_ORDERS } from '@/constants/cardOrder';
 import {
   cloneUserData,
   deserializeCardDoc,
   deserializeDeckDoc,
   deserializeStudyModeDoc,
+  serializeDeckDoc,
   type UserData,
 } from '../firestoreSchema';
 
@@ -56,11 +58,24 @@ describe('firestoreSchema', () => {
     expect(normalized.groups[0].studyFilter).toBe('new+review');
   });
 
+  it('round-trips cardOrder through deck docs', () => {
+    const serialized = serializeDeckDoc({
+      ...normalized.groups[0],
+      cardOrder: CARD_ORDERS.hardest,
+    });
+    const deserialized = deserializeDeckDoc('deck-1', serialized, [card]);
+    expect(deserialized.cardOrder).toBe(CARD_ORDERS.hardest);
+  });
+
   it('throws when deck doc is missing a valid name', () => {
     expect(() =>
       deserializeDeckDoc(
         'broken-deck',
-        { activeModeId: 'classic', pageNames: ['Front', 'Back'], pageLanguages: ['en-US', 'pl-PL'] },
+        {
+          activeModeId: 'classic',
+          pageNames: ['Front', 'Back'],
+          pageLanguages: ['en-US', 'pl-PL'],
+        },
         [],
       ),
     ).toThrow('missing a valid name');

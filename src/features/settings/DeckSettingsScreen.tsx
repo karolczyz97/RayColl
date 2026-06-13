@@ -4,6 +4,7 @@ import { Button, IconButton, useTheme } from 'react-native-paper';
 import { getTopBarColors } from '@/theme/semanticColors';
 import { DeckNameSection } from '@/components/settings/DeckNameSection';
 import { StudyScopeSection } from '@/components/settings/StudyScopeSection';
+import { CardOrderSection } from '@/components/settings/CardOrderSection';
 import { StudyModeSelector } from '@/components/settings/StudyModeSelector';
 import { StudyModeEditor } from '@/components/settings/StudyModeEditor';
 import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
@@ -17,7 +18,9 @@ import { SectionCard } from '@/components/layout/SectionCard';
 import { PageConfigEditor } from '@/components/pageConfig/PageConfigEditor';
 import { PagesReorderDialog } from './PagesReorderDialog';
 
-export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDeckSettingsController').useDeckSettingsController>) {
+export function DeckSettingsScreen(
+  controller: ReturnType<typeof import('./useDeckSettingsController').useDeckSettingsController>,
+) {
   const { fg: topBarFg } = getTopBarColors(useTheme());
   const {
     activeGroup,
@@ -47,6 +50,7 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
     newThreshold,
     newCondition,
     onFilterChange,
+    onCardOrderChange,
     onModeChange,
     openCreateModeDialog,
     pageCount,
@@ -92,8 +96,8 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
   const hasHiddenColumns = storedPageCount > (activeGroup.activePageCount ?? 0);
 
   const sectionOrder = useTwoColumnLayout
-    ? { name: 0, pageConfig: 2, scope: 1, modeEditor: 1, modeSelector: 0 }
-    : { name: 0, pageConfig: 2, scope: 1, modeEditor: 4, modeSelector: 3 };
+    ? { name: 0, pageConfig: 3, scope: 1, cardOrder: 2, modeEditor: 1, modeSelector: 0 }
+    : { name: 0, scope: 1, cardOrder: 2, pageConfig: 3, modeSelector: 4, modeEditor: 5 };
 
   const leftColumnContent = (
     <>
@@ -113,6 +117,15 @@ export function DeckSettingsScreen(controller: ReturnType<typeof import('./useDe
           <StudyScopeSection
             studyFilter={activeGroup.studyFilter}
             onFilterChange={onFilterChange}
+          />
+        </SectionCard>
+      </AnimatedSection>
+
+      <AnimatedSection order={sectionOrder.cardOrder}>
+        <SectionCard>
+          <CardOrderSection
+            cardOrder={activeGroup.cardOrder}
+            onCardOrderChange={onCardOrderChange}
           />
         </SectionCard>
       </AnimatedSection>

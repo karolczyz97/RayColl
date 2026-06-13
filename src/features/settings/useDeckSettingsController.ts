@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { navigateUp } from '@/utils/navigation';
 import type { ModeStep, StudyMode } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
+import type { CardOrder } from '@/constants/cardOrder';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { POPULAR_LANGS } from '@/constants/languages';
@@ -207,11 +208,15 @@ export function useDeckSettingsController() {
     newCondition: stepEditor.newCondition,
     onFilterChange: (filter: CardFilter) => {
       if (!activeGroup) return;
-      store.updateGroup({ ...activeGroup, studyFilter: filter });
+      store.setStudyFilter(activeGroup.id, filter);
+    },
+    onCardOrderChange: (order: CardOrder) => {
+      if (!activeGroup) return;
+      store.setCardOrder(activeGroup.id, order);
     },
     onModeChange: (modeId: string) => {
       if (!activeGroup) return;
-      store.updateGroup({ ...activeGroup, activeModeId: modeId });
+      store.setActiveStudyMode(activeGroup.id, modeId);
     },
     openCreateModeDialog: () => {
       setEditingModeId(null);

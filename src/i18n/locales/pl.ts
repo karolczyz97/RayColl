@@ -151,6 +151,10 @@ export const pl: Record<string, string> = {
   'settings.reorder_columns': 'Zmień kolejność kolumn',
   'settings.active_mode': 'Aktywny tryb nauki',
   'settings.study_scope': 'Zakres nauki',
+  'settings.card_order': 'Kolejność kart',
+  'settings.card_order.sequential': 'Po kolei',
+  'settings.card_order.random': 'Losowo',
+  'settings.card_order.hardest': 'Od najtrudniejszych',
   'settings.which_cards': 'Które fiszki uczyć',
   'settings.mode_steps': 'Kroki trybu „{name}"',
   'settings.add_step_btn': 'Dodaj krok',
@@ -185,7 +189,12 @@ export const pl: Record<string, string> = {
   'app_settings.export_error': 'Eksport nie powiódł się.',
   'app_settings.import_success': 'Import zakończony!',
   'app_settings.import_error': 'Import nie powiódł się.',
+  'app_settings.reset_success': 'Dane zresetowane.',
+  'app_settings.reset_error': 'Reset nie powiódł się. Dane bez zmian.',
   'app_settings.sharing_unavailable': 'Udostępnianie niedostępne na tym urządzeniu.',
+  'app_settings.reset_btn': 'Resetuj aplikację',
+  'app_settings.reset_confirm':
+    'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
   'app_settings.lang': 'Język',
   'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
   'app_settings.dynamic_colors.desc':
@@ -238,6 +247,7 @@ export const pl: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Tryby nauki',
   'app_settings.study_modes.desc': 'Edytuj lub usuń tryby nauki',
+  'app_settings.study_modes.open': 'Otwórz tryby nauki',
   'study_modes.title': 'Tryby nauki',
   'study_modes.steps_count': 'Kroki: {count}',
   'study_modes.built_in': 'wbudowany',
@@ -268,6 +278,9 @@ export const pl: Record<string, string> = {
   'browse.tooltip.repetitions': 'Powtórzeń: {count}',
   'browse.tooltip.review_in': 'Powtórka za: {time}',
   'browse.delete_card': 'Usuń fiszkę',
+
+  // Danger zone in App Settings
+  'app_settings.danger_zone': 'Strefa zagrożenia',
 
   // Update notification
   'update.updated': 'Zaktualizowano aplikację',

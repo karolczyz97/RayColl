@@ -150,6 +150,10 @@ export const en: Record<string, string> = {
   'settings.reorder_columns': 'Reorder Columns',
   'settings.active_mode': 'Active Study Mode',
   'settings.study_scope': 'Study Scope',
+  'settings.card_order': 'Card order',
+  'settings.card_order.sequential': 'In order',
+  'settings.card_order.random': 'Random',
+  'settings.card_order.hardest': 'Hardest first',
   'settings.which_cards': 'Which cards to study',
   'settings.mode_steps': 'Steps of Mode "{name}"',
   'settings.add_step_btn': 'Add step',
@@ -184,7 +188,12 @@ export const en: Record<string, string> = {
   'app_settings.export_error': 'Export failed.',
   'app_settings.import_success': 'Import completed!',
   'app_settings.import_error': 'Import failed.',
+  'app_settings.reset_success': 'Data reset to defaults.',
+  'app_settings.reset_error': 'Reset failed. Your data was not changed.',
   'app_settings.sharing_unavailable': 'Sharing not available on this device.',
+  'app_settings.reset_btn': 'Reset App to Defaults',
+  'app_settings.reset_confirm':
+    'Are you sure you want to reset the app? All custom decks and statistics will be wiped.',
   'app_settings.lang': 'Language',
   'app_settings.dynamic_colors.title': 'Dynamic system colors',
   'app_settings.dynamic_colors.desc':
@@ -237,6 +246,7 @@ export const en: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Study modes',
   'app_settings.study_modes.desc': 'Edit or delete study modes',
+  'app_settings.study_modes.open': 'Open study modes',
   'study_modes.title': 'Study modes',
   'study_modes.steps_count': 'Steps: {count}',
   'study_modes.built_in': 'built-in',
@@ -267,6 +277,9 @@ export const en: Record<string, string> = {
   'browse.tooltip.repetitions': 'Repetitions: {count}',
   'browse.tooltip.review_in': 'Review in: {time}',
   'browse.delete_card': 'Delete Flashcard',
+
+  // Danger zone in App Settings
+  'app_settings.danger_zone': 'Danger Zone',
 
   // Update notification
   'update.updated': 'App updated',

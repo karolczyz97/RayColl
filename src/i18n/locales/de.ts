@@ -151,6 +151,10 @@ export const de: Record<string, string> = {
   'settings.reorder_columns': 'Spalten neu ordnen',
   'settings.active_mode': 'Aktiver Lernmodus',
   'settings.study_scope': 'Lernumfang',
+  'settings.card_order': 'Kartenreihenfolge',
+  'settings.card_order.sequential': 'Der Reihe nach',
+  'settings.card_order.random': 'Zufällig',
+  'settings.card_order.hardest': 'Schwierigste zuerst',
   'settings.which_cards': 'Welche Karten lernen',
   'settings.mode_steps': 'Schritte des Modus "{name}"',
   'settings.add_step_btn': 'Schritt hinzufügen',
@@ -184,7 +188,12 @@ export const de: Record<string, string> = {
   'app_settings.export_error': 'Export fehlgeschlagen.',
   'app_settings.import_success': 'Import erfolgreich!',
   'app_settings.import_error': 'Import fehlgeschlagen.',
+  'app_settings.reset_success': 'Daten zurückgesetzt.',
+  'app_settings.reset_error': 'Zurücksetzen fehlgeschlagen. Deine Daten wurden nicht geändert.',
   'app_settings.sharing_unavailable': 'Teilen auf diesem Gerät nicht verfügbar.',
+  'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
+  'app_settings.reset_confirm':
+    'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',
   'app_settings.lang': 'Sprache',
   'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
   'app_settings.dynamic_colors.desc':
@@ -236,6 +245,7 @@ export const de: Record<string, string> = {
   // Study modes screen
   'app_settings.study_modes': 'Lernmodi',
   'app_settings.study_modes.desc': 'Lernmodi bearbeiten oder löschen',
+  'app_settings.study_modes.open': 'Lernmodi öffnen',
   'study_modes.title': 'Lernmodi',
   'study_modes.steps_count': 'Schritte: {count}',
   'study_modes.built_in': 'integriert',
@@ -266,6 +276,9 @@ export const de: Record<string, string> = {
   'browse.tooltip.repetitions': 'Wiederholungen: {count}',
   'browse.tooltip.review_in': 'Überprüfung in: {time}',
   'browse.delete_card': 'Karteikarte löschen',
+
+  // Danger zone in App Settings
+  'app_settings.danger_zone': 'Gefahrenzone',
 
   // Update notification
   'update.updated': 'App aktualisiert',

@@ -7,6 +7,7 @@ import { useSyncedRef } from '@/hooks/useSyncedRef';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
 import { useFlashcardListEditing } from '@/features/flashcards/useFlashcardListEditing';
 import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
+import { DEFAULT_CARD_ORDER } from '@/constants/cardOrder';
 import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MIN_PAGE_COUNT } from '@/constants/pages';
 import {
   getPreviewRows,
@@ -15,10 +16,7 @@ import {
 } from './importDraftHelpers';
 import { getActiveSepValue, pickAndReadFile } from './importDraftUtils';
 import { useImportTextSync } from './useImportTextSync';
-import {
-  importDraftReducer,
-  createInitialDraftState,
-} from './importDraftReducer';
+import { importDraftReducer, createInitialDraftState } from './importDraftReducer';
 
 export function useImportDeckDraft() {
   const store = useFlashcardStore();
@@ -109,23 +107,22 @@ export function useImportDeckDraft() {
   });
 
   // --- Text sync hook ------------------------------------------------------
-  const { syncDraftFromText, applyDetectedText, syncHeaderConfigFromText } =
-    useImportTextSync({
-      debouncedRawText,
-      sepKey,
-      customSep,
-      pageCount,
-      dispatch,
-      draftRef,
-      firstRowIsHeaderRef,
-      pageNamesRef,
-      pageLangsRef,
-      headerSettingTouchedRef,
-      lastAppliedHeaderKeyRef,
-      preHeaderPageNamesRef,
-      sepTouchedRef,
-      lastSyncedKeyRef,
-    });
+  const { syncDraftFromText, applyDetectedText, syncHeaderConfigFromText } = useImportTextSync({
+    debouncedRawText,
+    sepKey,
+    customSep,
+    pageCount,
+    dispatch,
+    draftRef,
+    firstRowIsHeaderRef,
+    pageNamesRef,
+    pageLangsRef,
+    headerSettingTouchedRef,
+    lastAppliedHeaderKeyRef,
+    preHeaderPageNamesRef,
+    sepTouchedRef,
+    lastSyncedKeyRef,
+  });
 
   // --- Handlers ------------------------------------------------------------
   const handlePaste = useCallback(() => {
@@ -218,7 +215,14 @@ export function useImportDeckDraft() {
       }
       syncDraftFromText(s.rawText, activeSep, s.pageCount);
     },
-    [dispatch, draftRef, firstRowIsHeaderRef, pageNamesRef, syncDraftFromText, syncHeaderConfigFromText],
+    [
+      dispatch,
+      draftRef,
+      firstRowIsHeaderRef,
+      pageNamesRef,
+      syncDraftFromText,
+      syncHeaderConfigFromText,
+    ],
   );
 
   const handlePageNameChange = useCallback(
@@ -330,7 +334,17 @@ export function useImportDeckDraft() {
     } finally {
       setIsImporting(false);
     }
-  }, [cards, dispatch, hasSourceContent, isImportBlocked, name, pageCount, pageLangs, pageNames, store]);
+  }, [
+    cards,
+    dispatch,
+    hasSourceContent,
+    isImportBlocked,
+    name,
+    pageCount,
+    pageLangs,
+    pageNames,
+    store,
+  ]);
 
   const previewGroup = useMemo<FlashcardGroup>(
     () => ({
@@ -339,6 +353,7 @@ export function useImportDeckDraft() {
       cards: [],
       activeModeId: 'classic',
       studyFilter: DEFAULT_STUDY_FILTER,
+      cardOrder: DEFAULT_CARD_ORDER,
       pageLanguages: pageLangs.slice(0, pageCount),
       pageNames: pageNames.slice(0, pageCount),
       activePageCount: Math.min(pageCount, MAX_VISIBLE_PAGE_COUNT),
@@ -347,10 +362,7 @@ export function useImportDeckDraft() {
   );
 
   // --- Setter wrappers (compatible with external consumers) ----------------
-  const setName = useCallback(
-    (value: string) => dispatch({ type: 'SET_NAME', value }),
-    [dispatch],
-  );
+  const setName = useCallback((value: string) => dispatch({ type: 'SET_NAME', value }), [dispatch]);
   const handleNameBlur = useCallback(() => {
     setNameTouched(true);
   }, []);
@@ -359,8 +371,7 @@ export function useImportDeckDraft() {
   }, []);
   const setPageLangs = useCallback(
     (value: string[] | ((prev: string[]) => string[])) => {
-      const resolved =
-        typeof value === 'function' ? value(pageLangsRef.current) : value;
+      const resolved = typeof value === 'function' ? value(pageLangsRef.current) : value;
       pageLangsRef.current = resolved;
       dispatch({ type: 'SET_PAGE_LANGS', value: resolved });
     },

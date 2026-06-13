@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, List, SegmentedButtons, Text, useTheme } from 'react-native-paper';
+import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { ROUTES } from '@/constants/routes';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
@@ -145,16 +145,20 @@ export function AppSettingsScreen() {
       </AnimatedSection>
 
       <AnimatedSection order={4}>
-        <SectionCard>
-          <List.Item
-            style={styles.linkItem}
-            title={t('app_settings.study_modes')}
-            description={t('app_settings.study_modes.desc')}
-            right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => router.navigate(ROUTES.STUDY_MODES)}
-            accessibilityRole="button"
-            accessibilityLabel={t('app_settings.study_modes')}
-          />
+        <SectionCard title={t('app_settings.study_modes')}>
+          <Text variant="bodyMedium" style={styles.mutedText}>
+            {t('app_settings.study_modes.desc')}
+          </Text>
+          <View style={styles.sectionActionRow}>
+            <Button
+              mode="contained-tonal"
+              icon="chevron-right"
+              onPress={() => router.navigate(ROUTES.STUDY_MODES)}
+              accessibilityLabel={t('app_settings.study_modes')}
+            >
+              {t('app_settings.study_modes.open')}
+            </Button>
+          </View>
         </SectionCard>
       </AnimatedSection>
 
@@ -214,10 +218,6 @@ const styles = StyleSheet.create({
   segmentedButtons: {
     width: '100%',
   },
-  linkItem: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-  },
   mutedText: {
     marginBottom: TOKENS.spacing.md,
   },
@@ -231,6 +231,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  sectionActionRow: {
+    flexDirection: 'row',
   },
   versionFooter: {
     alignSelf: 'flex-end',

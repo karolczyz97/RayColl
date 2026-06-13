@@ -63,6 +63,8 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.layout.topBarHeight,
     paddingHorizontal: TOKENS.spacing.xs,
     gap: TOKENS.spacing.sm,
+    borderBottomLeftRadius: TOKENS.radius.xl,
+    borderBottomRightRadius: TOKENS.radius.xl,
   },
   leftGroup: {
     flex: 1,
