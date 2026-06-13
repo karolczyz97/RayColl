@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
 
 import { createAppTheme } from '../../../theme/createAppTheme';
+import { getReviewStatusColor } from '../../../theme/semanticColors';
 import { ExpressiveButtonGroup } from '../ExpressiveButtonGroup';
 
 const theme = createAppTheme({ isDark: false, useSystemColors: false });
@@ -21,11 +22,16 @@ function renderGroup(value: string, onValueChange: (value: string) => void) {
   );
 }
 
+const srsNew = getReviewStatusColor(theme, 'new');
+const srsLearning = getReviewStatusColor(theme, 'learning');
+const srsReview = getReviewStatusColor(theme, 'review');
+const srsMastered = getReviewStatusColor(theme, 'mastered');
+
 const MULTI_BUTTONS = [
-  { value: 'new', label: '5', icon: 'new-box', selectedBg: '#c2d9ff', selectedContent: '#1b4fa8' },
-  { value: 'learning', label: '3', icon: 'book-open-variant', selectedBg: '#f4dd87', selectedContent: '#8a6d00' },
-  { value: 'review', label: '2', icon: 'refresh', selectedBg: '#ffcfa8', selectedContent: '#b4480f' },
-  { value: 'mastered', label: '10', icon: 'trophy-outline', selectedBg: '#c2f0d9', selectedContent: '#0c6e4c' },
+  { value: 'new', label: '5', icon: 'new-box', selectedBg: srsNew.bg, selectedContent: srsNew.fg },
+  { value: 'learning', label: '3', icon: 'book-open-variant', selectedBg: srsLearning.bg, selectedContent: srsLearning.fg },
+  { value: 'review', label: '2', icon: 'refresh', selectedBg: srsReview.bg, selectedContent: srsReview.fg },
+  { value: 'mastered', label: '10', icon: 'trophy-outline', selectedBg: srsMastered.bg, selectedContent: srsMastered.fg },
 ];
 
 function renderMultiGroup(value: string[], onValueChange: (v: string) => void) {
