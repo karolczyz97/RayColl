@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { HelperText } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '@/types/models';
 import { useI18n, type TranslationFn } from '@/i18n';
@@ -56,7 +56,7 @@ export function StudyModeEditor({
   };
 
   return (
-    <>
+    <View style={styles.container}>
       {!mode.isBuiltIn && (
         <SectionCard>
           <AppTextInput
@@ -84,12 +84,16 @@ export function StudyModeEditor({
         onResetMode={onResetMode}
         formatStepSummary={formatStepSummary}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    gap: TOKENS.spacing.lg,
+    width: '100%',
+  },
   nameInput: {
-    marginBottom: TOKENS.spacing.xs,
+    marginBottom: 0,
   },
 });

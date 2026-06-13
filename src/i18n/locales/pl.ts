@@ -2,6 +2,10 @@ export const pl: Record<string, string> = {
   // Common
   'app.title': 'RayColl',
   'nav.dashboard': 'Panel',
+  'route.study': 'Nauka',
+  'route.browse': 'Przegląd fiszek',
+  'route.deck_settings': 'Ustawienia zestawu',
+  'route.study_mode_detail': 'Edycja trybu nauki',
   'btn.cancel': 'Anuluj',
   'btn.save': 'Zapisz',
   'btn.add': 'Dodaj',
@@ -16,14 +20,17 @@ export const pl: Record<string, string> = {
     'Masz lokalne talie z poprzedniej sesji. Czy chcesz przenieść je na konto, czy zacząć od nowa?',
   'auth.migration.migrate_btn': 'Przenieś na konto',
   'auth.migration.fresh_btn': 'Zacznij od nowa',
-  'auth.error.not_configured': 'Logowanie nie jest skonfigurowane. Aplikacja działa w trybie lokalnym.',
-  'auth.error.play_services': 'Usługi Google Play są niedostępne lub nieaktualne. Zaktualizuj je i spróbuj ponownie.',
+  'auth.error.not_configured':
+    'Logowanie nie jest skonfigurowane. Aplikacja działa w trybie lokalnym.',
+  'auth.error.play_services':
+    'Usługi Google Play są niedostępne lub nieaktualne. Zaktualizuj je i spróbuj ponownie.',
   'auth.error.no_token': 'Brak tokena logowania. Spróbuj ponownie.',
   'auth.error.invalid_token': 'Token logowania nieprawidłowy. Spróbuj ponownie.',
   'auth.error.login_failed': 'Logowanie nie powiodło się. Spróbuj ponownie.',
   'sync.status.saving': 'Zapisywanie zmian...',
   'sync.status.syncing': 'Synchronizowanie zmian...',
-  'sync.status.offline': 'Tryb offline — zmiany są zapisywane na tym urządzeniu i zsynchronizują się po odzyskaniu połączenia.',
+  'sync.status.offline':
+    'Tryb offline — zmiany są zapisywane na tym urządzeniu i zsynchronizują się po odzyskaniu połączenia.',
   'dialog.delete.title': 'Czy na pewno?',
   'dialog.delete.desc': 'Tej operacji nie można cofnąć.',
   'dialog.delete_permanent.title': 'Usunąć trwale?',
@@ -178,12 +185,7 @@ export const pl: Record<string, string> = {
   'app_settings.export_error': 'Eksport nie powiódł się.',
   'app_settings.import_success': 'Import zakończony!',
   'app_settings.import_error': 'Import nie powiódł się.',
-  'app_settings.reset_success': 'Dane zresetowane.',
-  'app_settings.reset_error': 'Reset nie powiódł się. Dane bez zmian.',
   'app_settings.sharing_unavailable': 'Udostępnianie niedostępne na tym urządzeniu.',
-  'app_settings.reset_btn': 'Resetuj aplikację',
-  'app_settings.reset_confirm':
-    'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
   'app_settings.lang': 'Język',
   'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
   'app_settings.dynamic_colors.desc':
@@ -202,7 +204,6 @@ export const pl: Record<string, string> = {
   'archive.auto_delete_today': 'Usuwa się dzisiaj',
   'archive.delete_permanently': 'Usuń trwale',
   'archive.decks_count': '{count} zarchiwizowanych',
-
 
   // Mode names
   'mode.classic.name': 'Klasyczny',
@@ -242,7 +243,8 @@ export const pl: Record<string, string> = {
   'study_modes.built_in': 'wbudowany',
   'study_modes.name_label': 'Nazwa trybu',
   'study_modes.delete_title': 'Usuń tryb',
-  'study_modes.delete_message': 'Usunąć tryb „{name}"? Talie, które go używają, wrócą do trybu domyślnego.',
+  'study_modes.delete_message':
+    'Usunąć tryb „{name}"? Talie, które go używają, wrócą do trybu domyślnego.',
 
   // Study Filters
   'filter.new_review': 'Nowe + Powtórki',
@@ -266,9 +268,6 @@ export const pl: Record<string, string> = {
   'browse.tooltip.repetitions': 'Powtórzeń: {count}',
   'browse.tooltip.review_in': 'Powtórka za: {time}',
   'browse.delete_card': 'Usuń fiszkę',
-
-  // Danger zone in App Settings
-  'app_settings.danger_zone': 'Strefa zagrożenia',
 
   // Update notification
   'update.updated': 'Zaktualizowano aplikację',

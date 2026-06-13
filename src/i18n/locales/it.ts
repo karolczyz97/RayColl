@@ -2,6 +2,10 @@ export const it: Record<string, string> = {
   // Common
   'app.title': 'RayColl',
   'nav.dashboard': 'Dashboard',
+  'route.study': 'Studio',
+  'route.browse': 'Sfoglia le carte',
+  'route.deck_settings': 'Impostazioni mazzo',
+  'route.study_mode_detail': 'Modifica modalita di studio',
   'btn.cancel': 'Annulla',
   'btn.save': 'Salva',
   'btn.add': 'Aggiungi',
@@ -14,22 +18,26 @@ export const it: Record<string, string> = {
   'auth.migration.title': 'Dati locali trovati',
   'auth.migration.desc':
     'Hai mazzi locali da una sessione precedente. Vuoi trasferirli sul tuo account o ricominciare da zero?',
-  'auth.migration.migrate_btn': 'Trasferisci sull\'account',
+  'auth.migration.migrate_btn': "Trasferisci sull'account",
   'auth.migration.fresh_btn': 'Ricominciare da zero',
-  'auth.error.not_configured': 'Accesso non configurato. L\'app funziona in modalità locale.',
-  'auth.error.play_services': 'I servizi Google Play non sono disponibili o non sono aggiornati. Aggiornali e riprova.',
+  'auth.error.not_configured': "Accesso non configurato. L'app funziona in modalità locale.",
+  'auth.error.play_services':
+    'I servizi Google Play non sono disponibili o non sono aggiornati. Aggiornali e riprova.',
   'auth.error.no_token': 'Nessun token di accesso ricevuto. Riprova.',
   'auth.error.invalid_token': 'Token di accesso non valido. Riprova.',
   'auth.error.login_failed': 'Accesso fallito. Riprova.',
   'sync.status.saving': 'Salvataggio delle modifiche...',
   'sync.status.syncing': 'Sincronizzazione delle modifiche...',
-  'sync.status.offline': 'Modalità offline — le modifiche vengono salvate su questo dispositivo e verranno sincronizzate quando tornerai online.',
+  'sync.status.offline':
+    'Modalità offline — le modifiche vengono salvate su questo dispositivo e verranno sincronizzate quando tornerai online.',
   'dialog.delete.title': 'Sei sicuro?',
   'dialog.delete.desc': 'Questa azione non può essere annullata.',
   'dialog.delete_permanent.title': 'Eliminare permanentemente?',
-  'dialog.delete_permanent.desc': 'Il mazzo "{name}" sarà eliminato permanentemente. Non può essere annullato.',
+  'dialog.delete_permanent.desc':
+    'Il mazzo "{name}" sarà eliminato permanentemente. Non può essere annullato.',
   'dialog.archive.title': 'Archiviare questo mazzo?',
-  'dialog.archive.confirm': 'Il mazzo sarà spostato in Archivio ed eliminato permanentemente dopo {days} giorni. Puoi ripristinarlo prima.',
+  'dialog.archive.confirm':
+    'Il mazzo sarà spostato in Archivio ed eliminato permanentemente dopo {days} giorni. Puoi ripristinarlo prima.',
   'dialog.restore.title': 'Ripristinare "{name}"?',
   'dialog.restore.desc': 'Il mazzo "{name}" tornerà alla lista principale.',
   'btn.archive': 'Archivia',
@@ -69,7 +77,7 @@ export const it: Record<string, string> = {
   'study.back_to_panel': 'Torna al pannello',
   'study.recognized': 'Riconosciuto:',
   'study.tap_to_reveal': 'Tocca per rivelare',
-  'study.error.stt': 'Riconoscimento vocale non riuscito. Controlla l\'accesso al microfono.',
+  'study.error.stt': "Riconoscimento vocale non riuscito. Controlla l'accesso al microfono.",
   'study.error.tts': 'Riproduzione audio non riuscita.',
   'study.exit_confirm_title': 'Uscire dalla modalità studio?',
   'study.exit_confirm_message': 'Sei in modalità studio. Vuoi davvero uscire?',
@@ -176,12 +184,7 @@ export const it: Record<string, string> = {
   'app_settings.export_error': 'Esportazione non riuscita.',
   'app_settings.import_success': 'Import completato!',
   'app_settings.import_error': 'Import non riuscito.',
-  'app_settings.reset_success': 'Dati ripristinati.',
-  'app_settings.reset_error': 'Ripristino non riuscito. I tuoi dati non sono stati modificati.',
   'app_settings.sharing_unavailable': 'Condivisione non disponibile su questo dispositivo.',
-  'app_settings.reset_btn': 'Ripristina app',
-  'app_settings.reset_confirm':
-    "Sei sicuro di voler ripristinare l'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.",
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colori dinamici del sistema',
   'app_settings.dynamic_colors.desc':
@@ -238,7 +241,8 @@ export const it: Record<string, string> = {
   'study_modes.built_in': 'integrata',
   'study_modes.name_label': 'Nome della modalità',
   'study_modes.delete_title': 'Elimina modalità',
-  'study_modes.delete_message': 'Eliminare la modalità "{name}"? I mazzi che la usano torneranno alla modalità predefinita.',
+  'study_modes.delete_message':
+    'Eliminare la modalità "{name}"? I mazzi che la usano torneranno alla modalità predefinita.',
 
   // Study Filters
   'filter.new_review': 'Nuove + in scadenza',
@@ -262,9 +266,6 @@ export const it: Record<string, string> = {
   'browse.tooltip.repetitions': 'Ripetizioni: {count}',
   'browse.tooltip.review_in': 'Ripasso tra: {time}',
   'browse.delete_card': 'Elimina flashcard',
-
-  // Danger zone in App Settings
-  'app_settings.danger_zone': 'Zona di pericolo',
 
   // Update notification
   'update.updated': 'App aggiornata',

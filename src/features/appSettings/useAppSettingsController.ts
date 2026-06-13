@@ -35,7 +35,6 @@ export function useAppSettingsController() {
     useAppTheme();
   const { formMaxWidth } = useResponsiveLayout();
   const [isImporting, setIsImporting] = useState(false);
-  const [resetVisible, setResetVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [changelogVisible, setChangelogVisible] = useState(false);
 
@@ -90,7 +89,10 @@ export function useAppSettingsController() {
         setSnackbarMessage(t('app_settings.sharing_unavailable'));
         return;
       }
-      await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: `${APP_NAME} Backup` });
+      await shareAsync(file.uri, {
+        mimeType: 'application/json',
+        dialogTitle: `${APP_NAME} Backup`,
+      });
     } catch (error) {
       console.warn('Export failed:', error);
       setSnackbarMessage(t('app_settings.export_error'));
@@ -126,31 +128,18 @@ export function useAppSettingsController() {
     }
   }, [isImporting, store, t]);
 
-  const handleResetConfirm = useCallback(async () => {
-    setResetVisible(false);
-    try {
-      await store.resetToDefault();
-      setSnackbarMessage(t('app_settings.reset_success'));
-    } catch {
-      setSnackbarMessage(t('app_settings.reset_error'));
-    }
-  }, [store, t]);
-
   return {
     changelogVisible,
     formMaxWidth,
     handleBack: navigateUp,
     handleExport,
     handleImportFromFile,
-    handleResetConfirm,
     handleTtsRateChange,
     isImporting,
     isLoading: store.isLoading,
     language,
-    resetVisible,
     setChangelogVisible,
     setLanguage,
-    setResetVisible,
     setSnackbarMessage,
     setThemePref,
     setUseSystemColors,

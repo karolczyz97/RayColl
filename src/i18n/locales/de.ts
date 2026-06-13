@@ -2,6 +2,10 @@ export const de: Record<string, string> = {
   // Common
   'app.title': 'RayColl',
   'nav.dashboard': 'Dashboard',
+  'route.study': 'Lernen',
+  'route.browse': 'Karten durchsuchen',
+  'route.deck_settings': 'Deck-Einstellungen',
+  'route.study_mode_detail': 'Lernmodus bearbeiten',
   'btn.cancel': 'Abbrechen',
   'btn.save': 'Speichern',
   'btn.add': 'Hinzufügen',
@@ -17,19 +21,23 @@ export const de: Record<string, string> = {
   'auth.migration.migrate_btn': 'Auf Konto übertragen',
   'auth.migration.fresh_btn': 'Neu beginnen',
   'auth.error.not_configured': 'Anmeldung ist nicht konfiguriert. Die App läuft im lokalen Modus.',
-  'auth.error.play_services': 'Google Play-Dienste sind nicht verfügbar oder veraltet. Bitte aktualisieren und erneut versuchen.',
+  'auth.error.play_services':
+    'Google Play-Dienste sind nicht verfügbar oder veraltet. Bitte aktualisieren und erneut versuchen.',
   'auth.error.no_token': 'Kein Anmeldetoken erhalten. Bitte erneut versuchen.',
   'auth.error.invalid_token': 'Ungültiges Anmeldetoken. Bitte erneut versuchen.',
   'auth.error.login_failed': 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   'sync.status.saving': 'Änderungen werden gespeichert...',
   'sync.status.syncing': 'Änderungen werden synchronisiert...',
-  'sync.status.offline': 'Offline-Modus — Änderungen werden auf diesem Gerät gespeichert und synchronisiert, sobald du wieder online bist.',
+  'sync.status.offline':
+    'Offline-Modus — Änderungen werden auf diesem Gerät gespeichert und synchronisiert, sobald du wieder online bist.',
   'dialog.delete.title': 'Sind Sie sicher?',
   'dialog.delete.desc': 'Diese Aktion kann nicht rückgängig gemacht werden.',
   'dialog.delete_permanent.title': 'Endgültig löschen?',
-  'dialog.delete_permanent.desc': 'Das Deck "{name}" wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.',
+  'dialog.delete_permanent.desc':
+    'Das Deck "{name}" wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.',
   'dialog.archive.title': 'Deck archivieren?',
-  'dialog.archive.confirm': 'Das Deck wird ins Archiv verschoben und nach {days} Tagen endgültig gelöscht. Du kannst es vorher wiederherstellen.',
+  'dialog.archive.confirm':
+    'Das Deck wird ins Archiv verschoben und nach {days} Tagen endgültig gelöscht. Du kannst es vorher wiederherstellen.',
   'dialog.restore.title': '"{name}" wiederherstellen?',
   'dialog.restore.desc': 'Das Deck "{name}" kehrt zur Hauptliste zurück.',
   'btn.archive': 'Archivieren',
@@ -176,12 +184,7 @@ export const de: Record<string, string> = {
   'app_settings.export_error': 'Export fehlgeschlagen.',
   'app_settings.import_success': 'Import erfolgreich!',
   'app_settings.import_error': 'Import fehlgeschlagen.',
-  'app_settings.reset_success': 'Daten zurückgesetzt.',
-  'app_settings.reset_error': 'Zurücksetzen fehlgeschlagen. Deine Daten wurden nicht geändert.',
   'app_settings.sharing_unavailable': 'Teilen auf diesem Gerät nicht verfügbar.',
-  'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
-  'app_settings.reset_confirm':
-    'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',
   'app_settings.lang': 'Sprache',
   'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
   'app_settings.dynamic_colors.desc':
@@ -238,7 +241,8 @@ export const de: Record<string, string> = {
   'study_modes.built_in': 'integriert',
   'study_modes.name_label': 'Modusname',
   'study_modes.delete_title': 'Modus löschen',
-  'study_modes.delete_message': 'Modus „{name}" löschen? Decks, die ihn verwenden, nutzen wieder den Standardmodus.',
+  'study_modes.delete_message':
+    'Modus „{name}" löschen? Decks, die ihn verwenden, nutzen wieder den Standardmodus.',
 
   // Study Filters
   'filter.new_review': 'Neue + Fällige zur Überprüfung',
@@ -262,9 +266,6 @@ export const de: Record<string, string> = {
   'browse.tooltip.repetitions': 'Wiederholungen: {count}',
   'browse.tooltip.review_in': 'Überprüfung in: {time}',
   'browse.delete_card': 'Karteikarte löschen',
-
-  // Danger zone in App Settings
-  'app_settings.danger_zone': 'Gefahrenzone',
 
   // Update notification
   'update.updated': 'App aktualisiert',

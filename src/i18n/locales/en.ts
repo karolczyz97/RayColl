@@ -2,6 +2,10 @@ export const en: Record<string, string> = {
   // Common
   'app.title': 'RayColl',
   'nav.dashboard': 'Dashboard',
+  'route.study': 'Study',
+  'route.browse': 'Browse cards',
+  'route.deck_settings': 'Deck settings',
+  'route.study_mode_detail': 'Edit study mode',
   'btn.cancel': 'Cancel',
   'btn.save': 'Save',
   'btn.add': 'Add',
@@ -17,13 +21,15 @@ export const en: Record<string, string> = {
   'auth.migration.migrate_btn': 'Transfer to account',
   'auth.migration.fresh_btn': 'Start fresh',
   'auth.error.not_configured': 'Sign-in is not configured. The app works in local mode.',
-  'auth.error.play_services': 'Google Play Services are unavailable or outdated. Please update them and try again.',
+  'auth.error.play_services':
+    'Google Play Services are unavailable or outdated. Please update them and try again.',
   'auth.error.no_token': 'No login token received. Please try again.',
   'auth.error.invalid_token': 'Invalid login token. Please try again.',
   'auth.error.login_failed': 'Login failed. Please try again.',
   'sync.status.saving': 'Saving changes...',
   'sync.status.syncing': 'Syncing changes...',
-  'sync.status.offline': 'Offline mode — changes are saved on this device and will sync when you\'re back online.',
+  'sync.status.offline':
+    "Offline mode — changes are saved on this device and will sync when you're back online.",
   'dialog.delete.title': 'Are you sure?',
   'dialog.delete.desc': 'This action cannot be undone.',
   'dialog.delete_permanent.title': 'Delete permanently?',
@@ -178,12 +184,7 @@ export const en: Record<string, string> = {
   'app_settings.export_error': 'Export failed.',
   'app_settings.import_success': 'Import completed!',
   'app_settings.import_error': 'Import failed.',
-  'app_settings.reset_success': 'Data reset to defaults.',
-  'app_settings.reset_error': 'Reset failed. Your data was not changed.',
   'app_settings.sharing_unavailable': 'Sharing not available on this device.',
-  'app_settings.reset_btn': 'Reset App to Defaults',
-  'app_settings.reset_confirm':
-    'Are you sure you want to reset the app? All custom decks and statistics will be wiped.',
   'app_settings.lang': 'Language',
   'app_settings.dynamic_colors.title': 'Dynamic system colors',
   'app_settings.dynamic_colors.desc':
@@ -202,7 +203,6 @@ export const en: Record<string, string> = {
   'archive.auto_delete_today': 'Deletes today',
   'archive.delete_permanently': 'Delete permanently',
   'archive.decks_count': '{count} archived',
-
 
   // Mode names
   'mode.classic.name': 'Classic',
@@ -242,7 +242,8 @@ export const en: Record<string, string> = {
   'study_modes.built_in': 'built-in',
   'study_modes.name_label': 'Mode name',
   'study_modes.delete_title': 'Delete mode',
-  'study_modes.delete_message': 'Delete mode "{name}"? Decks using it will fall back to the default mode.',
+  'study_modes.delete_message':
+    'Delete mode "{name}"? Decks using it will fall back to the default mode.',
 
   // Study Filters
   'filter.new_review': 'New + due for review',
@@ -266,9 +267,6 @@ export const en: Record<string, string> = {
   'browse.tooltip.repetitions': 'Repetitions: {count}',
   'browse.tooltip.review_in': 'Review in: {time}',
   'browse.delete_card': 'Delete Flashcard',
-
-  // Danger zone in App Settings
-  'app_settings.danger_zone': 'Danger Zone',
 
   // Update notification
   'update.updated': 'App updated',

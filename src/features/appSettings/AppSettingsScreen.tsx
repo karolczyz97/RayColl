@@ -3,7 +3,6 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, List, SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { ROUTES } from '@/constants/routes';
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
 import { AppSelect } from '@/components/AppSelect';
@@ -15,7 +14,11 @@ import { isThemePref } from '@/contexts/UserPreferencesContext';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { ChangelogDialog } from '@/components/feedback/ChangelogDialog';
-import { LANGUAGE_OPTIONS, isLanguageCode, useAppSettingsController } from './useAppSettingsController';
+import {
+  LANGUAGE_OPTIONS,
+  isLanguageCode,
+  useAppSettingsController,
+} from './useAppSettingsController';
 
 export function AppSettingsScreen() {
   const { t } = useI18n();
@@ -26,15 +29,12 @@ export function AppSettingsScreen() {
     handleBack,
     handleExport,
     handleImportFromFile,
-    handleResetConfirm,
     handleTtsRateChange,
     isImporting,
     isLoading,
     language,
-    resetVisible,
     setChangelogVisible,
     setLanguage,
-    setResetVisible,
     setSnackbarMessage,
     setThemePref,
     setUseSystemColors,
@@ -51,11 +51,7 @@ export function AppSettingsScreen() {
   }
 
   return (
-    <AppScreen
-      title={t('app_settings.title')}
-      onBack={handleBack}
-      maxWidth={formMaxWidth}
-    >
+    <AppScreen title={t('app_settings.title')} onBack={handleBack} maxWidth={formMaxWidth}>
       <SyncStatusBanner
         syncStatus={store.syncStatus}
         lastSyncError={store.lastSyncError}
@@ -154,7 +150,6 @@ export function AppSettingsScreen() {
             style={styles.linkItem}
             title={t('app_settings.study_modes')}
             description={t('app_settings.study_modes.desc')}
-            left={(props) => <List.Icon {...props} icon="school-outline" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => router.navigate(ROUTES.STUDY_MODES)}
             accessibilityRole="button"
@@ -187,17 +182,6 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection order={6}>
-        <SectionCard title={t('app_settings.danger_zone')} danger>
-          <Text variant="bodySmall" style={styles.mutedText}>
-            {t('app_settings.reset_confirm')}
-          </Text>
-          <Button mode="contained" onPress={() => setResetVisible(true)}>
-            {t('app_settings.reset_btn')}
-          </Button>
-        </SectionCard>
-      </AnimatedSection>
-
       <TouchableOpacity
         style={styles.versionFooter}
         onPress={() => setChangelogVisible(true)}
@@ -216,17 +200,6 @@ export function AppSettingsScreen() {
         ))}
       </TouchableOpacity>
       <ChangelogDialog visible={changelogVisible} onDismiss={() => setChangelogVisible(false)} />
-
-      <ConfirmDialog
-        visible={resetVisible}
-        onDismiss={() => setResetVisible(false)}
-        onConfirm={handleResetConfirm}
-        title={t('app_settings.reset_btn')}
-        message={t('app_settings.reset_confirm')}
-        confirmLabel={t('app_settings.reset_btn')}
-        cancelLabel={t('btn.cancel')}
-        destructive
-      />
 
       <AppSnackbar
         visible={!!snackbarMessage}

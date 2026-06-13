@@ -14,7 +14,12 @@ interface StudyModeSelectorProps {
   onCreateMode?: () => void;
 }
 
-export function StudyModeSelector({ activeModeId, onModeChange, studyModes, onCreateMode }: StudyModeSelectorProps) {
+export function StudyModeSelector({
+  activeModeId,
+  onModeChange,
+  studyModes,
+  onCreateMode,
+}: StudyModeSelectorProps) {
   const { t } = useI18n();
   const options = studyModes.map((mode) => ({
     label: getModeName(t, mode.id, mode.name),
@@ -52,18 +57,16 @@ export function StudyModeSelector({ activeModeId, onModeChange, studyModes, onCr
 
 const styles = StyleSheet.create({
   container: {
-    gap: TOKENS.spacing.xs,
+    gap: TOKENS.spacing.md,
     width: '100%',
   },
   sectionTitle: {
     fontWeight: TOKENS.typography.weight.bold,
-    marginBottom: TOKENS.spacing.xs,
   },
   selectorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    marginBottom: TOKENS.spacing.md,
   },
   selectWrapper: {
     flex: 1,

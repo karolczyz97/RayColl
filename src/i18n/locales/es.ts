@@ -2,6 +2,10 @@ export const es: Record<string, string> = {
   // Common
   'app.title': 'RayColl',
   'nav.dashboard': 'Panel',
+  'route.study': 'Estudiar',
+  'route.browse': 'Explorar tarjetas',
+  'route.deck_settings': 'Ajustes del mazo',
+  'route.study_mode_detail': 'Editar modo de estudio',
   'btn.cancel': 'Cancelar',
   'btn.save': 'Guardar',
   'btn.add': 'Añadir',
@@ -17,19 +21,23 @@ export const es: Record<string, string> = {
   'auth.migration.migrate_btn': 'Transferir a la cuenta',
   'auth.migration.fresh_btn': 'Empezar desde cero',
   'auth.error.not_configured': 'Inicio de sesión no configurado. La app funciona en modo local.',
-  'auth.error.play_services': 'Los servicios de Google Play no están disponibles o están desactualizados. Actualízalos e inténtalo de nuevo.',
+  'auth.error.play_services':
+    'Los servicios de Google Play no están disponibles o están desactualizados. Actualízalos e inténtalo de nuevo.',
   'auth.error.no_token': 'No se recibió token de inicio de sesión. Inténtalo de nuevo.',
   'auth.error.invalid_token': 'Token de inicio de sesión no válido. Inténtalo de nuevo.',
   'auth.error.login_failed': 'Error de inicio de sesión. Inténtalo de nuevo.',
   'sync.status.saving': 'Guardando cambios...',
   'sync.status.syncing': 'Sincronizando cambios...',
-  'sync.status.offline': 'Modo sin conexión — los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.',
+  'sync.status.offline':
+    'Modo sin conexión — los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.',
   'dialog.delete.title': '¿Estás seguro?',
   'dialog.delete.desc': 'Esta acción no se puede deshacer.',
   'dialog.delete_permanent.title': '¿Eliminar permanentemente?',
-  'dialog.delete_permanent.desc': 'El mazo "{name}" será eliminado permanentemente. Esto no se puede deshacer.',
+  'dialog.delete_permanent.desc':
+    'El mazo "{name}" será eliminado permanentemente. Esto no se puede deshacer.',
   'dialog.archive.title': '¿Archivar este mazo?',
-  'dialog.archive.confirm': 'El mazo se moverá al Archivo y se eliminará permanentemente después de {days} días. Puedes restaurarlo antes.',
+  'dialog.archive.confirm':
+    'El mazo se moverá al Archivo y se eliminará permanentemente después de {days} días. Puedes restaurarlo antes.',
   'dialog.restore.title': '¿Restaurar "{name}"?',
   'dialog.restore.desc': 'El mazo "{name}" volverá a la lista principal.',
   'btn.archive': 'Archivar',
@@ -176,12 +184,7 @@ export const es: Record<string, string> = {
   'app_settings.export_error': 'Export fallido.',
   'app_settings.import_success': '¡Import completado!',
   'app_settings.import_error': 'Import fallido.',
-  'app_settings.reset_success': 'Datos restablecidos.',
-  'app_settings.reset_error': 'No se pudo restablecer. Tus datos no se modificaron.',
   'app_settings.sharing_unavailable': 'Compartir no disponible en este dispositivo.',
-  'app_settings.reset_btn': 'Restablecer aplicación',
-  'app_settings.reset_confirm':
-    '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
   'app_settings.dynamic_colors.desc':
@@ -238,7 +241,8 @@ export const es: Record<string, string> = {
   'study_modes.built_in': 'integrado',
   'study_modes.name_label': 'Nombre del modo',
   'study_modes.delete_title': 'Eliminar modo',
-  'study_modes.delete_message': '¿Eliminar el modo "{name}"? Los mazos que lo usan volverán al modo predeterminado.',
+  'study_modes.delete_message':
+    '¿Eliminar el modo "{name}"? Los mazos que lo usan volverán al modo predeterminado.',
 
   // Study Filters
   'filter.new_review': 'Nuevas + pendientes de repaso',
@@ -262,9 +266,6 @@ export const es: Record<string, string> = {
   'browse.tooltip.repetitions': 'Repeticiones: {count}',
   'browse.tooltip.review_in': 'Repaso en: {time}',
   'browse.delete_card': 'Eliminar tarjeta',
-
-  // Danger zone in App Settings
-  'app_settings.danger_zone': 'Zona de peligro',
 
   // Update notification
   'update.updated': 'App actualizada',

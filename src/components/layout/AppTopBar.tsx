@@ -23,12 +23,7 @@ interface AppTopBarProps {
  * slot at the far right. The bar spans the full width of the app shell and
  * stays fixed while the content region below it scrolls.
  */
-export function AppTopBar({
-  title,
-  onBack,
-  right,
-  brand,
-}: AppTopBarProps) {
+export function AppTopBar({ title, onBack, right, brand }: AppTopBarProps) {
   const theme = useTheme();
   const { bg, fg } = getTopBarColors(theme);
 
@@ -48,11 +43,12 @@ export function AppTopBar({
             accessibilityLabel="Go back"
           />
         ) : null}
-        {brand ?? (title ? (
-          <Text variant="titleLarge" style={[styles.title, { color: fg }]} numberOfLines={1}>
-            {title}
-          </Text>
-        ) : null)}
+        {brand ??
+          (title ? (
+            <Text variant="titleLarge" style={[styles.title, { color: fg }]} numberOfLines={1}>
+              {title}
+            </Text>
+          ) : null)}
       </View>
       {right ? <View style={styles.rightGroup}>{right}</View> : null}
     </Animated.View>
@@ -67,8 +63,6 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.layout.topBarHeight,
     paddingHorizontal: TOKENS.spacing.xs,
     gap: TOKENS.spacing.sm,
-    borderBottomLeftRadius: TOKENS.radius.xl,
-    borderBottomRightRadius: TOKENS.radius.xl,
   },
   leftGroup: {
     flex: 1,

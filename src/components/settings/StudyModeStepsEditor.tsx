@@ -32,48 +32,50 @@ export function StudyModeStepsEditor({
   const { t } = useI18n();
 
   return (
-    <SectionCard title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}>
-        <View style={styles.stepsList}>
-          {activeMode.steps.map((step, index) => (
-            <View key={step.id ?? index}>
-              {index > 0 && <Divider style={styles.divider} />}
-              <List.Item
-                style={styles.listItem}
-                title={`${index + 1}. ${formatStepSummary(step, t)}`}
-                right={() => (
-                  <StepReorderControls
-                    index={index}
-                    isFirst={index === 0}
-                    isLast={index === activeMode.steps.length - 1}
-                    onMoveUp={() => moveStep(activeMode, index, -1)}
-                    onMoveDown={() => moveStep(activeMode, index, 1)}
-                    onDelete={() => deleteStep(activeMode, index)}
-                  />
-                )}
-              />
-            </View>
-          ))}
-        </View>
-        <View style={styles.footer}>
+    <SectionCard
+      title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}
+    >
+      <View style={styles.stepsList}>
+        {activeMode.steps.map((step, index) => (
+          <View key={step.id ?? index}>
+            {index > 0 && <Divider style={styles.divider} />}
+            <List.Item
+              style={styles.listItem}
+              title={`${index + 1}. ${formatStepSummary(step, t)}`}
+              right={() => (
+                <StepReorderControls
+                  index={index}
+                  isFirst={index === 0}
+                  isLast={index === activeMode.steps.length - 1}
+                  onMoveUp={() => moveStep(activeMode, index, -1)}
+                  onMoveDown={() => moveStep(activeMode, index, 1)}
+                  onDelete={() => deleteStep(activeMode, index)}
+                />
+              )}
+            />
+          </View>
+        ))}
+      </View>
+      <View style={styles.footer}>
+        <Button
+          icon="plus"
+          mode="text"
+          onPress={() => addStepToMode(activeMode)}
+          accessibilityLabel="Add step"
+        >
+          {t('settings.add_step_btn')}
+        </Button>
+        {hasCustomSteps && (
           <Button
-            icon="plus"
+            icon="restore"
             mode="text"
-            onPress={() => addStepToMode(activeMode)}
-            accessibilityLabel="Add step"
+            onPress={() => onResetMode(activeMode)}
+            accessibilityLabel="Reset mode to default"
           >
-            {t('settings.add_step_btn')}
+            {t('settings.reset_mode_btn')}
           </Button>
-          {hasCustomSteps && (
-            <Button
-              icon="restore"
-              mode="text"
-              onPress={() => onResetMode(activeMode)}
-              accessibilityLabel="Reset mode to default"
-            >
-              {t('settings.reset_mode_btn')}
-            </Button>
-          )}
-        </View>
+        )}
+      </View>
     </SectionCard>
   );
 }
@@ -82,13 +84,14 @@ const styles = StyleSheet.create({
   stepsList: {
     borderRadius: TOKENS.control.borderRadius,
     overflow: 'hidden',
+    marginHorizontal: -TOKENS.spacing.lg,
   },
   divider: {
-    marginVertical: TOKENS.spacing.xs,
+    marginVertical: 0,
   },
   listItem: {
-    paddingVertical: TOKENS.spacing.xs,
-    paddingHorizontal: 0,
+    paddingVertical: TOKENS.spacing.sm,
+    paddingHorizontal: TOKENS.spacing.lg,
   },
   footer: {
     flexDirection: 'row',

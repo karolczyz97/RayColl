@@ -175,7 +175,10 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
           return;
         } catch (err: unknown) {
           if (attempt === 3) {
-            console.warn('MaterialCommunityIcons font load failed after retries:', getErrorMessage(err));
+            console.warn(
+              'MaterialCommunityIcons font load failed after retries:',
+              getErrorMessage(err),
+            );
           } else {
             await new Promise((resolve) => setTimeout(resolve, attempt * 300));
           }
@@ -237,16 +240,19 @@ function AppContent() {
       <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
         <AppNavigationShell>
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="study/[groupId]" />
-            <Stack.Screen name="browse/[groupId]" />
-            <Stack.Screen name="import" />
-            <Stack.Screen name="settings/[groupId]" />
-            <Stack.Screen name="stats" />
-            <Stack.Screen name="archive" />
-            <Stack.Screen name="app-settings" />
-            <Stack.Screen name="study-modes/index" />
-            <Stack.Screen name="study-modes/[modeId]" />
+            <Stack.Screen name="index" options={{ title: t('nav.dashboard') }} />
+            <Stack.Screen name="study/[groupId]" options={{ title: t('route.study') }} />
+            <Stack.Screen name="browse/[groupId]" options={{ title: t('route.browse') }} />
+            <Stack.Screen name="import" options={{ title: t('import.title') }} />
+            <Stack.Screen name="settings/[groupId]" options={{ title: t('route.deck_settings') }} />
+            <Stack.Screen name="stats" options={{ title: t('stats.title') }} />
+            <Stack.Screen name="archive" options={{ title: t('archive.title') }} />
+            <Stack.Screen name="app-settings" options={{ title: t('app_settings.title') }} />
+            <Stack.Screen name="study-modes/index" options={{ title: t('study_modes.title') }} />
+            <Stack.Screen
+              name="study-modes/[modeId]"
+              options={{ title: t('route.study_mode_detail') }}
+            />
           </Stack>
         </AppNavigationShell>
       </View>
@@ -256,9 +262,7 @@ function AppContent() {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.webOuter, { backgroundColor: theme.colors.background }]}>
-        {content}
-      </View>
+      <View style={[styles.webOuter, { backgroundColor: theme.colors.background }]}>{content}</View>
     );
   }
 
