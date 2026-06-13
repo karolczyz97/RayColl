@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
 
 import { createAppTheme } from '../../../theme/createAppTheme';
@@ -50,11 +50,85 @@ describe('Expressive progress components', () => {
 
     expect(screen.getByLabelText('SRS progress').props.accessibilityRole).toBe('progressbar');
     expect(screen.getByTestId('expressive-progress-segment-new').props.style).toEqual(
-      expect.objectContaining({ flexGrow: 2, backgroundColor: segmentColors.new }),
+      expect.arrayContaining([
+        expect.objectContaining({ flexGrow: 2, backgroundColor: segmentColors.new }),
+      ]),
     );
     expect(screen.queryByTestId('expressive-progress-segment-empty')).toBeNull();
     expect(screen.getByTestId('expressive-progress-segment-review').props.style).toEqual(
-      expect.objectContaining({ flexGrow: 3, backgroundColor: segmentColors.review }),
+      expect.arrayContaining([
+        expect.objectContaining({ flexGrow: 3, backgroundColor: segmentColors.review }),
+      ]),
+    );
+  });
+
+  it('grows a labeled interactive segment to fit its measured label width', async () => {
+    await renderWithPaper(
+      <ExpressiveSegmentedProgress
+        segments={[
+          {
+            id: 'review',
+            value: 3,
+            color: segmentColors.review,
+            label: 'Review (3)',
+            onPress: () => {},
+          },
+        ]}
+      />,
+    );
+
+    const segment = screen.getByTestId('expressive-progress-segment-review');
+    // Before measurement, the segment falls back to the percentage floor.
+    expect(segment.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minWidth: '12.5%' })]),
+    );
+
+    // Simulate the off-screen label reporting its natural single-line width.
+    fireEvent(
+      screen.getByTestId('expressive-progress-measure-review', { includeHiddenElements: true }),
+      'layout',
+      { nativeEvent: { layout: { width: 60 } } },
+    );
+
+    // minWidth = measured width + horizontal padding + fit buffer + width slack.
+    expect(segment.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minWidth: 60 + 4 * 2 + 2 + 12 })]),
+    );
+  });
+
+  it('sizes a count + icon segment to fit the measured count plus the icon', async () => {
+    await renderWithPaper(
+      <ExpressiveSegmentedProgress
+        segments={[
+          {
+            id: 'review',
+            value: 3,
+            color: segmentColors.review,
+            label: '3',
+            icon: 'refresh',
+            onPress: () => {},
+          },
+        ]}
+      />,
+    );
+
+    const segment = screen.getByTestId('expressive-progress-segment-review');
+    // Before measurement: percentage fallback.
+    expect(segment.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minWidth: '12.5%' })]),
+    );
+
+    // Measure the count text width.
+    fireEvent(
+      screen.getByTestId('expressive-progress-measure-review', { includeHiddenElements: true }),
+      'layout',
+      { nativeEvent: { layout: { width: 10 } } },
+    );
+
+    // minWidth = countWidth + icon + gap + horizontal padding + fit buffer + slack.
+    const expectedMinWidth = 10 + 16 + 4 + 4 * 2 + 2 + 12;
+    expect(segment.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minWidth: expectedMinWidth })]),
     );
   });
 });

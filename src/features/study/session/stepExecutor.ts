@@ -45,6 +45,13 @@ async function continueIfActive(
   }
 }
 
+async function skipableSleep(context: StepRunContext, ms: number) {
+  context.skipRef.current.requested = false;
+  context.skipRef.current.armed = true;
+  await context.guardedAwait(sleep(ms));
+  context.skipRef.current.armed = false;
+}
+
 async function executeSpeakPageStep(
   card: Flashcard,
   stepIndex: number,
@@ -195,10 +202,7 @@ async function executeListenAndCheckStep(
   }
 
   // Krótka pauza, żeby wynik był widoczny (jak w listen_and_branch).
-  context.skipRef.current.requested = false;
-  context.skipRef.current.armed = true;
-  await context.guardedAwait(sleep(1200));
-  context.skipRef.current.armed = false;
+  await skipableSleep(context, 1200);
   if (context.isStale()) return;
 
   await continueIfActive(card, stepIndex + 1, context);
@@ -214,10 +218,7 @@ async function evaluateRecognition(
   fromSkip: boolean,
 ) {
   if (!fromSkip) {
-    context.skipRef.current.requested = false;
-    context.skipRef.current.armed = true;
-    await context.guardedAwait(sleep(1200));
-    context.skipRef.current.armed = false;
+    await skipableSleep(context, 1200);
     if (context.isStale()) return;
   }
 
@@ -230,10 +231,7 @@ async function evaluateRecognition(
       revealedPages: getActivePageIndexes(group),
     });
 
-    context.skipRef.current.requested = false;
-    context.skipRef.current.armed = true;
-    await context.guardedAwait(sleep(1200)); // Dłuższa pauza, żeby użytkownik mógł przeczytać odkryte karty
-    context.skipRef.current.armed = false;
+    await skipableSleep(context, 1200);
     if (context.isStale()) return;
     const autoRating = mapMatchToRating(percent);
     context.processCardReview(card, autoRating);
@@ -275,9 +273,7 @@ async function evaluateRecognition(
     const pauseMs = wasTtsCut ? CORRECTION_INTERRUPT_PAUSE_MS : correctionDuration * 2;
     await context.guardedAwait(sleep(pauseMs));
   } else {
-    context.skipRef.current.requested = false;
-    context.skipRef.current.armed = true;
-    await context.guardedAwait(sleep(2000));
+    await skipableSleep(context, 2000);
   }
   context.skipRef.current.armed = false;
 

@@ -4,6 +4,7 @@ import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useStoreActionsContext } from '@/store/StoreContexts';
 import { useI18n } from '@/i18n';
+import { formatCardCount } from '@/i18n/plural';
 import { AppCard } from '@/components/AppCard';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { computeCardStats } from '@/store/selectors/stats';
@@ -37,7 +38,7 @@ export const GroupCard = memo(function GroupCard({
   onDeletePermanently,
 }: GroupCardProps) {
   const actions = useStoreActionsContext();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const theme = useTheme();
 
   const isArchived = variant === 'archived';
@@ -59,9 +60,7 @@ export const GroupCard = memo(function GroupCard({
             variant="bodyMedium"
             style={[styles.cardSubtitle, { color: theme.colors.onSurfaceVariant }]}
           >
-            {isArchived
-              ? t('archive.cards_count', { count: group.cards.length })
-              : t('dashboard.cards_count', { count: group.cards.length })}
+            {formatCardCount(group.cards.length, language, t)}
           </Text>
           {!isArchived && dueCount > 0 && (
             <Fragment>

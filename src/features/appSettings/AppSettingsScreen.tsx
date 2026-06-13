@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
-import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
+import { Button, Text, useTheme } from 'react-native-paper';
+import { ExpressiveButtonGroup } from '@/components/expressive';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
 import { AppSelect } from '@/components/AppSelect';
@@ -79,7 +80,7 @@ export function AppSettingsScreen() {
 
       <AnimatedSection order={1}>
         <SectionCard title={t('app_settings.theme')}>
-          <SegmentedButtons
+          <ExpressiveButtonGroup
             value={themePref}
             onValueChange={(value) => {
               if (isThemePref(value)) {
@@ -95,7 +96,6 @@ export function AppSettingsScreen() {
               },
               { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
             ]}
-            style={styles.segmentedButtons}
           />
         </SectionCard>
       </AnimatedSection>
@@ -106,7 +106,7 @@ export function AppSettingsScreen() {
             <Text variant="bodyMedium" style={styles.mutedText}>
               {t('app_settings.dynamic_colors.desc')}
             </Text>
-            <SegmentedButtons
+            <ExpressiveButtonGroup
               value={useSystemColors ? 'true' : 'false'}
               onValueChange={(value) => {
                 if (value === 'true' || value === 'false') {
@@ -125,7 +125,6 @@ export function AppSettingsScreen() {
                   icon: 'palette-swatch-outline',
                 },
               ]}
-              style={styles.segmentedButtons}
             />
           </SectionCard>
         </AnimatedSection>
@@ -136,7 +135,7 @@ export function AppSettingsScreen() {
           <Text variant="bodyLarge" style={styles.valueText}>
             {ttsRate.toFixed(1)}x
           </Text>
-          <SegmentedButtons
+          <ExpressiveButtonGroup
             value={String(ttsRate)}
             onValueChange={(value) => void handleTtsRateChange(parseFloat(value))}
             buttons={[
@@ -211,9 +210,6 @@ export function AppSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  segmentedButtons: {
-    width: '100%',
-  },
   mutedText: {
     marginBottom: TOKENS.spacing.md,
   },

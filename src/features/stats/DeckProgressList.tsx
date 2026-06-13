@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useI18n } from '@/i18n';
+import { formatCardCount } from '@/i18n/plural';
 import type { FlashcardGroup } from '@/types/models';
 import type { CardStats } from '@/store/selectors/stats';
 import { computeCardStats } from '@/store/selectors/stats';
@@ -16,7 +17,7 @@ interface DeckProgressListProps {
 
 export function DeckProgressList({ groups, overallStats, totalCards }: DeckProgressListProps) {
   const theme = useTheme();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   return (
     <>
@@ -26,10 +27,10 @@ export function DeckProgressList({ groups, overallStats, totalCards }: DeckProgr
             {t('stats.overall_progress')}
           </Text>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            {t('stats.cards_count', { count: totalCards })}
+            {formatCardCount(totalCards, language, t)}
           </Text>
         </View>
-        <SegmentedProgressBar stats={overallStats} showLegend />
+        <SegmentedProgressBar stats={overallStats} showInlineLabels />
       </View>
 
       {groups.map((group) => {
@@ -42,7 +43,7 @@ export function DeckProgressList({ groups, overallStats, totalCards }: DeckProgr
                 {group.name}
               </Text>
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {t('stats.cards_count', { count: group.cards.length })}
+                {formatCardCount(group.cards.length, language, t)}
               </Text>
             </View>
             <SegmentedProgressBar stats={groupStats} />

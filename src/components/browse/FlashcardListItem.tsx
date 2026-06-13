@@ -1,16 +1,13 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Chip, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
+import type { LayoutChangeEvent } from 'react-native';
+import { Text, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '@/types/models';
 import { getCardCategory } from '@/srs/srsEngine';
 import { AppIcon } from '@/components/AppIcon';
 import { AppCard } from '@/components/AppCard';
 import { useHiddenPagesToggle } from '@/hooks/useHiddenPagesToggle';
-import {
-  SRS_CATEGORIES_TOKENS,
-  getMasteryPercent,
-  getDaysUntilReview,
-} from '@/theme/srsTokens';
+import { SRS_CATEGORIES_TOKENS, getMasteryPercent, getDaysUntilReview } from '@/theme/srsTokens';
 import { TOKENS } from '@/theme/tokens';
 import { getVisiblePages } from '@/store/selectors/pages';
 import { getReviewStatusColor } from '@/theme/semanticColors';
@@ -29,13 +26,14 @@ function srsChip(
   state: SrsState,
   theme: MD3Theme,
   t: (key: string) => string,
-): { text: string; color: string; bg: string } {
+): { text: string; icon: string; color: string; bg: string } {
   const category = getCardCategory(state);
   const token = SRS_CATEGORIES_TOKENS[category];
   const srsColors = getReviewStatusColor(theme, category);
   return {
     text: t(token.labelKey),
-    color: srsColors.color,
+    icon: token.iconName,
+    color: srsColors.fg,
     bg: srsColors.bg,
   };
 }
@@ -82,14 +80,23 @@ export function FlashcardListItem({
       <AppCard.Content style={[styles.cardContent, fill && styles.contentFill]}>
         {displayPages.map((page, i) => {
           const isHidden = i >= activeCount;
+
           return (
-            <Text
+            <View
               key={i}
-              variant="bodyMedium"
-              style={[styles.pageLine, { color: isHidden ? theme.colors.onSurfaceVariant : theme.colors.onSurface }]}
+              testID={`flashcard-page-slot-${card.id}-${i}`}
+              style={styles.pageSlot}
             >
-              {page || '—'}
-            </Text>
+              <Text
+                variant="bodyMedium"
+                style={[
+                  styles.pageLine,
+                  { color: isHidden ? theme.colors.onSurfaceVariant : theme.colors.onSurface },
+                ]}
+              >
+                {page || '—'}
+              </Text>
+            </View>
           );
         })}
 
@@ -109,12 +116,13 @@ export function FlashcardListItem({
       </AppCard.Content>
       <AppCard.Actions style={[styles.cardActions, fill && styles.cardActionsPinned]}>
         <View style={styles.cardActionsLeft}>
-          <Chip
-            style={{ backgroundColor: srs.bg }}
-            textStyle={{ color: theme.colors.onSurface }}
+          <View
+            style={[styles.srsIconBadge, { backgroundColor: srs.bg }]}
+            accessibilityRole="image"
+            accessibilityLabel={srs.text}
           >
-            {srs.text}
-          </Chip>
+            <AppIcon name={srs.icon} size={TOKENS.iconSize.sm} color={srs.color} />
+          </View>
           {card.srsState.state > 0 && (
             <View style={styles.statsIconsRow}>
               <View style={styles.statIconItem}>
@@ -180,6 +188,9 @@ const styles = StyleSheet.create({
     paddingVertical: TOKENS.spacing.sm,
     gap: TOKENS.spacing.sm,
   },
+  pageSlot: {
+    justifyContent: 'flex-start',
+  },
   pageLine: {
     flexWrap: 'wrap',
   },
@@ -205,6 +216,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: TOKENS.spacing.md,
+  },
+  // Circular tinted badge so the category icon matches the segmented bar's
+  // "colored icon on a tinted fill" look.
+  srsIconBadge: {
+    width: TOKENS.touchTarget.compact,
+    height: TOKENS.touchTarget.compact,
+    borderRadius: TOKENS.radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statsIconsRow: {
     flexDirection: 'row',

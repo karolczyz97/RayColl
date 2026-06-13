@@ -47,6 +47,10 @@ export const en: Record<string, string> = {
   'a11y.profile_menu': 'Open user profile menu',
 
   // Dashboard
+  'cards_count.one': '{count} card',
+  'cards_count.few': '{count} cards',
+  'cards_count.many': '{count} cards',
+  'cards_count.other': '{count} cards',
   'dashboard.no_groups': 'No decks found. Click + to add one.',
   'dashboard.create_title': 'Create Deck',
   'dashboard.name_label': 'Deck Name',
@@ -57,7 +61,6 @@ export const en: Record<string, string> = {
   'dashboard.tooltip.study': 'Study',
   'dashboard.tooltip.browse': 'Browse Cards',
   'dashboard.tooltip.settings': 'Deck Settings',
-  'dashboard.cards_count': '{count} cards',
 
   // Study
   'study.finished': 'Review Session Finished! 🎉',
@@ -131,7 +134,6 @@ export const en: Record<string, string> = {
   'stats.due_cards': 'Due cards',
   'stats.deck_progress': 'Deck Progress',
   'stats.overall_progress': 'Overall Progress',
-  'stats.cards_count': '{count} cards',
   'stats.day.mon': 'Mon',
   'stats.day.tue': 'Tue',
   'stats.day.wed': 'Wed',
@@ -206,7 +208,6 @@ export const en: Record<string, string> = {
   // Archive
   'archive.title': 'Archived',
   'archive.empty': 'No archived decks.',
-  'archive.cards_count': '{count} cards',
   'archive.auto_delete_in': 'Deletes in {days} days',
   'archive.auto_delete_tomorrow': 'Deletes tomorrow',
   'archive.auto_delete_today': 'Deletes today',

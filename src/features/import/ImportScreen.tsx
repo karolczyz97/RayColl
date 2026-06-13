@@ -145,6 +145,9 @@ export function ImportScreen() {
 const styles = StyleSheet.create({
   listContent: {
     gap: TOKENS.spacing.lg,
+    // Top breathing room on the scroll container itself (matches Browse), so
+    // removing any header card never leaves content stuck to the top bar.
+    paddingTop: TOKENS.spacing.lg,
     paddingHorizontal: TOKENS.spacing.lg,
     paddingBottom: TOKENS.control.height + TOKENS.spacing.xl * 2 + TOKENS.spacing.xxl,
   },

@@ -70,7 +70,7 @@ export const TOKENS = {
     height: 48,
     compactHeight: 40,
     barHeight: 8,
-    progressHeight: 4,
+    progressHeight: 6,
     borderRadius: 12,
     roundedBorderRadius: 24,
   },

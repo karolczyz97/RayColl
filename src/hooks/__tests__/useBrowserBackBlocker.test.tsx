@@ -33,12 +33,14 @@ const mockedNavigateUp = navigateUp as jest.MockedFunction<typeof navigateUp>;
 interface FakeHistory {
   back: jest.Mock;
   pushState: jest.Mock;
+  replaceState: jest.Mock;
   state: unknown;
 }
 
 let fakeHistory: FakeHistory;
 let fakeLocation: { href: string };
 let listeners: Record<string, ((event: Event) => void)[]>;
+let captureListeners: Record<string, ((event: Event) => void)[]>;
 
 function setHistoryState(state: unknown, path = '/study/group-1') {
   fakeHistory.state = state;
@@ -49,9 +51,16 @@ describe('useBrowserBackBlocker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     listeners = {};
+    captureListeners = {};
     fakeHistory = {
       back: jest.fn(),
       pushState: jest.fn((state: unknown, _title: string, href?: string | URL | null) => {
+        fakeHistory.state = state;
+        if (href) {
+          fakeLocation.href = href.toString();
+        }
+      }),
+      replaceState: jest.fn((state: unknown, _title: string, href?: string | URL | null) => {
         fakeHistory.state = state;
         if (href) {
           fakeLocation.href = href.toString();
@@ -71,19 +80,38 @@ describe('useBrowserBackBlocker', () => {
     });
     Object.defineProperty(window, 'addEventListener', {
       configurable: true,
-      value: jest.fn((type: string, listener: (event: Event) => void) => {
-        listeners[type] = [...(listeners[type] ?? []), listener];
+      value: jest.fn((
+        type: string,
+        listener: (event: Event) => void,
+        options?: boolean | AddEventListenerOptions,
+      ) => {
+        const targetListeners = options === true || (typeof options === 'object' && options.capture)
+          ? captureListeners
+          : listeners;
+        targetListeners[type] = [...(targetListeners[type] ?? []), listener];
       }),
     });
     Object.defineProperty(window, 'removeEventListener', {
       configurable: true,
-      value: jest.fn((type: string, listener: (event: Event) => void) => {
-        listeners[type] = (listeners[type] ?? []).filter((registered) => registered !== listener);
+      value: jest.fn((
+        type: string,
+        listener: (event: Event) => void,
+        options?: boolean | EventListenerOptions,
+      ) => {
+        const targetListeners = options === true || (typeof options === 'object' && options.capture)
+          ? captureListeners
+          : listeners;
+        targetListeners[type] = (targetListeners[type] ?? []).filter(
+          (registered) => registered !== listener,
+        );
       }),
     });
     Object.defineProperty(window, 'dispatchEvent', {
       configurable: true,
       value: jest.fn((event: Event) => {
+        for (const listener of captureListeners[event.type] ?? []) {
+          listener(event);
+        }
         for (const listener of listeners[event.type] ?? []) {
           listener(event);
         }
@@ -121,6 +149,31 @@ describe('useBrowserBackBlocker', () => {
     expect(hasBrowserBackBlocker(window.history.state)).toBe(true);
   });
 
+  it('refreshes an existing guarded entry so browser back stays on the study route', () => {
+    setHistoryState(
+      {
+        expo: true,
+        __raycollBrowserBackBlocker: true,
+      },
+      '/study/group-1',
+    );
+
+    renderHook(() =>
+      useBrowserBackBlocker({
+        active: true,
+        onBackBlocked: jest.fn(),
+      }),
+    );
+
+    expect(fakeHistory.replaceState).toHaveBeenCalledWith(
+      { expo: true },
+      '',
+      'http://localhost/study/group-1',
+    );
+    expect(fakeHistory.pushState).toHaveBeenCalledTimes(1);
+    expect(hasBrowserBackBlocker(window.history.state)).toBe(true);
+  });
+
   it('opens the blocked path when browser back emits popstate', () => {
     const onBackBlocked = jest.fn();
 
@@ -136,6 +189,30 @@ describe('useBrowserBackBlocker', () => {
     });
 
     expect(onBackBlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores the guarded study URL before later popstate listeners run', () => {
+    const onBackBlocked = jest.fn();
+    const routerListener = jest.fn(() => fakeLocation.href);
+
+    renderHook(() =>
+      useBrowserBackBlocker({
+        active: true,
+        onBackBlocked,
+      }),
+    );
+
+    window.addEventListener('popstate', routerListener);
+
+    act(() => {
+      setHistoryState({ expo: true }, '/');
+      window.dispatchEvent(new Event('popstate'));
+    });
+
+    expect(onBackBlocked).toHaveBeenCalledTimes(1);
+    expect(routerListener).toHaveReturnedWith('http://localhost/study/group-1');
+    expect(fakeLocation.href).toBe('http://localhost/study/group-1');
+    expect(hasBrowserBackBlocker(window.history.state)).toBe(true);
   });
 
   it('reinstalls the blocker so a cancelled browser back can be blocked again', () => {
@@ -177,13 +254,8 @@ describe('useBrowserBackBlocker', () => {
     });
 
     expect(historyBack).toHaveBeenCalledTimes(1);
-    expect(mockedNavigateUp).not.toHaveBeenCalled();
-
-    act(() => {
-      jest.runOnlyPendingTimers();
-    });
-
     expect(mockedNavigateUp).toHaveBeenCalledTimes(1);
+    
     historyBack.mockRestore();
   });
 });

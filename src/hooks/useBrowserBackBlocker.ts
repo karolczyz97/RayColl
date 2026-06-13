@@ -5,7 +5,7 @@ import { navigateUp } from '@/utils/navigation';
 
 export const BROWSER_BACK_BLOCKER_KEY = '__raycollBrowserBackBlocker';
 
-type BrowserHistoryLike = Pick<History, 'back' | 'pushState' | 'state'>;
+type BrowserHistoryLike = Pick<History, 'back' | 'pushState' | 'replaceState' | 'state'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -22,6 +22,12 @@ export function createBrowserBackBlockerState(state: unknown): Record<string, un
   };
 }
 
+export function removeBrowserBackBlockerState(state: unknown): Record<string, unknown> {
+  const nextState = { ...(isRecord(state) ? state : {}) };
+  delete nextState[BROWSER_BACK_BLOCKER_KEY];
+  return nextState;
+}
+
 function canUseBrowserHistory(): boolean {
   return Platform.OS === 'web' && typeof window !== 'undefined';
 }
@@ -36,13 +42,27 @@ export function useBrowserBackBlocker({
   onBackBlocked,
 }: UseBrowserBackBlockerOptions): () => void {
   const skippingControlledPopRef = useRef(false);
+  const blockerInstalledRef = useRef(false);
+  const guardedHrefRef = useRef<string | null>(null);
+  const onBackBlockedRef = useRef(onBackBlocked);
+
+  useEffect(() => {
+    onBackBlockedRef.current = onBackBlocked;
+  }, [onBackBlocked]);
 
   const installBlocker = useCallback((history: BrowserHistoryLike, href: string) => {
-    if (hasBrowserBackBlocker(history.state)) {
+    guardedHrefRef.current = href;
+
+    if (blockerInstalledRef.current && hasBrowserBackBlocker(history.state)) {
       return;
     }
 
+    if (hasBrowserBackBlocker(history.state)) {
+      history.replaceState(removeBrowserBackBlockerState(history.state), '', href);
+    }
+
     history.pushState(createBrowserBackBlockerState(history.state), '', href);
+    blockerInstalledRef.current = true;
   }, []);
 
   const navigateBack = useCallback(() => {
@@ -51,12 +71,19 @@ export function useBrowserBackBlocker({
       return;
     }
 
+    // If the blocker wasn't active/installed, just go back normally.
+    if (!blockerInstalledRef.current) {
+      window.history.back();
+      return;
+    }
+
+    // 1. Tell the popstate listener to ignore the next popstate event.
     skippingControlledPopRef.current = true;
+    // 2. We're about to pop, so the blocker will be uninstalled.
+    blockerInstalledRef.current = false;
+    // 3. Perform the actual back navigation.
     window.history.back();
-    window.setTimeout(() => {
-      skippingControlledPopRef.current = false;
-      navigateUp();
-    }, 0);
+    navigateUp();
   }, []);
 
   useEffect(() => {
@@ -68,29 +95,28 @@ export function useBrowserBackBlocker({
 
     const handlePopState = () => {
       if (skippingControlledPopRef.current) {
+        blockerInstalledRef.current = false;
+        skippingControlledPopRef.current = false;
         return;
       }
 
-      installBlocker(window.history, window.location.href);
-      onBackBlocked();
+      blockerInstalledRef.current = false;
+      installBlocker(window.history, guardedHrefRef.current ?? window.location.href);
+      onBackBlockedRef.current();
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handlePopState, { capture: true });
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('popstate', handlePopState, { capture: true });
     };
-  }, [active, installBlocker, onBackBlocked]);
+  }, [active, installBlocker]);
 
   useEffect(() => {
-    if (active || !canUseBrowserHistory() || !hasBrowserBackBlocker(window.history.state)) {
-      return;
+    if (!active && blockerInstalledRef.current && Platform.OS === 'web') {
+      skippingControlledPopRef.current = true;
+      blockerInstalledRef.current = false;
+      window.history.back();
     }
-
-    skippingControlledPopRef.current = true;
-    window.history.back();
-    window.setTimeout(() => {
-      skippingControlledPopRef.current = false;
-    }, 0);
   }, [active]);
 
   return navigateBack;

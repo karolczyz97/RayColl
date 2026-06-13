@@ -24,7 +24,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  const { View, Text } = require('react-native');
 
   const animationBuilder = {
     duration: () => animationBuilder,
@@ -37,6 +37,7 @@ jest.mock('react-native-reanimated', () => {
 
   const Animated = {
     View,
+    Text,
     createAnimatedComponent: (Component) => Component,
     useSharedValue: (value) => ({ value }),
     useAnimatedStyle: (callback) => callback(),
@@ -44,6 +45,16 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (value) => value,
     withRepeat: (value) => value,
     withSequence: (...values) => values[values.length - 1],
+    Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+    interpolate: (value, inputRange = [0, 1], outputRange = [0, 1]) => {
+      const last = inputRange.length - 1;
+      if (value <= inputRange[0]) return outputRange[0];
+      if (value >= inputRange[last]) return outputRange[last];
+      const t = (value - inputRange[0]) / (inputRange[1] - inputRange[0]);
+      return outputRange[0] + t * (outputRange[1] - outputRange[0]);
+    },
+    interpolateColor: (value, inputRange = [0, 1], outputRange = ['#000', '#000']) =>
+      value <= inputRange[0] ? outputRange[0] : outputRange[outputRange.length - 1],
     FadeIn: animationBuilder,
     FadeInUp: animationBuilder,
     FadeInDown: animationBuilder,

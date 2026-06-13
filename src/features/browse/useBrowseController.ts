@@ -6,6 +6,7 @@ import type { Flashcard } from '@/types/models';
 import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
+import { formatCardCount } from '@/i18n/plural';
 import { computeCardStats } from '@/store/selectors/stats';
 import { CATEGORY_TO_STATS_KEY, SRS_CATEGORY_ORDER } from '@/theme/srsTokens';
 import { useFlashcardListEditing } from '@/features/flashcards/useFlashcardListEditing';
@@ -13,7 +14,7 @@ import { shouldShowCard, toggleCategoryReducer } from './browseFilter';
 
 export function useBrowseController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const store = useFlashcardStore();
   const group =
     store.groups.find((item) => item.id === groupId) ??
@@ -141,7 +142,7 @@ export function useBrowseController() {
     activeCategories,
     activeGroup,
     canSaveEdit,
-    cardCountLabel: t('dashboard.cards_count', { count: stats.total }),
+    cardCountLabel: formatCardCount(stats.total, language, t),
     confirmDeleteCard,
     deleteCardId,
     editPages,

@@ -48,6 +48,10 @@ export const pl: Record<string, string> = {
   'a11y.profile_menu': 'Otwórz menu profilu użytkownika',
 
   // Dashboard
+  'cards_count.one': '{count} fiszka',
+  'cards_count.few': '{count} fiszki',
+  'cards_count.many': '{count} fiszek',
+  'cards_count.other': '{count} fiszek',
   'dashboard.no_groups': 'Brak zestawów. Kliknij +, aby dodać.',
   'dashboard.create_title': 'Stwórz zestaw',
   'dashboard.name_label': 'Nazwa zestawu',
@@ -58,7 +62,6 @@ export const pl: Record<string, string> = {
   'dashboard.tooltip.study': 'Ucz się',
   'dashboard.tooltip.browse': 'Przeglądaj karty',
   'dashboard.tooltip.settings': 'Ustawienia zestawu',
-  'dashboard.cards_count': '{count} fiszek',
 
   // Study
   'study.finished': 'Koniec sesji powtórek! 🎉',
@@ -132,7 +135,6 @@ export const pl: Record<string, string> = {
   'stats.due_cards': 'Do powtórki',
   'stats.deck_progress': 'Postępy zestawów',
   'stats.overall_progress': 'Ogólny postęp',
-  'stats.cards_count': '{count} fiszek',
   'stats.day.mon': 'Pon',
   'stats.day.tue': 'Wt',
   'stats.day.wed': 'Śr',
@@ -207,7 +209,6 @@ export const pl: Record<string, string> = {
   // Archive
   'archive.title': 'Zarchiwizowane',
   'archive.empty': 'Brak zarchiwizowanych zestawów.',
-  'archive.cards_count': '{count} fiszek',
   'archive.auto_delete_in': 'Usuwa się za {days} dni',
   'archive.auto_delete_tomorrow': 'Usuwa się jutro',
   'archive.auto_delete_today': 'Usuwa się dzisiaj',

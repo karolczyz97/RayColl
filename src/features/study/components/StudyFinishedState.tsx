@@ -7,7 +7,7 @@ import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { computeCardStats } from '@/store/selectors/stats';
-import { getSuccessColor } from '@/theme/semanticColors';
+import { getReviewStatusColor, getSuccessColor } from '@/theme/semanticColors';
 import { TOKENS } from '@/theme/tokens';
 
 interface StudyFinishedStateProps {
@@ -32,11 +32,14 @@ export function StudyFinishedState({
 }: StudyFinishedStateProps) {
   const theme = useTheme();
   const { t } = useI18n();
+  const statusIcon = endedEarly ? 'stop-circle-outline' : 'check-circle';
+  const { fg: interruptedColor } = getReviewStatusColor(theme, 'learning');
+  const statusIconColor = endedEarly ? interruptedColor : getSuccessColor(theme);
 
   return (
     <View style={styles.finishedContainer}>
       <Animated.View entering={ZoomIn.springify().damping(12)}>
-        <AppIcon name="check-circle" size={TOKENS.iconSize.display} color={getSuccessColor(theme)} />
+        <AppIcon name={statusIcon} size={TOKENS.iconSize.display} color={statusIconColor} />
       </Animated.View>
       <Animated.View entering={FadeInUp.springify().delay(150)}>
         <Text variant="headlineLarge" style={styles.bravoTitle}>

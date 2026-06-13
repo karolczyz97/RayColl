@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.xxl,
     borderWidth: 1,
     padding: TOKENS.spacing.xl,
+    paddingBottom: TOKENS.spacing.xxl,
     maxWidth: TOKENS.layout.studyCardMaxWidth,
     width: '100%',
     alignSelf: 'center',
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   // last lines of a long card. Applied only when the content actually overflows;
   // otherwise it would shrink the evenly-distributed pages and shift them up.
   scrollContentWithRatings: {
-    paddingBottom: TOKENS.control.height + TOKENS.spacing.lg,
+    paddingBottom: TOKENS.control.height + TOKENS.spacing.xxl,
   },
   tapIndicator: {
     flexDirection: 'row',

@@ -2,22 +2,29 @@ import { SrsState } from '@/types/models';
 import { SrsCardCategory } from '@/srs/srsEngine';
 import type { CardStats } from '@/store/selectors/stats';
 
+
 export interface SrsCategoryToken {
   labelKey: string;
+  /** MaterialCommunityIcons name shown instead of the label on narrow screens. */
+  iconName: string;
 }
 
 export const SRS_CATEGORIES_TOKENS: Record<SrsCardCategory, SrsCategoryToken> = {
   new: {
     labelKey: 'srs.badge.new',
+    iconName: 'new-box',
   },
   learning: {
     labelKey: 'srs.badge.learning',
+    iconName: 'book-open-variant',
   },
   review: {
     labelKey: 'srs.badge.review',
+    iconName: 'refresh',
   },
   mastered: {
     labelKey: 'srs.badge.mastered',
+    iconName: 'trophy-outline',
   },
 };
 

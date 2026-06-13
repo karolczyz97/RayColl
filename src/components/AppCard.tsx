@@ -36,6 +36,18 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
     scale.value = withTiming(1, { duration: TOKENS.motion.duration.short });
   };
 
+  const handlePressIn = () => {
+    if (isHoverEnabled) return;
+    scale.value = withTiming(TOKENS.surface.hoverScale, {
+      duration: TOKENS.motion.duration.short,
+    });
+  };
+
+  const handlePressOut = () => {
+    if (isHoverEnabled) return;
+    scale.value = withTiming(1, { duration: TOKENS.motion.duration.short });
+  };
+
   const layoutStyle = useMemo(() => {
     const flatStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
     const nextStyle: ViewStyle = {
@@ -84,6 +96,8 @@ function AppCardBase({ style, ...props }: PaperCardProps) {
     <Pressable
       onHoverIn={handleHoverIn}
       onHoverOut={handleHoverOut}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       style={layoutStyle}
     >
       <Animated.View style={[styles.hoverLayer, innerFlexStyle, animatedStyle]}>

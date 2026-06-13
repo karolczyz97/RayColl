@@ -27,9 +27,7 @@ export function BrowseSearchBar({ search, setSearch }: BrowseSearchBarProps) {
 }
 
 const styles = StyleSheet.create({
-  searchBar: {
-    marginBottom: TOKENS.spacing.md,
-  },
+  searchBar: {},
   outline: {
     borderRadius: TOKENS.radius.md,
   },

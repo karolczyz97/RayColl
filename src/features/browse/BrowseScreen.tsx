@@ -1,24 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { Text, useTheme } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
 import { AppFloatingActionButton } from '@/components/AppFloatingActionButton';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { EditFlashcardDialog } from '@/components/browse/EditFlashcardDialog';
 import { BrowseSearchBar } from '@/components/browse/BrowseSearchBar';
+import { ExpressiveButtonGroup } from '@/components/expressive';
+import type { ExpressiveButtonGroupOption } from '@/components/expressive';
 import { GroupNotFound } from '@/components/GroupNotFound';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
-import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
+import { useI18n } from '@/i18n';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
+import type { SrsCardCategory } from '@/srs/srsEngine';
+import { getReviewStatusColor } from '@/theme/semanticColors';
 import { TOKENS, getTokenMotionEnterDelay } from '@/theme/tokens';
 import { FlashcardList } from '@/features/flashcards/FlashcardList';
 import { useBrowseController } from './useBrowseController';
+import { useBrowseFilterButtons } from './useBrowseFilterButtons';
 
 export function BrowseScreen() {
-  const theme = useTheme();
   const scrollbarProps = useStableScrollbarProps();
+  const theme = useTheme();
+  const { t, language } = useI18n();
   const controller = useBrowseController();
   const {
     activeCategories,
@@ -48,6 +55,9 @@ export function BrowseScreen() {
     toggleCategory,
   } = controller;
 
+  const { showNavigationRail } = useResponsiveLayout();
+  const filterButtons = useBrowseFilterButtons(stats, showNavigationRail);
+
   const addCard = () => {
     startCreate();
   };
@@ -60,36 +70,29 @@ export function BrowseScreen() {
     return <GroupNotFound onBack={handleBack} />;
   }
 
+
   const listHeaderContent = (
     <View style={styles.listHeader}>
-      <AnimatedSection order={0}>
-        <View style={styles.header}>
-          <Text style={[styles.cardCountText, { color: theme.colors.onSurfaceVariant }]}>
-            {cardCountLabel}
-          </Text>
-        </View>
-      </AnimatedSection>
-
       <AnimatedSection order={1}>
         <BrowseSearchBar search={search} setSearch={setSearch} />
       </AnimatedSection>
 
       <AnimatedSection order={2}>
-        <View style={styles.progressBarSection}>
-          <SegmentedProgressBar
-            stats={stats}
-            showLegend
-            selectedCategories={activeCategories}
-            onCategoryToggle={toggleCategory}
-          />
-        </View>
+        <ExpressiveButtonGroup
+          multiSelect
+          value={activeCategories}
+          onValueChange={toggleCategory}
+          buttons={filterButtons}
+          height={TOKENS.touchTarget.compact}
+          accessibilityLabel="Filter by card status"
+        />
       </AnimatedSection>
     </View>
   );
 
   return (
     <AppScreen
-      title={activeGroup.name}
+      title={`${activeGroup.name}  •  ${cardCountLabel}`}
       onBack={handleBack}
       scroll={false}
       contentStyle={styles.screenContent}
@@ -153,15 +156,8 @@ export function BrowseScreen() {
 const styles = StyleSheet.create({
   listHeader: {
     gap: TOKENS.spacing.lg,
-    marginBottom: TOKENS.spacing.sm,
   },
-  header: {
-    alignItems: 'flex-end',
-  },
-  cardCountText: {
-    fontSize: TOKENS.typography.size.xs,
-  },
-  progressBarSection: {},
+
   screenContent: {
     flex: 1,
     minHeight: 0,
@@ -179,6 +175,10 @@ const styles = StyleSheet.create({
     maxWidth: TOKENS.layout.maxWidth,
     alignSelf: 'center',
     gap: TOKENS.spacing.lg,
+    // Vertical breathing room lives on the scroll container itself, so removing
+    // any header element (count, search…) never leaves the content stuck to the
+    // top bar.
+    paddingTop: TOKENS.spacing.lg,
     paddingBottom: TOKENS.spacing.xxl * 3,
     paddingHorizontal: TOKENS.spacing.lg,
   },

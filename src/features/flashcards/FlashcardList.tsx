@@ -1,16 +1,24 @@
-import React, { useCallback, useMemo } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
 import { FlashcardListItem } from '@/components/browse/FlashcardListItem';
+import { AppIcon } from '@/components/AppIcon';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { getVisiblePageNames } from '@/store/selectors/pages';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { TOKENS } from '@/theme/tokens';
 import { isExpandedWindowSize } from '@/utils/windowSizeClass';
 
-type FlashcardRow = Flashcard | { id: string; placeholder: true };
+export interface FlashcardPairRow {
+  id: string;
+  rowIndex: number;
+  cards: [Flashcard, Flashcard?];
+}
+
+type FlashcardListEntry = Flashcard | FlashcardPairRow;
 
 interface FlashcardListProps {
   cards: Flashcard[];
@@ -30,6 +38,27 @@ interface FlashcardListProps {
   itemAnimationOffset?: number;
   className?: string;
   readOnly?: boolean;
+}
+
+export function pairFlashcardRows(cards: Flashcard[]): FlashcardPairRow[] {
+  const rows: FlashcardPairRow[] = [];
+
+  for (let index = 0; index < cards.length; index += 2) {
+    const left = cards[index];
+    const right = cards[index + 1];
+
+    rows.push({
+      id: `row-${left.id}`,
+      rowIndex: index / 2,
+      cards: [left, right],
+    });
+  }
+
+  return rows;
+}
+
+function isFlashcardPairRow(item: FlashcardListEntry): item is FlashcardPairRow {
+  return 'cards' in item;
 }
 
 export function FlashcardList({
@@ -54,74 +83,98 @@ export function FlashcardList({
   const theme = useTheme();
   const { contentWidth } = useNavigationShell();
   const useTwoColumnLayout = isExpandedWindowSize(contentWidth);
-  const numColumns = useTwoColumnLayout ? 2 : 1;
 
-  // Pad an odd card count with an invisible cell so the lone last card keeps
-  // the same width as paired cards instead of stretching toward the center.
-  const data = useMemo<FlashcardRow[]>(() => {
-    if (numColumns === 2 && cards.length % 2 === 1) {
-      return [...cards, { id: '__spacer__', placeholder: true }];
-    }
-    return cards;
-  }, [cards, numColumns]);
-
-  const ItemSeparator = useCallback(
-    () => <View style={styles.itemSeparator} />,
-    [],
+  const data = useMemo<FlashcardListEntry[]>(
+    () => (useTwoColumnLayout ? pairFlashcardRows(cards) : cards),
+    [cards, useTwoColumnLayout],
   );
+
 
   const pageNames = getVisiblePageNames(group);
 
   const pageNamesHeader =
     showHeader && cards.length > 0 ? (
-      <View style={styles.headerRow}>
-        <Text
-          variant="labelMedium"
-          style={[styles.headerText, { color: theme.colors.onSurfaceVariant }]}
-        >
-          {pageNames.filter(Boolean).join('  •  ')}
-        </Text>
-      </View>
+      <AnimatedSection order={itemAnimationOffset}>
+        <View style={styles.headerRow}>
+          {pageNames.filter(Boolean).map((name, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && (
+                <View style={styles.separatorContainer}>
+                  <AppIcon
+                    name="chevron-right"
+                    size={TOKENS.iconSize.xs}
+                    color={theme.colors.outline}
+                    style={styles.separatorIcon}
+                  />
+                </View>
+              )}
+              <View
+                style={[
+                  styles.pageNameChip,
+                  {
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderColor: theme.colors.outlineVariant,
+                  },
+                ]}
+              >
+                <Text
+                  variant="labelSmall"
+                  style={[styles.pageNameText, { color: theme.colors.onSurfaceVariant }]}
+                >
+                  {name}
+                </Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+      </AnimatedSection>
     ) : null;
+
+  // The page-names header animates at itemAnimationOffset, so the list items
+  // start one step later.
+  const itemOrderOffset = itemAnimationOffset + 1;
+
+
 
   const listHeader =
     listHeaderContent || pageNamesHeader ? (
-      <View>
+      <View style={styles.listHeaderWrapper}>
         {listHeaderContent}
         {pageNamesHeader}
       </View>
     ) : null;
 
   return (
-    <FlatList
-      key={`flashcard-list-${numColumns}`}
+    <Animated.FlatList
+      key={`flashcard-list-${useTwoColumnLayout ? 'grid' : 'list'}`}
       className={className}
       data={data}
-      keyExtractor={(item) => item.id}
-      numColumns={numColumns}
-      columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-      ItemSeparatorComponent={ItemSeparator}
+      keyExtractor={(item: FlashcardListEntry) => item.id}
+      itemLayoutAnimation={LinearTransition.springify()}
       renderItem={({ item, index }) => {
-        if ('placeholder' in item) {
-          return <View style={styles.columnCell} />;
+        if (isFlashcardPairRow(item)) {
+          return (
+            <FlashcardPairRowView
+              row={item}
+              group={group}
+              onStartEdit={onStartEdit}
+              onDelete={onDelete}
+              readOnly={readOnly}
+              itemAnimationOffset={itemOrderOffset}
+            />
+          );
         }
-        const row = Math.floor(index / numColumns);
+
         return (
-          <View style={numColumns > 1 ? styles.columnCell : undefined}>
-            <AnimatedSection
-              order={itemAnimationOffset + row}
-              style={numColumns > 1 ? styles.itemAnimation : undefined}
-            >
-              <FlashcardListItem
-                card={item}
-                group={group}
-                onStartEdit={() => onStartEdit(item)}
-                onDelete={() => onDelete(item.id)}
-                readOnly={readOnly}
-                fill={numColumns > 1}
-              />
-            </AnimatedSection>
-          </View>
+          <AnimatedSection order={itemOrderOffset + index}>
+            <FlashcardListItem
+              card={item}
+              group={group}
+              onStartEdit={() => onStartEdit(item)}
+              onDelete={() => onDelete(item.id)}
+              readOnly={readOnly}
+            />
+          </AnimatedSection>
         );
       }}
       ListHeaderComponent={listHeader}
@@ -145,25 +198,96 @@ export function FlashcardList({
   );
 }
 
+interface FlashcardPairRowViewProps {
+  row: FlashcardPairRow;
+  group: FlashcardGroup;
+  onStartEdit: (card: Flashcard) => void;
+  onDelete: (cardId: string) => void;
+  readOnly?: boolean;
+  itemAnimationOffset: number;
+}
+
+function FlashcardPairRowView({
+  row,
+  group,
+  onStartEdit,
+  onDelete,
+  readOnly,
+  itemAnimationOffset,
+}: FlashcardPairRowViewProps) {
+  const [leftCard, rightCard] = row.cards;
+
+  return (
+    <View style={styles.gridRow}>
+      <View style={styles.columnCell}>
+        <AnimatedSection order={itemAnimationOffset + row.rowIndex} style={styles.itemAnimation}>
+          <FlashcardListItem
+            card={leftCard}
+            group={group}
+            onStartEdit={() => onStartEdit(leftCard)}
+            onDelete={() => onDelete(leftCard.id)}
+            readOnly={readOnly}
+            fill
+          />
+        </AnimatedSection>
+      </View>
+      <View style={styles.columnCell}>
+        {rightCard ? (
+          <AnimatedSection order={itemAnimationOffset + row.rowIndex} style={styles.itemAnimation}>
+            <FlashcardListItem
+              card={rightCard}
+              group={group}
+              onStartEdit={() => onStartEdit(rightCard)}
+              onDelete={() => onDelete(rightCard.id)}
+              readOnly={readOnly}
+              fill
+            />
+          </AnimatedSection>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  listHeaderWrapper: {
+    gap: TOKENS.spacing.lg,
+  },
   listContainer: {},
-  itemSeparator: {
-    height: TOKENS.spacing.lg,
-  },
   headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     paddingHorizontal: TOKENS.spacing.sm,
-    paddingBottom: TOKENS.spacing.xs,
+    gap: TOKENS.spacing.xs,
   },
-  headerText: {
+  separatorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: TOKENS.spacing.xxs,
+  },
+  separatorIcon: {
+    opacity: 0.5,
+  },
+  pageNameChip: {
+    borderWidth: 1,
+    borderRadius: TOKENS.radius.pill,
+    paddingVertical: TOKENS.spacing.xs,
+    paddingHorizontal: TOKENS.spacing.sm,
+  },
+  pageNameText: {
     fontWeight: TOKENS.typography.weight.medium,
   },
-  columnWrapper: {
+  gridRow: {
+    flexDirection: 'row',
     gap: TOKENS.spacing.lg,
     alignItems: 'stretch',
   },
   columnCell: {
     flex: 1,
-    maxWidth: '50%',
+    flexBasis: 0,
+    minWidth: 0,
     alignSelf: 'stretch',
   },
   itemAnimation: {

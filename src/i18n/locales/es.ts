@@ -47,6 +47,10 @@ export const es: Record<string, string> = {
   'a11y.profile_menu': 'Abrir el menú de perfil de usuario',
 
   // Dashboard
+  'cards_count.one': '{count} tarjeta',
+  'cards_count.few': '{count} tarjetas',
+  'cards_count.many': '{count} tarjetas',
+  'cards_count.other': '{count} tarjetas',
   'dashboard.no_groups': 'No se encontraron barajas. Haz clic en + para añadir una.',
   'dashboard.create_title': 'Crear baraja',
   'dashboard.name_label': 'Nombre de la baraja',
@@ -57,7 +61,6 @@ export const es: Record<string, string> = {
   'dashboard.tooltip.study': 'Estudiar',
   'dashboard.tooltip.browse': 'Ver tarjetas',
   'dashboard.tooltip.settings': 'Ajustes de baraja',
-  'dashboard.cards_count': '{count} tarjetas',
 
   // Study
   'study.finished': '¡Sesión de repaso terminada! 🎉',
@@ -132,7 +135,6 @@ export const es: Record<string, string> = {
   'stats.due_cards': 'Pendientes',
   'stats.deck_progress': 'Progreso de barajas',
   'stats.overall_progress': 'Progreso general',
-  'stats.cards_count': '{count} tarjetas',
   'stats.day.mon': 'Lun',
   'stats.day.tue': 'Mar',
   'stats.day.wed': 'Mié',
@@ -205,7 +207,6 @@ export const es: Record<string, string> = {
   // Archive
   'archive.title': 'Archivados',
   'archive.empty': 'No hay mazos archivados.',
-  'archive.cards_count': '{count} tarjetas',
   'archive.auto_delete_in': 'Se elimina en {days} días',
   'archive.auto_delete_tomorrow': 'Se elimina mañana',
   'archive.auto_delete_today': 'Se elimina hoy',

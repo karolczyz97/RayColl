@@ -3,28 +3,36 @@ import { SrsCardCategory } from '@/srs/srsEngine';
 import { hexToRgba } from './colorUtils';
 import { TOKENS } from './tokens';
 
+// Per-category SRS palette. `bg` is the light tint used as the chip/segment
+// fill (onSurface text is drawn on top); `fg` is the saturated/foreground
+// variant of the same hue. Hues: new=blue, learning=yellow, review=orange,
+// mastered=green.
 const SRS_STATUS_COLORS = {
   light: {
-    new: { color: '#5f6368', bg: '#eceff1' },
-    learning: { color: TOKENS.colors.warning, bg: TOKENS.colors.warningBg },
-    review: { color: '#2d6cdf', bg: '#dbeafe' },
-    mastered: { color: '#0f7b55', bg: '#d7f7e7' },
+    new: { fg: '#1b4fa8', bg: '#c2d9ff' },
+    learning: { fg: '#8a6d00', bg: '#f4dd87' },
+    review: { fg: '#b4480f', bg: '#ffcfa8' },
+    mastered: { fg: '#0c6e4c', bg: '#c2f0d9' },
   },
   dark: {
-    new: { color: '#c4c7c5', bg: '#323539' },
-    learning: { color: '#ffd180', bg: '#4a3000' },
-    review: { color: '#9ec5ff', bg: '#173a75' },
-    mastered: { color: '#7ee2b8', bg: '#063f2c' },
+    new: { fg: '#9ec5ff', bg: '#173a75' },
+    learning: { fg: '#f3d44e', bg: '#403300' },
+    review: { fg: '#fdba74', bg: '#7c2d12' },
+    mastered: { fg: '#7ee2b8', bg: '#063f2c' },
   },
 } as const;
 
+const SUCCESS_COLORS = {
+  light: { color: '#0f7b55', bg: '#d7f7e7' },
+  dark: { color: '#7ee2b8', bg: '#063f2c' },
+} as const;
+
 export function getSuccessColor(theme: MD3Theme): string {
-  // Tertiary is green in our theme, representing success
-  return theme.colors.tertiary;
+  return SUCCESS_COLORS[theme.dark ? 'dark' : 'light'].color;
 }
 
 export function getSuccessBgColor(theme: MD3Theme): string {
-  return theme.colors.tertiaryContainer;
+  return SUCCESS_COLORS[theme.dark ? 'dark' : 'light'].bg;
 }
 
 export function getWarningColor(theme: MD3Theme): string {
@@ -79,6 +87,6 @@ export function getHeatmapColor(theme: MD3Theme, count: number): string {
 export function getReviewStatusColor(
   theme: MD3Theme,
   category: SrsCardCategory,
-): { color: string; bg: string } {
+): { fg: string; bg: string } {
   return SRS_STATUS_COLORS[theme.dark ? 'dark' : 'light'][category];
 }

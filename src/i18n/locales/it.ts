@@ -47,6 +47,10 @@ export const it: Record<string, string> = {
   'a11y.profile_menu': 'Apri il menu del profilo utente',
 
   // Dashboard
+  'cards_count.one': '{count} carta',
+  'cards_count.few': '{count} carte',
+  'cards_count.many': '{count} carte',
+  'cards_count.other': '{count} carte',
   'dashboard.no_groups': 'Nessun mazzo trovato. Clicca su + per aggiungerne uno.',
   'dashboard.create_title': 'Crea Mazzo',
   'dashboard.name_label': 'Nome del mazzo',
@@ -57,7 +61,6 @@ export const it: Record<string, string> = {
   'dashboard.tooltip.study': 'Studia',
   'dashboard.tooltip.browse': 'Sfoglia carte',
   'dashboard.tooltip.settings': 'Impostazioni mazzo',
-  'dashboard.cards_count': '{count} carte',
 
   // Study
   'study.finished': 'Sessione di ripasso terminata! 🎉',
@@ -132,7 +135,6 @@ export const it: Record<string, string> = {
   'stats.due_cards': 'In scadenza',
   'stats.deck_progress': 'Progresso dei mazzi',
   'stats.overall_progress': 'Progresso generale',
-  'stats.cards_count': '{count} carte',
   'stats.day.mon': 'Lun',
   'stats.day.tue': 'Mar',
   'stats.day.wed': 'Mer',
@@ -205,7 +207,6 @@ export const it: Record<string, string> = {
   // Archive
   'archive.title': 'Archiviati',
   'archive.empty': 'Nessun mazzo archiviato.',
-  'archive.cards_count': '{count} carte',
   'archive.auto_delete_in': 'Eliminato tra {days} giorni',
   'archive.auto_delete_tomorrow': 'Eliminato domani',
   'archive.auto_delete_today': 'Eliminato oggi',

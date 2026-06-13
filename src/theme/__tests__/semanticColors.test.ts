@@ -1,26 +1,40 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { darkTheme, lightTheme } from '../createAppTheme';
-import { getReviewStatusColor } from '../semanticColors';
-import { TOKENS } from '../tokens';
+import { getReviewStatusColor, getSuccessBgColor, getSuccessColor } from '../semanticColors';
 
 describe('semanticColors', () => {
+  it('keeps success green even when the theme tertiary color is not green', () => {
+    const redTertiaryTheme = {
+      ...lightTheme,
+      colors: {
+        ...lightTheme.colors,
+        tertiary: lightTheme.colors.error,
+        tertiaryContainer: lightTheme.colors.errorContainer,
+      },
+    };
+
+    expect(getSuccessColor(redTertiaryTheme)).toBe('#0f7b55');
+    expect(getSuccessBgColor(redTertiaryTheme)).toBe('#d7f7e7');
+  });
+
   it('uses an explicit mastery-oriented palette for SRS categories', () => {
+    // Hues: new=blue, learning=yellow, review=orange, mastered=green.
     expect(getReviewStatusColor(lightTheme, 'new')).toEqual({
-      color: '#5f6368',
-      bg: '#eceff1',
+      fg: '#1b4fa8',
+      bg: '#c2d9ff',
     });
     expect(getReviewStatusColor(lightTheme, 'learning')).toEqual({
-      color: TOKENS.colors.warning,
-      bg: TOKENS.colors.warningBg,
+      fg: '#8a6d00',
+      bg: '#f4dd87',
     });
     expect(getReviewStatusColor(lightTheme, 'review')).toEqual({
-      color: '#2d6cdf',
-      bg: '#dbeafe',
+      fg: '#b4480f',
+      bg: '#ffcfa8',
     });
     expect(getReviewStatusColor(lightTheme, 'mastered')).toEqual({
-      color: '#0f7b55',
-      bg: '#d7f7e7',
+      fg: '#0c6e4c',
+      bg: '#c2f0d9',
     });
 
     const categoryColors = ['new', 'learning', 'review', 'mastered'].map((category) =>
@@ -29,27 +43,28 @@ describe('semanticColors', () => {
 
     expect(categoryColors).not.toContainEqual({
       color: lightTheme.colors.error,
+      fg: lightTheme.colors.error,
       bg: lightTheme.colors.errorContainer,
     });
-    expect(categoryColors).not.toContainEqual({ color: lightTheme.colors.primary, bg: lightTheme.colors.primaryContainer });
-    expect(categoryColors).not.toContainEqual({ color: lightTheme.colors.secondary, bg: lightTheme.colors.secondaryContainer });
+    expect(categoryColors).not.toContainEqual({ fg: lightTheme.colors.primary, bg: lightTheme.colors.primaryContainer });
+    expect(categoryColors).not.toContainEqual({ fg: lightTheme.colors.secondary, bg: lightTheme.colors.secondaryContainer });
   });
 
   it('keeps the explicit SRS palette readable in dark mode', () => {
     expect(getReviewStatusColor(darkTheme, 'new')).toEqual({
-      color: '#c4c7c5',
-      bg: '#323539',
-    });
-    expect(getReviewStatusColor(darkTheme, 'learning')).toEqual({
-      color: '#ffd180',
-      bg: '#4a3000',
-    });
-    expect(getReviewStatusColor(darkTheme, 'review')).toEqual({
-      color: '#9ec5ff',
+      fg: '#9ec5ff',
       bg: '#173a75',
     });
+    expect(getReviewStatusColor(darkTheme, 'learning')).toEqual({
+      fg: '#f3d44e',
+      bg: '#403300',
+    });
+    expect(getReviewStatusColor(darkTheme, 'review')).toEqual({
+      fg: '#fdba74',
+      bg: '#7c2d12',
+    });
     expect(getReviewStatusColor(darkTheme, 'mastered')).toEqual({
-      color: '#7ee2b8',
+      fg: '#7ee2b8',
       bg: '#063f2c',
     });
   });
