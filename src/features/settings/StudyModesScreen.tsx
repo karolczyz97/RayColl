@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Divider, IconButton, List } from 'react-native-paper';
+import { Button, Divider, IconButton, List, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
 import type { ModeStep, StudyMode } from '@/types/models';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -23,8 +23,9 @@ import { useStepEditorController } from './useStepEditorController';
 
 export function StudyModesScreen() {
   const { t } = useI18n();
+  const theme = useTheme();
   const store = useFlashcardStore();
-  const { contentMaxWidth } = useResponsiveLayout();
+  const { formMaxWidth } = useResponsiveLayout();
   const [modeToDelete, setModeToDelete] = useState<StudyMode | null>(null);
 
   const [creatingMode, setCreatingMode] = useState(false);
@@ -68,7 +69,7 @@ export function StudyModesScreen() {
   };
 
   return (
-    <AppScreen title={t('study_modes.title')} onBack={navigateUp} maxWidth={contentMaxWidth}>
+    <AppScreen title={t('study_modes.title')} onBack={navigateUp} maxWidth={formMaxWidth}>
       <AnimatedSection order={0}>
         <SectionCard>
           <View style={styles.modeList}>
@@ -89,6 +90,7 @@ export function StudyModesScreen() {
                         <IconButton
                           icon="delete-outline"
                           size={TOKENS.iconSize.md}
+                          iconColor={theme.colors.error}
                           onPress={() => setModeToDelete(mode)}
                           accessibilityLabel={t('study_modes.delete_title')}
                         />
