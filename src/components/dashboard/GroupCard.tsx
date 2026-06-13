@@ -12,6 +12,7 @@ import { StudyModeMenuButton } from './StudyModeMenuButton';
 import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
 import { ensureWebMicrophonePermission } from '@/services/sttExpo';
+import { getDueCards } from '@/store/selectors/cardSelectors';
 
 interface GroupCardProps {
   group: FlashcardGroup;
@@ -41,7 +42,7 @@ export const GroupCard = memo(function GroupCard({
 
   const isArchived = variant === 'archived';
   const cardStats = computeCardStats(group.cards);
-  const dueCount = isArchived ? 0 : actions.getDueCards(group.id).length;
+  const dueCount = isArchived ? 0 : getDueCards(group.cards, group.studyFilter, group.cardOrder).length;
 
   return (
     <AppCard

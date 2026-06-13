@@ -1,4 +1,5 @@
-import { FlashcardGroup, Flashcard } from '@/types/models';
+import { Flashcard, FlashcardGroup } from '@/types/models';
+import { getDueCards } from './cardSelectors';
 import { getCardCategory } from '@/srs/srsEngine';
 import { getLocalDateString } from '@/utils/date';
 
@@ -35,11 +36,8 @@ export function getTotalCardsCount(groups: FlashcardGroup[]): number {
   return groups.reduce((a, g) => a + g.cards.length, 0);
 }
 
-export function getTotalDueCardsCount(
-  groups: FlashcardGroup[],
-  getDueCards: (groupId: string) => Flashcard[],
-): number {
-  return groups.reduce((a, g) => a + getDueCards(g.id).length, 0);
+export function getTotalDueCardsCount(groups: FlashcardGroup[]): number {
+  return groups.reduce((a, g) => a + getDueCards(g.cards, g.studyFilter, g.cardOrder).length, 0);
 }
 
 export function getActiveDaysCount(heatmap: Record<string, number>): number {

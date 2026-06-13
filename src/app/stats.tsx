@@ -35,7 +35,7 @@ export default function StatsPage() {
   const { groups, activityHeatmap, getDueCards, isLoading } = store;
 
   const totalCards = useMemo(() => getTotalCardsCount(groups), [groups]);
-  const totalDue = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [getDueCards, groups]);
+  const totalDue = useMemo(() => getTotalDueCardsCount(groups), [groups]);
   const streak = useMemo(() => computeStreak(activityHeatmap), [activityHeatmap]);
   const activeDays = useMemo(() => getActiveDaysCount(activityHeatmap), [activityHeatmap]);
   const globalStats = useMemo(() => getGlobalStats(groups), [groups]);

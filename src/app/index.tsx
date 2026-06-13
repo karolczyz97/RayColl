@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   const decksCount = groups.length;
   const cardsCount = useMemo(() => getTotalCardsCount(groups), [groups]);
-  const dueCount = useMemo(() => getTotalDueCardsCount(groups, getDueCards), [groups, getDueCards]);
+  const dueCount = useMemo(() => getTotalDueCardsCount(groups), [groups]);
   const streak = useMemo(() => computeStreak(activityHeatmap), [activityHeatmap]);
 
   if (isLoading) {
