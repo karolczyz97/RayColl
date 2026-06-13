@@ -224,9 +224,15 @@ async function evaluateRecognition(
   if (percent >= step.successThreshold) {
     playSuccessSound();
     playSuccessHaptic();
+    
+    context.dispatchIfMounted({
+      type: 'REVEAL_PAGES',
+      revealedPages: getActivePageIndexes(group),
+    });
+
     context.skipRef.current.requested = false;
     context.skipRef.current.armed = true;
-    await context.guardedAwait(sleep(600));
+    await context.guardedAwait(sleep(1200)); // Dłuższa pauza, żeby użytkownik mógł przeczytać odkryte karty
     context.skipRef.current.armed = false;
     if (context.isStale()) return;
     const autoRating = mapMatchToRating(percent);

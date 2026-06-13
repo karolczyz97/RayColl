@@ -756,7 +756,7 @@ describe('useStudySession', () => {
 
       await waitFor(() => {
         expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', expect.any(Number));
-      });
+      }, { timeout: 2000 });
       expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
     });
 

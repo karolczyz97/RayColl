@@ -30,9 +30,9 @@ export function playMicOffSound(): void {
 }
 
 export function playSuccessSound(): void {
-  playSound(require('../../assets/sounds/success.mp3'));
+  playSound(require('../../assets/sounds/success.wav'));
 }
 
 export function playErrorSound(): void {
-  playSound(require('../../assets/sounds/error.mp3'));
+  playSound(require('../../assets/sounds/error.wav'));
 }
