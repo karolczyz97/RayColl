@@ -58,6 +58,8 @@ export const darkTheme: MD3Theme = {
   },
 };
 
+import { Platform } from 'react-native';
+
 export function createAppTheme({
   isDark,
   useSystemColors,
@@ -67,7 +69,8 @@ export function createAppTheme({
   useSystemColors: boolean;
   materialColors?: Material3Theme;
 }): MD3Theme {
-  if (useSystemColors && materialColors) {
+  const supportsDynamicColors = Platform.OS === 'android';
+  if (supportsDynamicColors && useSystemColors && materialColors) {
     const baseTheme = isDark ? MD3DarkTheme : MD3LightTheme;
     const colors = isDark ? materialColors.dark : materialColors.light;
     return {

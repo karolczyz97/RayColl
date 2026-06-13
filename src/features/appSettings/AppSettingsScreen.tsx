@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
 import { Button, SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
@@ -96,34 +96,36 @@ export function AppSettingsScreen() {
         </SectionCard>
       </AnimatedSection>
 
-      <AnimatedSection order={2}>
-        <SectionCard title={t('app_settings.dynamic_colors.title')}>
-          <Text variant="bodyMedium" style={styles.mutedText}>
-            {t('app_settings.dynamic_colors.desc')}
-          </Text>
-          <SegmentedButtons
-            value={useSystemColors ? 'true' : 'false'}
-            onValueChange={(value) => {
-              if (value === 'true' || value === 'false') {
-                setUseSystemColors(value === 'true');
-              }
-            }}
-            buttons={[
-              {
-                value: 'true',
-                label: t('app_settings.dynamic_colors.enabled'),
-                icon: 'palette',
-              },
-              {
-                value: 'false',
-                label: t('app_settings.dynamic_colors.disabled'),
-                icon: 'palette-swatch-outline',
-              },
-            ]}
-            style={styles.segmentedButtons}
-          />
-        </SectionCard>
-      </AnimatedSection>
+      {Platform.OS === 'android' && (
+        <AnimatedSection order={2}>
+          <SectionCard title={t('app_settings.dynamic_colors.title')}>
+            <Text variant="bodyMedium" style={styles.mutedText}>
+              {t('app_settings.dynamic_colors.desc')}
+            </Text>
+            <SegmentedButtons
+              value={useSystemColors ? 'true' : 'false'}
+              onValueChange={(value) => {
+                if (value === 'true' || value === 'false') {
+                  setUseSystemColors(value === 'true');
+                }
+              }}
+              buttons={[
+                {
+                  value: 'true',
+                  label: t('app_settings.dynamic_colors.enabled'),
+                  icon: 'palette',
+                },
+                {
+                  value: 'false',
+                  label: t('app_settings.dynamic_colors.disabled'),
+                  icon: 'palette-swatch-outline',
+                },
+              ]}
+              style={styles.segmentedButtons}
+            />
+          </SectionCard>
+        </AnimatedSection>
+      )}
 
       <AnimatedSection order={3}>
         <SectionCard title={t('app_settings.tts_rate')}>
