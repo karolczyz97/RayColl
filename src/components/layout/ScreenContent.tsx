@@ -30,5 +30,6 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
     minHeight: 0,
+    paddingVertical: 0,
   },
 });
