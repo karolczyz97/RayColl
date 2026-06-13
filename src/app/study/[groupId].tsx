@@ -41,12 +41,24 @@ function StudyPageContent() {
   // Intercept Android's native back/gesture while a session is in progress. Setting
   // preventRemove flips the screen's native preventNativeDismiss so the gesture can't pop the
   // screen out from under us; requestExit then surfaces the confirmation dialog (confirming
-  // ends the session in place). The old `beforeRemove` listener couldn't do this — native-stack
-  // dismissed the screen before JS could preventDefault, bypassing the dialog and desyncing
-  // navigation state.
+  // ends the session in place).
   usePreventRemove(isExitBlocked, () => {
     requestExit();
   });
+
+  // Bridge for JS-driven removals (like the header back button, and Expo Router Web's browser back).
+  // usePreventRemove (above) ensures native gestures are blocked, but on Web it doesn't correctly
+  // intercept the popstate routing change, causing the screen to unmount without warning.
+  useEffect(() => {
+    if (!isExitBlocked) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e: {
+      preventDefault: () => void;
+    }) => {
+      e.preventDefault();
+      requestExit();
+    });
+    return unsubscribe;
+  }, [isExitBlocked, navigation, requestExit]);
 
   // usePreventRemove blocks the native swipe-back, but the experimental stack reports a *blocked*
   // swipe as a 'gestureCancel' event rather than invoking the callback above (which only fires
