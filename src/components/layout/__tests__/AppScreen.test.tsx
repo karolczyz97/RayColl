@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { renderAsync, screen } from '@testing-library/react-native';
 
 import { TestProviders } from '../../../test/renderWithAppProviders';
+import { TOKENS } from '@/theme/tokens';
 import { AppScreen } from '../AppScreen';
 
 describe('AppScreen', () => {
@@ -33,5 +34,20 @@ describe('AppScreen', () => {
     expect(screen.getByText('Header action')).toBeOnTheScreen();
     expect(screen.getByText('Home overlay')).toBeOnTheScreen();
     expect(screen.getByText('Dashboard content')).toBeOnTheScreen();
+  });
+
+  it('uses compact shared bottom padding for scroll screens', async () => {
+    const { UNSAFE_getByType } = await renderAsync(
+      <TestProviders>
+        <AppScreen title="Settings">
+          <Text>Settings content</Text>
+        </AppScreen>
+      </TestProviders>,
+    );
+
+    expect(screen.getByText('Settings content')).toBeOnTheScreen();
+    expect(StyleSheet.flatten(UNSAFE_getByType(ScrollView).props.contentContainerStyle)).toEqual(
+      expect.objectContaining({ paddingBottom: TOKENS.spacing.md }),
+    );
   });
 });

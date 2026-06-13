@@ -137,10 +137,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: TOKENS.spacing.lg,
     paddingTop: TOKENS.spacing.md,
-    paddingBottom: TOKENS.spacing.xxl * 2,
+    paddingBottom: TOKENS.spacing.md,
   },
   nativeScrollContent: {
-    paddingBottom: TOKENS.spacing.xxl * 2,
+    paddingBottom: TOKENS.spacing.md,
   },
   flexFill: {
     flex: 1,

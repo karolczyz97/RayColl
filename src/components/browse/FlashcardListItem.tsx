@@ -22,6 +22,7 @@ interface FlashcardListItemProps {
   onStartEdit: () => void;
   onDelete: () => void;
   readOnly?: boolean;
+  fill?: boolean;
 }
 
 function srsChip(
@@ -52,6 +53,7 @@ export function FlashcardListItem({
   onStartEdit,
   onDelete,
   readOnly,
+  fill,
 }: FlashcardListItemProps) {
   const theme = useTheme();
   const { t } = useI18n();
@@ -72,8 +74,12 @@ export function FlashcardListItem({
   const toggleLabel = t('browse.show_hidden_pages');
 
   return (
-    <AppCard style={styles.card} mode="elevated">
-      <AppCard.Content style={styles.cardContent}>
+    <AppCard
+      style={[styles.card, fill && styles.cardFill]}
+      contentStyle={fill ? styles.cardInnerFill : undefined}
+      mode="elevated"
+    >
+      <AppCard.Content style={[styles.cardContent, fill && styles.contentFill]}>
         {displayPages.map((page, i) => {
           const isHidden = i >= activeCount;
           return (
@@ -101,7 +107,7 @@ export function FlashcardListItem({
           </View>
         )}
       </AppCard.Content>
-      <AppCard.Actions style={styles.cardActions}>
+      <AppCard.Actions style={[styles.cardActions, fill && styles.cardActionsPinned]}>
         <View style={styles.cardActionsLeft}>
           <Chip
             style={{ backgroundColor: srs.bg }}
@@ -160,6 +166,16 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radius.xl,
     overflow: 'hidden',
   },
+  cardFill: {
+    flex: 1,
+  },
+  cardInnerFill: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  contentFill: {
+    flexGrow: 1,
+  },
   cardContent: {
     paddingVertical: TOKENS.spacing.sm,
     gap: TOKENS.spacing.sm,
@@ -181,6 +197,9 @@ const styles = StyleSheet.create({
   cardActions: {
     padding: TOKENS.spacing.sm,
     justifyContent: 'space-between',
+  },
+  cardActionsPinned: {
+    marginTop: 'auto',
   },
   cardActionsLeft: {
     flexDirection: 'row',

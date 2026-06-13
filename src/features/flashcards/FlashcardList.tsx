@@ -108,13 +108,17 @@ export function FlashcardList({
         const row = Math.floor(index / numColumns);
         return (
           <View style={numColumns > 1 ? styles.columnCell : undefined}>
-            <AnimatedSection order={itemAnimationOffset + row}>
+            <AnimatedSection
+              order={itemAnimationOffset + row}
+              style={numColumns > 1 ? styles.itemAnimation : undefined}
+            >
               <FlashcardListItem
                 card={item}
                 group={group}
                 onStartEdit={() => onStartEdit(item)}
                 onDelete={() => onDelete(item.id)}
                 readOnly={readOnly}
+                fill={numColumns > 1}
               />
             </AnimatedSection>
           </View>
@@ -155,10 +159,15 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     gap: TOKENS.spacing.lg,
+    alignItems: 'stretch',
   },
   columnCell: {
     flex: 1,
     maxWidth: '50%',
+    alignSelf: 'stretch',
+  },
+  itemAnimation: {
+    flex: 1,
   },
   emptyState: {
     alignItems: 'center',

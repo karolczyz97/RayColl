@@ -50,7 +50,11 @@ export function AppSettingsScreen() {
   }
 
   return (
-    <AppScreen title={t('app_settings.title')} onBack={handleBack} maxWidth={formMaxWidth}>
+    <AppScreen
+      title={t('app_settings.title')}
+      onBack={handleBack}
+      maxWidth={formMaxWidth}
+    >
       <SyncStatusBanner
         syncStatus={store.syncStatus}
         lastSyncError={store.lastSyncError}
