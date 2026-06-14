@@ -18,24 +18,24 @@ describe('semanticColors', () => {
     expect(getSuccessBgColor(redTertiaryTheme)).toBe('#d7f7e7');
   });
 
-  it('uses an explicit vivid palette for SRS categories', () => {
+  it('uses an explicit pastel palette for SRS categories', () => {
     // Hues: new=blue, learning=yellow, review=orange, mastered=green.
-    // White content on saturated fills, dark content on the light yellow hue.
+    // Pastel fill (bg) with darker same-hue content (fg) drawn on top.
     expect(getReviewStatusColor(lightTheme, 'new')).toEqual({
-      fg: '#ffffff',
-      bg: '#2f6fed',
+      fg: '#1b4fa8',
+      bg: '#c2d9ff',
     });
     expect(getReviewStatusColor(lightTheme, 'learning')).toEqual({
-      fg: '#3d2f00',
-      bg: '#f3c01a',
+      fg: '#8a6d00',
+      bg: '#f4dd87',
     });
     expect(getReviewStatusColor(lightTheme, 'review')).toEqual({
-      fg: '#ffffff',
-      bg: '#e8600f',
+      fg: '#b4480f',
+      bg: '#ffcfa8',
     });
     expect(getReviewStatusColor(lightTheme, 'mastered')).toEqual({
-      fg: '#ffffff',
-      bg: '#0f9b4c',
+      fg: '#0c6e4c',
+      bg: '#c2f0d9',
     });
 
     const categoryColors = ['new', 'learning', 'review', 'mastered'].map((category) =>
@@ -51,7 +51,7 @@ describe('semanticColors', () => {
     expect(categoryColors).not.toContainEqual({ fg: lightTheme.colors.secondary, bg: lightTheme.colors.secondaryContainer });
   });
 
-  it('uses the same vivid SRS palette in dark mode', () => {
+  it('uses the same pastel SRS palette in dark mode', () => {
     // The palette is intentionally identical across themes so progress colors
     // read equally bright in light and dark.
     (['new', 'learning', 'review', 'mastered'] as const).forEach((category) => {

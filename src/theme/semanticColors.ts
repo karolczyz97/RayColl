@@ -3,17 +3,16 @@ import { SrsCardCategory } from '@/srs/srsEngine';
 import { hexToRgba } from './colorUtils';
 import { TOKENS } from './tokens';
 
-// Per-category SRS palette. Shared across light and dark so the progress colors
-// read equally vivid in both themes (previously dark used muted deep fills and
-// light used washed-out pastels). `bg` is the saturated fill used for chips,
-// progress segments, and filters; `fg` is the content drawn ON that fill — white,
-// except the light yellow hue which needs dark content to stay legible.
+// Per-category SRS palette. The light, pastel tints are shared across light and
+// dark mode so the progress colors stay bright in both themes (dark mode used to
+// use muted deep fills). `bg` is the pastel fill used for chips, progress
+// segments, and filters; `fg` is the darker same-hue content drawn ON that fill.
 // Hues: new=blue, learning=yellow, review=orange, mastered=green.
 const SRS_STATUS_COLORS: Record<SrsCardCategory, { fg: string; bg: string }> = {
-  new: { fg: '#ffffff', bg: '#2f6fed' },
-  learning: { fg: '#3d2f00', bg: '#f3c01a' },
-  review: { fg: '#ffffff', bg: '#e8600f' },
-  mastered: { fg: '#ffffff', bg: '#0f9b4c' },
+  new: { fg: '#1b4fa8', bg: '#c2d9ff' },
+  learning: { fg: '#8a6d00', bg: '#f4dd87' },
+  review: { fg: '#b4480f', bg: '#ffcfa8' },
+  mastered: { fg: '#0c6e4c', bg: '#c2f0d9' },
 };
 
 const SUCCESS_COLORS = {
