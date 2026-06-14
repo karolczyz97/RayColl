@@ -46,7 +46,6 @@ export const GroupCard = memo(function GroupCard({
   return (
     <AppCard
       style={styles.card}
-      mode="elevated"
       accessibilityLabel={`Deck ${group.name}, contains ${group.cards.length} cards`}
     >
       <AppCard.Content>

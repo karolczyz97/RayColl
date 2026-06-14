@@ -8,7 +8,6 @@ import { TOKENS } from '@/theme/tokens';
 interface SectionCardProps {
   title?: string;
   children: React.ReactNode;
-  mode?: 'elevated' | 'outlined' | 'contained';
   danger?: boolean;
   actions?: React.ReactNode;
   titleAlign?: 'left' | 'center';
@@ -19,7 +18,6 @@ interface SectionCardProps {
 export function SectionCard({
   title,
   children,
-  mode = 'elevated',
   danger = false,
   actions,
   titleAlign = 'left',
@@ -29,7 +27,7 @@ export function SectionCard({
   const theme = useTheme();
 
   return (
-    <AppCard mode={mode} style={[styles.card, danger && { borderColor: theme.colors.error }, style]}>
+    <AppCard style={[styles.card, danger && { borderColor: theme.colors.error }, style]}>
       <AppCard.Content style={[styles.content, contentStyle]}>
         {title ? (
           <Text

@@ -4,6 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { AppIcon } from '@/components/AppIcon';
 import { TOKENS } from '@/theme/tokens';
+import { getContainedSurface } from '@/theme/semanticColors';
 
 /** Position of a tile within its group — drives the grouped corner rounding. */
 type TilePosition = 'single' | 'first' | 'middle' | 'last';
@@ -164,7 +165,7 @@ export function SettingsTile({
       style={[
         styles.tile,
         cornerStyle,
-        { backgroundColor: theme.colors.elevation.level2 },
+        { backgroundColor: getContainedSurface(theme) },
         style,
       ]}
     >

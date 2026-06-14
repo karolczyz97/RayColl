@@ -59,9 +59,6 @@ export const TOKENS = {
     medium: 0.32,
     muted: 0.62,
   },
-  surface: {
-    hoverScale: 1.015,
-  },
   touchTarget: {
     min: 48,
     compact: 40,

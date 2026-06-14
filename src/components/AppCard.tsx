@@ -1,108 +1,94 @@
 import React, { useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Card, useTheme } from 'react-native-paper';
 import type { ComponentProps } from 'react';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import { TOKENS } from '@/theme/tokens';
+import { getContainedSurface } from '@/theme/semanticColors';
+import { hexToRgba } from '@/theme/colorUtils';
 
 type PaperCardProps = ComponentProps<typeof Card>;
 
-function AppCardBase({ style, ...props }: PaperCardProps) {
-  const [hovered, setHovered] = useState(false);
+// All cards share one "contained" treatment (MD3 filled card): a tonal fill, no
+// resting shadow, no outline. Interaction feedback follows MD3 — only an
+// *interactive* card (one given onPress/onLongPress) shows a subtle hover state
+// layer on web; static cards stay flat. No scale, no drop shadow (that was the
+// non-MD3 hover that lifted every card, including non-clickable ones).
+function AppCardBase({ style, mode: _ignoredMode, elevation: _ignoredElevation, ...props }: PaperCardProps) {
   const theme = useTheme();
-  const scale = useSharedValue(1);
+  const [hovered, setHovered] = useState(false);
 
-  const isHoverEnabled = Platform.OS === 'web';
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const interactive = props.onPress != null || props.onLongPress != null;
+  const isWeb = Platform.OS === 'web';
 
-  const handleHoverIn = () => {
-    if (!isHoverEnabled) return;
-    setHovered(true);
-    scale.value = withTiming(TOKENS.surface.hoverScale, {
-      duration: TOKENS.motion.duration.short,
-    });
-  };
+  const flatStyle = useMemo(() => (StyleSheet.flatten(style) ?? {}) as ViewStyle, [style]);
 
-  const handleHoverOut = () => {
-    if (!isHoverEnabled) return;
-    setHovered(false);
-    scale.value = withTiming(1, { duration: TOKENS.motion.duration.short });
-  };
+  // Match the state-layer overlay to the card's actual corner radius.
+  const radius = (flatStyle.borderRadius as number | undefined) ?? TOKENS.radius.xl;
 
-  const handlePressIn = () => {
-    if (isHoverEnabled) return;
-    scale.value = withTiming(TOKENS.surface.hoverScale, {
-      duration: TOKENS.motion.duration.short,
-    });
-  };
-
-  const handlePressOut = () => {
-    if (isHoverEnabled) return;
-    scale.value = withTiming(1, { duration: TOKENS.motion.duration.short });
-  };
-
-  const layoutStyle = useMemo(() => {
-    const flatStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
+  const layoutStyle = useMemo<ViewStyle>(() => {
     const nextStyle: ViewStyle = {
-      alignSelf: flatStyle?.alignSelf,
-      flex: flatStyle?.flex,
-      flexBasis: flatStyle?.flexBasis,
-      flexGrow: flatStyle?.flexGrow,
-      flexShrink: flatStyle?.flexShrink,
-      margin: flatStyle?.margin,
-      marginBottom: flatStyle?.marginBottom,
-      marginEnd: flatStyle?.marginEnd,
-      marginHorizontal: flatStyle?.marginHorizontal,
-      marginLeft: flatStyle?.marginLeft,
-      marginRight: flatStyle?.marginRight,
-      marginStart: flatStyle?.marginStart,
-      marginTop: flatStyle?.marginTop,
-      marginVertical: flatStyle?.marginVertical,
-      maxWidth: flatStyle?.maxWidth,
-      minWidth: flatStyle?.minWidth,
-      width: flatStyle?.width ?? '100%',
+      alignSelf: flatStyle.alignSelf,
+      flex: flatStyle.flex,
+      flexBasis: flatStyle.flexBasis,
+      flexGrow: flatStyle.flexGrow,
+      flexShrink: flatStyle.flexShrink,
+      margin: flatStyle.margin,
+      marginBottom: flatStyle.marginBottom,
+      marginEnd: flatStyle.marginEnd,
+      marginHorizontal: flatStyle.marginHorizontal,
+      marginLeft: flatStyle.marginLeft,
+      marginRight: flatStyle.marginRight,
+      marginStart: flatStyle.marginStart,
+      marginTop: flatStyle.marginTop,
+      marginVertical: flatStyle.marginVertical,
+      maxWidth: flatStyle.maxWidth,
+      minWidth: flatStyle.minWidth,
+      width: flatStyle.width ?? '100%',
     };
 
-    if (Platform.OS === 'web') {
-      nextStyle.cursor = 'auto';
+    if (isWeb) {
+      nextStyle.cursor = interactive ? 'pointer' : 'auto';
     }
 
     return nextStyle;
-  }, [style]);
+  }, [flatStyle, interactive, isWeb]);
 
-  const hoverStyle = useMemo<ViewStyle | undefined>(() => {
-    if (!hovered || Platform.OS !== 'web') return undefined;
-    return {
-      boxShadow: `0 0 0 1px ${theme.colors.outlineVariant}, 0 10px 24px ${theme.colors.shadow}`,
-    };
-  }, [hovered, theme.colors.outlineVariant, theme.colors.shadow]);
+  // Propagate flex to the inner layer so flex: 1 works on AppCard.
+  const innerFlexStyle = useMemo<StyleProp<ViewStyle>>(
+    () => (flatStyle.flex != null ? { flex: flatStyle.flex } : undefined),
+    [flatStyle.flex],
+  );
 
-  // Propagate flex to inner layers so flex: 1 works on AppCard
-  const innerFlexStyle = useMemo<StyleProp<ViewStyle>>(() => {
-    const flatStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
-    return flatStyle?.flex != null ? { flex: flatStyle.flex } : undefined;
-  }, [style]);
+  // Filled-card surface. Sits UNDER the caller's style so a screen can still
+  // override the radius (or, for `danger`, the border color) when it needs to.
+  const surfaceStyle = useMemo<ViewStyle>(
+    () => ({ backgroundColor: getContainedSurface(theme), borderRadius: TOKENS.radius.xl }),
+    [theme],
+  );
 
-  const cardStyle = useMemo(() => [style, styles.card, hoverStyle], [hoverStyle, style]);
+  const cardStyle = useMemo(() => [surfaceStyle, style, styles.card], [style, surfaceStyle]);
+
+  const showStateLayer = interactive && isWeb && hovered;
 
   return (
     <Pressable
-      onHoverIn={handleHoverIn}
-      onHoverOut={handleHoverOut}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onHoverIn={interactive && isWeb ? () => setHovered(true) : undefined}
+      onHoverOut={interactive && isWeb ? () => setHovered(false) : undefined}
       style={layoutStyle}
     >
-      <Animated.View style={[styles.hoverLayer, innerFlexStyle, animatedStyle]}>
-        <Card {...props} style={cardStyle} />
-      </Animated.View>
+      <View style={[styles.layer, innerFlexStyle]}>
+        <Card {...props} mode="contained" style={cardStyle} />
+        {showStateLayer ? (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.stateLayer,
+              { borderRadius: radius, backgroundColor: hexToRgba(theme.colors.onSurface, 0.05) },
+            ]}
+          />
+        ) : null}
+      </View>
     </Pressable>
   );
 }
@@ -116,7 +102,14 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
   },
-  hoverLayer: {
+  layer: {
     overflow: 'visible',
+  },
+  stateLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 });

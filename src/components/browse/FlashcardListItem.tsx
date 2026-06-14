@@ -74,7 +74,6 @@ export function FlashcardListItem({
     <AppCard
       style={[styles.card, fill && styles.cardFill]}
       contentStyle={fill ? styles.cardInnerFill : undefined}
-      mode="elevated"
     >
       <AppCard.Content style={[styles.cardContent, fill && styles.contentFill]}>
         {displayPages.map((page, i) => {

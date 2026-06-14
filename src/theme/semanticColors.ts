@@ -61,6 +61,18 @@ export function getSecondaryBgColor(theme: MD3Theme): string {
   return theme.colors.secondaryContainer;
 }
 
+// The "contained" surface (MD3 filled-card container): a tonal fill with no
+// shadow and no outline, used by cards and grouped settings tiles so they read
+// as filled surfaces on the lighter page canvas. The generated Material 3 scheme
+// carries the full surfaceContainer* ramp at runtime; Paper's color type predates
+// these roles, so we read it through a narrow cast and fall back to surfaceVariant
+// for any theme without the ramp. Kept distinct from `surfaceVariant` itself so
+// content drawn on a card (e.g. the heatmap's empty cells) stays visible.
+export function getContainedSurface(theme: MD3Theme): string {
+  const colors = theme.colors as unknown as { surfaceContainerHigh?: string };
+  return colors.surfaceContainerHigh ?? theme.colors.surfaceVariant;
+}
+
 // Top app bar: flush with the screen background so the bar blends into the
 // system status-bar area above it (the MD3 default top-app-bar treatment).
 // Single source of truth so the whole shell can be re-toned in one place.
