@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { navigateUp } from '@/utils/navigation';
-import type { ModeStep, StudyMode } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
 import type { CardOrder } from '@/constants/cardOrder';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { POPULAR_LANGS } from '@/constants/languages';
-import { uid } from '@/utils/id';
+import { ROUTES } from '@/constants/routes';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { isExpandedWindowSize } from '@/utils/windowSizeClass';
-import { formatStepSummary, getModeCustomization } from './studyModeUtils';
 import { reorderDeckPages } from './deckPageReorder';
-import { useStepEditorController } from './useStepEditorController';
 
 export function useDeckSettingsController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -28,10 +25,6 @@ export function useDeckSettingsController() {
   const pageNamesKey = activeGroupPageNames?.join('\u0000') ?? '';
 
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [creatingMode, setCreatingMode] = useState(false);
-  const [newModeName, setNewModeName] = useState('');
-  const [customSteps, setCustomSteps] = useState<ModeStep[]>([]);
-  const [editingModeId, setEditingModeId] = useState<string | null>(null);
   const [deckName, setDeckName] = useState('');
   const [colNames, setColNames] = useState<string[]>([]);
   const [deckNameTouched, setDeckNameTouched] = useState(false);
@@ -52,13 +45,6 @@ export function useDeckSettingsController() {
     setColNames(activeGroupPageNames);
     setTouchedPageNameIndexes(new Set());
   }, [activeGroupId, activeGroupPageNames, pageNamesKey]);
-
-  const closeCreateModeDialog = () => {
-    setCreatingMode(false);
-    setEditingModeId(null);
-    setCustomSteps([]);
-    setNewModeName('');
-  };
 
   const handleNameBlur = () => {
     if (!activeGroup) return;
@@ -92,14 +78,6 @@ export function useDeckSettingsController() {
     }
   };
 
-  const activeMode = store.studyModes.find((mode) => mode.id === activeGroup?.activeModeId) ?? null;
-  const { isDefaultMode, hasCustomSteps } = useMemo(
-    () =>
-      activeMode
-        ? getModeCustomization(activeMode)
-        : { isDefaultMode: false, hasCustomSteps: false },
-    [activeMode],
-  );
   const pageCount = activeGroup?.activePageCount ?? 0;
   const useTwoColumnLayout = isExpandedWindowSize(navigationShell.contentWidth);
   const deckNameError = deckNameTouched && !deckName.trim();
@@ -107,15 +85,6 @@ export function useDeckSettingsController() {
     () => colNames.map((name, index) => touchedPageNameIndexes.has(index) && !name.trim()),
     [colNames, touchedPageNameIndexes],
   );
-
-  const stepEditor = useStepEditorController({
-    pageCount,
-    creatingMode,
-    editingModeId,
-    customSteps,
-    setCustomSteps,
-    setEditingModeId,
-  });
 
   const adjustPageCount = (count: number) => {
     if (!activeGroup) return;
@@ -149,17 +118,14 @@ export function useDeckSettingsController() {
     store.updateGroup(reorderDeckPages(group, index, target));
   };
 
-  const saveCustomMode = () => {
-    if (!activeGroup || !newModeName.trim() || customSteps.length === 0) return;
-    const mode: StudyMode = {
-      id: uid(),
-      name: newModeName.trim(),
-      steps: customSteps,
-      isBuiltIn: false,
-    };
-    store.addStudyMode(mode);
-    store.updateGroup({ ...activeGroup, activeModeId: mode.id });
-    closeCreateModeDialog();
+  const handleCreateMode = () => {
+    if (!activeGroupId) return;
+    router.navigate(ROUTES.createStudyMode(activeGroupId));
+  };
+
+  const handleEditMode = () => {
+    if (!activeGroupId || !activeGroup?.activeModeId) return;
+    router.navigate(ROUTES.studyMode(activeGroup.activeModeId, activeGroupId));
   };
 
   const handleArchiveGroup = async () => {
@@ -177,35 +143,21 @@ export function useDeckSettingsController() {
 
   return {
     activeGroup,
-    activeMode,
     colNames,
-    confirmAddStep: stepEditor.confirmAddStep,
-    creatingMode,
-    customSteps,
     deckName,
     deckNameError,
     archiveDialogOpen,
-    editingModeId,
     handleBack: navigateUp,
     handleColBlur,
     handleArchiveGroup,
     handleNameBlur,
+    handleCreateMode,
+    handleEditMode,
     isCompact: responsiveLayout.isCompact,
-    isDefaultMode,
-    hasCustomSteps,
-    isExpanded: useTwoColumnLayout,
     useTwoColumnLayout,
     isLoading: store.isLoading,
     movePageSetting,
     movePageSettingAll,
-    moveStep: stepEditor.moveStep,
-    newModeName,
-    newMs: stepEditor.newMs,
-    newPauseMultiplier: stepEditor.newPauseMultiplier,
-    newPageIdx: stepEditor.newPageIdx,
-    newStepType: stepEditor.newStepType,
-    newThreshold: stepEditor.newThreshold,
-    newCondition: stepEditor.newCondition,
     onFilterChange: (filter: CardFilter) => {
       if (!activeGroup) return;
       store.setStudyFilter(activeGroup.id, filter);
@@ -218,40 +170,16 @@ export function useDeckSettingsController() {
       if (!activeGroup) return;
       store.setActiveStudyMode(activeGroup.id, modeId);
     },
-    openCreateModeDialog: () => {
-      setEditingModeId(null);
-      setCreatingMode(true);
-    },
     pageCount,
     pageNameErrors,
     popularLangs: POPULAR_LANGS,
     responsiveLayout,
-    saveCustomMode,
     setColNames,
-    setCreatingMode,
-    setCustomSteps,
     setDeckName,
     setArchiveDialogOpen,
-    setEditingModeId,
-    setNewModeName,
-    setNewMs: stepEditor.setNewMs,
-    setNewPauseMultiplier: stepEditor.setNewPauseMultiplier,
-    setNewPageIdx: stepEditor.setNewPageIdx,
-    setNewStepType: stepEditor.setNewStepType,
-    setNewThreshold: stepEditor.setNewThreshold,
-    setNewCondition: stepEditor.setNewCondition,
-    setStepDialogOpen: stepEditor.setStepDialogOpen,
-    stepDialogOpen: stepEditor.stepDialogOpen,
-    stepLabels: stepEditor.stepLabels,
-    formatStepSummary,
     store,
     t,
     updatePageLangValue,
     adjustPageCount,
-    closeCreateModeDialog,
-    deleteStep: stepEditor.deleteStep,
-    addStepToMode: stepEditor.addStepToMode,
-    resetMode: stepEditor.resetMode,
-    renameMode: stepEditor.renameMode,
   };
 }

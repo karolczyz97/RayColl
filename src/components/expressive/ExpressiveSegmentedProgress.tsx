@@ -13,7 +13,6 @@ import { useTheme } from 'react-native-paper';
 
 import { AppIcon } from '@/components/AppIcon';
 import { TOKENS } from '@/theme/tokens';
-import { getStopDotOpacity, STOP_DOT_SIZE, TRACK_END_GAP } from './expressiveGeometry';
 
 const INTERACTIVE_SEGMENT_MIN_WIDTH = '12.5%' as DimensionValue;
 // Extra px added to the measured label width so sub-pixel rounding never trims
@@ -70,9 +69,6 @@ export function ExpressiveSegmentedProgress({
   const hasInteractiveSegments = segments.some((segment) => segment.onPress);
   const safeHeight = Math.max(1, height);
   const radius = safeHeight / 2;
-  const dotSize = Math.max(2, Math.min(STOP_DOT_SIZE, safeHeight - 2));
-  const dotRadius = dotSize / 2;
-  const trackEndPadding = dotSize + TRACK_END_GAP;
   const hasContent = total > 0;
   const wrapperAccessibilityProps = hasInteractiveSegments
     ? {}
@@ -124,7 +120,6 @@ export function ExpressiveSegmentedProgress({
             height: safeHeight,
             borderRadius: radius,
             backgroundColor: theme.colors.surfaceVariant,
-            paddingRight: trackEndPadding,
           },
         ]}
         {...wrapperAccessibilityProps}
@@ -210,21 +205,6 @@ export function ExpressiveSegmentedProgress({
         </View>
       ) : null}
       </View>
-      <View
-        testID="expressive-segmented-progress-stop-dot"
-        pointerEvents="none"
-        style={[
-          styles.stopDot,
-          {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-            backgroundColor: hasContent ? theme.colors.onSurfaceVariant : theme.colors.surfaceVariant,
-            opacity: getStopDotOpacity(hasContent ? 0.5 : 0),
-            top: (safeHeight - dotSize) / 2,
-          },
-        ]}
-      />
     </View>
   );
 }
@@ -266,17 +246,9 @@ const styles = StyleSheet.create({
     gap: CONTENT_GAP,
     maxWidth: '100%',
   },
-  stopDot: {
-    position: 'absolute',
-    right: 0,
-  },
-  // Font comes from theme.fonts.labelLarge (the same typography Paper buttons
-  // use), applied inline; this only holds the layout-only overrides.
   segmentLabel: {
     flexShrink: 1,
   },
-  // Same typography as segmentLabel but unconstrained, so onLayout reports the
-  // label's true single-line width instead of a clipped one.
   measureLabel: {
     alignSelf: 'flex-start',
   },

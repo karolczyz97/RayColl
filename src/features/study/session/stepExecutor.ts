@@ -126,14 +126,27 @@ async function executeListenAndBranchStep(
     if (context.isStale()) return;
 
     if (!harvested) {
-      context.dispatchIfMounted({ type: 'END_LISTENING', text: '', matchPercent: 0 });
+      context.dispatchIfMounted({
+        type: 'END_LISTENING',
+        text: '',
+        matchPercent: 0,
+        successThreshold: step.successThreshold,
+        passed: false,
+      });
       await continueIfActive(card, stepIndex + 1, context);
       return;
     }
 
     const original = card.pages[step.pageIndex] || '';
     const percent = matchSpeech(harvested, original);
-    context.dispatchIfMounted({ type: 'END_LISTENING', text: harvested, matchPercent: percent });
+    const passed = percent >= step.successThreshold;
+    context.dispatchIfMounted({
+      type: 'END_LISTENING',
+      text: harvested,
+      matchPercent: percent,
+      successThreshold: step.successThreshold,
+      passed,
+    });
     await evaluateRecognition(card, stepIndex, step, group, percent, context, true);
     return;
   }
@@ -150,11 +163,14 @@ async function executeListenAndBranchStep(
   const recognized = result.text;
   const original = card.pages[step.pageIndex] || '';
   const percent = matchSpeech(recognized, original);
+  const passed = percent >= step.successThreshold;
 
   context.dispatchIfMounted({
     type: 'END_LISTENING',
     text: recognized || '',
     matchPercent: percent,
+    successThreshold: step.successThreshold,
+    passed,
   });
 
   await evaluateRecognition(card, stepIndex, step, group, percent, context, false);
@@ -194,7 +210,13 @@ async function executeListenAndCheckStep(
   const percent = recognized ? matchSpeech(recognized, original) : 0;
   const passed = percent >= step.successThreshold;
   context.lastCheckPassedRef.current = passed;
-  context.dispatchIfMounted({ type: 'END_LISTENING', text: recognized, matchPercent: percent });
+  context.dispatchIfMounted({
+    type: 'END_LISTENING',
+    text: recognized,
+    matchPercent: percent,
+    successThreshold: step.successThreshold,
+    passed,
+  });
 
   if (passed) {
     playSuccessSound();
@@ -236,7 +258,7 @@ async function evaluateRecognition(
 
     await skipableSleep(context, 1200);
     if (context.isStale()) return;
-    const autoRating = mapMatchToRating(percent);
+    const autoRating = mapMatchToRating(percent, step.successThreshold);
     context.processCardReview(card, autoRating);
     await context.advanceToNextCard();
     return;

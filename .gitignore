@@ -46,3 +46,8 @@ repomix-output.xml
 # generated native folders
 /ios
 /android
+
+# agent skills
+.agents/
+skills-lock.json
+.eslintcache

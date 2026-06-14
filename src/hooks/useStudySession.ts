@@ -167,11 +167,9 @@ export function useStudySession(
   });
 
   // While a `rate` step waits for the user to reveal the card, finish the wait as
-  // soon as every page is visible (e.g. pages were pre-revealed during an
-  // audio-step skip tap — setHolding reveals pages even outside waitingForTap).
-  // Re-runs the same step so the rate step shows its rating buttons.
-  // Guard in the setTimeout checks stateRef so if handleCardPress already resumed,
-  // this becomes a no-op.
+  // soon as every page is visible. Re-runs the same step so the rate step shows
+  // its rating buttons. Guard in the setTimeout checks stateRef so if
+  // handleCardPress already resumed, this becomes a no-op.
   useEffect(() => {
     if (!state.waitingForTap) return;
     if (!group) return;
@@ -291,6 +289,8 @@ export function useStudySession(
       peekedPageIndex: state.peekedPageIndex,
       sttResultText: state.sttResultText,
       sttMatchPercent: state.sttMatchPercent,
+      sttSuccessThreshold: state.sttSuccessThreshold,
+      sttPassed: state.sttPassed,
       waitingForTap: state.waitingForTap,
       audioPageIndex: state.audioPageIndex,
       isTtsPlaying: state.status === 'speaking',

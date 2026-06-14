@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
 import { TOKENS } from '@/theme/tokens';
-import { getProgressAccessibilityValue, getProgressRatio, getStopDotOpacity, STOP_DOT_SIZE, TRACK_END_GAP } from './expressiveGeometry';
+import { getProgressAccessibilityValue, getProgressRatio } from './expressiveGeometry';
 import { getExpressiveColors, type ExpressiveColorRole } from './expressiveColors';
 
 export interface ExpressiveProgressProps {
@@ -32,11 +32,6 @@ export function ExpressiveProgress({
   const ratio = getProgressRatio({ value, max });
   const safeHeight = Math.max(1, height);
   const radius = safeHeight / 2;
-  const dotSize = Math.max(2, Math.min(STOP_DOT_SIZE, safeHeight - 2));
-  const dotRadius = dotSize / 2;
-  const trackEndPadding = dotSize + TRACK_END_GAP;
-  const dotOpacity = getStopDotOpacity(ratio);
-  const dotColor = ratio >= 1 ? colors.fill : colors.container;
   const accessibilityValue = getProgressAccessibilityValue({ value, max });
   const wrapperAccessibilityProps = Platform.OS === 'web'
     ? accessibilityLabel
@@ -69,7 +64,6 @@ export function ExpressiveProgress({
             height: safeHeight,
             borderRadius: radius,
             backgroundColor: colors.container,
-            paddingRight: trackEndPadding,
           },
         ]}
       >
@@ -83,21 +77,6 @@ export function ExpressiveProgress({
           />
         ) : null}
       </View>
-      <View
-        testID="expressive-progress-stop-dot"
-        pointerEvents="none"
-        style={[
-          styles.stopDot,
-          {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-            backgroundColor: dotColor,
-            opacity: dotOpacity,
-            top: (safeHeight - dotSize) / 2,
-          },
-        ]}
-      />
     </View>
   );
 }
@@ -113,9 +92,5 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: '100%',
-  },
-  stopDot: {
-    position: 'absolute',
-    right: 0,
   },
 });

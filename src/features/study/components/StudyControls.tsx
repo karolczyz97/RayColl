@@ -22,10 +22,13 @@ interface StudyControlsProps {
   showRatingButtons: boolean;
   sttResultText: string;
   sttMatchPercent: number;
+  sttSuccessThreshold: number | null;
+  sttPassed: boolean | null;
   onRate: (rating: number) => void;
 }
 
 const STT_RESULT_HIDE_MS = 4000;
+export type SttResultTone = 'danger' | 'warning' | 'info' | 'success';
 
 interface RatingButtonProps {
   iconName: string;
@@ -35,12 +38,25 @@ interface RatingButtonProps {
   tone: RatingTone;
 }
 
+export function getSttResultTone(
+  sttMatchPercent: number,
+  sttPassed: boolean | null,
+): SttResultTone {
+  if (sttPassed != null) return sttPassed ? 'success' : 'danger';
+  if (sttMatchPercent >= 85) return 'success';
+  if (sttMatchPercent >= 60) return 'info';
+  if (sttMatchPercent >= 40) return 'warning';
+  return 'danger';
+}
+
 export function StudyControls({
   isNarrow,
   isListening,
   showRatingButtons,
   sttResultText,
   sttMatchPercent,
+  sttSuccessThreshold,
+  sttPassed,
   onRate,
 }: StudyControlsProps) {
   const theme = useTheme();
@@ -74,14 +90,22 @@ export function StudyControls({
     return t(key).split(' (')[0];
   };
 
+  const matchTone = getSttResultTone(sttMatchPercent, sttPassed);
   const matchColor =
-    sttMatchPercent >= 85
+    matchTone === 'success'
       ? getSuccessColor(theme)
-      : sttMatchPercent >= 60
+      : matchTone === 'info'
         ? getInfoColor(theme)
-        : sttMatchPercent >= 40
+        : matchTone === 'warning'
           ? getWarningColor(theme)
           : getDueColor(theme);
+  const matchLabel =
+    sttSuccessThreshold != null
+      ? t('study.match_percent_threshold', {
+          percent: sttMatchPercent,
+          threshold: sttSuccessThreshold,
+        })
+      : t('study.match_percent', { percent: sttMatchPercent });
 
   const getRatingButtonColors = (tone: RatingTone) => {
     switch (tone) {
@@ -161,7 +185,7 @@ export function StudyControls({
           </Text>
           {sttMatchPercent > 0 ? (
             <Text variant="labelSmall" style={[styles.matchPercentText, { color: matchColor }]}>
-              {t('study.match_percent', { percent: sttMatchPercent })}
+              {matchLabel}
             </Text>
           ) : null}
         </Animated.View>

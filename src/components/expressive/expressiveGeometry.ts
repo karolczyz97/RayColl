@@ -1,8 +1,5 @@
 import { clamp } from '@/utils/math';
 
-export const STOP_DOT_SIZE = 4;
-export const TRACK_END_GAP = 3;
-
 export interface ProgressGeometryOptions {
   value: number;
   max: number;
@@ -25,10 +22,6 @@ export function getProgressAccessibilityValue({ value, max }: ProgressGeometryOp
     max: safeMax,
     now: safeNow,
   };
-}
-
-export function getStopDotOpacity(ratio: number): number {
-  return ratio > 0 ? 1 : 0;
 }
 
 export function createShapeSurfacePath(variant: 'soft' | 'outline' | 'blob'): string {

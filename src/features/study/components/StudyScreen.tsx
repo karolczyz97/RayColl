@@ -40,6 +40,8 @@ interface StudyScreenProps {
     isSttListening: boolean;
     sttResultText: string;
     sttMatchPercent: number;
+    sttSuccessThreshold: number | null;
+    sttPassed: boolean | null;
     isSessionFinished: boolean;
     errorMsg?: string;
   };
@@ -132,6 +134,8 @@ export function StudyScreen({
               showRatingButtons={sessionState.showRatingButtons}
               sttResultText={sessionState.sttResultText}
               sttMatchPercent={sessionState.sttMatchPercent}
+              sttSuccessThreshold={sessionState.sttSuccessThreshold}
+              sttPassed={sessionState.sttPassed}
               onRate={handleRating}
             />
           </>

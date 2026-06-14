@@ -77,6 +77,11 @@ describe('srsEngine', () => {
     it('70% -> 3 (Good)', () => { expect(mapMatchToRating(70)).toBe(3); });
     it('50% -> 2 (Hard)', () => { expect(mapMatchToRating(50)).toBe(2); });
     it('20% -> 1 (Again)', () => { expect(mapMatchToRating(20)).toBe(1); });
+    it('uses the STT threshold as the pass/fail boundary when provided', () => {
+      expect(mapMatchToRating(75, 90)).toBe(1);
+      expect(mapMatchToRating(90, 90)).toBe(3);
+      expect(mapMatchToRating(95, 90)).toBe(4);
+    });
   });
 
   describe('calculateFsrs', () => {

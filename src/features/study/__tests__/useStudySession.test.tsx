@@ -255,6 +255,48 @@ describe('useStudySession', () => {
     }
   });
 
+  it('treats a match below the custom STT threshold as failed for feedback and FSRS', async () => {
+    const card1 = makeCard('c1', ['alpha beta gamma delta']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'listen_and_branch', pageIndex: 0, successThreshold: 90 },
+    ];
+
+    mockedSttService.startListening.mockImplementationOnce(() =>
+      Promise.resolve('alpha beta gamma'),
+    );
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(
+      () => {
+        expect(hookRef.current!.sessionState.sttMatchPercent).toBe(75);
+        expect(hookRef.current!.sessionState.sttSuccessThreshold).toBe(90);
+        expect(hookRef.current!.sessionState.sttPassed).toBe(false);
+      },
+      { timeout: 5000 },
+    );
+
+    await waitFor(
+      () => {
+        expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', 1);
+      },
+      { timeout: 5000 },
+    );
+    expect(hookRef.current!.failedCount).toBe(1);
+  });
+
   it('rating 1 adds card to failed count', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);
@@ -328,7 +370,7 @@ describe('useStudySession', () => {
     expect(mockedSttService.stopListening).toHaveBeenCalled();
   });
 
-  it('tap during speak_page skips, reveals the card, and advances to rating', async () => {
+  it('tap during speak_page skips TTS without revealing the answer', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);
     const onCardReviewed = jest.fn();
@@ -358,9 +400,64 @@ describe('useStudySession', () => {
     await tapCard(hookRef);
 
     await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
     });
     expect(ttsService.cancel).toHaveBeenCalled();
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([]);
+
+    await tapCard(hookRef);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([1]);
+  });
+
+  it('classic mode shows page one, skips TTS on tap, then reveals the answer on the next tap', async () => {
+    const card1 = makeCard('c1', ['front', 'back']);
+    const group = makeGroup(2, 2, [card1]);
+    const onCardReviewed = jest.fn();
+    const hookRef: HookResult = { current: null };
+    const steps: ModeStep[] = [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 5 },
+      { type: 'rate' },
+    ];
+
+    mockedTtsService.speak.mockImplementationOnce(() => new Promise<void>(() => {}));
+
+    render(
+      <TestHookWrapper
+        group={group}
+        steps={steps}
+        onCardReviewed={onCardReviewed}
+        hookRef={hookRef}
+      />,
+    );
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0]);
+
+    await tapCard(hookRef);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
+    });
+    expect(ttsService.cancel).toHaveBeenCalled();
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0]);
+
+    await tapCard(hookRef);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0, 1]);
   });
 
   it('restartSession restarts with fresh cards from group', async () => {
@@ -828,7 +925,7 @@ describe('useStudySession', () => {
       }
     });
 
-    it('skip with no recognised text reveals the card for manual rating', async () => {
+    it('skip with no recognised text waits for reveal before manual rating', async () => {
       const card1 = makeCard('c1', ['hello world']);
       const group = makeGroup(2, 2, [card1]);
       const onCardReviewed = jest.fn();
@@ -857,6 +954,14 @@ describe('useStudySession', () => {
       await waitFor(() => {
         expect(hookRef.current!.sessionState.isSttListening).toBe(true);
       });
+
+      await tapCard(hookRef);
+
+      await waitFor(() => {
+        expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
+      });
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
+      expect(onCardReviewed).not.toHaveBeenCalled();
 
       await tapCard(hookRef);
 

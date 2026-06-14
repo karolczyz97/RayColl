@@ -12,6 +12,7 @@ interface StudyModeSelectorProps {
   onModeChange: (modeId: string) => void;
   studyModes: StudyMode[];
   onCreateMode?: () => void;
+  onEditMode?: () => void;
 }
 
 export function StudyModeSelector({
@@ -19,6 +20,7 @@ export function StudyModeSelector({
   onModeChange,
   studyModes,
   onCreateMode,
+  onEditMode,
 }: StudyModeSelectorProps) {
   const { t } = useI18n();
   const options = studyModes.map((mode) => ({
@@ -40,6 +42,16 @@ export function StudyModeSelector({
             accessibilityLabel="Active study mode selection"
           />
         </View>
+        {onEditMode && (
+          <IconButton
+            icon="pencil"
+            mode="contained"
+            onPress={onEditMode}
+            style={styles.plusButton}
+            size={TOKENS.iconSize.md}
+            accessibilityLabel="Edit study mode"
+          />
+        )}
         {onCreateMode && (
           <IconButton
             icon="plus"

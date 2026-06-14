@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Button, Dialog, HelperText, Portal, Text } from 'react-native-paper';
 import { useI18n } from '@/i18n';
@@ -55,7 +55,11 @@ export function StudyModeDetailScreen() {
     setTimeout(navigate, 0);
   }, []);
 
-  const handleSaveAndLeave = useCallback((navigate: () => void = navigateUp) => {
+  const resolveLeave = useCallback(() => {
+    if (selectForGroup) { router.back(); } else { navigateUp(); }
+  }, [selectForGroup]);
+
+  const handleSaveAndLeave = useCallback((navigate: () => void = resolveLeave) => {
     if (!isValid) {
       setShowValidation(true);
       return;
@@ -63,7 +67,7 @@ export function StudyModeDetailScreen() {
     if (save()) {
       finishConfirmedLeave(navigate);
     }
-  }, [finishConfirmedLeave, isValid, save]);
+  }, [finishConfirmedLeave, isValid, resolveLeave, save]);
 
   const handleAttemptLeave = useCallback((navigate: () => void) => {
     setPendingNavigate(() => navigate);
@@ -76,12 +80,12 @@ export function StudyModeDetailScreen() {
   });
 
   const handleDiscardChanges = useCallback(() => {
-    finishConfirmedLeave(pendingNavigate ?? navigateUp);
-  }, [finishConfirmedLeave, pendingNavigate]);
+    finishConfirmedLeave(pendingNavigate ?? resolveLeave);
+  }, [finishConfirmedLeave, pendingNavigate, resolveLeave]);
 
   const handleSaveDialog = useCallback(() => {
-    handleSaveAndLeave(pendingNavigate ?? navigateUp);
-  }, [handleSaveAndLeave, pendingNavigate]);
+    handleSaveAndLeave(pendingNavigate ?? resolveLeave);
+  }, [handleSaveAndLeave, pendingNavigate, resolveLeave]);
 
   const title = draft
     ? isCreate
@@ -115,7 +119,7 @@ export function StudyModeDetailScreen() {
             icon="content-save"
             label={t('settings.save_mode_btn')}
             style={styles.fab}
-            onPress={() => handleSaveAndLeave(navigateUp)}
+            onPress={() => handleSaveAndLeave(resolveLeave)}
             accessibilityLabel={t('settings.save_mode_btn')}
           />
         </Animated.View>

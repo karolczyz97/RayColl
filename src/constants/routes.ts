@@ -9,9 +9,11 @@ export const ROUTES = {
   STATS: '/stats',
   ARCHIVE: '/archive',
   STUDY_MODES: '/study-modes',
-  studyMode: (modeId: string): Href => ({
+  studyMode: (modeId: string, selectForGroup?: string): Href => ({
     pathname: '/study-modes/[modeId]',
-    params: { modeId },
+    params: selectForGroup
+      ? { modeId, selectForGroup }
+      : { modeId },
   }),
   createStudyMode: (selectForGroup?: string): Href => ({
     pathname: '/study-modes/[modeId]',

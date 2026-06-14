@@ -9,6 +9,8 @@ export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
   peekedPageIndex: null,
   sttResultText: '',
   sttMatchPercent: 0,
+  sttSuccessThreshold: null,
+  sttPassed: null,
   waitingForTap: false,
   audioPageIndex: null,
   errorMsg: undefined,
@@ -52,6 +54,8 @@ export function sessionReducer(
         audioPageIndex: action.pageIndex,
         sttResultText: '',
         sttMatchPercent: 0,
+        sttSuccessThreshold: null,
+        sttPassed: null,
       };
     case 'UPDATE_PARTIAL_STT':
       // Ignore late partial results that arrive after we've left the listening
@@ -68,6 +72,8 @@ export function sessionReducer(
         audioPageIndex: null,
         sttResultText: action.text,
         sttMatchPercent: action.matchPercent,
+        sttSuccessThreshold: action.successThreshold ?? null,
+        sttPassed: action.passed ?? null,
       };
     case 'REVEAL_PAGES': {
       const newRevealed = uniquePageIndexes(action.revealedPages);

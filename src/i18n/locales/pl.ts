@@ -71,6 +71,7 @@ export const pl: Record<string, string> = {
   'study.status.listening': 'Słuchanie...',
   'study.status.speaking': 'Mówienie...',
   'study.match_percent': 'Dopasowanie: {percent}%',
+  'study.match_percent_threshold': 'Dopasowanie: {percent}% / próg {threshold}%',
   'study.rating.1': 'Powtórz (Again)',
   'study.rating.2': 'Trudne (Hard)',
   'study.rating.3': 'Dobrze (Good)',

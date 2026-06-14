@@ -70,6 +70,7 @@ export const de: Record<string, string> = {
   'study.status.listening': 'Hören...',
   'study.status.speaking': 'Sprechen...',
   'study.match_percent': 'Übereinstimmung: {percent}%',
+  'study.match_percent_threshold': 'Übereinstimmung: {percent}% / Schwelle {threshold}%',
   'study.rating.1': 'Nochmal',
   'study.rating.2': 'Schwer',
   'study.rating.3': 'Gut',

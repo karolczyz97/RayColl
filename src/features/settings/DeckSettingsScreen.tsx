@@ -6,10 +6,7 @@ import { DeckNameSection } from '@/components/settings/DeckNameSection';
 import { StudyScopeSection } from '@/components/settings/StudyScopeSection';
 import { CardOrderSection } from '@/components/settings/CardOrderSection';
 import { StudyModeSelector } from '@/components/settings/StudyModeSelector';
-import { StudyModeEditor } from '@/components/settings/StudyModeEditor';
-import { CreateStudyModeSection } from '@/components/settings/CreateStudyModeSection';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
-import { AddStepDialog } from '@/components/settings/AddStepDialog';
 import { TOKENS } from '@/theme/tokens';
 import { ARCHIVE_RETENTION_DAYS } from '@/constants/archive';
 import { AppScreen } from '@/components/layout/AppScreen';
@@ -24,65 +21,33 @@ export function DeckSettingsScreen(
   const { fg: topBarFg } = getTopBarColors(useTheme());
   const {
     activeGroup,
-    activeMode,
     colNames,
-    confirmAddStep,
-    creatingMode,
-    customSteps,
     deckName,
     deckNameError,
     archiveDialogOpen,
     handleColBlur,
     handleArchiveGroup,
     handleNameBlur,
+    handleCreateMode,
+    handleEditMode,
     isCompact,
-    isDefaultMode,
-    hasCustomSteps,
     useTwoColumnLayout,
     movePageSetting,
     movePageSettingAll,
-    moveStep,
-    newModeName,
-    newMs,
-    newPauseMultiplier,
-    newPageIdx,
-    newStepType,
-    newThreshold,
-    newCondition,
     onFilterChange,
     onCardOrderChange,
     onModeChange,
-    openCreateModeDialog,
     pageCount,
     pageNameErrors,
     popularLangs,
     responsiveLayout,
-    saveCustomMode,
     setColNames,
-    setCustomSteps,
     setDeckName,
     setArchiveDialogOpen,
-    setEditingModeId,
-    setNewModeName,
-    setNewMs,
-    setNewPauseMultiplier,
-    setNewPageIdx,
-    setNewStepType,
-    setNewThreshold,
-    setNewCondition,
-    setStepDialogOpen,
-    stepDialogOpen,
-    stepLabels,
-    formatStepSummary,
     store,
     t,
     updatePageLangValue,
     adjustPageCount,
-    closeCreateModeDialog,
-    deleteStep,
-    addStepToMode,
-    resetMode,
-    renameMode,
     handleBack,
   } = controller;
 
@@ -96,8 +61,8 @@ export function DeckSettingsScreen(
   const hasHiddenColumns = storedPageCount > (activeGroup.activePageCount ?? 0);
 
   const sectionOrder = useTwoColumnLayout
-    ? { name: 0, pageConfig: 3, scope: 1, cardOrder: 2, modeEditor: 1, modeSelector: 0 }
-    : { name: 0, scope: 1, cardOrder: 2, pageConfig: 3, modeSelector: 4, modeEditor: 5 };
+    ? { name: 0, pageConfig: 3, scope: 1, cardOrder: 2, modeSelector: 1 }
+    : { name: 0, scope: 1, cardOrder: 2, pageConfig: 3, modeSelector: 4 };
 
   const leftColumnContent = (
     <>
@@ -168,34 +133,17 @@ export function DeckSettingsScreen(
   );
 
   const rightColumnContent = (
-    <>
-      <AnimatedSection order={sectionOrder.modeSelector}>
-        <SectionCard>
-          <StudyModeSelector
-            activeModeId={activeGroup.activeModeId}
-            onModeChange={onModeChange}
-            studyModes={store.studyModes}
-            onCreateMode={openCreateModeDialog}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      {activeMode ? (
-        <AnimatedSection order={sectionOrder.modeEditor}>
-          <StudyModeEditor
-            mode={activeMode}
-            isDefaultMode={isDefaultMode}
-            hasCustomSteps={hasCustomSteps}
-            moveStep={moveStep}
-            deleteStep={deleteStep}
-            addStepToMode={addStepToMode}
-            onResetMode={resetMode}
-            onRenameMode={renameMode}
-            formatStepSummary={formatStepSummary}
-          />
-        </AnimatedSection>
-      ) : null}
-    </>
+    <AnimatedSection order={sectionOrder.modeSelector}>
+      <SectionCard>
+        <StudyModeSelector
+          activeModeId={activeGroup.activeModeId}
+          onModeChange={onModeChange}
+          studyModes={store.studyModes}
+          onCreateMode={handleCreateMode}
+          onEditMode={handleEditMode}
+        />
+      </SectionCard>
+    </AnimatedSection>
   );
 
   return (
@@ -223,39 +171,6 @@ export function DeckSettingsScreen(
           {rightColumnContent}
         </View>
       )}
-
-      <CreateStudyModeSection
-        visible={creatingMode}
-        onDismiss={closeCreateModeDialog}
-        newModeName={newModeName}
-        setNewModeName={setNewModeName}
-        customSteps={customSteps}
-        setCustomSteps={setCustomSteps}
-        saveCustomMode={saveCustomMode}
-        setStepDialogOpen={setStepDialogOpen}
-        setEditingModeId={setEditingModeId}
-        formatStepSummary={formatStepSummary}
-      />
-
-      <AddStepDialog
-        visible={stepDialogOpen}
-        onDismiss={() => setStepDialogOpen(false)}
-        newStepType={newStepType}
-        setNewStepType={setNewStepType}
-        newPageIdx={newPageIdx}
-        pageCount={pageCount}
-        setNewPageIdx={setNewPageIdx}
-        newMs={newMs}
-        setNewMs={setNewMs}
-        newPauseMultiplier={newPauseMultiplier}
-        setNewPauseMultiplier={setNewPauseMultiplier}
-        newThreshold={newThreshold}
-        setNewThreshold={setNewThreshold}
-        newCondition={newCondition}
-        setNewCondition={setNewCondition}
-        confirmAddStep={confirmAddStep}
-        stepLabels={stepLabels}
-      />
 
       <PagesReorderDialog
         visible={showReorderDialog}

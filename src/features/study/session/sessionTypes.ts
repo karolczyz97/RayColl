@@ -15,6 +15,8 @@ export interface StudySessionState {
   peekedPageIndex: number | null;
   sttResultText: string;
   sttMatchPercent: number;
+  sttSuccessThreshold: number | null;
+  sttPassed: boolean | null;
   waitingForTap: boolean;
   // Page currently being spoken (TTS) or listened to (STT), so the card can show
   // a per-page audio indicator. Null when no audio step is active.
@@ -34,7 +36,13 @@ export type SessionAction =
   | { type: 'END_SPEAKING' }
   | { type: 'START_LISTENING'; stepIndex: number; pageIndex: number }
   | { type: 'UPDATE_PARTIAL_STT'; text: string }
-  | { type: 'END_LISTENING'; text: string; matchPercent: number }
+  | {
+      type: 'END_LISTENING';
+      text: string;
+      matchPercent: number;
+      successThreshold?: number;
+      passed?: boolean;
+    }
   | { type: 'REVEAL_PAGES'; revealedPages: number[]; waitingForTap?: boolean }
   | { type: 'REVEAL_PAGE'; stepIndex: number; pageIndex: number }
   | { type: 'SHOW_RATINGS' }

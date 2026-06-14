@@ -162,7 +162,15 @@ export function matchSpeech(recognized: string, original: string): number {
   return Math.round(Math.max(globalSim, wordSim));
 }
 
-export function mapMatchToRating(matchPercent: number): number {
+export function mapMatchToRating(matchPercent: number, successThreshold?: number): number {
+  if (successThreshold != null && Number.isFinite(successThreshold)) {
+    const threshold = clamp(Math.round(successThreshold), 0, 100);
+    if (matchPercent < threshold) return 1;
+    const easyThreshold =
+      threshold >= 100 ? 100 : threshold + Math.ceil((100 - threshold) / 2);
+    return matchPercent >= easyThreshold ? 4 : 3;
+  }
+
   if (matchPercent >= 85) return 4; // Easy
   if (matchPercent >= 60) return 3; // Good
   if (matchPercent >= 40) return 2; // Hard

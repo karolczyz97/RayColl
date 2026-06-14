@@ -156,27 +156,6 @@ export function useStudyCardGestures({
         const holdDuration = Date.now() - gesture.pressTime;
 
         if (holdDuration < PEEK_HOLD_THRESHOLD_MS) {
-          if (
-            currentGroup &&
-            currentState.status !== 'revealed' &&
-            currentState.status !== 'finished'
-          ) {
-            const nextHidden = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
-            if (nextHidden !== null) {
-              const nextRevealedPages = uniquePageIndexes([
-                ...currentState.revealedPages,
-                nextHidden,
-              ]);
-              dispatchIfMounted({
-                type: 'SET_CURRENT_STEP',
-                stepIndex: currentState.currentStepIndex,
-                revealedPages: nextRevealedPages,
-              });
-              if (!currentState.waitingForTap) {
-                playSelectionHaptic();
-              }
-            }
-          }
           gesture.blockPress = false;
         } else {
           gesture.blockPress = true;
