@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { MD3LightTheme, MD3DarkTheme, MD3Theme } from 'react-native-paper';
 import { Material3Theme } from '@pchmn/expo-material3-theme';
 import { TOKENS } from './tokens';
@@ -11,8 +12,6 @@ export const darkTheme: MD3Theme = {
   ...MD3DarkTheme,
   roundness: TOKENS.radius.md,
 };
-
-import { Platform } from 'react-native';
 
 export function createAppTheme({
   isDark,

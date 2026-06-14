@@ -44,7 +44,10 @@ export function StudyModesListSection() {
                     icon="delete-outline"
                     size={TOKENS.iconSize.md}
                     iconColor={theme.colors.error}
-                    onPress={() => setModeToDelete(mode)}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      setModeToDelete(mode);
+                    }}
                     accessibilityLabel={t('study_modes.delete_title')}
                     style={styles.deleteBtn}
                   />

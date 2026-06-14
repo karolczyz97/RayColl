@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import type { LayoutChangeEvent } from 'react-native';
 import { Text, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '@/types/models';
 import { getCardCategory } from '@/srs/srsEngine';

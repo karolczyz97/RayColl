@@ -32,7 +32,7 @@ export default function StatsPage() {
   const theme = useTheme();
   const store = useFlashcardStore();
   const { formMaxWidth } = useResponsiveLayout();
-  const { groups, activityHeatmap, getDueCards, isLoading } = store;
+  const { groups, activityHeatmap, isLoading } = store;
 
   const totalCards = useMemo(() => getTotalCardsCount(groups), [groups]);
   const totalDue = useMemo(() => getTotalDueCardsCount(groups), [groups]);

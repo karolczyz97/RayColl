@@ -20,7 +20,7 @@ export function useBrowseFilterButtons(stats: CardStats, isWide: boolean): Expre
         const { fg, bg } = getReviewStatusColor(theme, category);
         const token = SRS_CATEGORIES_TOKENS[category];
         const formattedLabel = formatSrsCountLabel(category, count, t, language, token.labelKey);
-        
+
         return {
           value: category,
           label: isWide ? formattedLabel : `${count}`,

@@ -113,7 +113,7 @@ export function useBrowserBackBlocker({
 
   useEffect(() => {
     if (!active && blockerInstalledRef.current && Platform.OS === 'web') {
-      skippingControlledPopRef.current = true;
+      skippingControlledPopRef.current = false;
       blockerInstalledRef.current = false;
       window.history.back();
     }

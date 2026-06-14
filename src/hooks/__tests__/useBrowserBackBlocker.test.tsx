@@ -255,7 +255,32 @@ describe('useBrowserBackBlocker', () => {
 
     expect(historyBack).toHaveBeenCalledTimes(1);
     expect(mockedNavigateUp).toHaveBeenCalledTimes(1);
-    
+
     historyBack.mockRestore();
+  });
+
+  it('blocks browser back again after the guard is temporarily disabled and re-enabled', () => {
+    const onBackBlocked = jest.fn();
+    const { rerender } = renderHook<() => void, { active: boolean }>(
+      ({ active }) =>
+        useBrowserBackBlocker({
+          active,
+          onBackBlocked,
+        }),
+      { initialProps: { active: true } },
+    );
+
+    act(() => {
+      rerender({ active: false });
+    });
+    act(() => {
+      rerender({ active: true });
+    });
+    act(() => {
+      setHistoryState({ expo: true });
+      window.dispatchEvent(new Event('popstate'));
+    });
+
+    expect(onBackBlocked).toHaveBeenCalledTimes(1);
   });
 });

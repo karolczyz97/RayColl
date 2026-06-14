@@ -2,7 +2,6 @@ import React, { Fragment, memo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { router } from 'expo-router';
-import { useStoreActionsContext } from '@/store/StoreContexts';
 import { useI18n } from '@/i18n';
 import { formatCardCount } from '@/i18n/plural';
 import { AppCard } from '@/components/AppCard';
@@ -37,7 +36,6 @@ export const GroupCard = memo(function GroupCard({
   onRestore,
   onDeletePermanently,
 }: GroupCardProps) {
-  const actions = useStoreActionsContext();
   const { t, language } = useI18n();
   const theme = useTheme();
 

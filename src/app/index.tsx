@@ -26,7 +26,7 @@ export default function Dashboard() {
   const { showPersistentNavigation } = useNavigationShell();
   const { t } = useI18n();
 
-  const { groups, studyModes, getDueCards, user, signIn, signOut, isLoading, activityHeatmap, lastLoginError, clearLastLoginError } = store;
+  const { groups, studyModes, user, signIn, signOut, isLoading, activityHeatmap, lastLoginError, clearLastLoginError } = store;
 
   const handleLogin = async () => {
     try {
