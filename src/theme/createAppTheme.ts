@@ -35,13 +35,13 @@ const darkColors = paperColorsFromScheme(MD3DarkTheme.colors, generated.dark);
 
 export const lightTheme: MD3Theme = {
   ...MD3LightTheme,
-  roundness: TOKENS.radius.md,
+  roundness: TOKENS.radius.xl,
   colors: lightColors,
 };
 
 export const darkTheme: MD3Theme = {
   ...MD3DarkTheme,
-  roundness: TOKENS.radius.md,
+  roundness: TOKENS.radius.xl,
   colors: darkColors,
 };
 
@@ -60,12 +60,12 @@ export function createAppTheme({
     const scheme = isDark ? materialColors.dark : materialColors.light;
     return {
       ...baseTheme,
-      roundness: TOKENS.radius.md,
+      roundness: TOKENS.radius.xl,
       colors: paperColorsFromScheme(baseTheme.colors, scheme),
     };
   }
   return {
     ...(isDark ? darkTheme : lightTheme),
-    roundness: TOKENS.radius.md,
+    roundness: TOKENS.radius.xl,
   };
 }
