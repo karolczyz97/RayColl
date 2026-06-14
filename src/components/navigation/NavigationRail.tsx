@@ -1,7 +1,9 @@
-import React from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
+  withSpring,
   withTiming,
   type AnimatedStyle,
 } from 'react-native-reanimated';
@@ -22,6 +24,7 @@ import {
   type TopLevelDestinationKey,
 } from './navigationDestinations';
 import { NavigationAccountMenu } from './NavigationAccountMenu';
+import { getRailIndicatorY, type RailItemLayout } from './navigationRailUtils';
 
 interface NavigationRailProps {
   expanded: boolean;
@@ -41,6 +44,8 @@ interface RailItemProps {
   onPress: () => void;
   /** Animated opacity style for the label, shared across items. */
   labelStyle: AnimatedStyle<ViewStyle>;
+  /** Reports the leading column layout so the parent can position the shared indicator. */
+  onLeadingLayout?: (event: LayoutChangeEvent) => void;
 }
 
 /**
@@ -55,6 +60,7 @@ function RailItem({
   active,
   onPress,
   labelStyle,
+  onLeadingLayout,
 }: RailItemProps) {
   const theme = useTheme();
   const icon = active ? focusedIcon : unfocusedIcon;
@@ -71,13 +77,8 @@ function RailItem({
       accessibilityLabel={label}
     >
       <View style={styles.itemRow}>
-        <View style={styles.leading}>
-          <View
-            style={[
-              styles.itemIndicator,
-              { backgroundColor: active ? theme.colors.secondaryContainer : 'transparent' },
-            ]}
-          >
+        <View style={styles.leading} onLayout={onLeadingLayout}>
+          <View style={styles.itemIndicator}>
             <Icon source={icon} size={TOKENS.iconSize.md} color={iconColor} />
           </View>
         </View>
@@ -103,6 +104,41 @@ export function NavigationRail({
   const { t } = useI18n();
   const theme = useTheme();
 
+  const itemLayoutsRef = useRef<RailItemLayout[]>([]);
+  const indicatorY = useSharedValue(-1);
+  const indicatorOpacity = useSharedValue(0);
+
+  const activeIndex = NAVIGATION_DESTINATIONS.findIndex((d) => d.key === activeDestination);
+  const activeIndexRef = useRef(activeIndex);
+
+  // Animate the shared indicator pill to the active item on every navigation.
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+    const targetY = getRailIndicatorY(activeIndex, itemLayoutsRef.current);
+    if (targetY !== null) {
+      indicatorY.value = withSpring(targetY, TOKENS.motion.spring.tap);
+      indicatorOpacity.value = withTiming(1, { duration: TOKENS.motion.duration.short });
+    } else {
+      indicatorOpacity.value = withTiming(0, { duration: TOKENS.motion.duration.short });
+    }
+  }, [activeIndex, indicatorY, indicatorOpacity]);
+
+  // Re-apply the correct position when layout measurements arrive later.
+  const handleLeadingLayout = useCallback(
+    (index: number) => (event: LayoutChangeEvent) => {
+      const { y, height } = event.nativeEvent.layout;
+      itemLayoutsRef.current[index] = { y, height };
+      if (index === activeIndexRef.current) {
+        const targetY = getRailIndicatorY(index, itemLayoutsRef.current);
+        if (targetY !== null) {
+          indicatorY.value = targetY;
+          indicatorOpacity.value = 1;
+        }
+      }
+    },
+    [indicatorY, indicatorOpacity],
+  );
+
   // Animate the collapse/expand width change instead of snapping. The sibling
   // content area follows via flex, so this drives the whole reflow smoothly.
   const animatedWidthStyle = useAnimatedStyle(() => ({
@@ -115,6 +151,11 @@ export function NavigationRail({
   // instead of "icons slide to the centre".
   const labelAnimatedStyle = useAnimatedStyle(() => ({
     opacity: withTiming(expanded ? 1 : 0, { duration: TOKENS.motion.duration.short }),
+  }));
+
+  const indicatorAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: indicatorY.value }],
+    opacity: indicatorOpacity.value,
   }));
 
   return (
@@ -141,7 +182,15 @@ export function NavigationRail({
       </View>
 
       <View style={styles.destinations}>
-        {NAVIGATION_DESTINATIONS.map((destination) => {
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.activeIndicator,
+            { backgroundColor: theme.colors.secondaryContainer },
+            indicatorAnimatedStyle,
+          ]}
+        />
+        {NAVIGATION_DESTINATIONS.map((destination, index) => {
           const label = t(destination.labelKey);
           const active = activeDestination === destination.key;
 
@@ -154,6 +203,7 @@ export function NavigationRail({
               active={active}
               onPress={() => onNavigate(destination)}
               labelStyle={labelAnimatedStyle}
+              onLeadingLayout={handleLeadingLayout(index)}
             />
           );
         })}
@@ -197,6 +247,14 @@ const styles = StyleSheet.create({
   destinations: {
     flex: 1,
     gap: TOKENS.spacing.xs,
+    position: 'relative',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    left: (TOKENS.layout.railWidth - TOKENS.touchTarget.compact) / 2,
+    width: TOKENS.touchTarget.compact,
+    height: TOKENS.touchTarget.compact,
+    borderRadius: TOKENS.radius.pill,
   },
   itemRipple: {
     alignSelf: 'stretch',
