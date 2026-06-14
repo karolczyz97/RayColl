@@ -45,11 +45,7 @@ export function CardPageSection({
   const pulseStyle = usePulseAnimation(!!audioIndicator);
 
   useEffect(() => {
-    opacity.value = withSpring(isRevealed ? 1 : 0, {
-      damping: 20,
-      stiffness: 120,
-      mass: 0.8,
-    });
+    opacity.value = withSpring(isRevealed ? 1 : 0, TOKENS.motion.spring.standard);
   }, [isRevealed, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({

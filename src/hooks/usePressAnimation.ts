@@ -3,20 +3,20 @@ import { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reani
 import { TOKENS } from '@/theme/tokens';
 
 /**
- * Expressive spring press feedback. Scales the element down on press-in and
- * springs back on press-out using the shared `expressive` spring spec. Spread
- * the returned handlers onto a Pressable and `animatedStyle` onto a wrapping
- * Animated.View.
+ * Spring press feedback: scale down on press-in, spring back on press-out.
+ * Uses the shared `tap` spring (fast, restrained — no visible overshoot).
+ * Spread the returned handlers onto a Pressable/TouchableRipple and apply
+ * `animatedStyle` to a wrapping Animated.View.
  */
-export function usePressAnimation(scaleTo = 0.96) {
+export function usePressAnimation(scaleTo = 0.97) {
   const scale = useSharedValue(1);
 
   const onPressIn = useCallback(() => {
-    scale.value = withSpring(scaleTo, TOKENS.motion.spring.expressive);
+    scale.value = withSpring(scaleTo, TOKENS.motion.spring.tap);
   }, [scale, scaleTo]);
 
   const onPressOut = useCallback(() => {
-    scale.value = withSpring(1, TOKENS.motion.spring.expressive);
+    scale.value = withSpring(1, TOKENS.motion.spring.tap);
   }, [scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({

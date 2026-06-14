@@ -1,7 +1,9 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
+import { usePressAnimation } from '@/hooks/usePressAnimation';
 
 interface AppFloatingActionButtonProps {
   icon: string;
@@ -22,33 +24,37 @@ export function AppFloatingActionButton({
 }: AppFloatingActionButtonProps) {
   const theme = useTheme();
   const extended = !!label;
+  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   return (
-    <TouchableRipple
-      borderless
-      onPress={onPress}
-      style={[
-        styles.root,
-        extended ? styles.extended : styles.iconOnly,
-        { backgroundColor: theme.colors.primaryContainer },
-        style,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      <View style={[styles.content, extended && styles.contentExtended, contentStyle]}>
-        <Icon source={icon} size={TOKENS.iconSize.md} color={theme.colors.onPrimaryContainer} />
-        {extended ? (
-          <Text
-            variant="labelLarge"
-            numberOfLines={1}
-            style={[styles.label, { color: theme.colors.onPrimaryContainer }]}
-          >
-            {label}
-          </Text>
-        ) : null}
-      </View>
-    </TouchableRipple>
+    <Animated.View style={[style, animatedStyle]}>
+      <TouchableRipple
+        borderless
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[
+          styles.root,
+          extended ? styles.extended : styles.iconOnly,
+          { backgroundColor: theme.colors.primaryContainer },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+      >
+        <View style={[styles.content, extended && styles.contentExtended, contentStyle]}>
+          <Icon source={icon} size={TOKENS.iconSize.md} color={theme.colors.onPrimaryContainer} />
+          {extended ? (
+            <Text
+              variant="labelLarge"
+              numberOfLines={1}
+              style={[styles.label, { color: theme.colors.onPrimaryContainer }]}
+            >
+              {label}
+            </Text>
+          ) : null}
+        </View>
+      </TouchableRipple>
+    </Animated.View>
   );
 }
 

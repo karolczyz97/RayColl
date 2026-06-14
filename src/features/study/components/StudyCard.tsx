@@ -96,7 +96,7 @@ export function StudyCard({
   }));
 
   const pressIn = () => {
-    scale.value = withSpring(0.96, TOKENS.motion.spring.tap);
+    scale.value = withSpring(0.97, TOKENS.motion.spring.tap);
     onHoldingChange(true);
   };
 

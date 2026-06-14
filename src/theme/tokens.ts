@@ -162,13 +162,16 @@ export const TOKENS = {
       delayMax: 490,
       fadeDuration: 300,
     },
-    // Reanimated spring specs. `standard` preserves the prior AnimatedSection feel;
-    // `expressive` is springier, for Expressive press/enter polish (Task 2+).
+    // Reanimated spring presets — tune here, apply everywhere via TOKENS.motion.spring.*
+    // standard: section/content enter — moderate spring, near-critically-damped
+    // tap:      press feedback (scale ~0.97) — fast snap, negligible overshoot
+    // expressive: selection morph (ExpressiveButtonGroup) — mild spring, light overshoot OK
+    // pulse:    audio-indicator beat — intentionally underdamped (decorative)
     spring: {
       standard: { damping: 18, stiffness: 140, mass: 0.8 },
-      expressive: { damping: 14, stiffness: 170, mass: 0.9 },
+      tap: { damping: 24, stiffness: 200 },
+      expressive: { damping: 18, stiffness: 170, mass: 0.9 },
       pulse: { damping: 3 },
-      tap: { damping: 12, stiffness: 150 },
     },
   },
   // Light-theme fallback colors used when the theme doesn't provide a suitable token.

@@ -1,7 +1,9 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Icon, Menu, Surface, Text, TouchableRipple, useTheme } from 'react-native-paper';
+import Animated from 'react-native-reanimated';
+import { Icon, Menu, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
+import { usePressAnimation } from '@/hooks/usePressAnimation';
 import { AppMenuItem } from './AppMenuItem';
 import { useMenuAnchor } from '@/hooks/useMenuAnchor';
 
@@ -38,6 +40,7 @@ export function AppSplitButton({
   const { open, setOpen, setAnchorWidth, menuStyle, menuContentStyle } = useMenuAnchor(
     theme.colors.elevation.level2,
   );
+  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const buttonColor = disabled ? theme.colors.surfaceVariant : theme.colors.secondaryContainer;
   const textColor = disabled ? theme.colors.onSurfaceVariant : theme.colors.onSecondaryContainer;
@@ -50,15 +53,15 @@ export function AppSplitButton({
       style={menuStyle}
       contentStyle={menuContentStyle}
       anchor={
-        <Surface
-          mode="flat"
-          elevation={0}
+        <Animated.View
           onLayout={(event) => setAnchorWidth(event.nativeEvent.layout.width)}
-          style={[styles.container, { backgroundColor: buttonColor }]}
+          style={[styles.container, { backgroundColor: buttonColor }, animatedStyle]}
         >
           <TouchableRipple
             disabled={disabled}
             onPress={onPress}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
             style={styles.primarySegment}
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel ?? label}
@@ -84,6 +87,8 @@ export function AppSplitButton({
           <TouchableRipple
             disabled={menuDisabled}
             onPress={() => !menuDisabled && setOpen((current) => !current)}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
             style={styles.trailingSegment}
             accessibilityRole="button"
             accessibilityLabel={menuAccessibilityLabel ?? 'Open menu'}
@@ -93,7 +98,7 @@ export function AppSplitButton({
               <Icon source={open ? 'chevron-up' : 'chevron-down'} size={TOKENS.iconSize.md} color={textColor} />
             </View>
           </TouchableRipple>
-        </Surface>
+        </Animated.View>
       }
     >
       {options.map((option) => (
