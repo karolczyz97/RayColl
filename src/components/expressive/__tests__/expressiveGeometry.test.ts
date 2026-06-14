@@ -4,6 +4,9 @@ import {
   createShapeSurfacePath,
   getProgressAccessibilityValue,
   getProgressRatio,
+  getStopDotOpacity,
+  STOP_DOT_SIZE,
+  TRACK_END_GAP,
 } from '../expressiveGeometry';
 
 describe('expressiveGeometry', () => {
@@ -20,6 +23,17 @@ describe('expressiveGeometry', () => {
       max: 100,
       now: 100,
     });
+  });
+
+  it('getStopDotOpacity', () => {
+    expect(getStopDotOpacity(0)).toBe(0);
+    expect(getStopDotOpacity(0.5)).toBe(1);
+    expect(getStopDotOpacity(1)).toBe(1);
+  });
+
+  it('STOP_DOT_SIZE and TRACK_END_GAP are positive', () => {
+    expect(STOP_DOT_SIZE).toBeGreaterThan(0);
+    expect(TRACK_END_GAP).toBeGreaterThan(0);
   });
 
   it('createShapeSurfacePath', () => {
