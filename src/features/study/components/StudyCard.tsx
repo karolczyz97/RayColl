@@ -64,14 +64,14 @@ export function StudyCard({
 
   const scrollToY = useCallback((y: number) => {
     // Defer one frame so a just-committed layout/state change is in place first.
-    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y, animated: true }));
+    requestAnimationFrame(() => scrollRef.current?.scrollTo?.({ y, animated: true }));
   }, []);
 
   // Reset scroll state and cached measurements when the card changes.
   useEffect(() => {
     pageGeometryRef.current = {};
     prevRevealedRef.current = [];
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    scrollRef.current?.scrollTo?.({ y: 0, animated: false });
   }, [currentCard?.id]);
 
   // Auto-scroll as pages are revealed. Hidden pages reserve their full height, so
@@ -86,7 +86,8 @@ export function StudyCard({
     scrollToY(getBottomAlignedScrollY(geometry.y, geometry.height, viewportHeightRef.current));
   }, [revealedPages, scrollToY]);
 
-  // When the answer is shown for rating, scroll back to the top to review it.
+  // When rating controls appear, scroll back to the top so the card and buttons
+  // start from a predictable position. Revealing pages is owned by mode steps.
   useEffect(() => {
     if (showRatingButtons) scrollToY(0);
   }, [showRatingButtons, scrollToY]);
@@ -157,7 +158,7 @@ export function StudyCard({
               return activeGroup.pageNames.slice(0, activePageCount).map((pageName, pageIndex) => {
                 const content = visiblePages[pageIndex] || '';
                 const isRevealed =
-                  pageIndex === 0 || revealedPages.includes(pageIndex) || peekedPageIndex === pageIndex || showRatingButtons;
+                  pageIndex === 0 || revealedPages.includes(pageIndex) || peekedPageIndex === pageIndex;
                 const audioIndicator: CardAudioIndicator | null =
                   audioMode && audioPageIndex === pageIndex
                     ? {
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
   },
-  // Clear space under the answer so the floating rating buttons don't cover the
+  // Clear space under the content so the floating rating buttons don't cover the
   // last lines of a long card. Applied only when the content actually overflows;
   // otherwise it would shrink the evenly-distributed pages and shift them up.
   scrollContentWithRatings: {

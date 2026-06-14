@@ -9,6 +9,7 @@ export interface BuildModeStepForm {
   newMs: number;
   newPauseMultiplier: number;
   newThreshold: number;
+  newRating: number;
   newCondition: 'always' | StepCondition;
 }
 
@@ -36,19 +37,27 @@ export function buildModeStep(form: BuildModeStepForm): ModeStep | null {
     0,
     MAX_PAUSE_MULTIPLIER,
   );
+  const safeRating = clamp(toFiniteInteger(form.newRating, 3), 1, 4);
 
   let step: ModeStep;
   switch (form.newStepType) {
     case 'show_page':
       step = { ...withId(form.id), type: 'show_page', pageIndex: safePageIdx };
       break;
+    case 'show_all_pages':
+      step = { ...withId(form.id), type: 'show_all_pages' };
+      break;
+    case 'wait_for_tap_to_reveal_next':
+      step = { ...withId(form.id), type: 'wait_for_tap_to_reveal_next' };
+      break;
+    case 'wait_for_tap_to_reveal':
+      step = { ...withId(form.id), type: 'wait_for_tap_to_reveal' };
+      break;
+    case 'show_ratings':
+      step = { ...withId(form.id), type: 'show_ratings' };
+      break;
     case 'speak_page':
-      step = {
-        ...withId(form.id),
-        type: 'speak_page',
-        pageIndex: safePageIdx,
-        pauseMultiplier: safeMultiplier,
-      };
+      step = { ...withId(form.id), type: 'speak_page', pageIndex: safePageIdx };
       break;
     case 'dynamic_pause':
       step = {
@@ -61,14 +70,6 @@ export function buildModeStep(form: BuildModeStepForm): ModeStep | null {
     case 'wait':
       step = { ...withId(form.id), type: 'wait', ms: form.newMs };
       break;
-    case 'listen_and_branch':
-      step = {
-        ...withId(form.id),
-        type: 'listen_and_branch',
-        pageIndex: safePageIdx,
-        successThreshold: form.newThreshold,
-      };
-      break;
     case 'listen_and_check':
       step = {
         ...withId(form.id),
@@ -77,8 +78,20 @@ export function buildModeStep(form: BuildModeStepForm): ModeStep | null {
         successThreshold: form.newThreshold,
       };
       break;
-    case 'rate':
-      step = { ...withId(form.id), type: 'rate' };
+    case 'feedback_success':
+      step = { ...withId(form.id), type: 'feedback_success' };
+      break;
+    case 'feedback_error':
+      step = { ...withId(form.id), type: 'feedback_error' };
+      break;
+    case 'auto_rate_from_answer':
+      step = { ...withId(form.id), type: 'auto_rate_from_answer' };
+      break;
+    case 'auto_rate_fixed':
+      step = { ...withId(form.id), type: 'auto_rate_fixed', rating: safeRating };
+      break;
+    case 'mark_failed':
+      step = { ...withId(form.id), type: 'mark_failed' };
       break;
     case 'next_card':
       step = { ...withId(form.id), type: 'next_card' };

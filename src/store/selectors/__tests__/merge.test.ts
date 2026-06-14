@@ -229,7 +229,7 @@ describe('merge', () => {
   describe('mergeStudyModes', () => {
     it('combines both local and cloud modes', () => {
       const localModes = [
-        { id: 'custom', name: 'Custom Local', steps: [{ type: 'rate' as const }], isBuiltIn: false, updatedAt: now },
+        { id: 'custom', name: 'Custom Local', steps: [{ type: 'show_ratings' as const }], isBuiltIn: false, updatedAt: now },
       ];
       const cloudModes = [
         { id: 'classic', name: 'Classic Cloud', steps: [], isBuiltIn: true, builtInSourceId: 'classic', updatedAt: now - 5000 },
@@ -241,7 +241,7 @@ describe('merge', () => {
     });
 
     it('deduplicates by id, newer updatedAt wins', () => {
-      const localMode = { id: 'conflict', name: 'Local Wins', steps: [{ type: 'rate' as const }], isBuiltIn: false, updatedAt: now };
+      const localMode = { id: 'conflict', name: 'Local Wins', steps: [{ type: 'show_ratings' as const }], isBuiltIn: false, updatedAt: now };
       const cloudMode = { id: 'conflict', name: 'Cloud Older', steps: [], isBuiltIn: false, updatedAt: now - 5000 };
       const merged = mergeStudyModes([localMode], [cloudMode]);
       expect(merged.length).toBe(1);
@@ -269,7 +269,7 @@ describe('merge', () => {
       const cloudLive = {
         id: 'classic',
         name: 'Cloud classic',
-        steps: [{ type: 'rate' as const }],
+        steps: [{ type: 'show_ratings' as const }],
         isBuiltIn: true,
         builtInSourceId: 'classic',
         updatedAt: now - 5000,
@@ -292,7 +292,7 @@ describe('merge', () => {
       const cloudTomb = {
         id: 'classic',
         name: 'Deleted cloud classic',
-        steps: [{ type: 'rate' as const }],
+        steps: [{ type: 'show_ratings' as const }],
         isBuiltIn: true,
         builtInSourceId: 'classic',
         updatedAt: now,

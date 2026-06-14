@@ -98,4 +98,28 @@ describe('useStudyModeDraftController', () => {
     });
     expect(mockStore.addStudyMode).not.toHaveBeenCalled();
   });
+
+  it('orders step type options by study-flow category', () => {
+    const { result } = renderHook(() =>
+      useStudyModeDraftController({ modeId: STUDY_MODE_NEW_ID }),
+    );
+
+    expect(Object.keys(result.current.stepLabels)).toEqual([
+      'show_page',
+      'show_all_pages',
+      'wait_for_tap_to_reveal_next',
+      'wait_for_tap_to_reveal',
+      'speak_page',
+      'listen_and_check',
+      'dynamic_pause',
+      'wait',
+      'feedback_success',
+      'feedback_error',
+      'show_ratings',
+      'auto_rate_from_answer',
+      'auto_rate_fixed',
+      'mark_failed',
+      'next_card',
+    ]);
+  });
 });

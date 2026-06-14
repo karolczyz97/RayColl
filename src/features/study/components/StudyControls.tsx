@@ -13,6 +13,7 @@ import {
   getWarningColor,
 } from '@/theme/semanticColors';
 import { TOKENS } from '@/theme/tokens';
+import type { AnswerStatus } from '@/features/study/session/sessionTypes';
 
 type RatingTone = 'danger' | 'warning' | 'primary' | 'success';
 
@@ -23,7 +24,7 @@ interface StudyControlsProps {
   sttResultText: string;
   sttMatchPercent: number;
   sttSuccessThreshold: number | null;
-  sttPassed: boolean | null;
+  answerStatus: AnswerStatus;
   onRate: (rating: number) => void;
 }
 
@@ -40,9 +41,13 @@ interface RatingButtonProps {
 
 export function getSttResultTone(
   sttMatchPercent: number,
-  sttPassed: boolean | null,
+  answerStatus: AnswerStatus,
 ): SttResultTone {
-  if (sttPassed != null) return sttPassed ? 'success' : 'danger';
+  // Odróżniamy correct/incorrect od skipped/error/none. Skipped/error i tak nie
+  // mają rozpoznanego tekstu, więc box wyniku się nie pokazuje — ale ton liczymy
+  // jawnie ze statusu, nie z boolean "passed".
+  if (answerStatus === 'correct') return 'success';
+  if (answerStatus === 'incorrect') return 'danger';
   if (sttMatchPercent >= 85) return 'success';
   if (sttMatchPercent >= 60) return 'info';
   if (sttMatchPercent >= 40) return 'warning';
@@ -56,7 +61,7 @@ export function StudyControls({
   sttResultText,
   sttMatchPercent,
   sttSuccessThreshold,
-  sttPassed,
+  answerStatus,
   onRate,
 }: StudyControlsProps) {
   const theme = useTheme();
@@ -90,7 +95,7 @@ export function StudyControls({
     return t(key).split(' (')[0];
   };
 
-  const matchTone = getSttResultTone(sttMatchPercent, sttPassed);
+  const matchTone = getSttResultTone(sttMatchPercent, answerStatus);
   const matchColor =
     matchTone === 'success'
       ? getSuccessColor(theme)

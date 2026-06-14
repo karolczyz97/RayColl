@@ -3,12 +3,16 @@ import type { FlashcardGroup, Flashcard, ModeStep } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
 import { useSyncedRef } from './useSyncedRef';
-import type { SessionAction } from '@/features/study/session/sessionTypes';
 import { executeStudyStep } from '@/features/study/session/stepExecutor';
-import { areAllActivePagesRevealed } from '@/features/study/session/sessionUtils';
 import { useStudyAudio } from '@/features/study/hooks/useStudyAudio';
 import { useStudyCardGestures } from '@/features/study/hooks/useStudyCardGestures';
 import { useStudyReviewFlow } from '@/features/study/hooks/useStudyReviewFlow';
+import {
+  type SessionAction,
+  type CardReviewState,
+  type LastAnswerResult,
+  NO_ANSWER_RESULT,
+} from '@/features/study/session/sessionTypes';
 
 export function useStudySession(
   group: FlashcardGroup | null,
@@ -21,8 +25,14 @@ export function useStudySession(
   // Generation counter for step chains; see runEpochRef in stepExecutor.ts.
   const runEpochRef = useRef(0);
   const pausedRef = useRef(false);
-  // Wynik ostatniego kroku "sprawdź wymowę" (listen_and_check) na bieżącej karcie.
-  const lastCheckPassedRef = useRef<boolean | null>(null);
+  // Wynik ostatniego "Sprawdź wymowę" — synchroniczne źródło prawdy dla warunków
+  // runnera (mirror dla UI leci przez reducer state.lastAnswerResult).
+  const lastAnswerResultRef = useRef<LastAnswerResult>(NO_ANSWER_RESULT);
+  // Stan oceny bieżącej karty: jedna karta = max jedna ocena (auto albo manual).
+  const currentCardReviewStateRef = useRef<CardReviewState>('none');
+  // Synchroniczny mirror revealedPages — reducer state jest stale w obrębie jednego
+  // łańcucha kroków, a tap-gate/show_* muszą widzieć świeży zestaw odsłoniętych stron.
+  const revealedPagesRef = useRef<number[]>([]);
   const isMountedRef = useRef(true);
   const holdingRef = useRef(false);
   const groupRef = useSyncedRef(group);
@@ -47,7 +57,6 @@ export function useStudySession(
     stopAudio,
     lastTtsDurationRef,
     skipRef,
-    lastPartialTextRef,
   } = useStudyAudio(dispatchIfMounted, ttsRateRef);
 
   const prepareStartSession = useCallback(() => {
@@ -72,6 +81,7 @@ export function useStudySession(
     groupRef,
     stateRef,
     holdingRef,
+    currentCardReviewStateRef,
     onCardReviewedRef,
     dispatchIfMounted,
     isMountedRef,
@@ -107,7 +117,9 @@ export function useStudySession(
       await executeStudyStep(card, stepIndex, {
         abortRef,
         runEpochRef,
-        lastCheckPassedRef,
+        lastAnswerResultRef,
+        currentCardReviewStateRef,
+        revealedPagesRef,
         activeStepsRef,
         groupRef,
         stateRef,
@@ -120,7 +132,6 @@ export function useStudySession(
         processCardReview,
         advanceToNextCard,
         markCardFailed,
-        lastPartialTextRef,
         executeNext: async (nextCard, nextStepIndex) => {
           await executeStepRef.current?.(nextCard, nextStepIndex);
         },
@@ -131,7 +142,6 @@ export function useStudySession(
       dispatchIfMounted,
       groupRef,
       guardedAwait,
-      lastPartialTextRef,
       lastTtsDurationRef,
       markCardFailed,
       playTts,
@@ -146,63 +156,36 @@ export function useStudySession(
     executeStepRef.current = executeStep;
   }, [executeStep]);
 
-  const resumeAfterStep = useCallback((card: Flashcard, nextStepIndex: number) => {
-    // Defer so the reducer state (and stateRef) settle before the next step runs.
-    setTimeout(() => {
-      if (!abortRef.current) {
-        void executeStepRef.current?.(card, nextStepIndex);
-      }
-    }, 0);
-  }, []);
-
   const { handleCardPress, setHolding } = useStudyCardGestures({
     groupRef,
     stateRef,
-    dueCardsRef,
     holdingRef,
     skipRef,
     requestSkip,
-    resumeAfterStep,
     dispatchIfMounted,
   });
 
-  // While a `rate` step waits for the user to reveal the card, finish the wait as
-  // soon as every page is visible. Re-runs the same step so the rate step shows
-  // its rating buttons. Guard in the setTimeout checks stateRef so if
-  // handleCardPress already resumed, this becomes a no-op.
+  // Po domknięciu tap-gate gesty ustawiają pendingStepIndexToRun. Wznawiamy runner
+  // od wskazanego kroku TEJ SAMEJ karty — auto-run (poniżej) startuje kartę tylko
+  // od kroku 0 i blokuje ponowne odpalenie przez lastExecutedCardIndexRef.
   useEffect(() => {
-    if (!state.waitingForTap) return;
-    if (!group) return;
-    if (!areAllActivePagesRevealed(group, state.revealedPages)) return;
-    const card = dueCards[state.currentCardIndex];
-    if (!card) return;
-
-    const stepIndex = state.currentStepIndex;
-    const cardIndex = state.currentCardIndex;
-
-    const timer = setTimeout(() => {
-      if (
-        stateRef.current.waitingForTap &&
-        stateRef.current.currentStepIndex === stepIndex &&
-        stateRef.current.currentCardIndex === cardIndex &&
-        !abortRef.current
-      ) {
-        dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
-        void executeStepRef.current?.(card, stepIndex);
-      }
-    }, 0);
-
-    return () => clearTimeout(timer);
+    const pending = state.pendingStepIndexToRun;
+    if (pending === null) return;
+    const card = dueCardsRef.current[state.currentCardIndex];
+    // Konsumuj najpierw — re-render z pending=null wejdzie tu i wyjdzie od razu.
+    dispatchIfMounted({ type: 'CONSUME_PENDING_STEP_INDEX' });
+    if (!card || abortRef.current) return;
+    // Synchronizuj mirror odsłoniętych stron ze świeżego state (zawiera reveale z gate).
+    revealedPagesRef.current = stateRef.current.revealedPages;
+    // Odpalamy bezpośrednio (bez setTimeout): CONSUME zmienia pending, więc cleanup
+    // setTimeoutu anulowałby zaplanowane wznowienie zanim zdążyłoby wystartować.
+    void executeStepRef.current?.(card, pending);
   }, [
-    state.waitingForTap,
-    state.revealedPages,
-    state.currentStepIndex,
+    state.pendingStepIndexToRun,
     state.currentCardIndex,
-    group,
-    dueCards,
+    dueCardsRef,
     dispatchIfMounted,
     stateRef,
-    abortRef,
   ]);
 
   useEffect(() => {
@@ -210,7 +193,11 @@ export function useStudySession(
       lastExecutedCardIndexRef.current = null;
       return;
     }
-    if (state.status === 'revealed' || state.waitingForTap) return;
+    // Nie startuj karty od 0, gdy: pokazujemy ratingi, czekamy w tap-gate, albo
+    // mamy zaplanowane wznowienie kroku (pendingStepIndexToRun) tej karty.
+    if (state.status === 'revealed') return;
+    if (state.interactionGate.kind !== 'none') return;
+    if (state.pendingStepIndexToRun !== null) return;
     const card = dueCards[state.currentCardIndex];
     if (!card) return;
     if (lastExecutedCardIndexRef.current === state.currentCardIndex) return;
@@ -227,7 +214,14 @@ export function useStudySession(
       active = false;
       clearTimeout(timer);
     };
-  }, [dueCards, executeStep, state.currentCardIndex, state.status, state.waitingForTap]);
+  }, [
+    dueCards,
+    executeStep,
+    state.currentCardIndex,
+    state.status,
+    state.interactionGate.kind,
+    state.pendingStepIndexToRun,
+  ]);
 
   const stopSession = useCallback(() => {
     abortRef.current = true;
@@ -247,7 +241,11 @@ export function useStudySession(
   // for a tap or a manual rating, or the session is finished).
   const pauseSession = useCallback(() => {
     const current = stateRef.current;
-    if (current.status === 'finished' || current.status === 'revealed' || current.waitingForTap) {
+    if (
+      current.status === 'finished' ||
+      current.status === 'revealed' ||
+      current.interactionGate.kind !== 'none'
+    ) {
       return;
     }
     pausedRef.current = true;
@@ -281,17 +279,20 @@ export function useStudySession(
     dispatchIfMounted({ type: 'CLEAR_ERROR' });
   }, [dispatchIfMounted]);
 
-  const compatibilityState = useMemo(
-    () => ({
+  const compatibilityState = useMemo(() => {
+    const answer = state.lastAnswerResult;
+    return {
       currentCardIndex: state.currentCardIndex,
       currentStepIndex: state.currentStepIndex,
       revealedPages: state.revealedPages,
       peekedPageIndex: state.peekedPageIndex,
-      sttResultText: state.sttResultText,
-      sttMatchPercent: state.sttMatchPercent,
-      sttSuccessThreshold: state.sttSuccessThreshold,
-      sttPassed: state.sttPassed,
-      waitingForTap: state.waitingForTap,
+      // Pola STT wyprowadzone z kanonicznego lastAnswerResult (mirror dla UI).
+      sttResultText: answer.text,
+      sttMatchPercent: answer.percent ?? 0,
+      sttSuccessThreshold: answer.threshold,
+      answerStatus: answer.status,
+      // Tap-gate napędza wskazówkę "tap to reveal" w UI (dawne waitingForTap).
+      waitingForTap: state.interactionGate.kind === 'tap_to_reveal',
       audioPageIndex: state.audioPageIndex,
       isTtsPlaying: state.status === 'speaking',
       isSttListening: state.status === 'listening',
@@ -299,9 +300,8 @@ export function useStudySession(
       isSessionFinished: state.status === 'finished',
       status: state.status,
       errorMsg: state.errorMsg,
-    }),
-    [state],
-  );
+    };
+  }, [state]);
 
   return {
     dueCards,

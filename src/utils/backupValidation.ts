@@ -41,8 +41,8 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         step.pageIndex,
         `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
       );
-      // Nowe backupy mają pauseMultiplier, stare extraPauseMs — oba opcjonalne
-      // (normalizacja przy imporcie mapuje legacy pole i uzupełnia braki).
+      // Legacy pola (pauseMultiplier/extraPauseMs) bywają w starych backupach —
+      // akceptujemy i ignorujemy przy normalizacji (TTS już nie pauzuje).
       if (step.pauseMultiplier !== undefined) {
         assertNonNegativeNumber(
           step.pauseMultiplier,
@@ -77,25 +77,6 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
     case 'wait':
       assertNonNegativeNumber(step.ms, `Step ${index + 1} in study mode ${modeId} has invalid ms.`);
       return;
-    case 'listen_and_branch':
-      assertNonNegativeNumber(
-        step.pageIndex,
-        `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
-      );
-      assertNonNegativeNumber(
-        step.successThreshold,
-        `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`,
-      );
-      if (step.successThreshold > 100) {
-        throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
-      }
-      if (step.incorrectTtsPageIndex !== undefined) {
-        assertNonNegativeNumber(
-          step.incorrectTtsPageIndex,
-          `Step ${index + 1} in study mode ${modeId} has invalid incorrectTtsPageIndex.`,
-        );
-      }
-      return;
     case 'listen_and_check':
       assertNonNegativeNumber(
         step.pageIndex,
@@ -109,11 +90,28 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
       }
       return;
-    // `reveal_on_tap` is a removed legacy type, still accepted here so older
-    // backups validate; normalization strips it on import.
-    case 'reveal_on_tap':
-    case 'rate':
+    case 'auto_rate_fixed':
+      assertNonNegativeNumber(
+        step.rating,
+        `Step ${index + 1} in study mode ${modeId} has invalid rating.`,
+      );
+      return;
+    // Primitive steps bez parametrów.
+    case 'show_all_pages':
+    case 'wait_for_tap_to_reveal_next':
+    case 'wait_for_tap_to_reveal':
+    case 'show_ratings':
+    case 'feedback_success':
+    case 'feedback_error':
+    case 'auto_rate_from_answer':
+    case 'mark_failed':
     case 'next_card':
+      return;
+    // Legacy typy (reveal_on_tap, listen_and_branch, rate) — wciąż akceptowane,
+    // żeby stare backupy się walidowały; normalizacja usuwa je przy imporcie.
+    case 'reveal_on_tap':
+    case 'listen_and_branch':
+    case 'rate':
       return;
     default:
       throw new Error(`Step ${index + 1} in study mode ${modeId} has an unsupported type.`);

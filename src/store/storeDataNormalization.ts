@@ -109,19 +109,41 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
 
 export const MAX_PAUSE_MULTIPLIER = 5;
 
-// Migracja kroków z legacy `extraPauseMs` (stała pauza w ms) na `pauseMultiplier`
-// (wielokrotność czasu odsłuchu): dawna pauza > 0 → ×1, brak pauzy → ×0
-// (dla dynamic_pause brak/0 → ×1, bo sama pauza zawsze trwała 1× odsłuch).
-function normalizePauseMultiplier(step: ModeStep, legacyZeroMeans: 0 | 1): number {
-  const raw = step as { pauseMultiplier?: unknown; extraPauseMs?: unknown };
-  let multiplier: number;
-  if (typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)) {
-    multiplier = raw.pauseMultiplier;
-  } else if (typeof raw.extraPauseMs === 'number' && Number.isFinite(raw.extraPauseMs)) {
-    multiplier = raw.extraPauseMs > 0 ? 1 : legacyZeroMeans;
-  } else {
-    multiplier = 1;
-  }
+// Znane primitive steps. Wszystko spoza tego zbioru (legacy reveal_on_tap,
+// listen_and_branch, rate, albo nieznane typy z uszkodzonego backupu) jest
+// usuwane przy normalizacji, żeby runner nigdy nie dostał kroku, którego nie zna.
+const VALID_STEP_TYPES = new Set<ModeStep['type']>([
+  'show_page',
+  'show_all_pages',
+  'wait_for_tap_to_reveal_next',
+  'wait_for_tap_to_reveal',
+  'show_ratings',
+  'speak_page',
+  'dynamic_pause',
+  'wait',
+  'listen_and_check',
+  'feedback_success',
+  'feedback_error',
+  'auto_rate_from_answer',
+  'auto_rate_fixed',
+  'mark_failed',
+  'next_card',
+]);
+
+function clampStepRating(value: unknown): number {
+  const n = typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : 3;
+  return Math.max(1, Math.min(4, n));
+}
+
+// `pauseMultiplier` = wielokrotność czasu odsłuchu strony. Legacy `extraPauseMs`
+// (stała pauza w ms) oraz brak pola mapują się na domyślne 1× (dynamic_pause zawsze
+// trwał 1× odsłuch). Używane już tylko przez dynamic_pause — TTS nie pauzuje.
+function normalizePauseMultiplier(step: ModeStep): number {
+  const raw = step as { pauseMultiplier?: unknown };
+  const multiplier =
+    typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)
+      ? raw.pauseMultiplier
+      : 1;
   return Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(multiplier)));
 }
 
@@ -134,19 +156,22 @@ function normalizeStepCondition(step: ModeStep): { condition?: StepCondition } {
 function normalizeModeStep(step: ModeStep): ModeStep {
   const base = normalizeStepCondition(step);
   if (step.type === 'speak_page') {
-    return {
-      ...base,
-      type: 'speak_page',
-      pageIndex: step.pageIndex,
-      pauseMultiplier: normalizePauseMultiplier(step, 0),
-    };
+    // TTS już nie pauzuje — ewentualny legacy pauseMultiplier jest tu usuwany.
+    return { ...base, type: 'speak_page', pageIndex: step.pageIndex };
   }
   if (step.type === 'dynamic_pause') {
     return {
       ...base,
       type: 'dynamic_pause',
       nextPageIndex: step.nextPageIndex,
-      pauseMultiplier: normalizePauseMultiplier(step, 1),
+      pauseMultiplier: normalizePauseMultiplier(step),
+    };
+  }
+  if (step.type === 'auto_rate_fixed') {
+    return {
+      ...base,
+      type: 'auto_rate_fixed',
+      rating: clampStepRating((step as { rating?: unknown }).rating),
     };
   }
   if ('condition' in step && base.condition === undefined) {
@@ -175,10 +200,13 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     // list is normalized rather than crashing the whole load.
     // Step IDs are only used as React keys (with ?? index fallback) — stripping
     // them keeps normalization idempotent so deepEqual across data sources works.
-    // `reveal_on_tap` is a removed legacy step type — tapping to reveal the next
-    // page is now default behavior, so these steps are stripped on load/import.
+    // Zostaw tylko znane primitive steps — legacy/nieznane typy (reveal_on_tap,
+    // listen_and_branch, rate, …) są usuwane przy load/import, żeby runner nigdy
+    // nie dostał kroku, którego nie rozumie.
     steps: (Array.isArray(mode.steps) ? mode.steps : [])
-      .filter((step) => (step as { type?: unknown }).type !== 'reveal_on_tap')
+      .filter((step) =>
+        VALID_STEP_TYPES.has((step as { type?: unknown }).type as ModeStep['type']),
+      )
       .map(({ id: _id, ...step }) => normalizeModeStep(step as ModeStep)),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),

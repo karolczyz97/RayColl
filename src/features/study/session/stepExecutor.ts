@@ -4,26 +4,49 @@ import { mapMatchToRating, matchSpeech } from '@/srs/srsEngine';
 import { playErrorSound, playSuccessSound } from '@/services/audioFeedback';
 import { playErrorHaptic, playSuccessHaptic } from '@/services/hapticFeedback';
 import type { StudySkipState, SpeechRecognitionOutcome } from '@/features/study/hooks/useStudyAudio';
-import type { SessionAction, StudySessionState } from './sessionTypes';
-import { areAllActivePagesRevealed, getActivePageIndexes, sleep } from './sessionUtils';
+import type {
+  AnswerStatus,
+  CardReviewState,
+  LastAnswerResult,
+  SessionAction,
+  StudySessionState,
+} from './sessionTypes';
+import { NO_ANSWER_RESULT } from './sessionTypes';
+import {
+  areAllActivePagesRevealed,
+  getActivePageIndexes,
+  sleep,
+  uniquePageIndexes,
+} from './sessionUtils';
 
-const CORRECTION_INTERRUPT_PAUSE_MS = 2000;
-
+/**
+ * Runner = głupi interpreter listy primitive steps. Nie zna trybów. Każdy krok
+ * robi DOKŁADNIE jedną rzecz i kończy się jednym z:
+ *   - continue stepIndex + 1
+ *   - stop na interaction gate (wait_for_tap_to_reveal)
+ *   - stop na show ratings (show_ratings)
+ *   - next card (next_card)
+ * Koniec listy / brak kroku => STOP. Runner nie zgaduje intencji.
+ */
 interface StepExecutorContext {
   abortRef: MutableRefObject<boolean>;
   // Bumped on pause/resume/restart. A step chain captures the epoch when it starts;
   // a mismatch means the chain was superseded and must die without side effects.
   runEpochRef: MutableRefObject<number>;
-  // Wynik ostatniego kroku listen_and_check na bieżącej karcie (null = brak).
-  lastCheckPassedRef: MutableRefObject<boolean | null>;
+  // Wynik ostatniego "Sprawdź wymowę" na bieżącej karcie — synchroniczne źródło
+  // prawdy dla warunków (correct/wrong). Mirror dla UI leci przez reducer.
+  lastAnswerResultRef: MutableRefObject<LastAnswerResult>;
+  // Stan oceny karty: gwarantuje jedną ocenę na kartę (auto albo manual).
+  currentCardReviewStateRef: MutableRefObject<CardReviewState>;
+  // Synchroniczny mirror revealedPages — reducer state jest stale w obrębie
+  // jednego łańcucha kroków (brak re-renderu), a auto-complete tap-gate i show_*
+  // muszą widzieć świeży zestaw odsłoniętych stron.
+  revealedPagesRef: MutableRefObject<number[]>;
   activeStepsRef: MutableRefObject<ModeStep[]>;
   groupRef: MutableRefObject<FlashcardGroup | null>;
-  // Read-only view of the live session state, used by the `rate` step to decide
-  // whether the back is already revealed or whether to wait for taps first.
   stateRef: MutableRefObject<StudySessionState>;
   skipRef: MutableRefObject<StudySkipState>;
   lastTtsDurationRef: MutableRefObject<number>;
-  lastPartialTextRef: MutableRefObject<string>;
   dispatchIfMounted: (action: SessionAction) => void;
   guardedAwait: <T>(promise: Promise<T>) => Promise<T | undefined>;
   playTts: (text: string, lang: string) => Promise<void>;
@@ -48,11 +71,16 @@ async function continueIfActive(
   }
 }
 
-async function skipableSleep(context: StepRunContext, ms: number) {
-  context.skipRef.current.requested = false;
-  context.skipRef.current.armed = true;
-  await context.guardedAwait(sleep(ms));
-  context.skipRef.current.armed = false;
+function buildAnswerResult(
+  status: AnswerStatus,
+  text: string,
+  percent: number | null,
+  threshold: number | null,
+  pageIndex: number,
+): LastAnswerResult {
+  // STT nie ocenia: suggestedRating zostaje null. Ocenę z wyniku liczy dopiero
+  // krok auto_rate_from_answer (mapMatchToRating), nie ten krok.
+  return { status, text, percent, threshold, pageIndex, suggestedRating: null };
 }
 
 async function executeSpeakPageStep(
@@ -65,24 +93,15 @@ async function executeSpeakPageStep(
   context.skipRef.current.armed = true;
   context.dispatchIfMounted({ type: 'START_SPEAKING', stepIndex, pageIndex: step.pageIndex });
   const pageText = card.pages[step.pageIndex] || '';
+  // TTS tylko mówi — żadnej pauzy. Pauza po TTS to osobny krok (dynamic_pause/wait).
   await context.guardedAwait(
     context.playTts(pageText, group.pageLanguages[step.pageIndex] || 'en-US'),
   );
-  if (context.isStale()) {
-    context.dispatchIfMounted({ type: 'END_SPEAKING' });
-    return;
-  }
-  if (!context.skipRef.current.requested && step.pauseMultiplier > 0) {
-    // Pauza = N × czas odsłuchu strony; zmierzony czas TTS, a gdy go brak
-    // (błąd TTS), ta sama estymata co w kroku dynamic_pause.
-    const listenDuration =
-      context.lastTtsDurationRef.current > 0
-        ? context.lastTtsDurationRef.current
-        : pageText.length * 60;
-    await context.guardedAwait(sleep(listenDuration * step.pauseMultiplier));
-  }
+  context.skipRef.current.armed = false;
   context.dispatchIfMounted({ type: 'END_SPEAKING' });
-
+  if (context.isStale()) return;
+  // Tap podczas TTS tylko przerwał odtwarzanie (guardedAwait wrócił wcześniej);
+  // nie odsłania strony, nie pokazuje ratingów — po prostu idziemy dalej.
   await continueIfActive(card, stepIndex + 1, context);
 }
 
@@ -95,85 +114,9 @@ async function executeTimedWaitStep(
   context.skipRef.current.armed = true;
   context.dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex });
   await context.guardedAwait(sleep(waitMs));
-
-  await continueIfActive(card, stepIndex + 1, context);
-}
-
-async function executeListenAndBranchStep(
-  card: Flashcard,
-  stepIndex: number,
-  step: Extract<ModeStep, { type: 'listen_and_branch' }>,
-  group: FlashcardGroup,
-  context: StepRunContext,
-) {
-  context.skipRef.current.armed = true;
-  context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex, pageIndex: step.pageIndex });
-  const lang = group.pageLanguages[step.pageIndex] || 'en-US';
-  const softTimeout = Math.max(5000, context.lastTtsDurationRef.current * 3);
-  const recognitionPromise = context.runSpeechRecognition(lang, softTimeout + 10000);
-  const result = await context.guardedAwait(recognitionPromise);
   context.skipRef.current.armed = false;
-
   if (context.isStale()) return;
-
-  if (context.skipRef.current.requested) {
-    const late = await Promise.race([
-      recognitionPromise.catch(() => undefined),
-      sleep(700).then(() => undefined),
-    ]);
-    const harvested = late?.status === 'ok' ? late.text : context.lastPartialTextRef.current;
-
-    if (context.isStale()) return;
-
-    if (!harvested) {
-      context.dispatchIfMounted({
-        type: 'END_LISTENING',
-        text: '',
-        matchPercent: 0,
-        successThreshold: step.successThreshold,
-        passed: false,
-      });
-      await continueIfActive(card, stepIndex + 1, context);
-      return;
-    }
-
-    const original = card.pages[step.pageIndex] || '';
-    const percent = matchSpeech(harvested, original);
-    const passed = percent >= step.successThreshold;
-    context.dispatchIfMounted({
-      type: 'END_LISTENING',
-      text: harvested,
-      matchPercent: percent,
-      successThreshold: step.successThreshold,
-      passed,
-    });
-    await evaluateRecognition(card, stepIndex, step, group, percent, context, true);
-    return;
-  }
-
-  if (!result || result.status === 'error') {
-    context.dispatchIfMounted({
-      type: 'REVEAL_PAGES',
-      revealedPages: getActivePageIndexes(group),
-    });
-    context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
-    return;
-  }
-
-  const recognized = result.text;
-  const original = card.pages[step.pageIndex] || '';
-  const percent = matchSpeech(recognized, original);
-  const passed = percent >= step.successThreshold;
-
-  context.dispatchIfMounted({
-    type: 'END_LISTENING',
-    text: recognized || '',
-    matchPercent: percent,
-    successThreshold: step.successThreshold,
-    passed,
-  });
-
-  await evaluateRecognition(card, stepIndex, step, group, percent, context, false);
+  await continueIfActive(card, stepIndex + 1, context);
 }
 
 async function executeListenAndCheckStep(
@@ -187,125 +130,50 @@ async function executeListenAndCheckStep(
   context.dispatchIfMounted({ type: 'START_LISTENING', stepIndex, pageIndex: step.pageIndex });
   const lang = group.pageLanguages[step.pageIndex] || 'en-US';
   const softTimeout = Math.max(5000, context.lastTtsDurationRef.current * 3);
-  const recognitionPromise = context.runSpeechRecognition(lang, softTimeout + 10000);
-  const result = await context.guardedAwait(recognitionPromise);
+  const result = await context.guardedAwait(
+    context.runSpeechRecognition(lang, softTimeout + 10000),
+  );
   context.skipRef.current.armed = false;
 
   if (context.isStale()) return;
 
-  let recognized = '';
+  const threshold = step.successThreshold;
+  const pageIndex = step.pageIndex;
+  let answer: LastAnswerResult;
+
   if (context.skipRef.current.requested) {
-    // Tap = fast-forward: zbierz spóźniony/częściowy wynik zamiast go odrzucać.
-    const late = await Promise.race([
-      recognitionPromise.catch(() => undefined),
-      sleep(700).then(() => undefined),
-    ]);
-    recognized = late?.status === 'ok' ? late.text : context.lastPartialTextRef.current;
-    if (context.isStale()) return;
-  } else if (result?.status === 'ok') {
-    recognized = result.text;
-  }
-
-  const original = card.pages[step.pageIndex] || '';
-  const percent = recognized ? matchSpeech(recognized, original) : 0;
-  const passed = percent >= step.successThreshold;
-  context.lastCheckPassedRef.current = passed;
-  context.dispatchIfMounted({
-    type: 'END_LISTENING',
-    text: recognized,
-    matchPercent: percent,
-    successThreshold: step.successThreshold,
-    passed,
-  });
-
-  if (passed) {
-    playSuccessSound();
-    playSuccessHaptic();
+    // Tap podczas STT = skip. NIE zbieramy late/partial result, NIE liczymy
+    // matchSpeech, NIE ustawiamy incorrect. To wyłącznie pominięcie kroku, więc
+    // status `skipped` nie odpali kroków warunkowych correct/wrong.
+    answer = buildAnswerResult('skipped', '', null, threshold, pageIndex);
+  } else if (!result || result.status === 'error') {
+    // Techniczny błąd STT (mic/permission/network). To nie jest "źle".
+    answer = buildAnswerResult('error', '', null, threshold, pageIndex);
   } else {
-    playErrorSound();
-    playErrorHaptic();
+    const recognized = result.text;
+    const original = card.pages[pageIndex] || '';
+    const percent = matchSpeech(recognized, original);
+    const status: AnswerStatus = percent >= threshold ? 'correct' : 'incorrect';
+    answer = buildAnswerResult(status, recognized, percent, threshold, pageIndex);
   }
 
-  // Krótka pauza, żeby wynik był widoczny (jak w listen_and_branch).
-  await skipableSleep(context, 1200);
-  if (context.isStale()) return;
+  // Ref najpierw (kolejne kroki czytają warunek synchronicznie), potem mirror UI.
+  context.lastAnswerResultRef.current = answer;
+  context.dispatchIfMounted({ type: 'SET_LAST_ANSWER_RESULT', result: answer });
 
+  // STT samo: nie robi feedbacku, pauzy, odsłaniania, oceny, mark failed ani next card.
   await continueIfActive(card, stepIndex + 1, context);
 }
 
-async function evaluateRecognition(
-  card: Flashcard,
-  stepIndex: number,
-  step: Extract<ModeStep, { type: 'listen_and_branch' }>,
-  group: FlashcardGroup,
-  percent: number,
-  context: StepRunContext,
-  fromSkip: boolean,
-) {
-  if (!fromSkip) {
-    await skipableSleep(context, 1200);
-    if (context.isStale()) return;
-  }
-
-  if (percent >= step.successThreshold) {
-    playSuccessSound();
-    playSuccessHaptic();
-    
-    context.dispatchIfMounted({
-      type: 'REVEAL_PAGES',
-      revealedPages: getActivePageIndexes(group),
-    });
-
-    await skipableSleep(context, 1200);
-    if (context.isStale()) return;
-    const autoRating = mapMatchToRating(percent, step.successThreshold);
-    context.processCardReview(card, autoRating);
-    await context.advanceToNextCard();
-    return;
-  }
-
-  playErrorSound();
-  playErrorHaptic();
-  context.markCardFailed(card);
-
-  context.dispatchIfMounted({
-    type: 'REVEAL_PAGES',
-    revealedPages: getActivePageIndexes(group),
-  });
-
-  context.skipRef.current.requested = false;
-  context.skipRef.current.armed = true;
-  if (step.incorrectTtsPageIndex !== undefined) {
-    context.dispatchIfMounted({
-      type: 'START_SPEAKING',
-      stepIndex,
-      pageIndex: step.incorrectTtsPageIndex,
-    });
-    const correctionStart = Date.now();
-    await context.guardedAwait(
-      context.playTts(
-        card.pages[step.incorrectTtsPageIndex] || '',
-        group.pageLanguages[step.incorrectTtsPageIndex] || 'en-US',
-      ),
-    );
-    const correctionDuration = Date.now() - correctionStart;
-    context.dispatchIfMounted({ type: 'END_SPEAKING' });
-
-    const wasTtsCut = context.skipRef.current.requested;
-    context.skipRef.current.requested = false;
-    context.skipRef.current.armed = true;
-
-    const pauseMs = wasTtsCut ? CORRECTION_INTERRUPT_PAUSE_MS : correctionDuration * 2;
-    await context.guardedAwait(sleep(pauseMs));
-  } else {
-    await skipableSleep(context, 2000);
-  }
-  context.skipRef.current.armed = false;
-
-  if (!context.isStale()) {
-    context.processCardReview(card, 1);
-    await context.advanceToNextCard();
-  }
+function executeAutoRateFromAnswer(card: Flashcard, context: StepRunContext) {
+  const result = context.lastAnswerResultRef.current;
+  // No-op dla skipped/error/none — nawet przy condition "zawsze".
+  if (result.status !== 'correct' && result.status !== 'incorrect') return;
+  if (result.percent === null || result.threshold === null) return;
+  if (context.currentCardReviewStateRef.current !== 'none') return;
+  const rating = mapMatchToRating(result.percent, result.threshold);
+  context.processCardReview(card, rating);
+  context.currentCardReviewStateRef.current = 'autoRated';
 }
 
 export async function executeStudyStep(
@@ -325,23 +193,29 @@ export async function executeStudyStep(
   context.skipRef.current.requested = false;
   context.skipRef.current.armed = false;
 
-  // Nowa karta zaczyna bez wyniku sprawdzenia wymowy.
+  // Nowa karta (wejście od kroku 0): zeruj wynik odpowiedzi, stan oceny i
+  // synchroniczny mirror odsłoniętych stron. Re-entry po gate (stepIndex != 0)
+  // nie resetuje — pendingStepIndexToRun synchronizuje ref ze świeżego state.
   if (stepIndex === 0) {
-    context.lastCheckPassedRef.current = null;
+    context.lastAnswerResultRef.current = NO_ANSWER_RESULT;
+    context.currentCardReviewStateRef.current = 'none';
+    context.revealedPagesRef.current = [];
   }
 
+  // Koniec listy / brak grupy / abort => STOP. Bez fallbacku SHOW_RATINGS —
+  // runner nie zgaduje intencji. Niepełna konfiguracja to błąd konfiguracji.
   if (context.abortRef.current || !currentGroup || stepIndex >= currentSteps.length) {
-    context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
     return;
   }
 
   const step = currentSteps[stepIndex];
 
-  // Krok warunkowy wykonuje się tylko przy pasującym wyniku ostatniego
-  // "sprawdź wymowę"; bez sprawdzenia (null) kroki warunkowe są pomijane.
+  // Warunek kroku: 'correct' -> status correct; 'wrong' -> status incorrect.
+  // skipped/error/none NIGDY nie pasują (tap w STT nie odpala correct/wrong).
   if (step.condition) {
-    const passed = context.lastCheckPassedRef.current;
-    const conditionMet = step.condition === 'correct' ? passed === true : passed === false;
+    const status = context.lastAnswerResultRef.current.status;
+    const conditionMet =
+      step.condition === 'correct' ? status === 'correct' : status === 'incorrect';
     if (!conditionMet) {
       await continueIfActive(card, stepIndex + 1, context);
       return;
@@ -349,26 +223,59 @@ export async function executeStudyStep(
   }
 
   switch (step.type) {
-    case 'show_page':
+    case 'show_page': {
+      context.revealedPagesRef.current = uniquePageIndexes([
+        ...context.revealedPagesRef.current,
+        step.pageIndex,
+      ]);
       context.dispatchIfMounted({ type: 'REVEAL_PAGE', stepIndex, pageIndex: step.pageIndex });
       await continueIfActive(card, stepIndex + 1, context);
       break;
+    }
 
-    case 'rate':
-      // Rating is gated on the user having seen the whole card. If pages are
-      // still hidden, pause and let taps reveal them one by one (handled by the
-      // gesture layer + auto-advance effect); once everything is visible the
-      // step re-runs and shows the rating buttons.
-      if (areAllActivePagesRevealed(currentGroup, context.stateRef.current.revealedPages)) {
-        context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
+    case 'show_all_pages': {
+      const all = getActivePageIndexes(currentGroup);
+      context.revealedPagesRef.current = all;
+      context.dispatchIfMounted({ type: 'REVEAL_PAGES', revealedPages: all });
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+    }
+
+    case 'wait_for_tap_to_reveal_next':
+      if (areAllActivePagesRevealed(currentGroup, context.revealedPagesRef.current)) {
+        await continueIfActive(card, stepIndex + 1, context);
       } else {
-        context.dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: true });
+        context.dispatchIfMounted({
+          type: 'START_TAP_REVEAL_GATE',
+          revealMode: 'single',
+          continueStepIndex: stepIndex + 1,
+        });
       }
       break;
 
-    case 'next_card':
-      // Tryb osłuchowy: karta kończy się bez oceny — SRS zostaje nietknięty.
-      await context.advanceToNextCard();
+    case 'wait_for_tap_to_reveal':
+      // Auto-complete: jeśli wszystko już odkryte, nie otwieraj gate — idź dalej.
+      if (areAllActivePagesRevealed(currentGroup, context.revealedPagesRef.current)) {
+        await continueIfActive(card, stepIndex + 1, context);
+      } else {
+        // STOP: runner czeka na tapy. Każdy tap (w gestach) odsłania jedną stronę;
+        // ostatni domyka gate i ustawia pendingStepIndexToRun = stepIndex + 1.
+        context.dispatchIfMounted({
+          type: 'START_TAP_REVEAL_GATE',
+          revealMode: 'remaining',
+          continueStepIndex: stepIndex + 1,
+        });
+      }
+      break;
+
+    case 'show_ratings':
+      // Pokaż ratingi tylko jeśli karta jeszcze nieoceniona; inaczej no-op -> dalej.
+      if (context.currentCardReviewStateRef.current === 'none') {
+        context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
+        // STOP: czekamy na manualną ocenę (handleRating).
+      } else {
+        await continueIfActive(card, stepIndex + 1, context);
+      }
       break;
 
     case 'speak_page':
@@ -385,12 +292,47 @@ export async function executeStudyStep(
       await executeTimedWaitStep(card, stepIndex, step.ms, context);
       break;
 
-    case 'listen_and_branch':
-      await executeListenAndBranchStep(card, stepIndex, step, currentGroup, context);
-      break;
-
     case 'listen_and_check':
       await executeListenAndCheckStep(card, stepIndex, step, currentGroup, context);
+      break;
+
+    case 'feedback_success':
+      // Sam feedback — nie sprawdza wyniku (to robi condition), nie branchuje.
+      playSuccessSound();
+      playSuccessHaptic();
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+
+    case 'feedback_error':
+      playErrorSound();
+      playErrorHaptic();
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+
+    case 'auto_rate_from_answer':
+      executeAutoRateFromAnswer(card, context);
+      // Nie przechodzi do następnej karty, nie odsłania, nie pokazuje ratingów.
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+
+    case 'auto_rate_fixed':
+      if (context.currentCardReviewStateRef.current === 'none') {
+        context.processCardReview(card, step.rating);
+        context.currentCardReviewStateRef.current = 'autoRated';
+      }
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+
+    case 'mark_failed':
+      // Failed list != ocena SRS. Sam dodaje kartę do failed, nic więcej.
+      context.markCardFailed(card);
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+
+    case 'next_card':
+      // Przechodzi do następnej karty bez własnej oceny. advanceToNextCard
+      // respektuje holdingRef (czeka na puszczenie karty).
+      await context.advanceToNextCard();
       break;
 
     default: {

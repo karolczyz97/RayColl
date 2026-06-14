@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   listHeaderWrapper: {
     gap: TOKENS.spacing.lg,
   },
-  listContainer: {},
+  listContainer: { gap: TOKENS.spacing.lg },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

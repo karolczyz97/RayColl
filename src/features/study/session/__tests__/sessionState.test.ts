@@ -3,6 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 import type { Flashcard, FlashcardGroup } from '../../../../types/models';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '../sessionReducer';
 import type { SessionAction, StudySessionState } from '../sessionTypes';
+import { NO_ANSWER_RESULT } from '../sessionTypes';
 import {
   areAllActivePagesRevealed,
   getActivePageIndexes,
@@ -56,25 +57,14 @@ describe('sessionReducer', () => {
   });
 
   describe('SET_CURRENT_STEP', () => {
-    it('sets stepIndex and keeps revealedPages / waitingForTap when omitted', () => {
+    it('sets stepIndex, keeps revealedPages and clears peek', () => {
       const stepKept = reduce(
-        { ...INITIAL_STUDY_SESSION_STATE, revealedPages: [0, 1], waitingForTap: true },
+        { ...INITIAL_STUDY_SESSION_STATE, revealedPages: [0, 1], peekedPageIndex: 1 },
         { type: 'SET_CURRENT_STEP', stepIndex: 2 },
       );
       expect(stepKept.currentStepIndex).toBe(2);
       expect(stepKept.revealedPages).toEqual([0, 1]);
-      expect(stepKept.waitingForTap).toBe(true);
-    });
-
-    it('applies revealedPages and waitingForTap when given', () => {
-      const stepSet = reduce(INITIAL_STUDY_SESSION_STATE, {
-        type: 'SET_CURRENT_STEP',
-        stepIndex: 1,
-        revealedPages: [0, 2],
-        waitingForTap: true,
-      });
-      expect(stepSet.revealedPages).toEqual([0, 2]);
-      expect(stepSet.waitingForTap).toBe(true);
+      expect(stepKept.peekedPageIndex).toBeNull();
     });
   });
 
@@ -95,15 +85,24 @@ describe('sessionReducer', () => {
   });
 
   describe('START_LISTENING', () => {
-    it('sets listening status, audio page and clears partial text / match percent', () => {
+    it('sets listening status, audio page and resets the last answer result', () => {
       const listening = reduce(
-        { ...INITIAL_STUDY_SESSION_STATE, sttResultText: 'stale', sttMatchPercent: 80 },
+        {
+          ...INITIAL_STUDY_SESSION_STATE,
+          lastAnswerResult: {
+            status: 'correct',
+            text: 'stale',
+            percent: 80,
+            threshold: 70,
+            pageIndex: 1,
+            suggestedRating: 3,
+          },
+        },
         { type: 'START_LISTENING', stepIndex: 2, pageIndex: 0 },
       );
       expect(listening.status).toBe('listening');
       expect(listening.audioPageIndex).toBe(0);
-      expect(listening.sttResultText).toBe('');
-      expect(listening.sttMatchPercent).toBe(0);
+      expect(listening.lastAnswerResult).toEqual(NO_ANSWER_RESULT);
     });
   });
 
@@ -111,26 +110,32 @@ describe('sessionReducer', () => {
     it('updates text while keeping listening status', () => {
       const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2, pageIndex: 0 });
       const partial = reduce(listening, { type: 'UPDATE_PARTIAL_STT', text: 'hel' });
-      expect(partial.sttResultText).toBe('hel');
+      expect(partial.lastAnswerResult.text).toBe('hel');
       expect(partial.status).toBe('listening');
     });
 
     it('ignores late partials once no longer listening (post-skip/advance zombie callback)', () => {
-      const revealed = { ...INITIAL_STUDY_SESSION_STATE, status: 'revealed' as const, sttResultText: 'final' };
+      const revealed = { ...INITIAL_STUDY_SESSION_STATE, status: 'revealed' as const };
       const partial = reduce(revealed, { type: 'UPDATE_PARTIAL_STT', text: 'stale partial' });
       expect(partial).toBe(revealed); // unchanged reference
-      expect(partial.sttResultText).toBe('final');
     });
   });
 
-  describe('END_LISTENING', () => {
-    it('sets checking status, clears audio page and stores text / match percent', () => {
-      const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2, pageIndex: 0 });
-      const checked = reduce(listening, { type: 'END_LISTENING', text: 'hello', matchPercent: 92 });
-      expect(checked.status).toBe('checking');
+  describe('SET_LAST_ANSWER_RESULT', () => {
+    it('returns to idle, clears audio page and stores the answer result', () => {
+      const listening = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'START_LISTENING', stepIndex: 2, pageIndex: 1 });
+      const result = {
+        status: 'incorrect' as const,
+        text: 'helo',
+        percent: 40,
+        threshold: 70,
+        pageIndex: 1,
+        suggestedRating: null,
+      };
+      const checked = reduce(listening, { type: 'SET_LAST_ANSWER_RESULT', result });
+      expect(checked.status).toBe('idle');
       expect(checked.audioPageIndex).toBeNull();
-      expect(checked.sttResultText).toBe('hello');
-      expect(checked.sttMatchPercent).toBe(92);
+      expect(checked.lastAnswerResult).toEqual(result);
     });
   });
 
@@ -161,48 +166,108 @@ describe('sessionReducer', () => {
   });
 
   describe('SHOW_RATINGS', () => {
-    it('sets revealed status and clears waitingForTap', () => {
+    it('sets revealed status and clears peek', () => {
       const ratings = reduce(
-        { ...INITIAL_STUDY_SESSION_STATE, waitingForTap: true },
+        { ...INITIAL_STUDY_SESSION_STATE, peekedPageIndex: 1 },
         { type: 'SHOW_RATINGS' },
       );
       expect(ratings.status).toBe('revealed');
-      expect(ratings.waitingForTap).toBe(false);
+      expect(ratings.peekedPageIndex).toBeNull();
     });
   });
 
   describe('FINISH_SESSION', () => {
-    it('sets finished status and clears waitingForTap', () => {
+    it('sets finished status and clears the interaction gate / pending step', () => {
       const finished = reduce(
-        { ...INITIAL_STUDY_SESSION_STATE, waitingForTap: true },
+        {
+          ...INITIAL_STUDY_SESSION_STATE,
+          pendingStepIndexToRun: 3,
+          interactionGate: { kind: 'tap_to_reveal', revealMode: 'remaining', continueStepIndex: 2 },
+        },
         { type: 'FINISH_SESSION' },
       );
       expect(finished.status).toBe('finished');
-      expect(finished.waitingForTap).toBe(false);
+      expect(finished.interactionGate.kind).toBe('none');
+      expect(finished.pendingStepIndexToRun).toBeNull();
     });
 
-    it('forces finished from an in-progress status (early end mid-step)', () => {
+    it('forces finished from an in-progress status, preserving the position', () => {
       const finished = reduce(
-        { ...INITIAL_STUDY_SESSION_STATE, status: 'speaking', currentCardIndex: 2, waitingForTap: true },
+        { ...INITIAL_STUDY_SESSION_STATE, status: 'speaking', currentCardIndex: 2 },
         { type: 'FINISH_SESSION' },
       );
       expect(finished.status).toBe('finished');
-      expect(finished.waitingForTap).toBe(false);
-      // Position is preserved so the summary reflects where the user stopped.
       expect(finished.currentCardIndex).toBe(2);
     });
   });
 
   describe('ADVANCE_CARD', () => {
-    it('sets next card index, resets step index, status, and revealedPages', () => {
+    it('sets next card index and resets step/status/reveal/answer/gate/pending', () => {
       const advanced = reduce(
-        { ...INITIAL_STUDY_SESSION_STATE, currentStepIndex: 4, revealedPages: [0, 1], status: 'revealed' },
+        {
+          ...INITIAL_STUDY_SESSION_STATE,
+          currentStepIndex: 4,
+          revealedPages: [0, 1],
+          status: 'revealed',
+          pendingStepIndexToRun: 2,
+          lastAnswerResult: {
+            status: 'correct',
+            text: 'hi',
+            percent: 90,
+            threshold: 70,
+            pageIndex: 1,
+            suggestedRating: 3,
+          },
+        },
         { type: 'ADVANCE_CARD', nextCardIndex: 7 },
       );
       expect(advanced.currentCardIndex).toBe(7);
       expect(advanced.currentStepIndex).toBe(0);
       expect(advanced.status).toBe('idle');
       expect(advanced.revealedPages).toEqual([]);
+      expect(advanced.lastAnswerResult).toEqual(NO_ANSWER_RESULT);
+      expect(advanced.interactionGate.kind).toBe('none');
+      expect(advanced.pendingStepIndexToRun).toBeNull();
+    });
+  });
+
+  describe('interaction gate', () => {
+    it('START_TAP_REVEAL_GATE opens an idle tap-to-reveal gate', () => {
+      const gated = reduce(INITIAL_STUDY_SESSION_STATE, {
+        type: 'START_TAP_REVEAL_GATE',
+        revealMode: 'remaining',
+        continueStepIndex: 3,
+      });
+      expect(gated.status).toBe('idle');
+      expect(gated.interactionGate).toEqual({
+        kind: 'tap_to_reveal',
+        revealMode: 'remaining',
+        continueStepIndex: 3,
+      });
+    });
+
+    it('REVEAL_NEXT_PAGE_IN_GATE appends a page without changing the step index', () => {
+      const gated = reduce(
+        { ...INITIAL_STUDY_SESSION_STATE, revealedPages: [0], currentStepIndex: 4 },
+        { type: 'REVEAL_NEXT_PAGE_IN_GATE', pageIndex: 1 },
+      );
+      expect(gated.revealedPages).toEqual([0, 1]);
+      expect(gated.currentStepIndex).toBe(4);
+    });
+
+    it('COMPLETE_INTERACTION_GATE clears the gate', () => {
+      const gated = reduce(INITIAL_STUDY_SESSION_STATE, {
+        type: 'START_TAP_REVEAL_GATE',
+        revealMode: 'remaining',
+        continueStepIndex: 3,
+      });
+      expect(reduce(gated, { type: 'COMPLETE_INTERACTION_GATE' }).interactionGate.kind).toBe('none');
+    });
+
+    it('SET_PENDING_STEP_INDEX then CONSUME_PENDING_STEP_INDEX', () => {
+      const pending = reduce(INITIAL_STUDY_SESSION_STATE, { type: 'SET_PENDING_STEP_INDEX', stepIndex: 5 });
+      expect(pending.pendingStepIndexToRun).toBe(5);
+      expect(reduce(pending, { type: 'CONSUME_PENDING_STEP_INDEX' }).pendingStepIndexToRun).toBeNull();
     });
   });
 
@@ -350,8 +415,20 @@ describe('sessionUtils', () => {
 describe('formatStepSummary', () => {
   const fakeT = ((key: string) => key) as Parameters<typeof formatStepSummary>[1];
 
-  it('maps rate step', () => {
-    expect(formatStepSummary({ type: 'rate' }, fakeT)).toBe('step.rate');
+  it('maps a primitive step to its summary key', () => {
+    expect(formatStepSummary({ type: 'show_ratings' }, fakeT)).toBe('step.show_ratings');
+  });
+
+  it('maps the single tap reveal step to its summary key', () => {
+    expect(formatStepSummary({ type: 'wait_for_tap_to_reveal_next' }, fakeT)).toBe(
+      'step.wait_for_tap_to_reveal_next',
+    );
+  });
+
+  it('prefixes the condition for conditional steps', () => {
+    expect(formatStepSummary({ type: 'show_all_pages', condition: 'correct' }, fakeT)).toBe(
+      'step.condition.correct: step.show_all_pages',
+    );
   });
 });
 

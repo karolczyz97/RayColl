@@ -121,29 +121,29 @@ describe('normalizeStudyMode', () => {
     expect(normalized.deletedAt).toBe(7777);
   });
 
-  it('migrates legacy speak_page extraPauseMs to pauseMultiplier (>0 -> 1, 0 -> 0)', () => {
+  it('drops legacy speak_page pause fields (TTS no longer pauses)', () => {
     const legacySteps = [
       { type: 'speak_page', pageIndex: 0, extraPauseMs: 500 },
-      { type: 'speak_page', pageIndex: 1, extraPauseMs: 0 },
+      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 4 },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps: legacySteps }));
     expect(normalized.steps).toEqual([
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1 },
-      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 0 },
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'speak_page', pageIndex: 1 },
     ]);
   });
 
-  it('defaults missing speak_page pauseMultiplier to 1 and clamps to 0–5', () => {
+  it('clamps auto_rate_fixed rating to 1–4 and defaults invalid values', () => {
     const steps = [
-      { type: 'speak_page', pageIndex: 0 },
-      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 9 },
-      { type: 'speak_page', pageIndex: 2, pauseMultiplier: -3 },
+      { type: 'auto_rate_fixed', rating: 9 },
+      { type: 'auto_rate_fixed', rating: 0 },
+      { type: 'auto_rate_fixed' },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps }));
     expect(normalized.steps).toEqual([
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1 },
-      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 5 },
-      { type: 'speak_page', pageIndex: 2, pauseMultiplier: 0 },
+      { type: 'auto_rate_fixed', rating: 4 },
+      { type: 'auto_rate_fixed', rating: 1 },
+      { type: 'auto_rate_fixed', rating: 3 },
     ]);
   });
 
@@ -156,28 +156,32 @@ describe('normalizeStudyMode', () => {
     expect(normalized.steps).toEqual([{ type: 'next_card' }, { type: 'show_page', pageIndex: 0 }]);
   });
 
-  it('strips legacy reveal_on_tap steps because tap-to-reveal is now default behavior', () => {
+  it('strips legacy/unknown step types the runner no longer understands', () => {
     const steps = [
       { type: 'show_page', pageIndex: 0 },
+      { type: 'wait_for_tap_to_reveal_next' },
       { type: 'reveal_on_tap' },
       { type: 'rate' },
+      { type: 'listen_and_branch', pageIndex: 1, successThreshold: 70 },
+      { type: 'show_ratings' },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps }));
     expect(normalized.steps).toEqual([
       { type: 'show_page', pageIndex: 0 },
-      { type: 'rate' },
+      { type: 'wait_for_tap_to_reveal_next' },
+      { type: 'show_ratings' },
     ]);
   });
 
   it('preserves valid step conditions and drops invalid ones', () => {
     const steps = [
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1, condition: 'correct' },
+      { type: 'speak_page', pageIndex: 0, condition: 'correct' },
       { type: 'next_card', condition: 'wrong' },
       { type: 'show_page', pageIndex: 0, condition: 'nonsense' },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps }));
     expect(normalized.steps).toEqual([
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1, condition: 'correct' },
+      { type: 'speak_page', pageIndex: 0, condition: 'correct' },
       { type: 'next_card', condition: 'wrong' },
       { type: 'show_page', pageIndex: 0 },
     ]);

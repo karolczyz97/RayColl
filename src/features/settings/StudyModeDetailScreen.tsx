@@ -44,6 +44,7 @@ export function StudyModeDetailScreen() {
     isNameValid,
     areStepsValid,
     isValid,
+    stepIssues,
     save,
     setName,
   } = draftController;
@@ -159,6 +160,15 @@ export function StudyModeDetailScreen() {
                 {t('settings.validation.mode_steps_required')}
               </HelperText>
             ) : null}
+            {stepIssues.map((issue, issueIndex) => (
+              <HelperText
+                key={`${issue.messageKey}-${issueIndex}`}
+                type={issue.severity === 'error' ? 'error' : 'info'}
+                visible
+              >
+                {t(issue.messageKey, issue.params)}
+              </HelperText>
+            ))}
           </View>
         </View>
       </AnimatedSection>
@@ -177,6 +187,8 @@ export function StudyModeDetailScreen() {
         setNewPauseMultiplier={draftController.setNewPauseMultiplier}
         newThreshold={draftController.newThreshold}
         setNewThreshold={draftController.setNewThreshold}
+        newRating={draftController.newRating}
+        setNewRating={draftController.setNewRating}
         newCondition={draftController.newCondition}
         setNewCondition={draftController.setNewCondition}
         confirmAddStep={draftController.confirmAddStep}

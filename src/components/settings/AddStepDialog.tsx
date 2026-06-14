@@ -9,6 +9,9 @@ import { AppNumberInput } from '@/components/forms/AppNumberInput';
 import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
 import type { StepCondition } from '@/types/models';
 
+// Kroki, które operują na konkretnej stronie (pageIndex / nextPageIndex).
+const PAGE_INDEX_STEP_TYPES = ['show_page', 'speak_page', 'listen_and_check', 'dynamic_pause'];
+
 interface AddStepDialogProps {
   visible: boolean;
   onDismiss: () => void;
@@ -23,6 +26,8 @@ interface AddStepDialogProps {
   setNewPauseMultiplier: (multiplier: number) => void;
   newThreshold: number;
   setNewThreshold: (threshold: number) => void;
+  newRating: number;
+  setNewRating: (rating: number) => void;
   newCondition: 'always' | StepCondition;
   setNewCondition: (condition: 'always' | StepCondition) => void;
   confirmAddStep: () => void;
@@ -43,6 +48,8 @@ export function AddStepDialog({
   setNewPauseMultiplier,
   newThreshold,
   setNewThreshold,
+  newRating,
+  setNewRating,
   newCondition,
   setNewCondition,
   confirmAddStep,
@@ -69,20 +76,18 @@ export function AddStepDialog({
             accessibilityLabel="Select step type"
           />
 
-          {newStepType !== 'wait' &&
-            newStepType !== 'rate' &&
-            newStepType !== 'next_card' && (
-              <AppNumberInput
-                label={t('settings.dialog.add_step.page_idx')}
-                value={newPageIdx + 1}
-                onChange={(page) => setNewPageIdx(page - 1)}
-                min={1}
-                max={Math.max(1, pageCount)}
-                accessibilityLabel="Page number input"
-              />
-            )}
+          {PAGE_INDEX_STEP_TYPES.includes(newStepType) && (
+            <AppNumberInput
+              label={t('settings.dialog.add_step.page_idx')}
+              value={newPageIdx + 1}
+              onChange={(page) => setNewPageIdx(page - 1)}
+              min={1}
+              max={Math.max(1, pageCount)}
+              accessibilityLabel="Page number input"
+            />
+          )}
 
-          {(newStepType === 'speak_page' || newStepType === 'dynamic_pause') && (
+          {newStepType === 'dynamic_pause' && (
             <AppNumberInput
               label={t('settings.dialog.add_step.pause_multiplier')}
               value={newPauseMultiplier}
@@ -103,7 +108,7 @@ export function AddStepDialog({
             />
           )}
 
-          {(newStepType === 'listen_and_branch' || newStepType === 'listen_and_check') && (
+          {newStepType === 'listen_and_check' && (
             <AppNumberInput
               label={t('settings.dialog.add_step.threshold')}
               value={newThreshold}
@@ -111,6 +116,17 @@ export function AddStepDialog({
               min={0}
               max={100}
               accessibilityLabel="Success threshold input"
+            />
+          )}
+
+          {newStepType === 'auto_rate_fixed' && (
+            <AppNumberInput
+              label={t('settings.dialog.add_step.rating')}
+              value={newRating}
+              onChange={setNewRating}
+              min={1}
+              max={4}
+              accessibilityLabel="Rating input"
             />
           )}
 

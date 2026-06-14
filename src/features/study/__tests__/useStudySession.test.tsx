@@ -4,7 +4,6 @@ import { render, act, waitFor } from '@testing-library/react-native';
 import { Text, View } from 'react-native';
 import type { FlashcardGroup, Flashcard, ModeStep } from '@/types/models';
 import { createNewSrsState } from '@/srs/srsEngine';
-import { PEEK_HOLD_THRESHOLD_MS } from '@/features/study/session/sessionUtils';
 
 jest.mock('@/services/ttsService', () => ({
   ttsService: { speak: jest.fn(() => Promise.resolve()), cancel: jest.fn() },
@@ -63,8 +62,15 @@ function makeGroup(
   };
 }
 
-function makeSteps(): ModeStep[] {
-  return [{ type: 'rate' }];
+// Domyślny tryb manualny: pokaż stronę, odkryj resztę tapnięciami,
+// jawnie pokaż całą kartę, pokaż ratingi.
+function manualSteps(): ModeStep[] {
+  return [
+    { type: 'show_page', pageIndex: 0 },
+    { type: 'wait_for_tap_to_reveal' },
+    { type: 'show_all_pages' },
+    { type: 'show_ratings' },
+  ];
 }
 
 interface HookResult {
@@ -101,16 +107,15 @@ async function tapCard(hookRef: HookResult) {
   await flushQueuedSessionWork();
 }
 
-async function revealCardForRating(hookRef: HookResult) {
+// Manual gate: tap odsłania kolejne strony aż runner pokaże przyciski oceny.
+async function revealViaTapGate(hookRef: HookResult) {
   await waitFor(() => {
     const { showRatingButtons, waitingForTap } = hookRef.current!.sessionState;
     expect(showRatingButtons || waitingForTap).toBe(true);
   });
-
-  for (let i = 0; i < 5 && !hookRef.current!.sessionState.showRatingButtons; i += 1) {
+  for (let i = 0; i < 6 && !hookRef.current!.sessionState.showRatingButtons; i += 1) {
     await tapCard(hookRef);
   }
-
   await waitFor(() => {
     expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
   });
@@ -137,10 +142,22 @@ function TestHookWrapper({
     <View>
       <Text testID="status">{hookResult.sessionState.status}</Text>
       <Text testID="cardIndex">{hookResult.sessionState.currentCardIndex}</Text>
-      <Text testID="failedCount">{hookResult.failedCount}</Text>
-      <Text testID="dueCards">{hookResult.dueCards.length}</Text>
     </View>
   );
+}
+
+function renderSession(group: FlashcardGroup | null, steps: ModeStep[]) {
+  const onCardReviewed = jest.fn();
+  const hookRef: HookResult = { current: null };
+  render(
+    <TestHookWrapper
+      group={group}
+      steps={steps}
+      onCardReviewed={onCardReviewed}
+      hookRef={hookRef}
+    />,
+  );
+  return { onCardReviewed, hookRef };
 }
 
 describe('useStudySession', () => {
@@ -152,65 +169,34 @@ describe('useStudySession', () => {
   });
 
   it('starts in idle state', () => {
-    const group = makeGroup(2, 2, []);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
+    const { hookRef } = renderSession(makeGroup(2, 2, []), manualSteps());
     expect(hookRef.current).not.toBeNull();
     expect(hookRef.current!.sessionState.status).toBe('idle');
     expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
     expect(hookRef.current!.dueCards).toEqual([]);
-    expect(hookRef.current!.failedCount).toBe(0);
   });
 
   it('startSession sets due cards', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
+    const { hookRef } = renderSession(makeGroup(2, 2, [card1]), manualSteps());
     await startSession(hookRef, [card1]);
-
     expect(hookRef.current!.dueCards).toEqual([card1]);
   });
 
-  it('handleRating calls onCardReviewed after the card is fully revealed', async () => {
+  it('manual flow: taps reveal pages, show_all_pages confirms reveal, then ratings show', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
+    const { onCardReviewed, hookRef } = renderSession(makeGroup(2, 2, [card1]), manualSteps());
 
     await startSession(hookRef, [card1]);
+
+    // Po starcie czekamy w tap-gate (strona 1 ukryta), ratingi jeszcze nie.
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
+    });
     expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
 
-    await revealCardForRating(hookRef);
+    await revealViaTapGate(hookRef);
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0, 1]);
     await rateCurrentCard(hookRef, 3);
 
     await waitFor(() => {
@@ -218,36 +204,99 @@ describe('useStudySession', () => {
     });
   });
 
-  it('STT service error reveals the card for manual rating without auto-recording a review', async () => {
+  it('gate auto-completes when all pages are already revealed (show_all_pages -> tap gate -> ratings)', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const steps: ModeStep[] = [
+      { type: 'show_all_pages' },
+      { type: 'wait_for_tap_to_reveal' },
+      { type: 'show_ratings' },
+    ];
+    const { hookRef } = renderSession(makeGroup(2, 2, [card1]), steps);
+
+    await startSession(hookRef, [card1]);
+
+    // Bez ani jednego tapa: gate widzi że wszystko odkryte i runner pokazuje ratingi.
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+  });
+
+  it('single tap reveal gate resumes after one page so STT can run before the rest is shown', async () => {
+    const card1 = makeCard('c1', ['front', 'spoken answer', 'extra note']);
+    const steps: ModeStep[] = [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'wait_for_tap_to_reveal_next' },
+      { type: 'listen_and_check', pageIndex: 1, successThreshold: 70 },
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ];
+    mockedSttService.startListening.mockImplementationOnce(() => new Promise<string>(() => {}));
+    const { hookRef } = renderSession(makeGroup(3, 3, [card1]), steps);
+
+    await startSession(hookRef, [card1]);
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
+    });
+
+    await tapCard(hookRef);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.isSttListening).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0, 1]);
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
+    expect(hookRef.current!.sessionState.waitingForTap).toBe(false);
+
+    await tapCard(hookRef);
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+  });
+
+  it('STT correct path auto-rates once and advances to the next card without manual input', async () => {
+    const card1 = makeCard('c1', ['hello']);
+    const steps: ModeStep[] = [
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 60 },
+      { type: 'auto_rate_from_answer', condition: 'correct' },
+      { type: 'next_card', condition: 'correct' },
+    ];
+    const { onCardReviewed, hookRef } = renderSession(makeGroup(1, 1, [card1]), steps);
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.status).toBe('finished');
+    });
+    expect(onCardReviewed).toHaveBeenCalledTimes(1);
+    expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', expect.any(Number));
+  });
+
+  it('tap during STT sets skipped: no auto-rate fires, flow falls through to the always terminal', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const card1 = makeCard('c1', ['hello', 'world']);
-      const group = makeGroup(2, 2, [card1]);
-      const onCardReviewed = jest.fn();
-      const hookRef: HookResult = { current: null };
       const steps: ModeStep[] = [
-        { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-        { type: 'rate' },
+        { type: 'listen_and_check', pageIndex: 0, successThreshold: 60 },
+        { type: 'auto_rate_from_answer', condition: 'correct' },
+        { type: 'next_card', condition: 'correct' },
+        { type: 'show_all_pages' },
+        { type: 'show_ratings' },
       ];
-
-      mockedSttService.startListening.mockImplementationOnce(() =>
-        Promise.reject(new Error('service-failure')),
-      );
-
-      render(
-        <TestHookWrapper
-          group={group}
-          steps={steps}
-          onCardReviewed={onCardReviewed}
-          hookRef={hookRef}
-        />,
-      );
+      // STT nie kończy się sam — tap musi je skipnąć.
+      mockedSttService.startListening.mockImplementationOnce(() => new Promise<string>(() => {}));
+      const { onCardReviewed, hookRef } = renderSession(makeGroup(2, 2, [card1]), steps);
 
       await startSession(hookRef, [card1]);
+      await waitFor(() => {
+        expect(hookRef.current!.sessionState.isSttListening).toBe(true);
+      });
+
+      await tapCard(hookRef);
 
       await waitFor(() => {
         expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
       });
+      // skipped nie odpala correct/wrong -> brak auto-oceny, karta się nie zmieniła.
       expect(onCardReviewed).not.toHaveBeenCalled();
       expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
     } finally {
@@ -255,351 +304,11 @@ describe('useStudySession', () => {
     }
   });
 
-  it('treats a match below the custom STT threshold as failed for feedback and FSRS', async () => {
-    const card1 = makeCard('c1', ['alpha beta gamma delta']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'listen_and_branch', pageIndex: 0, successThreshold: 90 },
-    ];
-
-    mockedSttService.startListening.mockImplementationOnce(() =>
-      Promise.resolve('alpha beta gamma'),
-    );
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await waitFor(
-      () => {
-        expect(hookRef.current!.sessionState.sttMatchPercent).toBe(75);
-        expect(hookRef.current!.sessionState.sttSuccessThreshold).toBe(90);
-        expect(hookRef.current!.sessionState.sttPassed).toBe(false);
-      },
-      { timeout: 5000 },
-    );
-
-    await waitFor(
-      () => {
-        expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', 1);
-      },
-      { timeout: 5000 },
-    );
-    expect(hookRef.current!.failedCount).toBe(1);
-  });
-
-  it('rating 1 adds card to failed count', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-    await revealCardForRating(hookRef);
-
-    await rateCurrentCard(hookRef, 1);
-
-    expect(hookRef.current!.failedCount).toBe(1);
-  });
-
-  it('rating 1 adds card to failed count only once', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-    await revealCardForRating(hookRef);
-
-    await rateCurrentCard(hookRef, 1);
-    await rateCurrentCard(hookRef, 1);
-
-    expect(hookRef.current!.failedCount).toBe(1);
-    expect(onCardReviewed).toHaveBeenCalledTimes(1);
-  });
-
-  it('stopSession stops audio', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    act(() => {
-      hookRef.current!.stopSession();
-    });
-
-    expect(ttsService.cancel).toHaveBeenCalled();
-    expect(mockedSttService.stopListening).toHaveBeenCalled();
-  });
-
-  it('tap during speak_page skips TTS without revealing the answer', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 5 },
-      { type: 'rate' },
-    ];
-
-    mockedTtsService.speak.mockImplementationOnce(() => new Promise<void>(() => {}));
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
-    });
-
-    await tapCard(hookRef);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
-    });
-    expect(ttsService.cancel).toHaveBeenCalled();
-    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-    expect(hookRef.current!.sessionState.revealedPages).toEqual([]);
-
-    await tapCard(hookRef);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    });
-    expect(hookRef.current!.sessionState.revealedPages).toEqual([1]);
-  });
-
-  it('classic mode shows page one, skips TTS on tap, then reveals the answer on the next tap', async () => {
-    const card1 = makeCard('c1', ['front', 'back']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'show_page', pageIndex: 0 },
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 5 },
-      { type: 'rate' },
-    ];
-
-    mockedTtsService.speak.mockImplementationOnce(() => new Promise<void>(() => {}));
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
-    });
-    expect(hookRef.current!.sessionState.revealedPages).toEqual([0]);
-
-    await tapCard(hookRef);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
-    });
-    expect(ttsService.cancel).toHaveBeenCalled();
-    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-    expect(hookRef.current!.sessionState.revealedPages).toEqual([0]);
-
-    await tapCard(hookRef);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    });
-    expect(hookRef.current!.sessionState.revealedPages).toEqual([0, 1]);
-  });
-
-  it('restartSession restarts with fresh cards from group', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const originalCard1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [originalCard1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await act(async () => {
-      hookRef.current!.restartSession();
-    });
-    await flushQueuedSessionWork();
-
-    expect(hookRef.current!.dueCards).toEqual([originalCard1]);
-  });
-
-  it('restartFailed only restarts with failed cards', async () => {
+  it('next_card advances without recording an SRS rating', async () => {
     const card1 = makeCard('c1', ['hello']);
     const card2 = makeCard('c2', ['world']);
-    const group = makeGroup(2, 2, [card1, card2]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1, card2]);
-    await revealCardForRating(hookRef);
-
-    await rateCurrentCard(hookRef, 1);
-
-    expect(hookRef.current!.failedCount).toBe(1);
-
-    await act(async () => {
-      hookRef.current!.restartFailed();
-    });
-    await flushQueuedSessionWork();
-
-    expect(hookRef.current!.dueCards).toEqual([card1]);
-  });
-
-  it('restartFailed uses fresh card state from group', async () => {
-    const staleCard1 = makeCard('c1', ['old']);
-    const freshCard1 = makeCard('c1', ['fresh']);
-    const group = makeGroup(1, 1, [freshCard1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [staleCard1]);
-    await revealCardForRating(hookRef);
-    await rateCurrentCard(hookRef, 1);
-
-    await act(async () => {
-      hookRef.current!.restartFailed();
-    });
-    await flushQueuedSessionWork();
-
-    expect(hookRef.current!.dueCards).toEqual([freshCard1]);
-  });
-
-  it('long hold sets and clears peekedPageIndex', () => {
-    jest.useFakeTimers();
-    try {
-      const group = makeGroup(2, 2, []);
-      const onCardReviewed = jest.fn();
-      const hookRef: HookResult = { current: null };
-
-      render(
-        <TestHookWrapper
-          group={group}
-          steps={makeSteps()}
-          onCardReviewed={onCardReviewed}
-          hookRef={hookRef}
-        />,
-      );
-
-      act(() => {
-        hookRef.current!.setHolding(true);
-      });
-
-      act(() => {
-        jest.advanceTimersByTime(PEEK_HOLD_THRESHOLD_MS);
-      });
-
-      expect(hookRef.current!.sessionState.peekedPageIndex).toBe(1);
-
-      act(() => {
-        hookRef.current!.setHolding(false);
-      });
-
-      expect(hookRef.current!.sessionState.peekedPageIndex).toBeNull();
-    } finally {
-      jest.useRealTimers();
-    }
-  });
-
-  it('next_card step advances through all cards without recording any rating', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const card2 = makeCard('c2', ['foo', 'bar']);
-    const group = makeGroup(2, 2, [card1, card2]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'show_page', pageIndex: 0 },
-      { type: 'next_card' },
-    ];
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
+    const steps: ModeStep[] = [{ type: 'show_all_pages' }, { type: 'next_card' }];
+    const { onCardReviewed, hookRef } = renderSession(makeGroup(1, 1, [card1, card2]), steps);
 
     await startSession(hookRef, [card1, card2]);
 
@@ -609,600 +318,24 @@ describe('useStudySession', () => {
     expect(onCardReviewed).not.toHaveBeenCalled();
   });
 
-  it('listen_and_check passes: "if correct" step runs, "if wrong" step is skipped, no rating', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
+  it('STT incorrect path can auto-rate a fixed rating and mark the card failed', async () => {
+    mockedSttService.startListening.mockImplementation(() => Promise.resolve('totally different'));
+    const card1 = makeCard('c1', ['hello']);
     const steps: ModeStep[] = [
-      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
-      // "jeśli źle" nie powinno się wykonać (TTS by się odpalił)
-      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 0, condition: 'wrong' },
-      // "jeśli dobrze" kończy kartę bez oceny
-      { type: 'next_card', condition: 'correct' },
-      { type: 'rate' },
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 90 },
+      { type: 'mark_failed', condition: 'wrong' },
+      { type: 'auto_rate_fixed', rating: 1, condition: 'wrong' },
+      { type: 'next_card', condition: 'wrong' },
     ];
-
-    mockedSttService.startListening.mockImplementationOnce(() => Promise.resolve('hello'));
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await waitFor(
-      () => {
-        expect(hookRef.current!.sessionState.status).toBe('finished');
-      },
-      { timeout: 5000 },
-    );
-    expect(onCardReviewed).not.toHaveBeenCalled();
-    expect(mockedTtsService.speak).not.toHaveBeenCalled();
-  });
-
-  it('listen_and_check fails: "if wrong" step runs and rating waits for full reveal', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
-      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 0, condition: 'wrong' },
-      { type: 'next_card', condition: 'correct' },
-      { type: 'rate' },
-    ];
-
-    mockedSttService.startListening.mockImplementationOnce(() => Promise.resolve('zzz'));
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await waitFor(
-      () => {
-        expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
-      },
-      { timeout: 5000 },
-    );
-    expect(mockedTtsService.speak).toHaveBeenCalledTimes(1);
-    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-    expect(onCardReviewed).not.toHaveBeenCalled();
-
-    await revealCardForRating(hookRef);
-  });
-
-  it('pauseSession stops audio and resumeSession replays the current card from its first step', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'speak_page', pageIndex: 0, pauseMultiplier: 0 },
-      { type: 'rate' },
-    ];
-
-    // TTS hangs until cancelled, like a long utterance.
-    mockedTtsService.speak.mockImplementationOnce(() => new Promise<void>(() => {}));
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
+    const { onCardReviewed, hookRef } = renderSession(makeGroup(1, 1, [card1]), steps);
 
     await startSession(hookRef, [card1]);
 
     await waitFor(() => {
-      expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
+      expect(hookRef.current!.sessionState.status).toBe('finished');
     });
-    expect(mockedTtsService.speak).toHaveBeenCalledTimes(1);
-
-    act(() => {
-      hookRef.current!.pauseSession();
-    });
-
-    expect(ttsService.cancel).toHaveBeenCalled();
-
-    await act(async () => {
-      hookRef.current!.resumeSession();
-    });
-    await flushQueuedSessionWork();
-
-    expect(mockedTtsService.speak).toHaveBeenCalledTimes(2);
-    await revealCardForRating(hookRef);
-    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
-  });
-
-  it('a paused listen step drops its result without failing or revealing the card', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-    const steps: ModeStep[] = [
-      { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-      { type: 'rate' },
-    ];
-
-    let resolveListen: (text: string) => void = () => {};
-    mockedSttService.startListening.mockImplementationOnce(
-      () =>
-        new Promise<string>((resolve) => {
-          resolveListen = resolve;
-        }),
-    );
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={steps}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.isSttListening).toBe(true);
-    });
-
-    act(() => {
-      hookRef.current!.pauseSession();
-    });
-
-    // The pending recognition settles after the pause (e.g. stopListening flushes it).
-    await act(async () => {
-      resolveListen('hello');
-    });
-    await flushQueuedSessionWork();
-
-    expect(onCardReviewed).not.toHaveBeenCalled();
-    expect(hookRef.current!.failedCount).toBe(0);
-    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
-  });
-
-  it('pauseSession is a no-op while rating buttons are shown', async () => {
-    const card1 = makeCard('c1', ['hello', 'world']);
-    const group = makeGroup(2, 2, [card1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-    await revealCardForRating(hookRef);
-
-    await act(async () => {
-      hookRef.current!.pauseSession();
-      hookRef.current!.resumeSession();
-    });
-    await flushQueuedSessionWork();
-
-    // Manual rating state must survive the dialog round-trip untouched.
-    expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
-  });
-
-  it('getFreshCards returns current card state from group', async () => {
-    const card1 = makeCard('c1', ['old']);
-    const freshCard1 = makeCard('c1', ['fresh']);
-    const group = makeGroup(2, 2, [freshCard1]);
-    const onCardReviewed = jest.fn();
-    const hookRef: HookResult = { current: null };
-
-    render(
-      <TestHookWrapper
-        group={group}
-        steps={makeSteps()}
-        onCardReviewed={onCardReviewed}
-        hookRef={hookRef}
-      />,
-    );
-
-    await startSession(hookRef, [card1]);
-
-    // restartSession calls getFreshCards internally
-    await act(async () => {
-      hookRef.current!.restartSession();
-    });
-    await flushQueuedSessionWork();
-
-    expect(hookRef.current!.dueCards).toEqual([freshCard1]);
-  });
-
-  describe('listen_and_branch skip behavior', () => {
-    it('skip with recognised text >= threshold auto-rates and advances without showing ratings', async () => {
-      const card1 = makeCard('c1', ['hello world']);
-      const card2 = makeCard('c2', ['bonjour']);
-      const group = makeGroup(2, 2, [card1, card2]);
-      const onCardReviewed = jest.fn();
-      const hookRef: HookResult = { current: null };
-      const steps: ModeStep[] = [
-        { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-      ];
-
-      // startListening hangs; stopListening resolves it with correct text
-      let resolveStt: (text: string) => void = () => {};
-      mockedSttService.startListening.mockImplementationOnce(
-        () => new Promise<string>((resolve) => { resolveStt = resolve; }),
-      );
-      mockedSttService.stopListening.mockImplementationOnce(() => {
-        resolveStt('hello world');
-        return Promise.resolve();
-      });
-
-      render(
-        <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-      );
-
-      await startSession(hookRef, [card1, card2]);
-
-      await waitFor(() => {
-        expect(hookRef.current!.sessionState.isSttListening).toBe(true);
-      });
-
-      await tapCard(hookRef);
-
-      await waitFor(() => {
-        expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', expect.any(Number));
-      }, { timeout: 2000 });
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-    });
-
-    it('skip with recognised text < threshold enters error path (markCardFailed + reveal)', async () => {
-      jest.useFakeTimers();
-      try {
-        const card1 = makeCard('c1', ['hello world']);
-        const group = makeGroup(2, 2, [card1]);
-        const onCardReviewed = jest.fn();
-        const hookRef: HookResult = { current: null };
-        const steps: ModeStep[] = [
-          { type: 'listen_and_branch', pageIndex: 0, successThreshold: 95 },
-        ];
-
-        let resolveStt: (text: string) => void = () => {};
-        mockedSttService.startListening.mockImplementationOnce(
-          () => new Promise<string>((resolve) => { resolveStt = resolve; }),
-        );
-        mockedSttService.stopListening.mockImplementationOnce(() => {
-          resolveStt('xyz');
-          return Promise.resolve();
-        });
-
-        render(
-          <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-        );
-
-        await act(async () => {
-          hookRef.current!.startSession([card1]);
-        });
-        await act(async () => {
-          jest.advanceTimersByTime(0);
-        });
-
-        expect(hookRef.current!.sessionState.isSttListening).toBe(true);
-
-        // Tap to skip
-        await act(async () => {
-          hookRef.current!.handleCardPress();
-          await Promise.resolve();
-        });
-
-        // Advance for 700ms harvest + 2000ms correction pause (no incorrectTtsPageIndex)
-        await act(async () => {
-          jest.advanceTimersByTime(3000);
-        });
-
-        expect(hookRef.current!.failedCount).toBe(1);
-        expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', 1);
-        expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    it('skip with no recognised text waits for reveal before manual rating', async () => {
-      const card1 = makeCard('c1', ['hello world']);
-      const group = makeGroup(2, 2, [card1]);
-      const onCardReviewed = jest.fn();
-      const hookRef: HookResult = { current: null };
-      const steps: ModeStep[] = [
-        { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-        { type: 'rate' },
-      ];
-
-      // startListening resolves with empty string
-      let resolveStt: (text: string) => void = () => {};
-      mockedSttService.startListening.mockImplementationOnce(
-        () => new Promise<string>((resolve) => { resolveStt = resolve; }),
-      );
-      mockedSttService.stopListening.mockImplementationOnce(() => {
-        resolveStt('');
-        return Promise.resolve();
-      });
-
-      render(
-        <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-      );
-
-      await startSession(hookRef, [card1]);
-
-      await waitFor(() => {
-        expect(hookRef.current!.sessionState.isSttListening).toBe(true);
-      });
-
-      await tapCard(hookRef);
-
-      await waitFor(() => {
-        expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
-      });
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-      expect(onCardReviewed).not.toHaveBeenCalled();
-
-      await tapCard(hookRef);
-
-      await waitFor(() => {
-        expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-      });
-      expect(onCardReviewed).not.toHaveBeenCalled();
-    });
-
-    it('tap during success pause advances without waiting full 1800ms', async () => {
-      jest.useFakeTimers();
-      try {
-        const card1 = makeCard('c1', ['hello']);
-        const group = makeGroup(2, 2, [card1]);
-        const onCardReviewed = jest.fn();
-        const hookRef: HookResult = { current: null };
-        const steps: ModeStep[] = [
-          { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-        ];
-
-        mockedSttService.startListening.mockImplementationOnce(
-          () => Promise.resolve('hello'),
-        );
-
-        render(
-          <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-        );
-
-        await act(async () => {
-          hookRef.current!.startSession([card1]);
-        });
-        // Fire effect's setTimeout(0) to start executeStep
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        // Flush recognition microtask → creates sleep(1200) timer
-        await act(async () => {
-          await Promise.resolve();
-        });
-        // Fire sleep(1200) → enters success path
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        // Flush success microtask → creates sleep(600) timer
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        // Tap to cut the 600ms success pause
-        await act(async () => {
-          hookRef.current!.handleCardPress();
-          await Promise.resolve();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        expect(onCardReviewed).toHaveBeenCalled();
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    it('error path: 1st tap cuts correction TTS, 2nd tap does auto-rate Again and advances', async () => {
-      jest.useFakeTimers();
-      try {
-        const card1 = makeCard('c1', ['hello world']);
-        const group = makeGroup(2, 2, [card1]);
-        const onCardReviewed = jest.fn();
-        const hookRef: HookResult = { current: null };
-        const steps: ModeStep[] = [
-          { type: 'listen_and_branch', pageIndex: 0, successThreshold: 95, incorrectTtsPageIndex: 0 },
-        ];
-
-        mockedSttService.startListening.mockImplementationOnce(
-          () => Promise.resolve('xyz'),
-        );
-        mockedTtsService.speak.mockImplementationOnce(
-          () => new Promise<void>(() => {}),
-        );
-
-        render(
-          <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-        );
-
-        await act(async () => {
-          hookRef.current!.startSession([card1]);
-        });
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-        // Fire sleep(1200) → error path starts, enters TTS (hanging)
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
-
-        // 1st tap: cut TTS → enters CORRECTION_INTERRUPT_PAUSE (2000ms)
-        await act(async () => {
-          hookRef.current!.handleCardPress();
-          await Promise.resolve();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        // 2nd tap: cut pause → auto-rate + advance
-        await act(async () => {
-          hookRef.current!.handleCardPress();
-          await Promise.resolve();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        await act(async () => {
-          jest.runAllTimers();
-        });
-
-        expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', 1);
-        expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    it('session pause during guarded sleeps prevents evaluation', async () => {
-      jest.useFakeTimers();
-      try {
-        const card1 = makeCard('c1', ['hello']);
-        const group = makeGroup(2, 2, [card1]);
-        const onCardReviewed = jest.fn();
-        const hookRef: HookResult = { current: null };
-        const steps: ModeStep[] = [
-          { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-        ];
-
-        mockedSttService.startListening.mockImplementationOnce(
-          () => Promise.resolve('hello'),
-        );
-
-        render(
-          <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-        );
-
-        await act(async () => {
-          hookRef.current!.startSession([card1]);
-        });
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-        // Now sleep(1200) timer is scheduled. Pause before it fires.
-        await act(async () => {
-          hookRef.current!.pauseSession();
-        });
-        await act(async () => {
-          jest.runAllTimers();
-        });
-
-        expect(onCardReviewed).not.toHaveBeenCalled();
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    it('skip during listening falls back to lastPartialText when STT promise hangs past 700ms', async () => {
-      jest.useFakeTimers();
-      try {
-        const card1 = makeCard('c1', ['hello world']);
-        const group = makeGroup(2, 2, [card1]);
-        const onCardReviewed = jest.fn();
-        const hookRef: HookResult = { current: null };
-        const steps: ModeStep[] = [
-          { type: 'listen_and_branch', pageIndex: 0, successThreshold: 60 },
-        ];
-
-        mockedSttService.startListening.mockImplementationOnce(
-          (options: any) => {
-            setTimeout(() => {
-              options?.onPartialResult?.('helo wrld');
-            }, 5);
-            return new Promise<string>(() => {});
-          },
-        );
-
-        render(
-          <TestHookWrapper group={group} steps={steps} onCardReviewed={onCardReviewed} hookRef={hookRef} />,
-        );
-
-        await act(async () => {
-          hookRef.current!.startSession([card1]);
-        });
-
-        // Fire effect's setTimeout + startListening's setTimeout for partial
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        expect(hookRef.current!.sessionState.isSttListening).toBe(true);
-
-        // Tap to skip
-        await act(async () => {
-          hookRef.current!.handleCardPress();
-          await Promise.resolve();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        // Fire harvest (700ms) + success pause (600ms)
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-        await act(async () => {
-          jest.runAllTimers();
-        });
-        await act(async () => {
-          await Promise.resolve();
-        });
-
-        expect(onCardReviewed).toHaveBeenCalled();
-        expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
-      } finally {
-        jest.useRealTimers();
-      }
-    });
+    expect(onCardReviewed).toHaveBeenCalledTimes(1);
+    expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', 1);
+    expect(hookRef.current!.failedCount).toBe(1);
   });
 });

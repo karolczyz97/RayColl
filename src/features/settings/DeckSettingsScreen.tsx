@@ -1,24 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, IconButton, useTheme } from 'react-native-paper';
+import { HelperText, IconButton, useTheme } from 'react-native-paper';
 import { getTopBarColors } from '@/theme/semanticColors';
-import { DeckNameSection } from '@/components/settings/DeckNameSection';
-import { StudyScopeSection } from '@/components/settings/StudyScopeSection';
-import { CardOrderSection } from '@/components/settings/CardOrderSection';
-import { StudyModeSelector } from '@/components/settings/StudyModeSelector';
+import { AppSelect } from '@/components/AppSelect';
+import { AppTextInput } from '@/components/forms/AppTextInput';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { TOKENS } from '@/theme/tokens';
+import { CARD_FILTER_OPTIONS, type CardFilter } from '@/constants/cardFilters';
+import { CARD_ORDER_OPTIONS, normalizeCardOrder } from '@/constants/cardOrder';
 import { ARCHIVE_RETENTION_DAYS } from '@/constants/archive';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
-import { SectionCard } from '@/components/layout/SectionCard';
+import { SettingsSection, SettingsTile } from '@/components/settings/SettingsSection';
 import { PageConfigEditor } from '@/components/pageConfig/PageConfigEditor';
-import { PagesReorderDialog } from './PagesReorderDialog';
+import { useI18n } from '@/i18n';
+
+function isCardFilter(value: string): value is CardFilter {
+  return CARD_FILTER_OPTIONS.some((filter) => filter.value === value);
+}
 
 export function DeckSettingsScreen(
   controller: ReturnType<typeof import('./useDeckSettingsController').useDeckSettingsController>,
 ) {
   const { fg: topBarFg } = getTopBarColors(useTheme());
+  const { t } = useI18n();
   const {
     activeGroup,
     colNames,
@@ -30,10 +35,7 @@ export function DeckSettingsScreen(
     handleNameBlur,
     handleCreateMode,
     handleEditMode,
-    isCompact,
-    useTwoColumnLayout,
     movePageSetting,
-    movePageSettingAll,
     onFilterChange,
     onCardOrderChange,
     onModeChange,
@@ -45,106 +47,29 @@ export function DeckSettingsScreen(
     setDeckName,
     setArchiveDialogOpen,
     store,
-    t,
     updatePageLangValue,
     adjustPageCount,
     handleBack,
   } = controller;
 
-  const [showReorderDialog, setShowReorderDialog] = useState(false);
-
   if (!activeGroup) {
     return null;
   }
 
-  const storedPageCount = activeGroup.pageNames.length;
-  const hasHiddenColumns = storedPageCount > (activeGroup.activePageCount ?? 0);
+  const modeOptions = store.studyModes.map((mode) => ({
+    label: mode.name,
+    value: mode.id,
+  }));
 
-  const sectionOrder = useTwoColumnLayout
-    ? { name: 0, pageConfig: 3, scope: 1, cardOrder: 2, modeSelector: 1 }
-    : { name: 0, scope: 1, cardOrder: 2, pageConfig: 3, modeSelector: 4 };
+  const scopeOptions = CARD_FILTER_OPTIONS.map((filter) => ({
+    label: t(filter.labelKey),
+    value: filter.value,
+  }));
 
-  const leftColumnContent = (
-    <>
-      <AnimatedSection order={sectionOrder.name}>
-        <SectionCard>
-          <DeckNameSection
-            deckName={deckName}
-            onChangeText={setDeckName}
-            onBlur={handleNameBlur}
-            errorMessage={deckNameError ? t('validation.required') : undefined}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection order={sectionOrder.scope}>
-        <SectionCard>
-          <StudyScopeSection
-            studyFilter={activeGroup.studyFilter}
-            onFilterChange={onFilterChange}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection order={sectionOrder.cardOrder}>
-        <SectionCard>
-          <CardOrderSection
-            cardOrder={activeGroup.cardOrder}
-            onCardOrderChange={onCardOrderChange}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection order={sectionOrder.pageConfig}>
-        <SectionCard title={t('settings.pages_config')}>
-          <PageConfigEditor
-            mode="settings"
-            pageCount={pageCount}
-            pageNames={colNames}
-            pageLanguages={activeGroup.pageLanguages}
-            popularLangs={popularLangs}
-            onPageCountChange={adjustPageCount}
-            onPageNameChange={(index, value) => {
-              setColNames((prev) => {
-                const next = [...prev];
-                next[index] = value;
-                return next;
-              });
-            }}
-            onPageNameBlur={handleColBlur}
-            pageNameErrors={pageNameErrors}
-            pageNameErrorMessage={t('validation.required')}
-            onPageLanguageChange={updatePageLangValue}
-            onMovePage={movePageSetting}
-          />
-          {hasHiddenColumns ? (
-            <Button
-              mode="text"
-              compact
-              onPress={() => setShowReorderDialog(true)}
-              style={styles.reorderButton}
-            >
-              {t('settings.reorder_columns')}
-            </Button>
-          ) : null}
-        </SectionCard>
-      </AnimatedSection>
-    </>
-  );
-
-  const rightColumnContent = (
-    <AnimatedSection order={sectionOrder.modeSelector}>
-      <SectionCard>
-        <StudyModeSelector
-          activeModeId={activeGroup.activeModeId}
-          onModeChange={onModeChange}
-          studyModes={store.studyModes}
-          onCreateMode={handleCreateMode}
-          onEditMode={handleEditMode}
-        />
-      </SectionCard>
-    </AnimatedSection>
-  );
+  const orderOptions = CARD_ORDER_OPTIONS.map((option) => ({
+    label: t(option.labelKey),
+    value: option.value,
+  }));
 
   return (
     <AppScreen
@@ -158,33 +83,110 @@ export function DeckSettingsScreen(
           accessibilityLabel={t('settings.archive_btn')}
         />
       }
-      maxWidth={responsiveLayout.contentMaxWidth}
+      maxWidth={responsiveLayout.formMaxWidth}
     >
-      {useTwoColumnLayout ? (
-        <View style={styles.row}>
-          <View style={styles.column}>{leftColumnContent}</View>
-          <View style={styles.column}>{rightColumnContent}</View>
-        </View>
-      ) : (
-        <View style={[styles.singleColumn, !isCompact && styles.singleColumnWide]}>
-          {leftColumnContent}
-          {rightColumnContent}
-        </View>
-      )}
+      <View style={styles.content}>
+        <AnimatedSection order={0}>
+          <SettingsSection title={t('settings.section.general')}>
+            <SettingsTile title={t('settings.rename_label')}>
+              <AppTextInput
+                label={t('settings.rename_label')}
+                value={deckName}
+                onChangeText={setDeckName}
+                onBlur={handleNameBlur}
+                error={!!deckNameError}
+              />
+              {deckNameError ? (
+                <HelperText type="error" visible>
+                  {t('validation.required')}
+                </HelperText>
+              ) : null}
+            </SettingsTile>
+          </SettingsSection>
+        </AnimatedSection>
 
-      <PagesReorderDialog
-        visible={showReorderDialog}
-        onDismiss={() => setShowReorderDialog(false)}
-        activeGroup={activeGroup}
-        colNames={colNames}
-        setColNames={setColNames}
-        popularLangs={popularLangs}
-        handleColBlur={handleColBlur}
-        pageNameErrors={pageNameErrors}
-        pageNameErrorMessage={t('validation.required')}
-        updatePageLangValue={updatePageLangValue}
-        movePageSettingAll={movePageSettingAll}
-      />
+        <AnimatedSection order={1}>
+          <SettingsSection title={t('settings.section.cards')}>
+            <SettingsTile title={t('settings.pages_config')}>
+              <PageConfigEditor
+                mode="settings"
+                pageCount={pageCount}
+                pageNames={colNames}
+                pageLanguages={activeGroup.pageLanguages}
+                popularLangs={popularLangs}
+                onPageCountChange={adjustPageCount}
+                onPageNameChange={(index, value) => {
+                  setColNames((prev) => {
+                    const next = [...prev];
+                    next[index] = value;
+                    return next;
+                  });
+                }}
+                onPageNameBlur={handleColBlur}
+                pageNameErrors={pageNameErrors}
+                pageNameErrorMessage={t('validation.required')}
+                onPageLanguageChange={updatePageLangValue}
+              onMovePage={movePageSetting}
+            />
+            </SettingsTile>
+          </SettingsSection>
+        </AnimatedSection>
+
+        <AnimatedSection order={2}>
+          <SettingsSection title={t('settings.section.study')}>
+            <SettingsTile
+              title={t('settings.active_mode')}
+              trailing={
+                <View style={styles.modeActions}>
+                  <IconButton
+                    icon="pencil"
+                    mode="contained"
+                    size={TOKENS.iconSize.md}
+                    onPress={handleEditMode}
+                    accessibilityLabel="Edit study mode"
+                  />
+                  <IconButton
+                    icon="plus"
+                    mode="contained"
+                    size={TOKENS.iconSize.md}
+                    onPress={handleCreateMode}
+                    accessibilityLabel="Create study mode"
+                  />
+                </View>
+              }
+            >
+              <AppSelect
+                value={activeGroup.activeModeId}
+                options={modeOptions}
+                onChange={onModeChange}
+                accessibilityLabel="Active study mode selection"
+              />
+            </SettingsTile>
+
+            <SettingsTile title={t('settings.study_scope')}>
+              <AppSelect
+                value={activeGroup.studyFilter}
+                options={scopeOptions}
+                onChange={(value) => {
+                  if (isCardFilter(value)) {
+                    onFilterChange(value);
+                  }
+                }}
+                accessibilityLabel="Study scope filter selection"
+              />
+            </SettingsTile>
+
+            <SettingsTile title={t('settings.card_order')}>
+              <AppSelect
+                value={normalizeCardOrder(activeGroup.cardOrder)}
+                options={orderOptions}
+                onChange={(value) => onCardOrderChange(normalizeCardOrder(value))}
+                accessibilityLabel="Card order selection"
+              />
+            </SettingsTile>
+          </SettingsSection>
+        </AnimatedSection>
+      </View>
 
       <ActionConfirmDialog
         visible={archiveDialogOpen}
@@ -201,26 +203,12 @@ export function DeckSettingsScreen(
 }
 
 const styles = StyleSheet.create({
-  row: {
+  content: {
+    width: '100%',
+    gap: TOKENS.spacing.lg,
+  },
+  modeActions: {
     flexDirection: 'row',
-    gap: TOKENS.spacing.xl,
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  column: {
-    flex: 1,
-    gap: TOKENS.spacing.lg,
-  },
-  singleColumn: {
-    width: '100%',
-    gap: TOKENS.spacing.lg,
-  },
-  singleColumnWide: {
-    maxWidth: TOKENS.layout.deckSettingsSingleColumnMaxWidth,
-    alignSelf: 'center',
-  },
-  reorderButton: {
-    alignSelf: 'flex-start',
-    marginTop: TOKENS.spacing.sm,
+    gap: TOKENS.spacing.xs,
   },
 });

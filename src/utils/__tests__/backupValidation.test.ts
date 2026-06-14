@@ -35,7 +35,7 @@ function makeValidMode(): StudyMode {
     name: 'Classic',
     steps: [
       { type: 'show_page', pageIndex: 0 },
-      { type: 'rate' },
+      { type: 'show_ratings' },
     ],
     isBuiltIn: true,
   };
@@ -95,6 +95,12 @@ describe('backupValidation', () => {
     expect(() => validateBackupData(legacy)).not.toThrow();
   });
 
+  it('accepts the single tap-to-reveal primitive step', () => {
+    const backup = makeValidBackup();
+    backup.studyModes[0].steps.push({ type: 'wait_for_tap_to_reveal_next' });
+    expect(() => validateBackupData(backup)).not.toThrow();
+  });
+
   it('throws on empty object', () => {
     expect(() => validateBackupData({} as BackupData)).toThrow();
   });
@@ -138,7 +144,7 @@ describe('backupValidation', () => {
 
   it('throws on successThreshold above 100', () => {
     const bad = makeValidBackup();
-    bad.studyModes[0].steps.push({ type: 'listen_and_branch', pageIndex: 0, successThreshold: 150 });
+    bad.studyModes[0].steps.push({ type: 'listen_and_check', pageIndex: 0, successThreshold: 150 });
     expect(() => validateBackupData(bad)).toThrow('successThreshold');
   });
 

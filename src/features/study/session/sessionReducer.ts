@@ -1,4 +1,5 @@
 import type { StudySessionState, SessionAction } from './sessionTypes';
+import { NO_ANSWER_RESULT, NO_INTERACTION_GATE } from './sessionTypes';
 import { uniquePageIndexes } from './sessionUtils';
 
 export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
@@ -7,14 +8,23 @@ export const INITIAL_STUDY_SESSION_STATE: StudySessionState = {
   currentStepIndex: 0,
   revealedPages: [],
   peekedPageIndex: null,
-  sttResultText: '',
-  sttMatchPercent: 0,
-  sttSuccessThreshold: null,
-  sttPassed: null,
-  waitingForTap: false,
+  lastAnswerResult: NO_ANSWER_RESULT,
   audioPageIndex: null,
+  interactionGate: NO_INTERACTION_GATE,
+  pendingStepIndexToRun: null,
   errorMsg: undefined,
 };
+
+// Dla REVEAL_*: jeśli aktualnie podglądana (peek) strona właśnie się odsłoniła,
+// peek znika, bo jest już widoczna na stałe.
+function clearPeekIfRevealed(
+  peekedPageIndex: number | null,
+  revealedPages: number[],
+): number | null {
+  return peekedPageIndex != null && revealedPages.includes(peekedPageIndex)
+    ? null
+    : peekedPageIndex;
+}
 
 export function sessionReducer(
   state: StudySessionState,
@@ -29,8 +39,6 @@ export function sessionReducer(
       return {
         ...state,
         currentStepIndex: action.stepIndex,
-        revealedPages: action.revealedPages ?? state.revealedPages,
-        waitingForTap: action.waitingForTap ?? state.waitingForTap,
         peekedPageIndex: null,
       };
     case 'START_SPEAKING':
@@ -52,10 +60,7 @@ export function sessionReducer(
         status: 'listening',
         currentStepIndex: action.stepIndex,
         audioPageIndex: action.pageIndex,
-        sttResultText: '',
-        sttMatchPercent: 0,
-        sttSuccessThreshold: null,
-        sttPassed: null,
+        lastAnswerResult: NO_ANSWER_RESULT,
       };
     case 'UPDATE_PARTIAL_STT':
       // Ignore late partial results that arrive after we've left the listening
@@ -63,28 +68,21 @@ export function sessionReducer(
       if (state.status !== 'listening') return state;
       return {
         ...state,
-        sttResultText: action.text,
+        lastAnswerResult: { ...state.lastAnswerResult, text: action.text },
       };
-    case 'END_LISTENING':
+    case 'SET_LAST_ANSWER_RESULT':
       return {
         ...state,
-        status: 'checking',
+        status: 'idle',
         audioPageIndex: null,
-        sttResultText: action.text,
-        sttMatchPercent: action.matchPercent,
-        sttSuccessThreshold: action.successThreshold ?? null,
-        sttPassed: action.passed ?? null,
+        lastAnswerResult: action.result,
       };
     case 'REVEAL_PAGES': {
       const newRevealed = uniquePageIndexes(action.revealedPages);
       return {
         ...state,
         revealedPages: newRevealed,
-        peekedPageIndex:
-          state.peekedPageIndex != null && newRevealed.includes(state.peekedPageIndex)
-            ? null
-            : state.peekedPageIndex,
-        waitingForTap: action.waitingForTap ?? state.waitingForTap,
+        peekedPageIndex: clearPeekIfRevealed(state.peekedPageIndex, newRevealed),
       };
     }
     case 'REVEAL_PAGE': {
@@ -93,30 +91,60 @@ export function sessionReducer(
         ...state,
         currentStepIndex: action.stepIndex,
         revealedPages: newRevealed,
-        peekedPageIndex:
-          state.peekedPageIndex != null && newRevealed.includes(state.peekedPageIndex)
-            ? null
-            : state.peekedPageIndex,
+        peekedPageIndex: clearPeekIfRevealed(state.peekedPageIndex, newRevealed),
+      };
+    }
+    case 'REVEAL_NEXT_PAGE_IN_GATE': {
+      const newRevealed = uniquePageIndexes([...state.revealedPages, action.pageIndex]);
+      return {
+        ...state,
+        revealedPages: newRevealed,
+        peekedPageIndex: clearPeekIfRevealed(state.peekedPageIndex, newRevealed),
       };
     }
     case 'SHOW_RATINGS':
       return {
         ...state,
         status: 'revealed',
-        waitingForTap: false,
         peekedPageIndex: null,
       };
     case 'FINISH_SESSION':
       return {
         ...state,
         status: 'finished',
-        waitingForTap: false,
         peekedPageIndex: null,
+        interactionGate: NO_INTERACTION_GATE,
+        pendingStepIndexToRun: null,
       };
     case 'ADVANCE_CARD':
       return {
         ...INITIAL_STUDY_SESSION_STATE,
         currentCardIndex: action.nextCardIndex,
+      };
+    case 'START_TAP_REVEAL_GATE':
+      return {
+        ...state,
+        status: 'idle',
+        interactionGate: {
+          kind: 'tap_to_reveal',
+          revealMode: action.revealMode,
+          continueStepIndex: action.continueStepIndex,
+        },
+      };
+    case 'COMPLETE_INTERACTION_GATE':
+      return {
+        ...state,
+        interactionGate: NO_INTERACTION_GATE,
+      };
+    case 'SET_PENDING_STEP_INDEX':
+      return {
+        ...state,
+        pendingStepIndexToRun: action.stepIndex,
+      };
+    case 'CONSUME_PENDING_STEP_INDEX':
+      return {
+        ...state,
+        pendingStepIndexToRun: null,
       };
     case 'SET_ERROR':
       return {

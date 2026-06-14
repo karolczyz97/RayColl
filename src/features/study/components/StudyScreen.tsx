@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useI18n } from '@/i18n';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
+import type { AnswerStatus } from '@/features/study/session/sessionTypes';
 import type { SessionProgressItem } from '@/features/study/session/sessionProgress';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
@@ -41,7 +42,7 @@ interface StudyScreenProps {
     sttResultText: string;
     sttMatchPercent: number;
     sttSuccessThreshold: number | null;
-    sttPassed: boolean | null;
+    answerStatus: AnswerStatus;
     isSessionFinished: boolean;
     errorMsg?: string;
   };
@@ -135,7 +136,7 @@ export function StudyScreen({
               sttResultText={sessionState.sttResultText}
               sttMatchPercent={sessionState.sttMatchPercent}
               sttSuccessThreshold={sessionState.sttSuccessThreshold}
-              sttPassed={sessionState.sttPassed}
+              answerStatus={sessionState.answerStatus}
               onRate={handleRating}
             />
           </>

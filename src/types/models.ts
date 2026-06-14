@@ -34,58 +34,49 @@ export interface FlashcardGroup {
   archivedAt?: number | null;
 }
 
-/** Warunek wykonania kroku względem ostatniego sprawdzenia wymowy (listen_and_check). */
+/**
+ * Warunek wykonania kroku względem ostatniego wyniku odpowiedzi na tej karcie
+ * (krok "Sprawdź wymowę"). `correct` → status `correct`; `wrong` → status
+ * `incorrect`. Statusy `skipped`/`error`/`none` NIGDY nie pasują do warunku,
+ * więc tap podczas STT (skipped) nie odpala kroków `correct`/`wrong`.
+ */
 export type StepCondition = 'correct' | 'wrong';
 
 interface ModeStepBase {
   id?: string;
-  // Krok z warunkiem wykonuje się tylko, gdy ostatni krok "sprawdź wymowę"
-  // na tej karcie zakończył się odpowiednio dobrze/źle; inaczej jest pomijany.
+  // Krok z warunkiem wykonuje się tylko przy pasującym wyniku ostatniego
+  // "Sprawdź wymowę"; brak warunku (undefined) = wykonuj zawsze.
   condition?: StepCondition;
 }
 
+/**
+ * Pojedynczy primitive step. Runner jest głupim interpreterem tej listy —
+ * każdy krok robi DOKŁADNIE jedną rzecz. Żadnych makro-kroków: STT nie ocenia,
+ * TTS nie pauzuje, feedback nie branchuje, ocena nie przechodzi do następnej karty.
+ */
 export type ModeStep = ModeStepBase &
   (
-    | {
-        type: 'show_page';
-        pageIndex: number;
-      }
-    | {
-        type: 'speak_page';
-        pageIndex: number;
-        // Pauza po TTS = N × czas odsłuchania tej strony (0–5; 0 = bez pauzy).
-        pauseMultiplier: number;
-      }
-    | {
-        type: 'dynamic_pause';
-        nextPageIndex: number;
-        // Pauza = N × szacowany czas odsłuchania następnej strony (0–5).
-        pauseMultiplier: number;
-      }
-    | {
-        type: 'wait';
-        ms: number;
-      }
-    | {
-        type: 'listen_and_branch';
-        pageIndex: number;
-        successThreshold: number;
-        incorrectTtsPageIndex?: number;
-      }
-    | {
-        // Sprawdza wymowę i zapisuje wynik (dobrze/źle) bez oceny SRS;
-        // wynik sterują krokami z `condition`.
-        type: 'listen_and_check';
-        pageIndex: number;
-        successThreshold: number;
-      }
-    | {
-        type: 'rate';
-      }
-    | {
-        // Kończy kartę bez oceny SRS (tryb osłuchowy).
-        type: 'next_card';
-      }
+    // --- Odsłanianie / oceny ---
+    | { type: 'show_page'; pageIndex: number }
+    | { type: 'show_all_pages' }
+    | { type: 'wait_for_tap_to_reveal_next' }
+    | { type: 'wait_for_tap_to_reveal' }
+    | { type: 'show_ratings' }
+    // --- Audio / czas ---
+    | { type: 'speak_page'; pageIndex: number }
+    | { type: 'dynamic_pause'; nextPageIndex: number; pauseMultiplier: number }
+    | { type: 'wait'; ms: number }
+    // --- STT ---
+    | { type: 'listen_and_check'; pageIndex: number; successThreshold: number }
+    // --- Feedback ---
+    | { type: 'feedback_success' }
+    | { type: 'feedback_error' }
+    // --- Ocena SRS / failed list ---
+    | { type: 'auto_rate_from_answer' }
+    | { type: 'auto_rate_fixed'; rating: number }
+    | { type: 'mark_failed' }
+    // --- Przejście ---
+    | { type: 'next_card' }
   );
 
 export interface StudyMode {

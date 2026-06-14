@@ -9,6 +9,7 @@ import { sleep } from '@/features/study/session/sessionUtils';
 import { useSyncedRef } from '@/hooks/useSyncedRef';
 import { playRatingHaptic } from '@/services/hapticFeedback';
 import type {
+  CardReviewState,
   SessionAction,
   StudySessionState,
 } from '@/features/study/session/sessionTypes';
@@ -17,6 +18,9 @@ interface UseStudyReviewFlowParams {
   groupRef: MutableRefObject<FlashcardGroup | null>;
   stateRef: MutableRefObject<StudySessionState>;
   holdingRef: MutableRefObject<boolean>;
+  // Jedna karta = max jedna ocena. Współdzielone z runnerem (auto-rate) i resetowane
+  // na nowej karcie (executeStudyStep, stepIndex 0).
+  currentCardReviewStateRef: MutableRefObject<CardReviewState>;
   onCardReviewedRef: MutableRefObject<(groupId: string, cardId: string, rating: number) => void>;
   dispatchIfMounted: (action: SessionAction) => void;
   isMountedRef: MutableRefObject<boolean>;
@@ -29,6 +33,7 @@ export function useStudyReviewFlow({
   groupRef,
   stateRef,
   holdingRef,
+  currentCardReviewStateRef,
   onCardReviewedRef,
   dispatchIfMounted,
   isMountedRef,
@@ -106,6 +111,10 @@ export function useStudyReviewFlow({
 
   const handleRating = useCallback(
     async (rating: number) => {
+      // Jedna karta = max jedna ocena. Jeśli karta już oceniona (auto albo wcześniejszy
+      // tap), ignoruj — to chroni też przed double-tapem przy trzymaniu karty: jedno
+      // advanceToNextCard już czeka na release i wykona przejście dokładnie raz.
+      if (currentCardReviewStateRef.current !== 'none') return;
       const index = stateRef.current.currentCardIndex;
       if (index >= dueCardsRef.current.length || !groupRef.current) return;
       const card = dueCardsRef.current[index];
@@ -115,10 +124,14 @@ export function useStudyReviewFlow({
         markCardFailed(card);
       }
       processCardReview(card, rating);
+      currentCardReviewStateRef.current = 'manuallyRated';
+      // advanceToNextCard respektuje holdingRef: gdy user trzyma kartę, zapis oceny
+      // następuje od razu, ale opuszczenie karty czeka na puszczenie.
       await advanceToNextCard();
     },
     [
       advanceToNextCard,
+      currentCardReviewStateRef,
       dueCardsRef,
       groupRef,
       markCardFailed,

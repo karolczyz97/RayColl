@@ -11,6 +11,7 @@ function makeForm(overrides: Partial<BuildModeStepForm> = {}): BuildModeStepForm
     newMs: 750,
     newPauseMultiplier: 2,
     newThreshold: 80,
+    newRating: 3,
     newCondition: 'always',
     ...overrides,
   };
@@ -19,24 +20,26 @@ function makeForm(overrides: Partial<BuildModeStepForm> = {}): BuildModeStepForm
 describe('buildModeStep', () => {
   it.each([
     ['show_page', { id: 'step-1', type: 'show_page', pageIndex: 1 }],
-    [
-      'speak_page',
-      { id: 'step-1', type: 'speak_page', pageIndex: 1, pauseMultiplier: 2 },
-    ],
+    ['show_all_pages', { id: 'step-1', type: 'show_all_pages' }],
+    ['wait_for_tap_to_reveal_next', { id: 'step-1', type: 'wait_for_tap_to_reveal_next' }],
+    ['wait_for_tap_to_reveal', { id: 'step-1', type: 'wait_for_tap_to_reveal' }],
+    ['show_ratings', { id: 'step-1', type: 'show_ratings' }],
+    // speak_page nie ma już pauseMultiplier — TTS tylko mówi.
+    ['speak_page', { id: 'step-1', type: 'speak_page', pageIndex: 1 }],
     [
       'dynamic_pause',
       { id: 'step-1', type: 'dynamic_pause', nextPageIndex: 1, pauseMultiplier: 2 },
     ],
     ['wait', { id: 'step-1', type: 'wait', ms: 750 }],
     [
-      'listen_and_branch',
-      { id: 'step-1', type: 'listen_and_branch', pageIndex: 1, successThreshold: 80 },
-    ],
-    [
       'listen_and_check',
       { id: 'step-1', type: 'listen_and_check', pageIndex: 1, successThreshold: 80 },
     ],
-    ['rate', { id: 'step-1', type: 'rate' }],
+    ['feedback_success', { id: 'step-1', type: 'feedback_success' }],
+    ['feedback_error', { id: 'step-1', type: 'feedback_error' }],
+    ['auto_rate_from_answer', { id: 'step-1', type: 'auto_rate_from_answer' }],
+    ['auto_rate_fixed', { id: 'step-1', type: 'auto_rate_fixed', rating: 3 }],
+    ['mark_failed', { id: 'step-1', type: 'mark_failed' }],
     ['next_card', { id: 'step-1', type: 'next_card' }],
   ])('builds %s steps', (newStepType, expected) => {
     expect(buildModeStep(makeForm({ newStepType }))).toEqual(expected);
@@ -68,10 +71,10 @@ describe('buildModeStep', () => {
   });
 
   it('clamps and truncates pause multipliers', () => {
-    expect(buildModeStep(makeForm({ newStepType: 'speak_page', newPauseMultiplier: -4 }))).toEqual({
+    expect(buildModeStep(makeForm({ newStepType: 'dynamic_pause', newPauseMultiplier: -4 }))).toEqual({
       id: 'step-1',
-      type: 'speak_page',
-      pageIndex: 1,
+      type: 'dynamic_pause',
+      nextPageIndex: 1,
       pauseMultiplier: 0,
     });
 
@@ -82,11 +85,25 @@ describe('buildModeStep', () => {
       pauseMultiplier: MAX_PAUSE_MULTIPLIER,
     });
 
-    expect(buildModeStep(makeForm({ newStepType: 'speak_page', newPauseMultiplier: 3.8 }))).toEqual({
+    expect(buildModeStep(makeForm({ newStepType: 'dynamic_pause', newPauseMultiplier: 3.8 }))).toEqual({
       id: 'step-1',
-      type: 'speak_page',
-      pageIndex: 1,
+      type: 'dynamic_pause',
+      nextPageIndex: 1,
       pauseMultiplier: 3,
+    });
+  });
+
+  it('clamps auto-rate fixed rating to 1–4', () => {
+    expect(buildModeStep(makeForm({ newStepType: 'auto_rate_fixed', newRating: 0 }))).toEqual({
+      id: 'step-1',
+      type: 'auto_rate_fixed',
+      rating: 1,
+    });
+
+    expect(buildModeStep(makeForm({ newStepType: 'auto_rate_fixed', newRating: 9 }))).toEqual({
+      id: 'step-1',
+      type: 'auto_rate_fixed',
+      rating: 4,
     });
   });
 

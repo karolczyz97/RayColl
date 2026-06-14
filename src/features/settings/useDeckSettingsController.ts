@@ -4,20 +4,15 @@ import { navigateUp } from '@/utils/navigation';
 import type { CardFilter } from '@/constants/cardFilters';
 import type { CardOrder } from '@/constants/cardOrder';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
-import { useI18n } from '@/i18n';
 import { POPULAR_LANGS } from '@/constants/languages';
 import { ROUTES } from '@/constants/routes';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { useNavigationShell } from '@/contexts/NavigationShellContext';
-import { isExpandedWindowSize } from '@/utils/windowSizeClass';
 import { reorderDeckPages } from './deckPageReorder';
 
 export function useDeckSettingsController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const { t } = useI18n();
   const store = useFlashcardStore();
   const responsiveLayout = useResponsiveLayout();
-  const navigationShell = useNavigationShell();
   const activeGroup = store.groups.find((group) => group.id === groupId) ?? null;
   const activeGroupId = activeGroup?.id ?? null;
   const activeGroupName = activeGroup?.name ?? '';
@@ -79,7 +74,6 @@ export function useDeckSettingsController() {
   };
 
   const pageCount = activeGroup?.activePageCount ?? 0;
-  const useTwoColumnLayout = isExpandedWindowSize(navigationShell.contentWidth);
   const deckNameError = deckNameTouched && !deckName.trim();
   const pageNameErrors = useMemo(
     () => colNames.map((name, index) => touchedPageNameIndexes.has(index) && !name.trim()),
@@ -153,8 +147,6 @@ export function useDeckSettingsController() {
     handleNameBlur,
     handleCreateMode,
     handleEditMode,
-    isCompact: responsiveLayout.isCompact,
-    useTwoColumnLayout,
     isLoading: store.isLoading,
     movePageSetting,
     movePageSettingAll,
@@ -178,7 +170,6 @@ export function useDeckSettingsController() {
     setDeckName,
     setArchiveDialogOpen,
     store,
-    t,
     updatePageLangValue,
     adjustPageCount,
   };

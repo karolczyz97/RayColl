@@ -10,6 +10,7 @@ import { swapElements } from '@/utils/array';
 import { deepEqual } from '@/utils/deepEqual';
 import { uid } from '@/utils/id';
 import { buildModeStep } from './buildModeStep';
+import { hasBlockingStepIssue, validateModeSteps } from './validateModeSteps';
 
 function cloneStep(step: ModeStep): ModeStep {
   return { ...step };
@@ -37,6 +38,42 @@ function getSeedSteps(mode: StudyMode): ModeStep[] | null {
   const seed = createSeedModes().find((seedMode) => seedMode.id === sourceId);
   return seed ? seed.steps.map(cloneStep) : null;
 }
+
+const STEP_TYPE_ORDER: ModeStep['type'][] = [
+  'show_page',
+  'show_all_pages',
+  'wait_for_tap_to_reveal_next',
+  'wait_for_tap_to_reveal',
+  'speak_page',
+  'listen_and_check',
+  'dynamic_pause',
+  'wait',
+  'feedback_success',
+  'feedback_error',
+  'show_ratings',
+  'auto_rate_from_answer',
+  'auto_rate_fixed',
+  'mark_failed',
+  'next_card',
+];
+
+const STEP_TYPE_LABEL_KEYS: Record<ModeStep['type'], string> = {
+  show_page: 'step.type.show_page',
+  show_all_pages: 'step.type.show_all_pages',
+  wait_for_tap_to_reveal_next: 'step.type.wait_for_tap_to_reveal_next',
+  wait_for_tap_to_reveal: 'step.type.wait_for_tap_to_reveal',
+  speak_page: 'step.type.speak_page',
+  listen_and_check: 'step.type.listen_and_check',
+  dynamic_pause: 'step.type.dynamic_pause',
+  wait: 'step.type.wait',
+  feedback_success: 'step.type.feedback_success',
+  feedback_error: 'step.type.feedback_error',
+  show_ratings: 'step.type.show_ratings',
+  auto_rate_from_answer: 'step.type.auto_rate_from_answer',
+  auto_rate_fixed: 'step.type.auto_rate_fixed',
+  mark_failed: 'step.type.mark_failed',
+  next_card: 'step.type.next_card',
+};
 
 interface DraftState {
   initializedModeId: string | null;
@@ -70,6 +107,7 @@ export function useStudyModeDraftController({
   const [newMs, setNewMs] = useState(500);
   const [newPauseMultiplier, setNewPauseMultiplier] = useState(1);
   const [newThreshold, setNewThreshold] = useState(70);
+  const [newRating, setNewRating] = useState(3);
   const [newCondition, setNewCondition] = useState<'always' | StepCondition>('always');
 
   useEffect(() => {
@@ -147,6 +185,7 @@ export function useStudyModeDraftController({
       newMs,
       newPauseMultiplier,
       newThreshold,
+      newRating,
       newCondition,
     });
     if (!step) return;
@@ -164,6 +203,7 @@ export function useStudyModeDraftController({
     newMs,
     newPageIdx,
     newPauseMultiplier,
+    newRating,
     newStepType,
     newThreshold,
     pageCount,
@@ -177,9 +217,14 @@ export function useStudyModeDraftController({
     return original ? !deepEqual(draft, original) : false;
   }, [draft, isCreate, original]);
 
+  const stepIssues = useMemo(
+    () => (draft ? validateModeSteps(draft.steps, pageCount) : []),
+    [draft, pageCount],
+  );
   const isNameValid = !draft || draft.isBuiltIn || draft.name.trim().length > 0;
   const areStepsValid = !!draft && draft.steps.length >= 1;
-  const isValid = isNameValid && areStepsValid;
+  // Błędy walidacji (np. strona poza zakresem) blokują zapis; ostrzeżenia nie.
+  const isValid = isNameValid && areStepsValid && !hasBlockingStepIssue(stepIssues);
 
   const save = useCallback(() => {
     if (!draft || !isValid) return false;
@@ -208,17 +253,12 @@ export function useStudyModeDraftController({
     return true;
   }, [draft, isCreate, isValid, selectForGroup, store]);
 
+  // Kolejność = kolejność w dropdownie. Tylko primitive steps — żadnych makro-kroków.
   const stepLabels = useMemo<Record<string, string>>(
-    () => ({
-      show_page: t('step.type.show_page'),
-      rate: t('step.type.rate'),
-      speak_page: t('step.type.speak_page'),
-      dynamic_pause: t('step.type.dynamic_pause'),
-      wait: t('step.type.wait'),
-      listen_and_branch: t('step.type.listen_and_branch'),
-      listen_and_check: t('step.type.listen_and_check'),
-      next_card: t('step.type.next_card'),
-    }),
+    () =>
+      Object.fromEntries(
+        STEP_TYPE_ORDER.map((type) => [type, t(STEP_TYPE_LABEL_KEYS[type])]),
+      ) as Record<string, string>,
     [t],
   );
 
@@ -229,6 +269,7 @@ export function useStudyModeDraftController({
     isNameValid,
     areStepsValid,
     isValid,
+    stepIssues,
     isInitializing: !!modeId && initializedModeId !== modeId,
     stepDialogOpen,
     setStepDialogOpen,
@@ -242,6 +283,8 @@ export function useStudyModeDraftController({
     setNewPauseMultiplier,
     newThreshold,
     setNewThreshold,
+    newRating,
+    setNewRating,
     newCondition,
     setNewCondition,
     setName,

@@ -123,7 +123,7 @@ export const GroupCard = memo(function GroupCard({
                 onStudy={async () => {
                   if (Platform.OS === 'web') {
                     const activeMode = studyModes.find((m) => m.id === group.activeModeId);
-                    const hasStt = activeMode?.steps.some((step) => step.type === 'listen_and_branch');
+                    const hasStt = activeMode?.steps.some((step) => step.type === 'listen_and_check');
                     if (hasStt) {
                       await ensureWebMicrophonePermission();
                     }

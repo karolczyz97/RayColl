@@ -299,7 +299,7 @@ describe('useStoreBootstrap data flow', () => {
 });
 
 function makeMode(over: Partial<StudyMode> & Pick<StudyMode, 'id' | 'name'>): StudyMode {
-  return { isBuiltIn: false, steps: [{ type: 'rate' }], ...over };
+  return { isBuiltIn: false, steps: [{ type: 'show_ratings' }], ...over };
 }
 
 describe('getGuestHasData', () => {
@@ -323,14 +323,14 @@ describe('getGuestHasData', () => {
   });
 
   it('detects a modified built-in mode', () => {
-    const seed = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'rate' }] });
+    const seed = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'show_ratings' }] });
     jest.mocked(createSeedModes).mockReturnValueOnce([seed]);
     const modified = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'wait', ms: 500 }] });
     expect(getGuestHasData({ groups: [], studyModes: [modified], activityHeatmap: {} })).toBe(true);
   });
 
   it('returns false for an unmodified built-in mode', () => {
-    const seed = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'rate' }] });
+    const seed = makeMode({ id: 'classic', name: 'Klasyczny', isBuiltIn: true, builtInSourceId: 'classic', steps: [{ type: 'show_ratings' }] });
     jest.mocked(createSeedModes).mockReturnValueOnce([seed]);
     expect(getGuestHasData({ groups: [], studyModes: [seed], activityHeatmap: {} })).toBe(false);
   });
