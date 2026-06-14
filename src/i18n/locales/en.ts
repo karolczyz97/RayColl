@@ -10,6 +10,7 @@ export const en: Record<string, string> = {
   'btn.save': 'Save',
   'btn.add': 'Add',
   'btn.delete': 'Delete',
+  'btn.discard': 'Discard',
   'btn.back': 'Back',
   'btn.login': 'Sign in with Google',
   'btn.logout': 'Sign out',
@@ -177,6 +178,8 @@ export const en: Record<string, string> = {
 
   // App Settings
   'app_settings.title': 'App Settings',
+  'app_settings.section.appearance': 'Appearance',
+  'app_settings.section.language_speech': 'Language & speech',
   'app_settings.theme': 'Theme',
   'app_settings.theme.system': 'System',
   'app_settings.theme.light': 'Light',
@@ -254,6 +257,8 @@ export const en: Record<string, string> = {
   'study_modes.delete_title': 'Delete mode',
   'study_modes.delete_message':
     'Delete mode "{name}"? Decks using it will fall back to the default mode.',
+  'study_modes.unsaved_title': 'Unsaved changes',
+  'study_modes.unsaved_message': 'Save changes before leaving?',
 
   // Study Filters
   'filter.new_review': 'New + due for review',

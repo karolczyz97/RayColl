@@ -1,22 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { useTheme } from 'react-native-paper';
+import { IconButton, useTheme } from 'react-native-paper';
 import { AppFloatingActionButton } from '@/components/AppFloatingActionButton';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
 import { EditFlashcardDialog } from '@/components/browse/EditFlashcardDialog';
-import { BrowseSearchBar } from '@/components/browse/BrowseSearchBar';
+import { BrowseSearchField } from '@/components/browse/BrowseSearchField';
 import { ExpressiveButtonGroup } from '@/components/expressive';
-import type { ExpressiveButtonGroupOption } from '@/components/expressive';
 import { GroupNotFound } from '@/components/GroupNotFound';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
-import { useI18n } from '@/i18n';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
-import type { SrsCardCategory } from '@/srs/srsEngine';
-import { getReviewStatusColor } from '@/theme/semanticColors';
 import { TOKENS, getTokenMotionEnterDelay } from '@/theme/tokens';
 import { FlashcardList } from '@/features/flashcards/FlashcardList';
 import { useBrowseController } from './useBrowseController';
@@ -25,7 +21,7 @@ import { useBrowseFilterButtons } from './useBrowseFilterButtons';
 export function BrowseScreen() {
   const scrollbarProps = useStableScrollbarProps();
   const theme = useTheme();
-  const { t, language } = useI18n();
+  const [searchActive, setSearchActive] = useState(false);
   const controller = useBrowseController();
   const {
     activeCategories,
@@ -62,6 +58,11 @@ export function BrowseScreen() {
     startCreate();
   };
 
+  const exitSearch = () => {
+    setSearchActive(false);
+    setSearch('');
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -70,14 +71,9 @@ export function BrowseScreen() {
     return <GroupNotFound onBack={handleBack} />;
   }
 
-
   const listHeaderContent = (
     <View style={styles.listHeader}>
       <AnimatedSection order={1}>
-        <BrowseSearchBar search={search} setSearch={setSearch} />
-      </AnimatedSection>
-
-      <AnimatedSection order={2}>
         <ExpressiveButtonGroup
           multiSelect
           value={activeCategories}
@@ -90,10 +86,32 @@ export function BrowseScreen() {
     </View>
   );
 
+  // Native-style search: a magnify icon in the top bar that expands into a text
+  // field (rendered in place of the title) when tapped; the back arrow exits it.
+  const topBarRight = searchActive ? (
+    search ? (
+      <IconButton
+        icon="close"
+        iconColor={theme.colors.onBackground}
+        onPress={() => setSearch('')}
+        accessibilityLabel="Clear search"
+      />
+    ) : undefined
+  ) : (
+    <IconButton
+      icon="magnify"
+      iconColor={theme.colors.onBackground}
+      onPress={() => setSearchActive(true)}
+      accessibilityLabel="Search"
+    />
+  );
+
   return (
     <AppScreen
-      title={`${activeGroup.name}  •  ${cardCountLabel}`}
-      onBack={handleBack}
+      title={searchActive ? undefined : `${activeGroup.name}  •  ${cardCountLabel}`}
+      brand={searchActive ? <BrowseSearchField search={search} setSearch={setSearch} /> : undefined}
+      onBack={searchActive ? exitSearch : handleBack}
+      right={topBarRight}
       scroll={false}
       contentStyle={styles.screenContent}
     >

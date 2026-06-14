@@ -11,6 +11,7 @@ export const de: Record<string, string> = {
   'btn.add': 'Hinzufügen',
   'btn.delete': 'Löschen',
   'btn.back': 'Zurück',
+  'btn.discard': 'Verwerfen',
   'btn.login': 'Mit Google anmelden',
   'btn.logout': 'Abmelden',
   'auth.local': 'Lokaler Modus',
@@ -177,6 +178,8 @@ export const de: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
   'app_settings.title': 'App-Einstellungen',
+  'app_settings.section.appearance': 'Darstellung',
+  'app_settings.section.language_speech': 'Sprache & Sprachausgabe',
   'app_settings.theme': 'Thema',
   'app_settings.theme.system': 'System',
   'app_settings.theme.light': 'Hell',
@@ -253,6 +256,9 @@ export const de: Record<string, string> = {
   'study_modes.delete_title': 'Modus löschen',
   'study_modes.delete_message':
     'Modus „{name}" löschen? Decks, die ihn verwenden, nutzen wieder den Standardmodus.',
+
+  'study_modes.unsaved_title': 'Ungespeicherte Änderungen',
+  'study_modes.unsaved_message': 'Änderungen vor dem Verlassen speichern?',
 
   // Study Filters
   'filter.new_review': 'Neue + Fällige zur Überprüfung',

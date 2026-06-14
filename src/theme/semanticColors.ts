@@ -3,10 +3,11 @@ import { SrsCardCategory } from '@/srs/srsEngine';
 import { hexToRgba } from './colorUtils';
 import { TOKENS } from './tokens';
 
-// Per-category SRS palette. The light, pastel tints are shared across light and
-// dark mode so the progress colors stay bright in both themes (dark mode used to
-// use muted deep fills). `bg` is the pastel fill used for chips, progress
-// segments, and filters; `fg` is the darker same-hue content drawn ON that fill.
+// Per-category SRS palette, defined for light mode: `bg` is the pastel fill used
+// for chips, progress segments, and filters; `fg` is the darker same-hue content
+// drawn ON that fill. In dark mode the two are swapped (see getReviewStatusColor)
+// so the fill becomes the dark/saturated tone and the content the light pastel —
+// keeping the colors bright while fitting the dark theme.
 // Hues: new=blue, learning=yellow, review=orange, mastered=green.
 const SRS_STATUS_COLORS: Record<SrsCardCategory, { fg: string; bg: string }> = {
   new: { fg: '#1b4fa8', bg: '#c2d9ff' },
@@ -78,12 +79,13 @@ export function getHeatmapColor(theme: MD3Theme, count: number): string {
   return primary;
 }
 
-// Theme is accepted for API symmetry with the other color helpers, but the SRS
-// palette is intentionally identical in light and dark mode.
+// In dark mode the pastel fg/bg are swapped so the fill is the dark/saturated
+// tone and the content is the light pastel (light text on a dark chip), while
+// light mode keeps the dark content on the pastel fill.
 export function getReviewStatusColor(
   theme: MD3Theme,
   category: SrsCardCategory,
 ): { fg: string; bg: string } {
-  void theme;
-  return SRS_STATUS_COLORS[category];
+  const colors = SRS_STATUS_COLORS[category];
+  return theme.dark ? { fg: colors.bg, bg: colors.fg } : colors;
 }

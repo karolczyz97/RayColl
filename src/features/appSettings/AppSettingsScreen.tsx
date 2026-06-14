@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
-import { Button, Text, useTheme } from 'react-native-paper';
+import { Button, Switch, Text, useTheme } from 'react-native-paper';
 import { ExpressiveButtonGroup } from '@/components/expressive';
 import { AppSnackbar } from '@/components/feedback/AppSnackbar';
 import { SyncStatusBanner } from '@/components/feedback/SyncStatusBanner';
@@ -8,7 +8,7 @@ import { AppSelect } from '@/components/AppSelect';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
 import { AppScreen } from '@/components/layout/AppScreen';
 import { LoadingState } from '@/components/layout/LoadingState';
-import { SectionCard } from '@/components/layout/SectionCard';
+import { SettingsSection, SettingsTile } from '@/components/settings/SettingsSection';
 import { isThemePref } from '@/contexts/UserPreferencesContext';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
@@ -64,121 +64,107 @@ export function AppSettingsScreen() {
       />
 
       <AnimatedSection order={0}>
-        <SectionCard title={t('app_settings.lang')}>
-          <AppSelect
-            value={language}
-            options={LANGUAGE_OPTIONS}
-            onChange={(value) => {
-              if (isLanguageCode(value)) {
-                setLanguage(value);
-              }
-            }}
-            accessibilityLabel="Select app language"
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection order={1}>
-        <SectionCard title={t('app_settings.theme')}>
-          <ExpressiveButtonGroup
-            value={themePref}
-            onValueChange={(value) => {
-              if (isThemePref(value)) {
-                setThemePref(value);
-              }
-            }}
-            buttons={[
-              { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
-              {
-                value: 'system',
-                label: t('app_settings.theme.system'),
-                icon: 'theme-light-dark',
-              },
-              { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
-            ]}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      {Platform.OS === 'android' && (
-        <AnimatedSection order={2}>
-          <SectionCard title={t('app_settings.dynamic_colors.title')}>
-            <Text variant="bodyMedium" style={styles.mutedText}>
-              {t('app_settings.dynamic_colors.desc')}
-            </Text>
+        <SettingsSection title={t('app_settings.section.appearance')}>
+          <SettingsTile title={t('app_settings.theme')}>
             <ExpressiveButtonGroup
-              value={useSystemColors ? 'true' : 'false'}
+              value={themePref}
               onValueChange={(value) => {
-                if (value === 'true' || value === 'false') {
-                  setUseSystemColors(value === 'true');
+                if (isThemePref(value)) {
+                  setThemePref(value);
                 }
               }}
               buttons={[
+                { value: 'light', label: t('app_settings.theme.light'), icon: 'weather-sunny' },
                 {
-                  value: 'true',
-                  label: t('app_settings.dynamic_colors.enabled'),
-                  icon: 'palette',
+                  value: 'system',
+                  label: t('app_settings.theme.system'),
+                  icon: 'theme-light-dark',
                 },
-                {
-                  value: 'false',
-                  label: t('app_settings.dynamic_colors.disabled'),
-                  icon: 'palette-swatch-outline',
-                },
+                { value: 'dark', label: t('app_settings.theme.dark'), icon: 'weather-night' },
               ]}
             />
-          </SectionCard>
-        </AnimatedSection>
-      )}
+          </SettingsTile>
+
+          {Platform.OS === 'android' && (
+            <SettingsTile
+              title={t('app_settings.dynamic_colors.title')}
+              description={t('app_settings.dynamic_colors.desc')}
+              onPress={() => setUseSystemColors(!useSystemColors)}
+              trailing={
+                <View pointerEvents="none">
+                  <Switch value={useSystemColors} />
+                </View>
+              }
+            />
+          )}
+        </SettingsSection>
+      </AnimatedSection>
+
+      <AnimatedSection order={1}>
+        <SettingsSection title={t('app_settings.section.language_speech')}>
+          <SettingsTile title={t('app_settings.lang')}>
+            <AppSelect
+              value={language}
+              options={LANGUAGE_OPTIONS}
+              onChange={(value) => {
+                if (isLanguageCode(value)) {
+                  setLanguage(value);
+                }
+              }}
+              accessibilityLabel="Select app language"
+            />
+          </SettingsTile>
+
+          <SettingsTile
+            title={t('app_settings.tts_rate')}
+            trailing={
+              <Text variant="titleMedium" style={[styles.valueText, { color: theme.colors.primary }]}>
+                {ttsRate.toFixed(1)}x
+              </Text>
+            }
+          >
+            <ExpressiveButtonGroup
+              value={String(ttsRate)}
+              onValueChange={(value) => void handleTtsRateChange(parseFloat(value))}
+              buttons={[
+                { value: '0.7', label: '0.7x' },
+                { value: '1', label: '1.0x' },
+                { value: '1.3', label: '1.3x' },
+                { value: '1.6', label: '1.6x' },
+              ]}
+            />
+          </SettingsTile>
+        </SettingsSection>
+      </AnimatedSection>
+
+      <AnimatedSection order={2}>
+        <StudyModesListSection />
+      </AnimatedSection>
 
       <AnimatedSection order={3}>
-        <SectionCard title={t('app_settings.tts_rate')}>
-          <Text variant="bodyLarge" style={styles.valueText}>
-            {ttsRate.toFixed(1)}x
-          </Text>
-          <ExpressiveButtonGroup
-            value={String(ttsRate)}
-            onValueChange={(value) => void handleTtsRateChange(parseFloat(value))}
-            buttons={[
-              { value: '0.7', label: '0.7x' },
-              { value: '1', label: '1.0x' },
-              { value: '1.3', label: '1.3x' },
-              { value: '1.6', label: '1.6x' },
-            ]}
-          />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection order={4}>
-        <SectionCard title={t('app_settings.study_modes')}>
-          <Text variant="bodyMedium" style={styles.mutedText}>
-            {t('app_settings.study_modes.desc')}
-          </Text>
-          <StudyModesListSection />
-        </SectionCard>
-      </AnimatedSection>
-
-      <AnimatedSection order={5}>
-        <SectionCard title={t('app_settings.export_import')}>
-          <View style={styles.actionButtonsRow}>
-            <Button
-              mode="contained-tonal"
-              icon="share-variant"
-              onPress={() => void handleExport()}
-              style={styles.actionButton}
-            >
-              {t('app_settings.export_btn')}
-            </Button>
-            <Button
-              mode="contained-tonal"
-              icon="file-upload"
-              onPress={() => void handleImportFromFile()}
-              disabled={isImporting}
-              style={styles.actionButton}
-            >
-              {t('app_settings.import_file_btn')}
-            </Button>
-          </View>
-        </SectionCard>
+        <SettingsSection title={t('app_settings.export_import')}>
+          <SettingsTile title={t('app_settings.export_import')}>
+            <View style={styles.actionButtonsRow}>
+              <Button
+                mode="contained-tonal"
+                icon="share-variant"
+                onPress={() => void handleExport()}
+                style={styles.actionButton}
+              >
+                {t('app_settings.export_btn')}
+              </Button>
+              <Button
+                mode="contained-tonal"
+                icon="file-upload"
+                onPress={() => void handleImportFromFile()}
+                disabled={isImporting}
+                style={styles.actionButton}
+              >
+                {t('app_settings.import_file_btn')}
+              </Button>
+            </View>
+          </SettingsTile>
+        </SettingsSection>
       </AnimatedSection>
 
       <TouchableOpacity
@@ -210,12 +196,8 @@ export function AppSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  mutedText: {
-    marginBottom: TOKENS.spacing.md,
-  },
   valueText: {
     fontWeight: TOKENS.typography.weight.bold,
-    marginBottom: TOKENS.spacing.md,
   },
   actionButtonsRow: {
     flexDirection: 'row',

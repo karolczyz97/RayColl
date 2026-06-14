@@ -3,8 +3,8 @@ import type { ModeStep, StepCondition, StudyMode } from '@/types/models';
 import { swapElements } from '@/utils/array';
 import { uid } from '@/utils/id';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
-import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
 import { useI18n } from '@/i18n';
+import { buildModeStep } from './buildModeStep';
 
 interface UseStepEditorControllerParams {
   pageCount: number;
@@ -59,47 +59,17 @@ export function useStepEditorController({
   };
 
   const confirmAddStep = () => {
-    let step: ModeStep;
-    const safePageIdx = Math.max(0, Math.min(pageCount - 1, Math.trunc(newPageIdx)));
-    switch (newStepType) {
-      case 'show_page':
-        step = { id: uid(), type: 'show_page', pageIndex: safePageIdx };
-        break;
-      case 'speak_page': {
-        const safeMultiplier = Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(newPauseMultiplier)));
-        step = { id: uid(), type: 'speak_page', pageIndex: safePageIdx, pauseMultiplier: safeMultiplier };
-        break;
-      }
-      case 'dynamic_pause': {
-        const safeMultiplier = Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(newPauseMultiplier)));
-        step = { id: uid(), type: 'dynamic_pause', nextPageIndex: safePageIdx, pauseMultiplier: safeMultiplier };
-        break;
-      }
-      case 'wait':
-        step = { id: uid(), type: 'wait', ms: newMs };
-        break;
-      case 'listen_and_branch':
-        step = { id: uid(), type: 'listen_and_branch', pageIndex: safePageIdx, successThreshold: newThreshold };
-        break;
-      case 'listen_and_check':
-        step = { id: uid(), type: 'listen_and_check', pageIndex: safePageIdx, successThreshold: newThreshold };
-        break;
-      case 'reveal_on_tap':
-        step = { id: uid(), type: 'reveal_on_tap' };
-        break;
-      case 'rate':
-        step = { id: uid(), type: 'rate' };
-        break;
-      case 'next_card':
-        step = { id: uid(), type: 'next_card' };
-        break;
-      default:
-        return;
-    }
-
-    if (newCondition !== 'always') {
-      step = { ...step, condition: newCondition };
-    }
+    const step = buildModeStep({
+      id: uid(),
+      newStepType,
+      pageCount,
+      newPageIdx,
+      newMs,
+      newPauseMultiplier,
+      newThreshold,
+      newCondition,
+    });
+    if (!step) return;
 
     if (editingModeId && !creatingMode) {
       const mode = store.studyModes.find((item) => item.id === editingModeId);

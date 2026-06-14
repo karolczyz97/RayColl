@@ -1,5 +1,7 @@
 import type { Href } from 'expo-router';
 
+export const STUDY_MODE_NEW_ID = 'new';
+
 export const ROUTES = {
   HOME: '/',
   APP_SETTINGS: '/app-settings',
@@ -10,6 +12,12 @@ export const ROUTES = {
   studyMode: (modeId: string): Href => ({
     pathname: '/study-modes/[modeId]',
     params: { modeId },
+  }),
+  createStudyMode: (selectForGroup?: string): Href => ({
+    pathname: '/study-modes/[modeId]',
+    params: selectForGroup
+      ? { modeId: STUDY_MODE_NEW_ID, selectForGroup }
+      : { modeId: STUDY_MODE_NEW_ID },
   }),
   browseDeck: (groupId: string): Href => ({
     pathname: '/browse/[groupId]',

@@ -15,6 +15,7 @@ const t = (key: string, replacements?: Record<string, string | number>) => {
     'app_settings.title': 'App Settings',
     'import.title': 'Import Flashcards',
     'study_modes.title': 'Study modes',
+    'settings.create_mode_btn': 'Create new mode',
   };
   let value = labels[key] ?? key;
   for (const [name, replacement] of Object.entries(replacements ?? {})) {
@@ -61,5 +62,9 @@ describe('getWebDocumentTitle', () => {
 
   it('uses the study mode name for mode detail routes', () => {
     expect(getWebDocumentTitle('/study-modes/custom', groups, modes, t)).toBe('Listening');
+  });
+
+  it('uses the create label for the new study mode route', () => {
+    expect(getWebDocumentTitle('/study-modes/new', groups, modes, t)).toBe('Create new mode');
   });
 });

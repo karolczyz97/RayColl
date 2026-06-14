@@ -13,6 +13,7 @@ export const es: Record<string, string> = {
   'btn.back': 'Atrás',
   'btn.login': 'Iniciar sesión con Google',
   'btn.logout': 'Cerrar sesión',
+  'btn.discard': 'Descartar',
   'auth.local': 'Modo local',
   'auth.welcome': 'Bienvenido, {name}',
   'auth.migration.title': 'Datos locales encontrados',
@@ -177,6 +178,8 @@ export const es: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
   'app_settings.title': 'Ajustes de la aplicación',
+  'app_settings.section.appearance': 'Apariencia',
+  'app_settings.section.language_speech': 'Idioma y voz',
   'app_settings.theme': 'Tema',
   'app_settings.theme.system': 'Sistema',
   'app_settings.theme.light': 'Claro',
@@ -253,6 +256,9 @@ export const es: Record<string, string> = {
   'study_modes.delete_title': 'Eliminar modo',
   'study_modes.delete_message':
     '¿Eliminar el modo "{name}"? Los mazos que lo usan volverán al modo predeterminado.',
+
+  'study_modes.unsaved_title': 'Cambios sin guardar',
+  'study_modes.unsaved_message': '¿Guardar los cambios antes de salir?',
 
   // Study Filters
   'filter.new_review': 'Nuevas + pendientes de repaso',

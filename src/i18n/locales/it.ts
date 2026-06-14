@@ -10,6 +10,7 @@ export const it: Record<string, string> = {
   'btn.save': 'Salva',
   'btn.add': 'Aggiungi',
   'btn.delete': 'Elimina',
+  'btn.discard': 'Scarta',
   'btn.back': 'Indietro',
   'btn.login': 'Accedi con Google',
   'btn.logout': 'Disconnetti',
@@ -177,6 +178,8 @@ export const it: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   // App Settings
   'app_settings.title': 'Impostazioni app',
+  'app_settings.section.appearance': 'Aspetto',
+  'app_settings.section.language_speech': 'Lingua e voce',
   'app_settings.theme': 'Tema',
   'app_settings.theme.system': 'Sistema',
   'app_settings.theme.light': 'Chiaro',
@@ -253,6 +256,9 @@ export const it: Record<string, string> = {
   'study_modes.delete_title': 'Elimina modalità',
   'study_modes.delete_message':
     'Eliminare la modalità "{name}"? I mazzi che la usano torneranno alla modalità predefinita.',
+
+  'study_modes.unsaved_title': 'Modifiche non salvate',
+  'study_modes.unsaved_message': 'Salvare le modifiche prima di uscire?',
 
   // Study Filters
   'filter.new_review': 'Nuove + in scadenza',

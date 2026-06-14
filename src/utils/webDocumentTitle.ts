@@ -1,6 +1,6 @@
 import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { APP_NAME } from '@/constants/app';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, STUDY_MODE_NEW_ID } from '@/constants/routes';
 import { getModeName } from '@/i18n/modeHelpers';
 import type { TranslationFn } from '@/i18n';
 
@@ -34,6 +34,7 @@ function getPageTitle(
 
   const studyModeId = getRouteId(pathname, `${ROUTES.STUDY_MODES}/`);
   if (studyModeId) {
+    if (studyModeId === STUDY_MODE_NEW_ID) return t('settings.create_mode_btn');
     const mode = studyModes.find((item) => item.id === studyModeId);
     return mode ? getModeName(t, mode.id, mode.name) : t('route.study_mode_detail');
   }

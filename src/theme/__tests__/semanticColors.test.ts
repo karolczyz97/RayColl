@@ -51,13 +51,15 @@ describe('semanticColors', () => {
     expect(categoryColors).not.toContainEqual({ fg: lightTheme.colors.secondary, bg: lightTheme.colors.secondaryContainer });
   });
 
-  it('uses the same pastel SRS palette in dark mode', () => {
-    // The palette is intentionally identical across themes so progress colors
-    // read equally bright in light and dark.
+  it('swaps the pastel fg/bg in dark mode', () => {
+    // Dark mode reverses the light palette: the fill becomes the dark tone and
+    // the content the light pastel, so chips stay bright but fit the dark theme.
     (['new', 'learning', 'review', 'mastered'] as const).forEach((category) => {
-      expect(getReviewStatusColor(darkTheme, category)).toEqual(
-        getReviewStatusColor(lightTheme, category),
-      );
+      const light = getReviewStatusColor(lightTheme, category);
+      expect(getReviewStatusColor(darkTheme, category)).toEqual({
+        fg: light.bg,
+        bg: light.fg,
+      });
     });
   });
 });

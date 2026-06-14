@@ -10,6 +10,7 @@ export const pl: Record<string, string> = {
   'btn.save': 'Zapisz',
   'btn.add': 'Dodaj',
   'btn.delete': 'Usuń',
+  'btn.discard': 'Odrzuć',
   'btn.back': 'Wstecz',
   'btn.login': 'Zaloguj się przez Google',
   'btn.logout': 'Wyloguj się',
@@ -178,6 +179,8 @@ export const pl: Record<string, string> = {
 
   // App Settings
   'app_settings.title': 'Ustawienia aplikacji',
+  'app_settings.section.appearance': 'Wygląd',
+  'app_settings.section.language_speech': 'Język i mowa',
   'app_settings.theme': 'Motyw',
   'app_settings.theme.system': 'Systemowy',
   'app_settings.theme.light': 'Jasny',
@@ -255,6 +258,9 @@ export const pl: Record<string, string> = {
   'study_modes.delete_title': 'Usuń tryb',
   'study_modes.delete_message':
     'Usunąć tryb „{name}"? Talie, które go używają, wrócą do trybu domyślnego.',
+
+  'study_modes.unsaved_title': 'Niezapisane zmiany',
+  'study_modes.unsaved_message': 'Zapisać zmiany przed wyjściem?',
 
   // Study Filters
   'filter.new_review': 'Nowe + Powtórki',
