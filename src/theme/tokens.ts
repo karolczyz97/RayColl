@@ -101,7 +101,9 @@ export const TOKENS = {
     minCardWidth: 280,
     maxCols: 4,
     minGap: 8,
-    maxGap: 32,
+    // Cap grid gaps at spacing.lg so the dashboard grids (stats + decks) use the
+    // same spacing as the Browse list on wide/web layouts instead of ballooning.
+    maxGap: 16,
     gapRatio: 0.0266,
     topBarHeight: 64,
     bottomBarHeight: 80,

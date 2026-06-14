@@ -7,7 +7,7 @@ import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
 import { SegmentedProgressBar } from '@/components/SegmentedProgressBar';
 import { computeCardStats } from '@/store/selectors/stats';
-import { getReviewStatusColor, getSuccessColor } from '@/theme/semanticColors';
+import { getSuccessColor, getWarningColor } from '@/theme/semanticColors';
 import { TOKENS } from '@/theme/tokens';
 
 interface StudyFinishedStateProps {
@@ -33,8 +33,9 @@ export function StudyFinishedState({
   const theme = useTheme();
   const { t } = useI18n();
   const statusIcon = endedEarly ? 'stop-circle-outline' : 'check-circle';
-  const { fg: interruptedColor } = getReviewStatusColor(theme, 'learning');
-  const statusIconColor = endedEarly ? interruptedColor : getSuccessColor(theme);
+  // A dedicated warning accent (readable on the screen background) for the
+  // "ended early" state, rather than borrowing the SRS fill-content color.
+  const statusIconColor = endedEarly ? getWarningColor(theme) : getSuccessColor(theme);
 
   return (
     <View style={styles.finishedContainer}>

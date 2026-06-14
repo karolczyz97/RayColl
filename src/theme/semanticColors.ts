@@ -3,24 +3,18 @@ import { SrsCardCategory } from '@/srs/srsEngine';
 import { hexToRgba } from './colorUtils';
 import { TOKENS } from './tokens';
 
-// Per-category SRS palette. `bg` is the light tint used as the chip/segment
-// fill (onSurface text is drawn on top); `fg` is the saturated/foreground
-// variant of the same hue. Hues: new=blue, learning=yellow, review=orange,
-// mastered=green.
-const SRS_STATUS_COLORS = {
-  light: {
-    new: { fg: '#1b4fa8', bg: '#c2d9ff' },
-    learning: { fg: '#8a6d00', bg: '#f4dd87' },
-    review: { fg: '#b4480f', bg: '#ffcfa8' },
-    mastered: { fg: '#0c6e4c', bg: '#c2f0d9' },
-  },
-  dark: {
-    new: { fg: '#9ec5ff', bg: '#173a75' },
-    learning: { fg: '#f3d44e', bg: '#403300' },
-    review: { fg: '#fdba74', bg: '#7c2d12' },
-    mastered: { fg: '#7ee2b8', bg: '#063f2c' },
-  },
-} as const;
+// Per-category SRS palette. Shared across light and dark so the progress colors
+// read equally vivid in both themes (previously dark used muted deep fills and
+// light used washed-out pastels). `bg` is the saturated fill used for chips,
+// progress segments, and filters; `fg` is the content drawn ON that fill — white,
+// except the light yellow hue which needs dark content to stay legible.
+// Hues: new=blue, learning=yellow, review=orange, mastered=green.
+const SRS_STATUS_COLORS: Record<SrsCardCategory, { fg: string; bg: string }> = {
+  new: { fg: '#ffffff', bg: '#2f6fed' },
+  learning: { fg: '#3d2f00', bg: '#f3c01a' },
+  review: { fg: '#ffffff', bg: '#e8600f' },
+  mastered: { fg: '#ffffff', bg: '#0f9b4c' },
+};
 
 const SUCCESS_COLORS = {
   light: { color: '#0f7b55', bg: '#d7f7e7' },
@@ -68,7 +62,7 @@ export function getSecondaryBgColor(theme: MD3Theme): string {
 }
 
 // Top app bar: flush with the screen background so the bar blends into the
-// system status-bar area above it instead of reading as a colored stripe.
+// system status-bar area above it (the MD3 default top-app-bar treatment).
 // Single source of truth so the whole shell can be re-toned in one place.
 export function getTopBarColors(theme: MD3Theme): { bg: string; fg: string } {
   return { bg: theme.colors.background, fg: theme.colors.onBackground };
@@ -85,9 +79,12 @@ export function getHeatmapColor(theme: MD3Theme, count: number): string {
   return primary;
 }
 
+// Theme is accepted for API symmetry with the other color helpers, but the SRS
+// palette is intentionally identical in light and dark mode.
 export function getReviewStatusColor(
   theme: MD3Theme,
   category: SrsCardCategory,
 ): { fg: string; bg: string } {
-  return SRS_STATUS_COLORS[theme.dark ? 'dark' : 'light'][category];
+  void theme;
+  return SRS_STATUS_COLORS[category];
 }

@@ -18,23 +18,24 @@ describe('semanticColors', () => {
     expect(getSuccessBgColor(redTertiaryTheme)).toBe('#d7f7e7');
   });
 
-  it('uses an explicit mastery-oriented palette for SRS categories', () => {
+  it('uses an explicit vivid palette for SRS categories', () => {
     // Hues: new=blue, learning=yellow, review=orange, mastered=green.
+    // White content on saturated fills, dark content on the light yellow hue.
     expect(getReviewStatusColor(lightTheme, 'new')).toEqual({
-      fg: '#1b4fa8',
-      bg: '#c2d9ff',
+      fg: '#ffffff',
+      bg: '#2f6fed',
     });
     expect(getReviewStatusColor(lightTheme, 'learning')).toEqual({
-      fg: '#8a6d00',
-      bg: '#f4dd87',
+      fg: '#3d2f00',
+      bg: '#f3c01a',
     });
     expect(getReviewStatusColor(lightTheme, 'review')).toEqual({
-      fg: '#b4480f',
-      bg: '#ffcfa8',
+      fg: '#ffffff',
+      bg: '#e8600f',
     });
     expect(getReviewStatusColor(lightTheme, 'mastered')).toEqual({
-      fg: '#0c6e4c',
-      bg: '#c2f0d9',
+      fg: '#ffffff',
+      bg: '#0f9b4c',
     });
 
     const categoryColors = ['new', 'learning', 'review', 'mastered'].map((category) =>
@@ -50,22 +51,13 @@ describe('semanticColors', () => {
     expect(categoryColors).not.toContainEqual({ fg: lightTheme.colors.secondary, bg: lightTheme.colors.secondaryContainer });
   });
 
-  it('keeps the explicit SRS palette readable in dark mode', () => {
-    expect(getReviewStatusColor(darkTheme, 'new')).toEqual({
-      fg: '#9ec5ff',
-      bg: '#173a75',
-    });
-    expect(getReviewStatusColor(darkTheme, 'learning')).toEqual({
-      fg: '#f3d44e',
-      bg: '#403300',
-    });
-    expect(getReviewStatusColor(darkTheme, 'review')).toEqual({
-      fg: '#fdba74',
-      bg: '#7c2d12',
-    });
-    expect(getReviewStatusColor(darkTheme, 'mastered')).toEqual({
-      fg: '#7ee2b8',
-      bg: '#063f2c',
+  it('uses the same vivid SRS palette in dark mode', () => {
+    // The palette is intentionally identical across themes so progress colors
+    // read equally bright in light and dark.
+    (['new', 'learning', 'review', 'mastered'] as const).forEach((category) => {
+      expect(getReviewStatusColor(darkTheme, category)).toEqual(
+        getReviewStatusColor(lightTheme, category),
+      );
     });
   });
 });
