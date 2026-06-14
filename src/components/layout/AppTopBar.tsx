@@ -17,7 +17,8 @@ interface AppTopBarProps {
 }
 
 /**
- * Full-width top app bar with its own strong background color.
+ * Full-width top app bar that sits flush with the screen background, so it
+ * blends into the system status-bar area above it.
  *
  * Layout is edge-pinned: back arrow / brand sit at the far left, the right
  * slot at the far right. The bar spans the full width of the app shell and
@@ -63,8 +64,6 @@ const styles = StyleSheet.create({
     minHeight: TOKENS.layout.topBarHeight,
     paddingHorizontal: TOKENS.spacing.xs,
     gap: TOKENS.spacing.sm,
-    borderBottomLeftRadius: TOKENS.radius.xl,
-    borderBottomRightRadius: TOKENS.radius.xl,
   },
   leftGroup: {
     flex: 1,

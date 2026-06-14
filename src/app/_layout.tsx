@@ -5,6 +5,7 @@ import { ExperimentalStack as Stack, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider, useTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -246,6 +247,9 @@ function AppContent() {
       resetKey={pathname}
       title={globalErrorTitleKey ? t(globalErrorTitleKey) : undefined}
     >
+      {/* Dark icons on light themes, light icons on dark themes, so the system
+          clock/signal icons stay legible against the (now background-toned) bar. */}
+      <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
         <AppNavigationShell>
           <Stack screenOptions={{ headerShown: false }}>

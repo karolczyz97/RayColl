@@ -120,6 +120,9 @@ export const TOKENS = {
     fabIconSize: 56,
     fabExtendedMinWidth: 80,
     fabMinHeight: 56,
+    // Bottom space reserved in scroll content so a pinned FAB/overlay never
+    // covers the last item (spacing.xxl * 3).
+    fabClearance: 96,
     // Navigation rail collapsed
     collapsedRailItemWidth: 72,
     collapsedRailItemMinHeight: 64,

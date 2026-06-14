@@ -38,14 +38,20 @@ interface AppScreenProps {
  *  1. AppTopBar — full viewport width, fixed (does not scroll).
  *  2. Scroll host — full viewport width, so the scrollbar sits at the WINDOW edge.
  *
- * Web + scroll: a full-width ScrollView; its contentContainer centers a webCard
- * (max 1200px, surface, rounded, shadow). The card is plain scrolling content —
- * no nested scroll container, so the scrollbar stays at the viewport edge.
+ * The scroll host always spans the full width; horizontal padding lives on the
+ * scroll *content container*, not on the region wrapping the scroller. That keeps
+ * the scrollbar at the window edge and stops card shadows from being clipped at
+ * an inset scroller boundary — the same pattern Browse already uses.
+ *
+ * Web + scroll: a full-width ScrollView; its contentContainer centers the content
+ * with horizontal padding. No nested scroll container, so the scrollbar stays at
+ * the viewport edge.
  *
  * Web + scroll=false: full-width region with no card; the screen renders its own
  * full-width scroller and centers content itself (e.g. Browse's FlatList).
  *
- * Native: ScrollView (scroll) or View (no scroll) with horizontal padding.
+ * Native: ScrollView (scroll) or View (no scroll); the ScrollView is full-width
+ * and its content container carries the horizontal padding.
  */
 export function AppScreen({
   title,
@@ -65,6 +71,11 @@ export function AppScreen({
   const isWeb = Platform.OS === 'web';
   const showBar = showBarProp;
 
+  // Reserve space at the bottom of the scroll content so a pinned overlay (e.g. a
+  // FAB) never covers the last item. Screens without an overlay keep the compact
+  // baseline.
+  const scrollBottomPadding = overlay ? TOKENS.layout.fabClearance : TOKENS.spacing.md;
+
   const screenContent = (
     <ScreenContent maxWidth={maxWidth} fill={!scroll} style={contentStyle}>
       {children}
@@ -74,12 +85,12 @@ export function AppScreen({
   let body: React.ReactNode;
 
   if (isWeb && scroll) {
-    // Full-width ScrollView → scrollbar at the window edge. Card centered inside.
+    // Full-width ScrollView → scrollbar at the window edge. Content centered inside.
     body = (
       <ScrollView
         style={styles.flexFill}
         className="raycoll-stable-scrollbar"
-        contentContainerStyle={styles.webScrollContent}
+        contentContainerStyle={[styles.webScrollContent, { paddingBottom: scrollBottomPadding }]}
       >
         {screenContent}
       </ScrollView>
@@ -88,9 +99,12 @@ export function AppScreen({
     // Screen owns its full-width scroller (e.g. Browse FlatList); no card wrapper.
     body = <View style={styles.flexFill}>{screenContent}</View>;
   } else if (scroll) {
-    // Native scroll.
+    // Native scroll. Full-width scroller; padding lives on the content container.
     body = (
-      <ScrollView style={styles.flexFill} contentContainerStyle={styles.nativeScrollContent}>
+      <ScrollView
+        style={styles.flexFill}
+        contentContainerStyle={[styles.nativeScrollContent, { paddingBottom: scrollBottomPadding }]}
+      >
         {screenContent}
       </ScrollView>
     );
@@ -104,16 +118,7 @@ export function AppScreen({
       {showBar ? <AppTopBar title={title} onBack={onBack} right={right} brand={brand} /> : null}
       {headerExtension}
 
-      <View
-        style={[
-          styles.contentRegion,
-          { backgroundColor: theme.colors.background },
-          // scroll=false screens (Browse/Import/Study) own their horizontal
-          // padding via their list/content styles. Applying nativePadding there too
-          // double-padded them on native, making them narrower than scroll screens.
-          !isWeb && scroll && styles.nativePadding,
-        ]}
-      >
+      <View style={[styles.contentRegion, { backgroundColor: theme.colors.background }]}>
         {body}
         {overlay}
       </View>
@@ -129,18 +134,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  nativePadding: {
-    paddingHorizontal: TOKENS.spacing.lg,
-  },
-  // Web scroll content: centers the card horizontally, with vertical breathing room.
+  // Web scroll content: centers the content horizontally, with top breathing room.
+  // Bottom padding is applied dynamically (overlay-aware).
   webScrollContent: {
     alignItems: 'center',
     paddingHorizontal: TOKENS.spacing.lg,
     paddingTop: TOKENS.spacing.md,
-    paddingBottom: TOKENS.spacing.md,
   },
+  // Native scroll content: horizontal padding lives here (not on the wrapping
+  // region) so the scroller spans full width and the scrollbar sits at the edge.
+  // Bottom padding is applied dynamically (overlay-aware).
   nativeScrollContent: {
-    paddingBottom: TOKENS.spacing.md,
+    paddingHorizontal: TOKENS.spacing.lg,
   },
   flexFill: {
     flex: 1,

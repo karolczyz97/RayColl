@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     // any header element (count, search…) never leaves the content stuck to the
     // top bar.
     paddingTop: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.spacing.xxl * 3,
+    paddingBottom: TOKENS.layout.fabClearance,
     paddingHorizontal: TOKENS.spacing.lg,
   },
   fab: {
