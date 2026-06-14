@@ -231,7 +231,6 @@ export const en: Record<string, string> = {
   'step.wait': 'Wait {ms}ms',
   'step.listen_and_branch': 'STT page {index} (threshold {threshold}%)',
   'step.listen_and_check': 'Check speech p. {index}, no rating (threshold {threshold}%)',
-  'step.reveal_on_tap': 'Reveal next page on tap',
   'step.rate': 'Rate knowledge',
   'step.next_card': 'Go to next card (no rating)',
   'step.unknown': 'Unknown step',
@@ -243,7 +242,6 @@ export const en: Record<string, string> = {
   'step.type.wait': 'Wait (ms)',
   'step.type.listen_and_branch': 'Verify speech (STT)',
   'step.type.listen_and_check': 'Check speech (STT, no rating)',
-  'step.type.reveal_on_tap': 'Reveal on tap',
   'step.type.rate': 'Rate knowledge',
   'step.type.next_card': 'Next card (no rating)',
 

@@ -36,7 +36,6 @@ describe('buildModeStep', () => {
       'listen_and_check',
       { id: 'step-1', type: 'listen_and_check', pageIndex: 1, successThreshold: 80 },
     ],
-    ['reveal_on_tap', { id: 'step-1', type: 'reveal_on_tap' }],
     ['rate', { id: 'step-1', type: 'rate' }],
     ['next_card', { id: 'step-1', type: 'next_card' }],
   ])('builds %s steps', (newStepType, expected) => {

@@ -211,7 +211,6 @@ export function useStudyModeDraftController({
   const stepLabels = useMemo<Record<string, string>>(
     () => ({
       show_page: t('step.type.show_page'),
-      reveal_on_tap: t('step.type.reveal_on_tap'),
       rate: t('step.type.rate'),
       speak_page: t('step.type.speak_page'),
       dynamic_pause: t('step.type.dynamic_pause'),

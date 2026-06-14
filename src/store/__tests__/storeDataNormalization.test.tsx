@@ -156,6 +156,19 @@ describe('normalizeStudyMode', () => {
     expect(normalized.steps).toEqual([{ type: 'next_card' }, { type: 'show_page', pageIndex: 0 }]);
   });
 
+  it('strips legacy reveal_on_tap steps because tap-to-reveal is now default behavior', () => {
+    const steps = [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'reveal_on_tap' },
+      { type: 'rate' },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps }));
+    expect(normalized.steps).toEqual([
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'rate' },
+    ]);
+  });
+
   it('preserves valid step conditions and drops invalid ones', () => {
     const steps = [
       { type: 'speak_page', pageIndex: 0, pauseMultiplier: 1, condition: 'correct' },

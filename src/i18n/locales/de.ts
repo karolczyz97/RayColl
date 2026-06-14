@@ -230,7 +230,6 @@ export const de: Record<string, string> = {
   'step.wait': 'Warte {ms}ms',
   'step.listen_and_branch': 'STT Seite {index} (Schwellenwert {threshold}%)',
   'step.listen_and_check': 'Sprache prüfen S. {index}, ohne Bewertung (Schwellenwert {threshold}%)',
-  'step.reveal_on_tap': 'Nächste Seite per Tippen aufdecken',
   'step.rate': 'Wissen bewerten',
   'step.next_card': 'Zur nächsten Karte (ohne Bewertung)',
   'step.unknown': 'Unbekannter Schritt',
@@ -242,7 +241,6 @@ export const de: Record<string, string> = {
   'step.type.wait': 'Warten (ms)',
   'step.type.listen_and_branch': 'Sprache überprüfen (STT)',
   'step.type.listen_and_check': 'Sprache prüfen (STT, ohne Bewertung)',
-  'step.type.reveal_on_tap': 'Per Tippen aufdecken',
   'step.type.rate': 'Wissen bewerten',
   'step.type.next_card': 'Nächste Karte (ohne Bewertung)',
 

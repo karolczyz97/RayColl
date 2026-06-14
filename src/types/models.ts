@@ -80,9 +80,6 @@ export type ModeStep = ModeStepBase &
         successThreshold: number;
       }
     | {
-        type: 'reveal_on_tap';
-      }
-    | {
         type: 'rate';
       }
     | {

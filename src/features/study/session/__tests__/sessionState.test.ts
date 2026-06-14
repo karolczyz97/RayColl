@@ -353,10 +353,6 @@ describe('formatStepSummary', () => {
   it('maps rate step', () => {
     expect(formatStepSummary({ type: 'rate' }, fakeT)).toBe('step.rate');
   });
-
-  it('maps reveal_on_tap step', () => {
-    expect(formatStepSummary({ type: 'reveal_on_tap' }, fakeT)).toBe('step.reveal_on_tap');
-  });
 });
 
 describe('reviewAttempts', () => {

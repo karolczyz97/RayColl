@@ -4,8 +4,8 @@ import { mapMatchToRating, matchSpeech } from '@/srs/srsEngine';
 import { playErrorSound, playSuccessSound } from '@/services/audioFeedback';
 import { playErrorHaptic, playSuccessHaptic } from '@/services/hapticFeedback';
 import type { StudySkipState, SpeechRecognitionOutcome } from '@/features/study/hooks/useStudyAudio';
-import type { SessionAction } from './sessionTypes';
-import { getActivePageIndexes, sleep } from './sessionUtils';
+import type { SessionAction, StudySessionState } from './sessionTypes';
+import { areAllActivePagesRevealed, getActivePageIndexes, sleep } from './sessionUtils';
 
 const CORRECTION_INTERRUPT_PAUSE_MS = 2000;
 
@@ -18,6 +18,9 @@ interface StepExecutorContext {
   lastCheckPassedRef: MutableRefObject<boolean | null>;
   activeStepsRef: MutableRefObject<ModeStep[]>;
   groupRef: MutableRefObject<FlashcardGroup | null>;
+  // Read-only view of the live session state, used by the `rate` step to decide
+  // whether the back is already revealed or whether to wait for taps first.
+  stateRef: MutableRefObject<StudySessionState>;
   skipRef: MutableRefObject<StudySkipState>;
   lastTtsDurationRef: MutableRefObject<number>;
   lastPartialTextRef: MutableRefObject<string>;
@@ -329,12 +332,16 @@ export async function executeStudyStep(
       await continueIfActive(card, stepIndex + 1, context);
       break;
 
-    case 'reveal_on_tap':
-      context.dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: true });
-      break;
-
     case 'rate':
-      context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
+      // Rating is gated on the user having seen the whole card. If pages are
+      // still hidden, pause and let taps reveal them one by one (handled by the
+      // gesture layer + auto-advance effect); once everything is visible the
+      // step re-runs and shows the rating buttons.
+      if (areAllActivePagesRevealed(currentGroup, context.stateRef.current.revealedPages)) {
+        context.dispatchIfMounted({ type: 'SHOW_RATINGS' });
+      } else {
+        context.dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: true });
+      }
       break;
 
     case 'next_card':

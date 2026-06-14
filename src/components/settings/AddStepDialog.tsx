@@ -70,7 +70,6 @@ export function AddStepDialog({
           />
 
           {newStepType !== 'wait' &&
-            newStepType !== 'reveal_on_tap' &&
             newStepType !== 'rate' &&
             newStepType !== 'next_card' && (
               <AppNumberInput

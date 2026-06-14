@@ -46,8 +46,6 @@ function formatStepBody(step: ModeStep, t: TranslationFn): string {
         index: step.pageIndex + 1,
         threshold: step.successThreshold,
       });
-    case 'reveal_on_tap':
-      return t('step.reveal_on_tap');
     case 'rate':
       return t('step.rate');
     case 'next_card':

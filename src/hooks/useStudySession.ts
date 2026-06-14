@@ -110,6 +110,7 @@ export function useStudySession(
         lastCheckPassedRef,
         activeStepsRef,
         groupRef,
+        stateRef,
         skipRef,
         lastTtsDurationRef,
         dispatchIfMounted,
@@ -137,6 +138,7 @@ export function useStudySession(
       processCardReview,
       runSpeechRecognition,
       skipRef,
+      stateRef,
     ],
   );
 
@@ -164,11 +166,11 @@ export function useStudySession(
     dispatchIfMounted,
   });
 
-  // Auto-advance reveal_on_tap when all pages are already visible.
-  // Handles the case where pages were pre-revealed during an audio-step skip tap
-  // (setHolding reveals pages even outside waitingForTap). Without this, the user
-  // would need an extra tap after the skip reveals the last page.
-  // Guard in the setTimeout checks stateRef so if handleCardPress already advanced,
+  // While a `rate` step waits for the user to reveal the card, finish the wait as
+  // soon as every page is visible (e.g. pages were pre-revealed during an
+  // audio-step skip tap — setHolding reveals pages even outside waitingForTap).
+  // Re-runs the same step so the rate step shows its rating buttons.
+  // Guard in the setTimeout checks stateRef so if handleCardPress already resumed,
   // this becomes a no-op.
   useEffect(() => {
     if (!state.waitingForTap) return;
@@ -188,7 +190,7 @@ export function useStudySession(
         !abortRef.current
       ) {
         dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
-        void executeStepRef.current?.(card, stepIndex + 1);
+        void executeStepRef.current?.(card, stepIndex);
       }
     }, 0);
 

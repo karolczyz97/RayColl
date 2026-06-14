@@ -77,9 +77,6 @@ export function buildModeStep(form: BuildModeStepForm): ModeStep | null {
         successThreshold: form.newThreshold,
       };
       break;
-    case 'reveal_on_tap':
-      step = { ...withId(form.id), type: 'reveal_on_tap' };
-      break;
     case 'rate':
       step = { ...withId(form.id), type: 'rate' };
       break;

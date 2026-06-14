@@ -230,7 +230,6 @@ export const es: Record<string, string> = {
   'step.wait': 'Esperar {ms}ms',
   'step.listen_and_branch': 'STT página {index} (umbral {threshold}%)',
   'step.listen_and_check': 'Comprobar voz pág. {index}, sin valoración (umbral {threshold}%)',
-  'step.reveal_on_tap': 'Revelar la siguiente página al tocar',
   'step.rate': 'Evaluar conocimiento',
   'step.next_card': 'Pasar a la siguiente tarjeta (sin valoración)',
   'step.unknown': 'Paso desconocido',
@@ -242,7 +241,6 @@ export const es: Record<string, string> = {
   'step.type.wait': 'Esperar (ms)',
   'step.type.listen_and_branch': 'Verificar voz (STT)',
   'step.type.listen_and_check': 'Comprobar voz (STT, sin valoración)',
-  'step.type.reveal_on_tap': 'Revelar al tocar',
   'step.type.rate': 'Evaluar conocimiento',
   'step.type.next_card': 'Siguiente tarjeta (sin valoración)',
 

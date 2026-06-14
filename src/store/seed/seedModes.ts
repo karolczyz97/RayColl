@@ -9,7 +9,6 @@ const SEED_MODES: StudyMode[] = [
     steps: [
       { type: 'show_page', pageIndex: 0 },
       { type: 'speak_page', pageIndex: 0, pauseMultiplier: 0 },
-      { type: 'reveal_on_tap' },
       { type: 'rate' },
     ],
   },

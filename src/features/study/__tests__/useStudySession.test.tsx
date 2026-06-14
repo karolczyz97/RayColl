@@ -92,6 +92,30 @@ async function rateCurrentCard(hookRef: HookResult, rating: number) {
   });
 }
 
+async function tapCard(hookRef: HookResult) {
+  await act(async () => {
+    hookRef.current!.setHolding(true);
+    hookRef.current!.setHolding(false);
+    hookRef.current!.handleCardPress();
+  });
+  await flushQueuedSessionWork();
+}
+
+async function revealCardForRating(hookRef: HookResult) {
+  await waitFor(() => {
+    const { showRatingButtons, waitingForTap } = hookRef.current!.sessionState;
+    expect(showRatingButtons || waitingForTap).toBe(true);
+  });
+
+  for (let i = 0; i < 5 && !hookRef.current!.sessionState.showRatingButtons; i += 1) {
+    await tapCard(hookRef);
+  }
+
+  await waitFor(() => {
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+  });
+}
+
 function TestHookWrapper({
   group,
   steps,
@@ -168,7 +192,7 @@ describe('useStudySession', () => {
     expect(hookRef.current!.dueCards).toEqual([card1]);
   });
 
-  it('handleRating calls onCardReviewed', async () => {
+  it('handleRating calls onCardReviewed after the card is fully revealed', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);
     const onCardReviewed = jest.fn();
@@ -184,12 +208,9 @@ describe('useStudySession', () => {
     );
 
     await startSession(hookRef, [card1]);
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
 
-    // With a 'rate' step, the session should immediately transition to revealed
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    });
-
+    await revealCardForRating(hookRef);
     await rateCurrentCard(hookRef, 3);
 
     await waitFor(() => {
@@ -250,6 +271,7 @@ describe('useStudySession', () => {
     );
 
     await startSession(hookRef, [card1]);
+    await revealCardForRating(hookRef);
 
     await rateCurrentCard(hookRef, 1);
 
@@ -272,6 +294,7 @@ describe('useStudySession', () => {
     );
 
     await startSession(hookRef, [card1]);
+    await revealCardForRating(hookRef);
 
     await rateCurrentCard(hookRef, 1);
     await rateCurrentCard(hookRef, 1);
@@ -305,7 +328,7 @@ describe('useStudySession', () => {
     expect(mockedSttService.stopListening).toHaveBeenCalled();
   });
 
-  it('tap during speak_page skips and advances', async () => {
+  it('tap during speak_page skips, reveals the card, and advances to rating', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);
     const onCardReviewed = jest.fn();
@@ -332,9 +355,7 @@ describe('useStudySession', () => {
       expect(hookRef.current!.sessionState.isTtsPlaying).toBe(true);
     });
 
-    await act(async () => {
-      hookRef.current!.handleCardPress();
-    });
+    await tapCard(hookRef);
 
     await waitFor(() => {
       expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
@@ -385,6 +406,7 @@ describe('useStudySession', () => {
     );
 
     await startSession(hookRef, [card1, card2]);
+    await revealCardForRating(hookRef);
 
     await rateCurrentCard(hookRef, 1);
 
@@ -415,6 +437,7 @@ describe('useStudySession', () => {
     );
 
     await startSession(hookRef, [staleCard1]);
+    await revealCardForRating(hookRef);
     await rateCurrentCard(hookRef, 1);
 
     await act(async () => {
@@ -526,7 +549,7 @@ describe('useStudySession', () => {
     expect(mockedTtsService.speak).not.toHaveBeenCalled();
   });
 
-  it('listen_and_check fails: "if wrong" step runs and rating panel is reached', async () => {
+  it('listen_and_check fails: "if wrong" step runs and rating waits for full reveal', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const group = makeGroup(2, 2, [card1]);
     const onCardReviewed = jest.fn();
@@ -553,13 +576,15 @@ describe('useStudySession', () => {
 
     await waitFor(
       () => {
-        expect(hookRef.current!.sessionState.status).toBe('revealed');
+        expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
       },
       { timeout: 5000 },
     );
-    // "jeśli źle": TTS strony 1 został odtworzony, karta czeka na ocenę
     expect(mockedTtsService.speak).toHaveBeenCalledTimes(1);
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
     expect(onCardReviewed).not.toHaveBeenCalled();
+
+    await revealCardForRating(hookRef);
   });
 
   it('pauseSession stops audio and resumeSession replays the current card from its first step', async () => {
@@ -602,11 +627,8 @@ describe('useStudySession', () => {
     });
     await flushQueuedSessionWork();
 
-    // Replayed from step 0: TTS spoken again, then the rate step shows ratings.
     expect(mockedTtsService.speak).toHaveBeenCalledTimes(2);
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    });
+    await revealCardForRating(hookRef);
     expect(hookRef.current!.sessionState.currentCardIndex).toBe(0);
   });
 
@@ -675,10 +697,7 @@ describe('useStudySession', () => {
     );
 
     await startSession(hookRef, [card1]);
-
-    await waitFor(() => {
-      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
-    });
+    await revealCardForRating(hookRef);
 
     await act(async () => {
       hookRef.current!.pauseSession();
@@ -749,10 +768,7 @@ describe('useStudySession', () => {
         expect(hookRef.current!.sessionState.isSttListening).toBe(true);
       });
 
-      await act(async () => {
-        hookRef.current!.handleCardPress();
-      });
-      await flushQueuedSessionWork();
+      await tapCard(hookRef);
 
       await waitFor(() => {
         expect(onCardReviewed).toHaveBeenCalledWith('g1', 'c1', expect.any(Number));
@@ -812,7 +828,7 @@ describe('useStudySession', () => {
       }
     });
 
-    it('skip with no recognised text shows ratings (existing behavior regression)', async () => {
+    it('skip with no recognised text reveals the card for manual rating', async () => {
       const card1 = makeCard('c1', ['hello world']);
       const group = makeGroup(2, 2, [card1]);
       const onCardReviewed = jest.fn();
@@ -842,10 +858,7 @@ describe('useStudySession', () => {
         expect(hookRef.current!.sessionState.isSttListening).toBe(true);
       });
 
-      await act(async () => {
-        hookRef.current!.handleCardPress();
-      });
-      await flushQueuedSessionWork();
+      await tapCard(hookRef);
 
       await waitFor(() => {
         expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);

@@ -232,7 +232,6 @@ export const pl: Record<string, string> = {
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_branch': 'STT strona {index} (próg {threshold}%)',
   'step.listen_and_check': 'Sprawdź wymowę str. {index}, bez oceny (próg {threshold}%)',
-  'step.reveal_on_tap': 'Odkryj kolejną stronę po dotknięciu',
   'step.rate': 'Oceń znajomość fiszki',
   'step.next_card': 'Przejdź do kolejnej karty (bez oceny)',
   'step.unknown': 'Nieznany krok',
@@ -244,7 +243,6 @@ export const pl: Record<string, string> = {
   'step.type.wait': 'Odczekaj (ms)',
   'step.type.listen_and_branch': 'Weryfikuj wymowę (STT)',
   'step.type.listen_and_check': 'Sprawdź wymowę (STT, bez oceny)',
-  'step.type.reveal_on_tap': 'Odkryj po dotknięciu',
   'step.type.rate': 'Oceń znajomość',
   'step.type.next_card': 'Kolejna karta (bez oceny)',
 

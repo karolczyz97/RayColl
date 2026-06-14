@@ -85,7 +85,7 @@ export function useStudyCardGestures({
       if (nextHiddenPageIndex === null) {
         playSelectionHaptic();
         dispatchIfMounted({ type: 'SET_CURRENT_STEP', stepIndex, waitingForTap: false });
-        resumeAfterStep(card, stepIndex + 1);
+        resumeAfterStep(card, stepIndex);
         return;
       }
 
@@ -102,7 +102,7 @@ export function useStudyCardGestures({
         waitingForTap: !allRevealed,
       });
       if (allRevealed) {
-        resumeAfterStep(card, stepIndex + 1);
+        resumeAfterStep(card, stepIndex);
       }
       return;
     }

@@ -89,6 +89,12 @@ describe('backupValidation', () => {
     expect(() => validateBackupData(bad)).toThrow();
   });
 
+  it('accepts legacy reveal_on_tap steps so older backups can be normalized', () => {
+    const legacy = makeValidBackup();
+    legacy.studyModes[0].steps.push({ type: 'reveal_on_tap' } as never);
+    expect(() => validateBackupData(legacy)).not.toThrow();
+  });
+
   it('throws on empty object', () => {
     expect(() => validateBackupData({} as BackupData)).toThrow();
   });

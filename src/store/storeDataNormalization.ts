@@ -175,9 +175,11 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
     // list is normalized rather than crashing the whole load.
     // Step IDs are only used as React keys (with ?? index fallback) — stripping
     // them keeps normalization idempotent so deepEqual across data sources works.
-    steps: (Array.isArray(mode.steps) ? mode.steps : []).map(({ id: _id, ...step }) =>
-      normalizeModeStep(step as ModeStep),
-    ),
+    // `reveal_on_tap` is a removed legacy step type — tapping to reveal the next
+    // page is now default behavior, so these steps are stripped on load/import.
+    steps: (Array.isArray(mode.steps) ? mode.steps : [])
+      .filter((step) => (step as { type?: unknown }).type !== 'reveal_on_tap')
+      .map(({ id: _id, ...step }) => normalizeModeStep(step as ModeStep)),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,

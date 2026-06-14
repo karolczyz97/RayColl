@@ -109,6 +109,8 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
       }
       return;
+    // `reveal_on_tap` is a removed legacy type, still accepted here so older
+    // backups validate; normalization strips it on import.
     case 'reveal_on_tap':
     case 'rate':
     case 'next_card':
