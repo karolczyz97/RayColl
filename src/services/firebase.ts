@@ -53,13 +53,10 @@ export async function signInWithGoogle(): Promise<User | null> {
     if (idToken === null) return null;
 
     try {
-      if (__DEV__) console.log('[auth-debug] signInWithCredential start');
       const credential = GoogleAuthProvider.credential(idToken);
       const userCredential = await signInWithCredential(auth, credential);
-      if (__DEV__) console.log(`[auth-debug] signInWithCredential resolved uid=${userCredential.user.uid}`);
       return userCredential.user;
     } catch (err: unknown) {
-      if (__DEV__) console.log(`[auth-debug] signInWithCredential threw: ${err instanceof Error ? err.message : String(err)}`);
       if (err instanceof Error && /invalid_id_token|auth/i.test(err.message)) {
         throw new Error('auth.error.invalid_token');
       }

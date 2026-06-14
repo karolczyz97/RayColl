@@ -18,6 +18,23 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
 }));
 
+jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  function MaterialCommunityIcons({ name, testID, ...props }) {
+    return React.createElement(Text, { ...props, testID }, name ?? '');
+  }
+
+  MaterialCommunityIcons.font = { MaterialCommunityIcons: 'MaterialCommunityIcons.ttf' };
+  MaterialCommunityIcons.loadFont = jest.fn(() => Promise.resolve());
+
+  return {
+    __esModule: true,
+    default: MaterialCommunityIcons,
+  };
+});
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );

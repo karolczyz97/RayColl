@@ -46,6 +46,7 @@ import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
 import { normalizeStoreData } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
 import { captureSnapshot, persistWithRollback } from './rollbackHelper';
+import { isRecord } from '@/utils/types';
 
 export const IMPORT_STATE_JSON_ERROR = 'app_settings.import_error';
 
@@ -55,6 +56,28 @@ export function parseBackupJson(json: string): unknown {
   } catch {
     throw new Error(IMPORT_STATE_JSON_ERROR);
   }
+}
+
+function assertBackupImportRoot(data: unknown): asserts data is StoreData {
+  if (!isRecord(data)) {
+    throw new Error('Backup data is not a valid JSON object.');
+  }
+  if (!Array.isArray(data.groups)) {
+    throw new Error('Backup data must contain a "groups" array.');
+  }
+  if (!Array.isArray(data.studyModes)) {
+    throw new Error('Backup data must contain a "studyModes" array.');
+  }
+  if (!isRecord(data.activityHeatmap)) {
+    throw new Error('Backup data must contain an "activityHeatmap" object.');
+  }
+}
+
+export function normalizeBackupImportData(data: unknown): StoreData {
+  assertBackupImportRoot(data);
+  const normalized = normalizeStoreData(data);
+  validateBackupData(normalized);
+  return normalized;
 }
 
 interface UseStoreActionsParams {
@@ -455,13 +478,7 @@ export function useStoreActionsCore({
       const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
 
       const data = parseBackupJson(json);
-      validateBackupData(data);
-
-      const normalized = normalizeStoreData({
-        groups: data.groups,
-        studyModes: data.studyModes,
-        activityHeatmap: data.activityHeatmap,
-      });
+      const normalized = normalizeBackupImportData(data);
 
       applySnapshot(normalized);
 
