@@ -1,18 +1,11 @@
 import { useWindowDimensions } from 'react-native';
 import { TOKENS } from '@/theme/tokens';
-import {
-  getNavigationRailWidth,
-  getWindowSizeClass,
-  isExpandedWindowSize,
-  type WindowSizeClass,
-} from '@/utils/windowSizeClass';
+import { getWindowSizeClass, type WindowSizeClass } from '@/utils/windowSizeClass';
 
 export interface ResponsiveLayout {
   width: number;
   height: number;
   windowSizeClass: WindowSizeClass;
-  contentWidth: number;
-  contentSizeClass: WindowSizeClass;
   isCompact: boolean;
   isMedium: boolean;
   isExpanded: boolean;
@@ -20,18 +13,22 @@ export interface ResponsiveLayout {
   contentMaxWidth: number;
   formMaxWidth: number;
   cardMaxWidth: number;
-  useTwoColumnLayout: boolean;
   /** Whether the persistent navigation rail is shown (medium+ widths). */
   showNavigationRail: boolean;
   /** Alias for shell code that should use rail wording instead of drawer wording. */
   showPersistentNavigation: boolean;
-  /** Width reserved on-screen by the rail (0 on compact). */
-  navWidth: number;
 }
 
 /**
- * Single source of responsive state, driven by MD3 window size classes:
- * compact < 600, medium 600-839, expanded 840+.
+ * Single source of window-level responsive state, driven by MD3 window size
+ * classes: compact < 600, medium 600-839, expanded 840+.
+ *
+ * Rail-dependent width (how much the rail actually occupies right now — which
+ * depends on the collapse toggle) is intentionally NOT computed here. That lives
+ * in `NavigationShellContext`, the single source of truth for content width.
+ * Computing it from window width alone could only ever be a guess that ignores
+ * the collapsed/expanded state, so consumers that need rail-aware width must
+ * read `useNavigationShell()` instead.
  */
 export function useResponsiveLayout(): ResponsiveLayout {
   const { width, height } = useWindowDimensions();
@@ -42,17 +39,14 @@ export function useResponsiveLayout(): ResponsiveLayout {
   const isExpanded = windowSizeClass === 'expanded';
   const isDesktop = isExpanded;
 
-  const navWidth = getNavigationRailWidth(width);
-  const showNavigationRail = navWidth > 0;
-  const contentWidth = Math.max(0, width - navWidth);
-  const contentSizeClass = getWindowSizeClass(contentWidth);
+  // The rail is shown on medium+ widths. Collapsing it changes its width (owned
+  // by the shell), not whether it is shown — so this stays a pure size-class check.
+  const showNavigationRail = !isCompact;
 
   return {
     width,
     height,
     windowSizeClass,
-    contentWidth,
-    contentSizeClass,
     isCompact,
     isMedium,
     isExpanded,
@@ -60,9 +54,7 @@ export function useResponsiveLayout(): ResponsiveLayout {
     contentMaxWidth: TOKENS.layout.maxWidth,
     formMaxWidth: TOKENS.layout.formMaxWidth,
     cardMaxWidth: TOKENS.layout.cardMaxWidth,
-    useTwoColumnLayout: isExpandedWindowSize(contentWidth),
     showNavigationRail,
     showPersistentNavigation: showNavigationRail,
-    navWidth,
   };
 }

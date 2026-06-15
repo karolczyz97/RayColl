@@ -113,6 +113,7 @@ export function BrowseScreen() {
       onBack={searchActive ? exitSearch : handleBack}
       right={topBarRight}
       scroll={false}
+      edges={['top', 'left', 'right', 'bottom']}
       contentStyle={styles.screenContent}
     >
       <View style={styles.listSection}>

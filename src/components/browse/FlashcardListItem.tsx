@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '@/types/models';
 import { getCardCategory } from '@/srs/srsEngine';
 import { AppIcon } from '@/components/AppIcon';
 import { AppCard } from '@/components/AppCard';
-import { useHiddenPagesToggle } from '@/hooks/useHiddenPagesToggle';
 import { SRS_CATEGORIES_TOKENS, getMasteryPercent, getDaysUntilReview } from '@/theme/srsTokens';
 import { TOKENS } from '@/theme/tokens';
 import { getVisiblePages } from '@/store/selectors/pages';
@@ -54,7 +53,7 @@ export function FlashcardListItem({
 }: FlashcardListItemProps) {
   const theme = useTheme();
   const { t } = useI18n();
-  const { showHidden: viewHidden, setShowHidden: setViewHidden } = useHiddenPagesToggle();
+  const [viewHidden, setViewHidden] = useState(false);
 
   const activeCount = group.activePageCount;
   const totalCount = card.pages.length;

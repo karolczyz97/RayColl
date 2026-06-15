@@ -200,12 +200,7 @@ export const de: Record<string, string> = {
   'app_settings.export_error': 'Export fehlgeschlagen.',
   'app_settings.import_success': 'Import erfolgreich!',
   'app_settings.import_error': 'Import fehlgeschlagen.',
-  'app_settings.reset_success': 'Daten zurückgesetzt.',
-  'app_settings.reset_error': 'Zurücksetzen fehlgeschlagen. Deine Daten wurden nicht geändert.',
   'app_settings.sharing_unavailable': 'Teilen auf diesem Gerät nicht verfügbar.',
-  'app_settings.reset_btn': 'App auf Standardwerte zurücksetzen',
-  'app_settings.reset_confirm':
-    'Sind Sie sicher, dass Sie die App zurücksetzen möchten? Alle benutzerdefinierten Decks und Statistiken werden gelöscht.',
   'app_settings.lang': 'Sprache',
   'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
   'app_settings.dynamic_colors.desc':

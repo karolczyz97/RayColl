@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -12,6 +12,7 @@ import {
   TouchableRipple,
   useTheme,
 } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
@@ -102,6 +103,7 @@ export function NavigationRail({
 }: NavigationRailProps) {
   const { t } = useI18n();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   // Animate the collapse/expand width change instead of snapping. The sibling
   // content area follows via flex, so this drives the whole reflow smoothly.
@@ -124,6 +126,11 @@ export function NavigationRail({
         {
           backgroundColor: theme.colors.surface,
           borderRightColor: theme.colors.outlineVariant,
+          // Keep the rail clear of the status bar / home indicator / landscape
+          // notch — the shell mounts it outside any SafeAreaView.
+          paddingTop: insets.top + TOKENS.spacing.md,
+          paddingBottom: insets.bottom + TOKENS.spacing.md,
+          paddingLeft: insets.left,
         },
         animatedWidthStyle,
       ]}
@@ -140,7 +147,11 @@ export function NavigationRail({
         </View>
       </View>
 
-      <View style={styles.destinations}>
+      <ScrollView
+        style={styles.destinations}
+        contentContainerStyle={styles.destinationsContent}
+        showsVerticalScrollIndicator={false}
+      >
         {NAVIGATION_DESTINATIONS.map((destination) => {
           const label = t(destination.labelKey);
           const active = activeDestination === destination.key;
@@ -157,7 +168,7 @@ export function NavigationRail({
             />
           );
         })}
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <NavigationAccountMenu
@@ -176,7 +187,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     overflow: 'hidden',
     borderRightWidth: StyleSheet.hairlineWidth,
-    paddingVertical: TOKENS.spacing.md,
   },
   // Fixed leading column = collapsed rail width. Centres icons and the menu
   // on the collapsed rail's centre line and pins that x across expand/collapse.
@@ -196,6 +206,10 @@ const styles = StyleSheet.create({
   },
   destinations: {
     flex: 1,
+  },
+  // Gap lives on the scroll content so the destinations can scroll instead of
+  // being clipped on short / landscape heights once safe-area padding is added.
+  destinationsContent: {
     gap: TOKENS.spacing.xs,
   },
   itemRipple: {

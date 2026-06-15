@@ -1,5 +1,6 @@
 import type { ModeStep, StepCondition } from '@/types/models';
 import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
+import { clamp } from '@/utils/math';
 
 export interface BuildModeStepForm {
   id?: string;
@@ -15,10 +16,6 @@ export interface BuildModeStepForm {
 
 function toFiniteInteger(value: number, fallback: number): number {
   return Number.isFinite(value) ? Math.trunc(value) : fallback;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function withCondition(step: ModeStep, condition: 'always' | StepCondition): ModeStep {

@@ -8,7 +8,7 @@ import type {
   FlashcardStoreState,
   SyncStatus,
 } from './FlashcardStoreTypes';
-import { StoreActionsContext, StoreStateContext } from './StoreContexts';
+import { StoreActionsContext } from './StoreContexts';
 import { useStorePersistence } from './useStorePersistence';
 import { useStoreBootstrap } from './useStoreBootstrap';
 import { useStoreActionsCore } from './useStoreActions';
@@ -167,7 +167,6 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       updateStudyMode: actions.updateStudyMode,
       deleteStudyMode: actions.deleteStudyMode,
       resetStudyMode: actions.resetStudyMode,
-      resetToDefault: actions.resetToDefault,
       recordActivity: actions.recordActivity,
       getDueCards: actions.getDueCards,
       getGroupProgress: actions.getGroupProgress,
@@ -192,18 +191,16 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
   );
 
   return (
-    <StoreStateContext.Provider value={stateValue}>
-      <StoreActionsContext.Provider value={actionsValue}>
-        <FlashcardStoreContext.Provider value={value}>
-          {children}
-          <MigrationDialog
-            visible={migrationPending}
-            onMigrate={auth.migrateGuestToAccount}
-            onStartFresh={auth.startFreshOnAccount}
-            onDismiss={auth.dismissMigration}
-          />
-        </FlashcardStoreContext.Provider>
-      </StoreActionsContext.Provider>
-    </StoreStateContext.Provider>
+    <StoreActionsContext.Provider value={actionsValue}>
+      <FlashcardStoreContext.Provider value={value}>
+        {children}
+        <MigrationDialog
+          visible={migrationPending}
+          onMigrate={auth.migrateGuestToAccount}
+          onStartFresh={auth.startFreshOnAccount}
+          onDismiss={auth.dismissMigration}
+        />
+      </FlashcardStoreContext.Provider>
+    </StoreActionsContext.Provider>
   );
 }

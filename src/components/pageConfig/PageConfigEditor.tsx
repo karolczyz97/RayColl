@@ -5,7 +5,6 @@ import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { MIN_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 import { AppSelect } from '@/components/AppSelect';
-import { AppFormRow } from '@/components/forms/AppFormRow';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 import { TextEntryDialog } from '@/components/dialogs/TextEntryDialog';
 
@@ -124,7 +123,7 @@ export function PageConfigEditor({
       {Array.from({ length: pageCount }).map((_, index) => {
         const isHidden = activePageCount !== undefined && index >= activePageCount;
         return (
-        <AppFormRow key={index} style={[styles.pageRow, isHidden && { opacity: 0.4 }]}>
+        <View key={index} style={[styles.pageRow, isHidden && { opacity: 0.4 }]}>
           {onMovePage ? (
             <View style={styles.sortButtons}>
               <IconButton
@@ -170,7 +169,7 @@ export function PageConfigEditor({
               accessibilityLabel={`Select language for page ${index + 1}`}
             />
           </View>
-        </AppFormRow>
+        </View>
         );
       })}
 
@@ -227,7 +226,10 @@ const styles = StyleSheet.create({
     width: TOKENS.layout.formSelectWidth,
   },
   pageRow: {
+    flexDirection: 'row',
     alignItems: 'flex-end',
+    gap: TOKENS.spacing.sm,
+    width: '100%',
   },
   sortButtons: {
     flexDirection: 'row',

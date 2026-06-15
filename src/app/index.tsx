@@ -56,6 +56,7 @@ export default function Dashboard() {
   return (
     <AppScreen
       maxWidth={contentMaxWidth}
+      edges={['top', 'left', 'right', 'bottom']}
       brand={<DashboardBrand />}
       right={showPersistentNavigation ? null : (
         <DashboardActions

@@ -200,12 +200,7 @@ export const it: Record<string, string> = {
   'app_settings.export_error': 'Esportazione non riuscita.',
   'app_settings.import_success': 'Import completato!',
   'app_settings.import_error': 'Import non riuscito.',
-  'app_settings.reset_success': 'Dati ripristinati.',
-  'app_settings.reset_error': 'Ripristino non riuscito. I tuoi dati non sono stati modificati.',
   'app_settings.sharing_unavailable': 'Condivisione non disponibile su questo dispositivo.',
-  'app_settings.reset_btn': 'Ripristina app',
-  'app_settings.reset_confirm':
-    "Sei sicuro di voler ripristinare l'app? Tutti i mazzi personalizzati e le statistiche verranno cancellati.",
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colori dinamici del sistema',
   'app_settings.dynamic_colors.desc':

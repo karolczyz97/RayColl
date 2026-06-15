@@ -18,7 +18,7 @@ Top ryzyka przy refaktoryzacji RayColl. Każde ryzyko ma plan minimalizacji i ja
 
 - Lista triggerów flush w jednym pliku, code-reviewed.
 - Local AsyncStorage ma krótki delay (≤500 ms) i jest "safety netem" — zapisuje częściej i bezpieczniej niż cloud.
-- `flushNow()` synchronous-await w `importDeck`, `importState`, `resetToDefault`, `deleteGroup`, `signOut`.
+- `flushNow()` synchronous-await w `importDeck`, `importState`, `deleteGroup`, `signOut`.
 - Unit testy queue: replace-pending (latest wins), single-in-flight, `flushNow` drain.
 
 **Test regresji:**

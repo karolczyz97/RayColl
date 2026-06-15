@@ -49,6 +49,7 @@ app/build/
 .idea/
 .claude/settings.local.json
 .agents/
+.codex/
 plany/
 
 # === Tooling config (formatowanie, lint, bundler, test runner) ===

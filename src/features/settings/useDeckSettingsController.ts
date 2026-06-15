@@ -12,7 +12,7 @@ import { reorderDeckPages } from './deckPageReorder';
 export function useDeckSettingsController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const store = useFlashcardStore();
-  const responsiveLayout = useResponsiveLayout();
+  const { formMaxWidth } = useResponsiveLayout();
   const activeGroup = store.groups.find((group) => group.id === groupId) ?? null;
   const activeGroupId = activeGroup?.id ?? null;
   const activeGroupName = activeGroup?.name ?? '';
@@ -165,7 +165,7 @@ export function useDeckSettingsController() {
     pageCount,
     pageNameErrors,
     popularLangs: POPULAR_LANGS,
-    responsiveLayout,
+    formMaxWidth,
     setColNames,
     setDeckName,
     setArchiveDialogOpen,

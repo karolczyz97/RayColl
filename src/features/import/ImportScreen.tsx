@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
 import { navigateUp } from '@/utils/navigation';
 import { ActionConfirmDialog } from '@/components/dialogs/ActionConfirmDialog';
@@ -11,7 +11,6 @@ import { POPULAR_LANGS } from '@/constants/languages';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
-import { useStableScrollbarProps } from '@/hooks/useStableScrollbarProps';
 import { ImportConfigCard } from './ImportConfigCard';
 import { ImportPreviewSection } from './ImportPreviewSection';
 import { ImportSourceCard } from './ImportSourceCard';
@@ -21,7 +20,6 @@ import { MAX_VISIBLE_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages
 export function ImportScreen() {
   const { t } = useI18n();
   const store = useFlashcardStore();
-  const scrollbarProps = useStableScrollbarProps();
   const draft = useImportDeckDraft();
 
   if (store.isLoading) {
@@ -96,31 +94,23 @@ export function ImportScreen() {
     <AppScreen
       title={t('import.title')}
       onBack={navigateUp}
-      scroll={false}
-      contentStyle={styles.screenContent}
+      edges={['top', 'left', 'right', 'bottom']}
+      overlay={
+        <View style={styles.floatingButtonContainer} pointerEvents="box-none">
+          <Button
+            mode="contained"
+            onPress={() => void draft.submitImport()}
+            disabled={draft.isImporting}
+            loading={draft.isImporting}
+            style={styles.importButton}
+            accessibilityLabel="Perform flashcard import button"
+          >
+            {t('import.btn', { count: draft.cards.length })}
+          </Button>
+        </View>
+      }
     >
-      <FlatList
-        data={[]}
-        keyExtractor={(item: { key: string }) => item.key}
-        style={[styles.list, scrollbarProps.style]}
-        className={scrollbarProps.className}
-        renderItem={null}
-        ListHeaderComponent={topCards}
-        contentContainerStyle={styles.listContent}
-      />
-
-      <View style={styles.floatingButtonContainer} pointerEvents="box-none">
-        <Button
-          mode="contained"
-          onPress={() => void draft.submitImport()}
-          disabled={draft.isImporting}
-          loading={draft.isImporting}
-          style={styles.importButton}
-          accessibilityLabel="Perform flashcard import button"
-        >
-          {t('import.btn', { count: draft.cards.length })}
-        </Button>
-      </View>
+      {topCards}
 
       <ActionConfirmDialog
         visible={!!draft.deleteCardId}
@@ -143,21 +133,6 @@ export function ImportScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: {
-    gap: TOKENS.spacing.lg,
-    // Top breathing room on the scroll container itself (matches Browse), so
-    // removing any header card never leaves content stuck to the top bar.
-    paddingTop: TOKENS.spacing.lg,
-    paddingHorizontal: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.control.height + TOKENS.spacing.xl * 2 + TOKENS.spacing.xxl,
-  },
-  screenContent: {
-    flex: 1,
-    minHeight: 0,
-  },
-  list: {
-    flex: 1,
-  },
   singleColumn: {
     width: '100%',
     maxWidth: TOKENS.layout.formMaxWidth,

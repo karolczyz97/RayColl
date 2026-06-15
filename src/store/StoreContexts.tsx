@@ -1,8 +1,7 @@
 import { createContext, useContext } from 'react';
-import type { FlashcardStoreActions, FlashcardStoreState } from './FlashcardStoreTypes';
+import type { FlashcardStoreActions } from './FlashcardStoreTypes';
 
 export const StoreActionsContext = createContext<FlashcardStoreActions | undefined>(undefined);
-export const StoreStateContext = createContext<FlashcardStoreState | undefined>(undefined);
 
 export function useStoreActionsContext(): FlashcardStoreActions {
   const actions = useContext(StoreActionsContext);
@@ -12,14 +11,4 @@ export function useStoreActionsContext(): FlashcardStoreActions {
   }
 
   return actions;
-}
-
-export function useStoreStateContext(): FlashcardStoreState {
-  const state = useContext(StoreStateContext);
-
-  if (!state) {
-    throw new Error('useStoreState must be used within a FlashcardStoreProvider');
-  }
-
-  return state;
 }

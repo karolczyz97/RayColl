@@ -201,12 +201,7 @@ export const pl: Record<string, string> = {
   'app_settings.export_error': 'Eksport nie powiódł się.',
   'app_settings.import_success': 'Import zakończony!',
   'app_settings.import_error': 'Import nie powiódł się.',
-  'app_settings.reset_success': 'Dane zresetowane.',
-  'app_settings.reset_error': 'Reset nie powiódł się. Dane bez zmian.',
   'app_settings.sharing_unavailable': 'Udostępnianie niedostępne na tym urządzeniu.',
-  'app_settings.reset_btn': 'Resetuj aplikację',
-  'app_settings.reset_confirm':
-    'Czy na pewno chcesz zresetować aplikację? Wszystkie niestandardowe zestawy i statystyki zostaną wykasowane.',
   'app_settings.lang': 'Język',
   'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
   'app_settings.dynamic_colors.desc':

@@ -33,7 +33,6 @@ import {
   updateStudyModeAction,
 } from './actions/studyModeActions';
 import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
-import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import {
   getDueCards as selectDueCards,
@@ -41,7 +40,6 @@ import {
 } from './selectors/cardSelectors';
 import { selectLiveStudyModes } from './selectors/liveSelectors';
 import { filterLive } from '@/utils/array';
-import { setSeedVersion } from './persistence/localPersistence';
 import type { PersistOptions, SyncStatus } from './FlashcardStoreTypes';
 import { normalizeStoreData } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
@@ -400,40 +398,6 @@ export function useStoreActionsCore({
     [commitStudyModes, studyModesRef],
   );
 
-  const resetToDefault = useCallback(async () => {
-    const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
-    const seedSnapshot: StoreData = {
-      groups: createSeedGroups(),
-      studyModes: createSeedModes(),
-      activityHeatmap: {},
-    };
-
-    await flushPersistence();
-    applySnapshot(seedSnapshot);
-
-    await persistWithRollback(
-      applySnapshot,
-      persistNow,
-      previousSnapshot,
-      seedSnapshot,
-      getCurrentUid(),
-      'Reset to default',
-    );
-
-    setSeedVersion(SEED_VERSION).catch((err) => {
-      setLastPersistenceError(getErrorMessage(err));
-    });
-  }, [
-    applySnapshot,
-    flushPersistence,
-    getCurrentUid,
-    groupsRef,
-    heatmapRef,
-    persistNow,
-    setLastPersistenceError,
-    studyModesRef,
-  ]);
-
   const recordActivity = useCallback(() => {
     const { nextHeatmap } = recordActivityAction(heatmapRef.current);
     commitHeatmap(nextHeatmap);
@@ -513,7 +477,6 @@ export function useStoreActionsCore({
       updateStudyMode,
       deleteStudyMode,
       resetStudyMode,
-      resetToDefault,
       recordActivity,
       getDueCards,
       getGroupProgress,
@@ -542,7 +505,6 @@ export function useStoreActionsCore({
       updateStudyMode,
       deleteStudyMode,
       resetStudyMode,
-      resetToDefault,
       recordActivity,
       getDueCards,
       getGroupProgress,

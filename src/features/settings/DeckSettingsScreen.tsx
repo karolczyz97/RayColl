@@ -42,7 +42,7 @@ export function DeckSettingsScreen(
     pageCount,
     pageNameErrors,
     popularLangs,
-    responsiveLayout,
+    formMaxWidth,
     setColNames,
     setDeckName,
     setArchiveDialogOpen,
@@ -83,7 +83,7 @@ export function DeckSettingsScreen(
           accessibilityLabel={t('settings.archive_btn')}
         />
       }
-      maxWidth={responsiveLayout.formMaxWidth}
+      maxWidth={formMaxWidth}
     >
       <View style={styles.content}>
         <AnimatedSection order={0}>

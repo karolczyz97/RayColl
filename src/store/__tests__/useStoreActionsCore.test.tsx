@@ -223,31 +223,6 @@ describe('useStoreActionsCore persistence behavior', () => {
     expect(mocks.setSyncStatus).toHaveBeenCalledWith('error');
   });
 
-  it('pre-flushes before resetToDefault applies seed data', async () => {
-    const { actions, mocks } = renderStoreActions();
-    mocks.flushPersistence.mockRejectedValueOnce(new Error('flush failed'));
-
-    await expect(actions.resetToDefault()).rejects.toThrow('flush failed');
-
-    expect(mocks.applySnapshot).not.toHaveBeenCalled();
-    expect(mocks.persistNow).not.toHaveBeenCalled();
-  });
-
-  it('rolls back resetToDefault when immediate persistence fails', async () => {
-    const initial = makeSnapshot();
-    const { actions, mocks } = renderStoreActions(initial);
-    mocks.persistNow.mockRejectedValueOnce(new Error('persist failed')).mockResolvedValueOnce();
-
-    await expect(actions.resetToDefault()).rejects.toThrow('persist failed');
-
-    expect(mocks.applySnapshot).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      groups: expect.any(Array),
-      studyModes: expect.any(Array),
-      activityHeatmap: {},
-    }));
-    expect(mocks.applySnapshot).toHaveBeenNthCalledWith(2, initial);
-  });
-
   it('does not apply importState when JSON is invalid', async () => {
     const { actions, mocks } = renderStoreActions();
 

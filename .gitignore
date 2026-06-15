@@ -49,5 +49,6 @@ repomix-output.xml
 
 # agent skills
 .agents/
+.codex/
 skills-lock.json
 .eslintcache

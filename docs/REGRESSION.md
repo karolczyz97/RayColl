@@ -127,7 +127,7 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] **Firestore (po zalogowaniu):** zmiany trafiają do dokumentu `users/{uid}` w konsoli Firebase.
 - [ ] **Study persistence policy:** sesja 12 ratingów → cloud `setDoc` widać **1× po 10 ratingach** i **1× na wyjściu/zakończeniu** (max 2), **nie** 12× per karta. Lokalnie (AsyncStorage) zapis może być częstszy.
 - [ ] **Sync status:** w czasie zapisu `syncStatus` przechodzi `idle → saving → syncing → idle`; przy błędzie `error` + `lastSyncError` ustawione.
-- [ ] **Critical ops zawsze immediate:** `importDeck`, `importState`, `resetToDefault`, delete deck, `signOut` — cloud write potwierdzony przed kontynuacją lub błąd surface'owany w `lastPersistenceError` / `lastSyncError`.
+- [ ] **Critical ops zawsze immediate:** `importDeck`, `importState`, delete deck, `signOut` — cloud write potwierdzony przed kontynuacją lub błąd surface'owany w `lastPersistenceError` / `lastSyncError`.
 
 #### Prompt 9 — kolejność zapisu i rollback (nowe)
 
@@ -135,7 +135,6 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] **Sesja 10 ratingów → restart:** postęp SRS i heatmap zachowane, heatmap dnia **nie jest podwojony** (jeden inkrement per oceniona karta).
 - [ ] **Usunięcie zestawu jest awaitowane:** usuń talię → od razu zapisane lokalnie + cloud; restart → talia nie wraca.
 - [ ] **importState rollback:** import backupu przy odłączonym/błędnym Firebase (zalogowany) → baner błędu, a po restarcie stan = sprzed importu (dysk i pamięć spójne, nie częściowy import).
-- [ ] **resetToDefault rollback:** reset do domyślnych przy błędzie persystencji → UI i dysk wracają do stanu sprzed resetu (nie zostają w połowie zseedowane).
 - [ ] **Recovery baneru sync:** po transient cloud error kolejna udana synchronizacja czyści `lastSyncError` (baner znika).
 
 #### Prompt 11 — product decisions regression (nowe)

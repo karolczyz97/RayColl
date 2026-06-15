@@ -111,6 +111,7 @@ export function StudyModeDetailScreen() {
       title={title}
       onBack={navigateBack}
       maxWidth={formMaxWidth}
+      edges={['top', 'left', 'right', 'bottom']}
       overlay={
         <Animated.View
           entering={ZoomIn.springify().delay(getTokenMotionEnterDelay(3))}

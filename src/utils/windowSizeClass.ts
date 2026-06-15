@@ -17,17 +17,3 @@ export function getWindowSizeClass(width: number): WindowSizeClass {
 export function isExpandedWindowSize(width: number): boolean {
   return getWindowSizeClass(width) === 'expanded';
 }
-
-export function getNavigationRailWidth(width: number): number {
-  const sizeClass = getWindowSizeClass(width);
-
-  if (sizeClass === 'compact') {
-    return 0;
-  }
-
-  if (sizeClass === 'expanded') {
-    return TOKENS.layout.expandedRailWidth;
-  }
-
-  return TOKENS.layout.railWidth;
-}

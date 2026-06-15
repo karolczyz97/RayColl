@@ -200,12 +200,7 @@ export const en: Record<string, string> = {
   'app_settings.export_error': 'Export failed.',
   'app_settings.import_success': 'Import completed!',
   'app_settings.import_error': 'Import failed.',
-  'app_settings.reset_success': 'Data reset to defaults.',
-  'app_settings.reset_error': 'Reset failed. Your data was not changed.',
   'app_settings.sharing_unavailable': 'Sharing not available on this device.',
-  'app_settings.reset_btn': 'Reset App to Defaults',
-  'app_settings.reset_confirm':
-    'Are you sure you want to reset the app? All custom decks and statistics will be wiped.',
   'app_settings.lang': 'Language',
   'app_settings.dynamic_colors.title': 'Dynamic system colors',
   'app_settings.dynamic_colors.desc':

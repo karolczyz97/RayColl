@@ -49,7 +49,6 @@ export interface FlashcardStore {
   updateStudyMode: (mode: StudyMode) => void;
   deleteStudyMode: (modeId: string) => void;
   resetStudyMode: (modeId: string) => void;
-  resetToDefault: () => Promise<void>;
   recordActivity: () => void;
   getDueCards: (groupId: string) => Flashcard[];
   getGroupProgress: (groupId: string) => number;

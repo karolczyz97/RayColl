@@ -200,12 +200,7 @@ export const es: Record<string, string> = {
   'app_settings.export_error': 'Export fallido.',
   'app_settings.import_success': '¡Import completado!',
   'app_settings.import_error': 'Import fallido.',
-  'app_settings.reset_success': 'Datos restablecidos.',
-  'app_settings.reset_error': 'No se pudo restablecer. Tus datos no se modificaron.',
   'app_settings.sharing_unavailable': 'Compartir no disponible en este dispositivo.',
-  'app_settings.reset_btn': 'Restablecer aplicación',
-  'app_settings.reset_confirm':
-    '¿Estás seguro de que deseas restablecer la aplicación? Se borrarán todas las barajas personalizadas y las estadísticas.',
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
   'app_settings.dynamic_colors.desc':
