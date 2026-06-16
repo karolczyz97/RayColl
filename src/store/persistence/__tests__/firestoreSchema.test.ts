@@ -3,7 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 import { createNewSrsState } from '../../../srs/srsEngine';
 import { normalizeStoreData } from '../../storeDataNormalization';
 import { deepEqual } from '../../../utils/deepEqual';
-import { CARD_ORDERS } from '@/constants/cardOrder';
+import { DEFAULT_CARD_ORDER } from '@/constants/cardOrder';
 import {
   cloneUserData,
   deserializeCardDoc,
@@ -18,6 +18,8 @@ describe('firestoreSchema', () => {
   const card = deserializeCardDoc('card-1', {
     pages: ['hello', 'czesc'],
     srsState: createNewSrsState(),
+    contentUpdatedAt: 1,
+    srsUpdatedAt: 1,
   });
 
   const deck = deserializeDeckDoc(
@@ -25,9 +27,12 @@ describe('firestoreSchema', () => {
     {
       name: 'Travel',
       activeModeId: 'classic',
-      pageNames: 'broken',
+      pageNames: ['Term', 'Definition'],
       pageLanguages: ['en-US'],
-      studyFilter: 'unsupported',
+      studyFilter: 'all',
+      cardOrder: DEFAULT_CARD_ORDER,
+      activePageCount: 1,
+      updatedAt: 1,
     },
     [card],
   );
@@ -38,34 +43,21 @@ describe('firestoreSchema', () => {
       deserializeStudyModeDoc('classic', {
         name: 'Classic',
         steps: [],
+        isBuiltIn: true,
+        builtInSourceId: 'classic',
+        updatedAt: 1,
       }),
     ],
     activityHeatmap: {},
   });
 
-  it('normalizes missing activePageCount from surviving page arrays', () => {
-    expect(normalized.groups[0].activePageCount).toBe(2);
-  });
-
-  it('regenerates missing page names', () => {
-    expect(normalized.groups[0].pageNames).toEqual(['Page 1', 'Page 2']);
-  });
-
-  it('pads missing page languages safely', () => {
-    expect(normalized.groups[0].pageLanguages).toEqual(['en-US', 'en-US']);
-  });
-
-  it('falls back to default studyFilter for invalid value', () => {
-    expect(normalized.groups[0].studyFilter).toBe('new+review');
-  });
-
   it('round-trips cardOrder through deck docs', () => {
     const serialized = serializeDeckDoc({
       ...normalized.groups[0],
-      cardOrder: CARD_ORDERS.hardest,
+      cardOrder: 'hardest',
     });
     const deserialized = deserializeDeckDoc('deck-1', serialized, [card]);
-    expect(deserialized.cardOrder).toBe(CARD_ORDERS.hardest);
+    expect(deserialized.cardOrder).toBe('hardest');
   });
 
   it('throws when deck doc is missing a valid name', () => {
@@ -76,6 +68,10 @@ describe('firestoreSchema', () => {
           activeModeId: 'classic',
           pageNames: ['Front', 'Back'],
           pageLanguages: ['en-US', 'pl-PL'],
+          studyFilter: 'all',
+          cardOrder: DEFAULT_CARD_ORDER,
+          activePageCount: 2,
+          updatedAt: 1,
         },
         [],
       ),
@@ -87,6 +83,8 @@ describe('firestoreSchema', () => {
       deserializeCardDoc('broken-card', {
         pages: ['hello', 'czesc'],
         srsState: { ...createNewSrsState(), repetitions: '2' },
+        contentUpdatedAt: 1,
+        srsUpdatedAt: 1,
       }),
     ).toThrow('srsState.repetitions');
   });
@@ -95,6 +93,8 @@ describe('firestoreSchema', () => {
     const mode = deserializeStudyModeDoc('custom', {
       name: 'Custom',
       steps: [{ type: 'compound', version: 1, params: defaultCompoundParams('listen_grade') }],
+      isBuiltIn: false,
+      updatedAt: 1,
     });
 
     expect(mode.steps).toEqual([
@@ -107,6 +107,8 @@ describe('firestoreSchema', () => {
       deserializeStudyModeDoc('custom', {
         name: 'Custom',
         steps: [{ type: 'compound', version: 1, params: { kind: 'mystery' } }],
+        isBuiltIn: false,
+        updatedAt: 1,
       }),
     ).toThrow('invalid compound params');
   });

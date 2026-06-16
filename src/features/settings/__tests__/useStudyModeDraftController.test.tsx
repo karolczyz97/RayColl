@@ -72,6 +72,7 @@ describe('useStudyModeDraftController', () => {
       id: 'new-mode',
       name: 'New mode',
       isBuiltIn: false,
+      updatedAt: 0,
       steps: [{ id: 'new-step', type: 'show_page', pageIndex: 0 }],
     });
     expect(mockStore.updateStudyMode).not.toHaveBeenCalled();

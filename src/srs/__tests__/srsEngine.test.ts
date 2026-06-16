@@ -214,11 +214,11 @@ describe('pageConfig', () => {
       expect(broken?.steps).toEqual([]);
     });
 
-    it('preserves edited built-in mode name but marks isBuiltIn', () => {
+    it('preserves edited built-in mode name and properties', () => {
       const result = normalizeStoreData({
         groups: [],
         studyModes: [
-          { id: 'classic', name: 'Edited Classic', steps: [{ type: 'wait', ms: 250 }] },
+          { id: 'classic', builtInSourceId: 'classic', isBuiltIn: true, name: 'Edited Classic', steps: [{ type: 'wait', ms: 250 }], updatedAt: 1 },
         ],
         activityHeatmap: {},
       } as unknown as Parameters<typeof normalizeStoreData>[0]);
@@ -226,6 +226,17 @@ describe('pageConfig', () => {
       expect(result.studyModes[0].builtInSourceId).toBe('classic');
       expect(result.studyModes[0].name).toBe('Edited Classic');
       expect(result.studyModes[0].steps).toEqual([{ type: 'wait', ms: 250 }]);
+    });
+
+    it('does not infer builtInSourceId for modes with built-in IDs', () => {
+      const result = normalizeStoreData({
+        groups: [],
+        studyModes: [
+          { id: 'classic', isBuiltIn: true, name: 'Edited Classic', steps: [], updatedAt: 1 },
+        ],
+        activityHeatmap: {},
+      } as unknown as Parameters<typeof normalizeStoreData>[0]);
+      expect(result.studyModes[0].builtInSourceId).toBeUndefined();
     });
   });
 });
