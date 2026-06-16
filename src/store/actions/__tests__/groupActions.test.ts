@@ -12,17 +12,31 @@ import {
 import { CARD_ORDERS } from '@/constants/cardOrder';
 import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 import { createNewSrsState } from '../../../srs/srsEngine';
+import type { Flashcard } from '@/types/models';
 
 describe('groupActions', () => {
+  function makeCard(overrides: Partial<Flashcard> = {}): Flashcard {
+    return {
+      id: 'c1',
+      pages: ['front', 'back', 'extra'],
+      srsState: createNewSrsState(),
+      contentUpdatedAt: 0,
+      srsUpdatedAt: 0,
+      ...overrides,
+    } as Flashcard;
+  }
+
   const group = {
     id: 'g1',
     name: 'Deck',
-    cards: [{ id: 'c1', pages: ['front', 'back', 'extra'], srsState: createNewSrsState() }],
+    cards: [makeCard()],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: CARD_ORDERS.sequential,
     pageLanguages: ['en-US', 'pl-PL', 'en-US'],
     pageNames: ['Front', 'Back', 'Extra'],
     activePageCount: 3,
+    updatedAt: 0,
   };
 
   describe('setVisiblePageCountAction', () => {
@@ -67,13 +81,13 @@ describe('groupActions', () => {
       const canonGroup = {
         ...group,
         cards: [
-          { id: 'c1', pages: ['a', 'b', 'c'], srsState: createNewSrsState() },
-          { id: 'c2', pages: ['x', 'y', 'z'], srsState: createNewSrsState(), deletedAt: now },
+          makeCard({ id: 'c1', pages: ['a', 'b', 'c'] }),
+          makeCard({ id: 'c2', pages: ['x', 'y', 'z'], deletedAt: now }),
         ],
       };
       const uiGroup = {
         ...group,
-        cards: [{ id: 'c1', pages: ['updated', 'b', 'c'], srsState: createNewSrsState() }],
+        cards: [makeCard({ id: 'c1', pages: ['updated', 'b', 'c'] })],
       };
       const updated = updateGroupAction([canonGroup], uiGroup)[0];
       expect(updated.cards.length).toBe(2);

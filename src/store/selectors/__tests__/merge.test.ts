@@ -10,7 +10,7 @@ import {
   mergeSrsStateNeverRegress,
   mergeActivityHeatmap,
 } from '../merge';
-import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
+import { DEFAULT_CARD_ORDER, DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
 
 describe('merge', () => {
   const now = Date.now();
@@ -103,12 +103,14 @@ describe('merge', () => {
               cards: [localCard],
               activeModeId: 'custom-mode',
               studyFilter: 'new+review',
+              cardOrder: DEFAULT_CARD_ORDER,
               pageLanguages: ['en-US', 'pl-PL'],
               pageNames: ['Front', 'Back'],
               activePageCount: 2,
+              updatedAt: now - 2000,
             },
           ],
-          studyModes: [{ id: 'custom-mode', name: 'Custom', steps: [], isBuiltIn: false }],
+          studyModes: [{ id: 'custom-mode', name: 'Custom', steps: [], isBuiltIn: false, updatedAt: now }],
           activityHeatmap: { '2026-05-27': 3 },
         },
         {
@@ -119,13 +121,15 @@ describe('merge', () => {
               cards: [cloudCard],
               activeModeId: '',
               studyFilter: DEFAULT_STUDY_FILTER,
+              cardOrder: DEFAULT_CARD_ORDER,
               pageLanguages: ['en-US', 'pl-PL'],
               pageNames: ['Front', 'Back'],
               activePageCount: 2,
+              updatedAt: now - 1000,
             },
           ],
           studyModes: [
-            { id: 'classic', name: 'Classic', steps: [], isBuiltIn: true, builtInSourceId: 'classic' },
+            { id: 'classic', name: 'Classic', steps: [], isBuiltIn: true, builtInSourceId: 'classic', updatedAt: now },
           ],
           activityHeatmap: { '2026-05-27': 1 },
         },
@@ -163,9 +167,11 @@ describe('merge', () => {
               cards: [deletedCard],
               activeModeId: 'classic',
               studyFilter: DEFAULT_STUDY_FILTER,
+              cardOrder: DEFAULT_CARD_ORDER,
               pageLanguages: ['en-US', 'pl-PL'],
               pageNames: ['Front', 'Back'],
               activePageCount: 2,
+              updatedAt: now,
             },
           ],
           studyModes: [],
@@ -179,9 +185,11 @@ describe('merge', () => {
               cards: [liveCard],
               activeModeId: 'classic',
               studyFilter: DEFAULT_STUDY_FILTER,
+              cardOrder: DEFAULT_CARD_ORDER,
               pageLanguages: ['en-US', 'pl-PL'],
               pageNames: ['Front', 'Back'],
               activePageCount: 2,
+              updatedAt: now - 5000,
             },
           ],
           studyModes: [],
@@ -211,9 +219,11 @@ describe('merge', () => {
               cards: [revivedCard],
               activeModeId: 'classic',
               studyFilter: DEFAULT_STUDY_FILTER,
+              cardOrder: DEFAULT_CARD_ORDER,
               pageLanguages: ['en-US', 'pl-PL'],
               pageNames: ['Front', 'Back'],
               activePageCount: 2,
+              updatedAt: now,
             },
           ],
           studyModes: [],
@@ -313,6 +323,7 @@ describe('merge', () => {
         cards: [],
         activeModeId: 'classic',
         studyFilter: DEFAULT_STUDY_FILTER,
+        cardOrder: DEFAULT_CARD_ORDER,
         pageLanguages: ['en-US'],
         pageNames: ['Front'],
         activePageCount: 1,
@@ -325,6 +336,7 @@ describe('merge', () => {
         cards: [],
         activeModeId: 'classic',
         studyFilter: DEFAULT_STUDY_FILTER,
+        cardOrder: DEFAULT_CARD_ORDER,
         pageLanguages: ['en-US'],
         pageNames: ['Front'],
         activePageCount: 1,
@@ -357,6 +369,7 @@ describe('merge', () => {
         cards: [localCard],
         activeModeId: 'classic',
         studyFilter: DEFAULT_STUDY_FILTER,
+        cardOrder: DEFAULT_CARD_ORDER,
         pageLanguages: ['en-US'],
         pageNames: ['Front'],
         activePageCount: 1,
@@ -369,6 +382,7 @@ describe('merge', () => {
         cards: [cloudCard],
         activeModeId: 'classic',
         studyFilter: DEFAULT_STUDY_FILTER,
+        cardOrder: DEFAULT_CARD_ORDER,
         pageLanguages: ['en-US'],
         pageNames: ['Front'],
         activePageCount: 1,
@@ -390,10 +404,6 @@ describe('merge', () => {
       expect(getLatestEdit(card)).toBe(2000);
     });
 
-    it('returns 0 when both timestamps missing', () => {
-      const card = { id: 'hlp2', pages: ['a'], srsState: createNewSrsState(), contentUpdatedAt: undefined, srsUpdatedAt: undefined };
-      expect(getLatestEdit(card)).toBe(0);
-    });
   });
 
   describe('mergeSrsStateNeverRegress', () => {

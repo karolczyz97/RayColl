@@ -42,7 +42,7 @@ const mockedTtsService = ttsService as jest.Mocked<typeof ttsService>;
 const mockedSttService = getSttService() as jest.Mocked<ReturnType<typeof getSttService>>;
 
 function makeCard(id: string, pages: string[]): Flashcard {
-  return { id, pages, srsState: createNewSrsState() };
+  return { id, pages, srsState: createNewSrsState(), contentUpdatedAt: 0, srsUpdatedAt: 0 };
 }
 
 function makeGroup(
@@ -56,9 +56,11 @@ function makeGroup(
     cards,
     activeModeId: 'basic',
     studyFilter: 'all',
+    cardOrder: 'sequential',
     pageLanguages: Array.from({ length: pageCount }, () => 'en-US'),
     pageNames: Array.from({ length: pageCount }, (_, i) => `Page ${i + 1}`),
     activePageCount,
+    updatedAt: 0,
   };
 }
 

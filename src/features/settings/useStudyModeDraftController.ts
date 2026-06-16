@@ -38,12 +38,14 @@ function createDraftMode(): StudyMode {
     name: '',
     steps: [],
     isBuiltIn: false,
+    updatedAt: 0,
   };
 }
 
 function getSeedSteps(mode: StudyMode): ModeStep[] | null {
   if (!mode.isBuiltIn) return null;
-  const sourceId = mode.builtInSourceId ?? mode.id;
+  const sourceId = mode.builtInSourceId;
+  if (!sourceId) return null;
   const seed = createSeedModes().find((seedMode) => seedMode.id === sourceId);
   return seed ? seed.steps.map(cloneStep) : null;
 }

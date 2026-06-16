@@ -72,6 +72,8 @@ export function buildCardsFromText(
     id: existingCards[index]?.id || uid(),
     pages: row,
     srsState: createNewSrsState(),
+    contentUpdatedAt: existingCards[index] ? existingCards[index].contentUpdatedAt : 0,
+    srsUpdatedAt: existingCards[index] ? existingCards[index].srsUpdatedAt : 0,
   }));
 }
 

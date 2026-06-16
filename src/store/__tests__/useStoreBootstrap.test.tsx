@@ -6,7 +6,7 @@ import type { StoreData, FlashcardGroup, StudyMode } from '@/types/models';
 import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
 import { useStoreBootstrap, getGuestHasData } from '../useStoreBootstrap';
 import { loadCloudData } from '../persistence/firebasePersistence';
-import { getSeedVersion, loadLocalData } from '../persistence/localPersistence';
+import { loadLocalData } from '../persistence/localPersistence';
 import { onAuthChange } from '@/services/firebase';
 import { createSeedModes } from '../seed/seedModes';
 
@@ -26,14 +26,11 @@ jest.mock('../persistence/firebasePersistence', () => ({
 }));
 
 jest.mock('../persistence/localPersistence', () => ({
-  getSeedVersion: jest.fn(),
   loadLocalData: jest.fn(),
-  setSeedVersion: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../seed/seedGroups', () => ({
   createSeedGroups: jest.fn(() => []),
-  SEED_VERSION: 1,
 }));
 
 jest.mock('../seed/seedModes', () => ({
@@ -52,9 +49,11 @@ function makeGroup(id = 'g-1'): FlashcardGroup {
     cards: [],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: 'sequential',
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,
+    updatedAt: 0,
   };
 }
 
@@ -99,7 +98,6 @@ function Harness({ user, mocks }: { user: User | null; mocks: Mocks }) {
 describe('useStoreBootstrap data flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(getSeedVersion).mockResolvedValue(1);
   });
 
   it('applies snapshot and persists locally for a guest user loading local data', async () => {
@@ -299,7 +297,7 @@ describe('useStoreBootstrap data flow', () => {
 });
 
 function makeMode(over: Partial<StudyMode> & Pick<StudyMode, 'id' | 'name'>): StudyMode {
-  return { isBuiltIn: false, steps: [{ type: 'show_ratings' }], ...over };
+  return { isBuiltIn: false, steps: [{ type: 'show_ratings' }], updatedAt: 0, ...over };
 }
 
 describe('getGuestHasData', () => {

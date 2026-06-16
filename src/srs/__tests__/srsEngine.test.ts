@@ -12,9 +12,40 @@ import {
   getVisiblePageNames,
 } from '../../store/selectors/pages';
 import { filterCards } from '../../store/selectors/cardSelectors';
-import { DEFAULT_STUDY_FILTER, normalizeStoreData } from '../../store/storeDataNormalization';
+import {
+  DEFAULT_CARD_ORDER,
+  DEFAULT_STUDY_FILTER,
+  normalizeStoreData,
+} from '../../store/storeDataNormalization';
 import { validateBackupData } from '../../utils/backupValidation';
 import type { Flashcard, FlashcardGroup } from '../../types/models';
+
+function makeCard(overrides: Partial<Flashcard> = {}): Flashcard {
+  return {
+    id: 'c1',
+    pages: ['hello', 'back'],
+    srsState: createNewSrsState(),
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
+    ...overrides,
+  } as Flashcard;
+}
+
+function makeGroup(overrides: Partial<FlashcardGroup> = {}): FlashcardGroup {
+  return {
+    id: 'g1',
+    name: 'Mock Deck',
+    cards: [],
+    activeModeId: 'classic',
+    studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: DEFAULT_CARD_ORDER,
+    pageNames: ['Front', 'Back'],
+    pageLanguages: ['en-US', 'pl-PL'],
+    activePageCount: 2,
+    updatedAt: 0,
+    ...overrides,
+  } as FlashcardGroup;
+}
 
 describe('srsEngine', () => {
   describe('createNewSrsState', () => {
@@ -120,16 +151,18 @@ describe('pageConfig', () => {
     cards: [],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: DEFAULT_CARD_ORDER,
     pageNames: ['Front', 'Back', 'Example'],
     pageLanguages: ['en-US', 'pl-PL', 'en-US'],
     activePageCount: 2,
+    updatedAt: 0,
   };
 
-  const mockCard: Flashcard = {
+  const mockCard = makeCard({
     id: 'c1',
     pages: ['hello', 'cześć', 'hello world'],
     srsState: createNewSrsState(),
-  };
+  });
 
   describe('getVisiblePages', () => {
     it('slices card pages to activePageCount', () => {
@@ -137,7 +170,7 @@ describe('pageConfig', () => {
     });
 
     it('pads visible pages to activePageCount if card lacks slots', () => {
-      const shortCard: Flashcard = { id: 'c2', pages: ['hello'], srsState: createNewSrsState() };
+      const shortCard: Flashcard = makeCard({ id: 'c2', pages: ['hello'] });
       expect(getVisiblePages(shortCard, mockGroup)).toEqual(['hello', '']);
     });
   });
@@ -152,16 +185,14 @@ describe('pageConfig', () => {
     it('handles backup with NaN activePageCount and overflow pages', () => {
       const backup = {
         groups: [
-          {
+          makeGroup({
             id: 'g2',
             name: 'Unnormalized',
             cards: [],
-            activeModeId: 'classic',
-            studyFilter: DEFAULT_STUDY_FILTER,
             activePageCount: Number.NaN,
             pageNames: ['Front', 'Back', 'Extra', 'Overflow', 'Too much', 'Ignored'],
             pageLanguages: ['en-US'],
-          },
+          }),
         ],
         studyModes: [],
         activityHeatmap: {},
@@ -195,28 +226,24 @@ describe('pageConfig', () => {
       expect(result.studyModes[0].builtInSourceId).toBe('classic');
       expect(result.studyModes[0].name).toBe('Edited Classic');
       expect(result.studyModes[0].steps).toEqual([{ type: 'wait', ms: 250 }]);
-      expect(result.studyModes.some((mode) => mode.id === 'listen-speak')).toBe(true);
     });
   });
 });
 
 describe('pageCountModification', () => {
-  const myCard: Flashcard = {
+  const myCard: Flashcard = makeCard({
     id: 'c_test',
     pages: ['Word', 'Tłumaczenie', 'Hidden Example Note'],
-    srsState: createNewSrsState(),
-  };
+  });
 
-  const myGroup: FlashcardGroup = {
+  const myGroup: FlashcardGroup = makeGroup({
     id: 'g_test',
     name: 'Test Deck',
     cards: [myCard],
-    activeModeId: 'classic',
-    studyFilter: DEFAULT_STUDY_FILTER,
     pageNames: ['Front', 'Back', 'Example'],
     pageLanguages: ['en-US', 'pl-PL', 'en-US'],
     activePageCount: 3,
-  };
+  });
 
   it('shows all pages when activePageCount=3', () => {
     expect(getVisiblePages(myCard, myGroup)).toEqual(['Word', 'Tłumaczenie', 'Hidden Example Note']);
@@ -241,9 +268,9 @@ describe('pageCountModification', () => {
 
 describe('cardFiltering', () => {
   const now = Date.now();
-  const newCard: Flashcard = { id: 'c_new', pages: ['New', 'Nowy'], srsState: { ...createNewSrsState(), state: 0 } };
-  const dueCard: Flashcard = { id: 'c_due', pages: ['Due', 'Należny'], srsState: { ...createNewSrsState(), state: 2, nextReviewTimestamp: now - 1000 } };
-  const notDueCard: Flashcard = { id: 'c_not_due', pages: ['Not Due', 'Nienależny'], srsState: { ...createNewSrsState(), state: 2, nextReviewTimestamp: now + 500000 } };
+  const newCard: Flashcard = makeCard({ id: 'c_new', pages: ['New', 'Nowy'], srsState: { ...createNewSrsState(), state: 0 } });
+  const dueCard: Flashcard = makeCard({ id: 'c_due', pages: ['Due', 'Due'], srsState: { ...createNewSrsState(), state: 2, nextReviewTimestamp: now - 1000 } });
+  const notDueCard: Flashcard = makeCard({ id: 'c_not_due', pages: ['Not Due', 'Not Due'], srsState: { ...createNewSrsState(), state: 2, nextReviewTimestamp: now + 500000 } });
   const allCards = [newCard, dueCard, notDueCard];
 
   it('filter=all returns all cards', () => {
@@ -266,16 +293,24 @@ describe('cardFiltering', () => {
 describe('backupValidation', () => {
   const validBackup = {
     groups: [
-      {
+      makeGroup({
         id: 'g_backup',
         name: 'Backup Group',
-        cards: [{ id: 'c_backup', pages: ['A', 'B'], srsState: createNewSrsState() }],
-        activeModeId: 'classic',
+        cards: [makeCard({ id: 'c_backup', pages: ['A', 'B'] })],
         pageLanguages: ['en-US', 'pl-PL'],
         pageNames: ['Front', 'Back'],
+      }),
+    ],
+    studyModes: [
+      {
+        id: 'classic',
+        name: 'Classic',
+        steps: [{ type: 'show_page', pageIndex: 0 }],
+        isBuiltIn: true,
+        builtInSourceId: 'classic',
+        updatedAt: 0,
       },
     ],
-    studyModes: [{ id: 'classic', name: 'Classic', steps: [{ type: 'show_page', pageIndex: 0 }] }],
     activityHeatmap: { '2026-05-26': 1 },
   };
 

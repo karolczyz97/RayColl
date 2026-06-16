@@ -70,7 +70,7 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] Zmiana `studyFilter` (StudyScopeSection) zostaje.
 - [ ] Wybór trybu nauki w `StudyModeSelector` zostaje (Dashboard pokazuje nowy aktywny tryb na karcie talii).
 - [ ] Edycja kroków trybu: add / move (strzałki) / delete — zostają (dla nie-domyślnych trybów).
-- [ ] `AddStepDialog` poprawnie buduje krok każdego typu: `show_page`, `speak_page`, `dynamic_pause`, `wait`, `listen_and_branch`.
+- [ ] `AddStepDialog` poprawnie buduje krok każdego typu: `show_page`, `speak_page`, `dynamic_pause`, `wait`, `listen_and_check`.
 - [ ] Tworzenie nowego custom trybu (`CreateStudyModeSection`) zapisuje go i ustawia jako aktywny.
 - [ ] `ArchiveDeckDialog`: archiwizuje talię, wraca na dashboard.
 
@@ -87,9 +87,9 @@ Każdą sekcję wykonujemy w dwóch kontekstach:
 - [ ] **Restart session** działa.
 - [ ] **Back to panel** działa.
 - [ ] Tryb z `speak_page` → TTS odtwarza tekst w prawidłowym języku (`pageLanguages[i]`).
-- [ ] Tryb z `listen_and_branch` → mikrofon się włącza, partial STT widać w `sttResultText`.
-- [ ] `listen_and_branch` ≥ `successThreshold` → auto-rating, ikona success, przejście dalej.
-- [ ] `listen_and_branch` < threshold → karta na `failed`, ewentualne korekcyjne TTS (jeśli `incorrectTtsPageIndex` ustawione).
+- [ ] Tryb z `listen_and_check` → mikrofon się włącza, partial STT widać w `sttResultText`.
+- [ ] `listen_and_check` ≥ `successThreshold` → auto-rating, ikona success, przejście dalej.
+- [ ] `listen_and_check` < threshold → karta na `failed`, ewentualne korekcyjne TTS (jeśli `incorrectTtsPageIndex` ustawione).
 - [ ] Press-and-hold na karcie blokuje przejście do następnej (`waitUntilReleased`).
 - [ ] **TTS/STT no crash:** bez mikrofonu / bez głosów systemowych sesja nie wywala aplikacji (`SET_ERROR` reducer + komunikat).
 - [ ] **Dotyk pomija TTS/pauzę:** kliknięcie karty podczas odtwarzania TTS lub pauzy przerywa krok i przechodzi dalej; głos TTS milknie natychmiast.

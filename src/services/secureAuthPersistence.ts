@@ -55,11 +55,11 @@ async function deleteSecureItem(key: string): Promise<void> {
   }
 }
 
-async function deleteLegacyItem(key: string): Promise<void> {
+async function deleteFallbackItem(key: string): Promise<void> {
   try {
     await AsyncStorage.removeItem(key);
   } catch {
-    // A stale legacy auth copy should not break the secure persistence path.
+    // Removing auth state is best-effort across both persistence backends.
   }
 }
 
@@ -68,16 +68,11 @@ export const secureAuthPersistence: AuthPersistenceStorage = {
     const secureValue = await getSecureItem(key);
     if (secureValue !== null) return secureValue;
 
-    const legacyValue = await AsyncStorage.getItem(key);
-    if (legacyValue !== null && (await setSecureItem(key, legacyValue))) {
-      await deleteLegacyItem(key);
-    }
-    return legacyValue;
+    return AsyncStorage.getItem(key);
   },
 
   async setItem(key, value) {
     if (await setSecureItem(key, value)) {
-      await deleteLegacyItem(key);
       return;
     }
     await AsyncStorage.setItem(key, value);
@@ -86,7 +81,7 @@ export const secureAuthPersistence: AuthPersistenceStorage = {
   async removeItem(key) {
     await Promise.allSettled([
       deleteSecureItem(key),
-      deleteLegacyItem(key),
+      deleteFallbackItem(key),
     ]);
   },
 };

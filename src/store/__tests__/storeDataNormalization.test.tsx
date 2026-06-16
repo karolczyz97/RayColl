@@ -47,8 +47,10 @@ function makeCard(overrides?: Partial<Flashcard>): Flashcard {
     id: 'c1',
     pages: ['front'],
     srsState,
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
     ...overrides,
-  };
+  } as Flashcard;
 }
 
 function makeGroup(overrides?: Partial<FlashcardGroup>): FlashcardGroup {
@@ -58,11 +60,13 @@ function makeGroup(overrides?: Partial<FlashcardGroup>): FlashcardGroup {
     cards: [],
     activeModeId: 'classic',
     studyFilter: 'all',
+    cardOrder: DEFAULT_CARD_ORDER,
     pageLanguages: ['en-US'],
     pageNames: ['Front'],
     activePageCount: 1,
+    updatedAt: 0,
     ...overrides,
-  };
+  } as FlashcardGroup;
 }
 
 describe('normalizeGroup', () => {
@@ -107,8 +111,9 @@ describe('normalizeStudyMode', () => {
       name: 'Custom',
       steps: [],
       isBuiltIn: false,
+      updatedAt: 0,
       ...overrides,
-    };
+    } as StudyMode;
   }
 
   it('does not produce deletedAt own-key when input has none', () => {
@@ -122,12 +127,12 @@ describe('normalizeStudyMode', () => {
     expect(normalized.deletedAt).toBe(7777);
   });
 
-  it('drops legacy speak_page pause fields (TTS no longer pauses)', () => {
-    const legacySteps = [
-      { type: 'speak_page', pageIndex: 0, extraPauseMs: 500 },
-      { type: 'speak_page', pageIndex: 1, pauseMultiplier: 4 },
+  it('normalizes speak_page to the canonical runtime shape', () => {
+    const steps = [
+      { type: 'speak_page', pageIndex: 0, unsupportedField: 500 },
+      { type: 'speak_page', pageIndex: 1, debugLabel: 'front' },
     ] as unknown as StudyMode['steps'];
-    const normalized = normalizeStudyMode(makeMode({ steps: legacySteps }));
+    const normalized = normalizeStudyMode(makeMode({ steps }));
     expect(normalized.steps).toEqual([
       { type: 'speak_page', pageIndex: 0 },
       { type: 'speak_page', pageIndex: 1 },
@@ -157,13 +162,13 @@ describe('normalizeStudyMode', () => {
     expect(normalized.steps).toEqual([{ type: 'next_card' }, { type: 'show_page', pageIndex: 0 }]);
   });
 
-  it('strips legacy/unknown step types the runner no longer understands', () => {
+  it('strips unknown step types the runner does not understand', () => {
     const steps = [
       { type: 'show_page', pageIndex: 0 },
       { type: 'wait_for_tap_to_reveal_next' },
-      { type: 'reveal_on_tap' },
-      { type: 'rate' },
-      { type: 'listen_and_branch', pageIndex: 1, successThreshold: 70 },
+      { type: 'unsupported_reveal' },
+      { type: 'unsupported_rate' },
+      { type: 'unsupported_branch', pageIndex: 1, successThreshold: 70 },
       { type: 'show_ratings' },
     ] as unknown as StudyMode['steps'];
     const normalized = normalizeStudyMode(makeMode({ steps }));
@@ -188,17 +193,19 @@ describe('normalizeStudyMode', () => {
     ]);
   });
 
-  it('migrates dynamic_pause to pauseMultiplier (legacy extraPauseMs dropped, missing -> 1)', () => {
-    const legacySteps = [
-      { type: 'dynamic_pause', nextPageIndex: 1, extraPauseMs: 500 },
+  it('normalizes dynamic_pause pauseMultiplier', () => {
+    const steps = [
+      { type: 'dynamic_pause', nextPageIndex: 1 },
       { type: 'dynamic_pause', nextPageIndex: 0 },
       { type: 'dynamic_pause', nextPageIndex: 2, pauseMultiplier: 3 },
+      { type: 'dynamic_pause', nextPageIndex: 3, pauseMultiplier: Number.NaN },
     ] as unknown as StudyMode['steps'];
-    const normalized = normalizeStudyMode(makeMode({ steps: legacySteps }));
+    const normalized = normalizeStudyMode(makeMode({ steps }));
     expect(normalized.steps).toEqual([
       { type: 'dynamic_pause', nextPageIndex: 1, pauseMultiplier: 1 },
       { type: 'dynamic_pause', nextPageIndex: 0, pauseMultiplier: 1 },
       { type: 'dynamic_pause', nextPageIndex: 2, pauseMultiplier: 3 },
+      { type: 'dynamic_pause', nextPageIndex: 3, pauseMultiplier: 1 },
     ]);
   });
 

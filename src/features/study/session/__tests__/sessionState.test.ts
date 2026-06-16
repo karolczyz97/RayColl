@@ -30,9 +30,11 @@ function makeGroup(pageCount: number, activePageCount: number): FlashcardGroup {
     cards: [],
     activeModeId: '',
     studyFilter: 'all',
+    cardOrder: 'sequential',
     pageLanguages: Array.from({ length: pageCount }, () => 'en-US'),
     pageNames: Array.from({ length: pageCount }, (_, i) => `Page ${i + 1}`),
     activePageCount,
+    updatedAt: 0,
   };
 }
 
@@ -41,7 +43,7 @@ function reduce(state: StudySessionState, action: SessionAction): StudySessionSt
 }
 
 function makeCard(id: string, srsState = createNewSrsState()): Flashcard {
-  return { id, pages: [id], srsState };
+  return { id, pages: [id], srsState, contentUpdatedAt: 0, srsUpdatedAt: 0 };
 }
 
 describe('sessionReducer', () => {

@@ -24,7 +24,7 @@ describe('normalizeBackupImportData', () => {
     nextReviewTimestamp: 0,
   };
 
-  it('normalizes repairable legacy fields before validating the backup', () => {
+  it('normalizes repairable boundary data before validating the backup', () => {
     const normalized = normalizeBackupImportData({
       groups: [
         {
@@ -48,7 +48,7 @@ describe('normalizeBackupImportData', () => {
           name: 'Custom',
           isBuiltIn: false,
           steps: [
-            { type: 'reveal_on_tap' },
+            { type: 'unsupported_step' },
             { type: 'show_page', pageIndex: 0, condition: 'nonsense' },
           ],
         },

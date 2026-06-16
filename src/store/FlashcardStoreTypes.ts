@@ -33,7 +33,7 @@ export interface FlashcardStore {
     name: string,
     languages: string[],
     pageNames: string[],
-    cards: Omit<Flashcard, 'id' | 'srsState'>[],
+    cards: { pages: string[] }[],
   ) => string;
   importDeck: (payload: ImportDeckPayload) => Promise<ImportDeckResult>;
   updateGroup: (group: FlashcardGroup) => void;

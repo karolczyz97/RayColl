@@ -7,14 +7,12 @@ export const STORAGE_KEYS = {
   TTS_RATE: 'td-tts-rate',
 
   // Navigation rail (persisted user preference, ≥600px widths)
-  NAV_RAIL_VISIBLE: 'td-nav-rail-visible',
   NAV_RAIL_EXPANDED: 'td-nav-rail-expanded',
 
   // Language settings
   LANGUAGE: 'td-lang',
 
   // Flashcard store persistence keys
-  SEED_VERSION: 'fiszki-seed-ver',
   LOCAL_GROUPS: 'fiszki-local-groups',
   LOCAL_MODES: 'fiszki-local-modes',
   LOCAL_HEATMAP: 'fiszki-local-heatmap',

@@ -13,6 +13,8 @@ function makeCard(id: string): Flashcard {
       lastReviewTimestamp: 0,
       nextReviewTimestamp: 0,
     },
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
   };
 }
 

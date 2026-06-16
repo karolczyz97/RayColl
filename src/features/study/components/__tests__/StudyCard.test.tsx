@@ -18,6 +18,8 @@ function makeCard(): Flashcard {
     id: 'card-1',
     pages: ['front', 'back'],
     srsState: createNewSrsState(),
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
   };
 }
 
@@ -28,9 +30,11 @@ function makeGroup(): FlashcardGroup {
     cards: [],
     activeModeId: 'classic',
     studyFilter: 'all',
+    cardOrder: 'sequential',
     pageLanguages: ['en-US', 'en-US'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,
+    updatedAt: 0,
   };
 }
 

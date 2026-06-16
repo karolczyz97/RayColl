@@ -12,7 +12,7 @@ function isAlive(latestEdit: number, deletedAt: number): boolean {
 }
 
 export function getLatestEdit(card: Flashcard): number {
-  return Math.max(card.contentUpdatedAt ?? 0, card.srsUpdatedAt ?? 0);
+  return Math.max(card.contentUpdatedAt, card.srsUpdatedAt);
 }
 
 export function mergeSrsStateNeverRegress(
@@ -74,12 +74,12 @@ export function mergeCards(localCards: Flashcard[], cloudCards: Flashcard[]): Fl
     const l = local!;
     const c = cloud!;
 
-    const localContentAt = l.contentUpdatedAt ?? 0;
-    const cloudContentAt = c.contentUpdatedAt ?? 0;
-    const localSrsAt = l.srsUpdatedAt ?? 0;
-    const cloudSrsAt = c.srsUpdatedAt ?? 0;
-    const localReps = l.srsState.repetitions ?? 0;
-    const cloudReps = c.srsState.repetitions ?? 0;
+    const localContentAt = l.contentUpdatedAt;
+    const cloudContentAt = c.contentUpdatedAt;
+    const localSrsAt = l.srsUpdatedAt;
+    const cloudSrsAt = c.srsUpdatedAt;
+    const localReps = l.srsState.repetitions;
+    const cloudReps = c.srsState.repetitions;
 
     const deletedAt = latestDelete(l.deletedAt, c.deletedAt);
     const latestEdit = Math.max(getLatestEdit(l), getLatestEdit(c));
@@ -98,8 +98,8 @@ export function mergeCards(localCards: Flashcard[], cloudCards: Flashcard[]): Fl
       id,
       pages: contentSide.pages,
       srsState: srsSide === 'local' ? l.srsState : c.srsState,
-      contentUpdatedAt: contentSide.contentUpdatedAt ?? 0,
-      srsUpdatedAt: srsSide === 'local' ? (l.srsUpdatedAt ?? 0) : (c.srsUpdatedAt ?? 0),
+      contentUpdatedAt: contentSide.contentUpdatedAt,
+      srsUpdatedAt: srsSide === 'local' ? l.srsUpdatedAt : c.srsUpdatedAt,
       ...(deletedAt > 0 ? { deletedAt } : {}),
     });
   }
@@ -136,8 +136,8 @@ export function mergeGroups(localGroups: FlashcardGroup[], cloudGroups: Flashcar
       continue;
     }
 
-    const localUpdatedAt = local.updatedAt ?? 0;
-    const cloudUpdatedAt = cloud.updatedAt ?? 0;
+    const localUpdatedAt = local.updatedAt;
+    const cloudUpdatedAt = cloud.updatedAt;
     const deletedAt = latestDelete(local.deletedAt, cloud.deletedAt);
     const latestEdit = Math.max(localUpdatedAt, cloudUpdatedAt);
 
@@ -191,13 +191,14 @@ export function mergeStudyModes(
       continue;
     }
 
-    const localUpdatedAt = local.updatedAt ?? 0;
-    const cloudUpdatedAt = cloud.updatedAt ?? 0;
+    const localUpdatedAt = local.updatedAt;
+    const cloudUpdatedAt = cloud.updatedAt;
     const deletedAt = latestDelete(local.deletedAt, cloud.deletedAt);
     const latestEdit = Math.max(localUpdatedAt, cloudUpdatedAt);
 
     if (!isAlive(latestEdit, deletedAt)) {
-      if (isBuiltInModeSourceId(id)) {
+      const sourceId = local.builtInSourceId || cloud.builtInSourceId;
+      if (sourceId && isBuiltInModeSourceId(sourceId)) {
         const winner = localUpdatedAt > cloudUpdatedAt ? local : cloud;
         merged.push({ ...winner, updatedAt: latestEdit, deletedAt: undefined });
         continue;

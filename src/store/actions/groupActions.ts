@@ -146,7 +146,7 @@ export function addGroupWithCardsAction(
   name: string,
   languages: string[],
   pageNames: string[],
-  cardsData: Omit<Flashcard, 'id' | 'srsState'>[],
+  cardsData: { pages: string[] }[],
 ): { nextGroups: FlashcardGroup[]; newGroupId: string } {
   const now = Date.now();
   const cards: Flashcard[] = cardsData.map((c) => ({

@@ -24,11 +24,13 @@ function makeGroup(overrides: Partial<FlashcardGroup> = {}): FlashcardGroup {
     cards: [makeCard()],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: 'sequential',
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,
+    updatedAt: 0,
     ...overrides,
-  };
+  } as FlashcardGroup;
 }
 
 function makeSnapshot(overrides: Partial<StoreData> = {}): StoreData {
@@ -165,7 +167,7 @@ describe('useStoreActionsCore persistence behavior', () => {
     expect(options).toEqual({ cloudMode: 'study' });
     // FSRS is recomputed on the stored card (id + rating), not on a passed-in object.
     expect(nextGroups[0].cards[0].srsState.repetitions).toBe(storedCard.srsState.repetitions + 1);
-    expect(nextGroups[0].cards[0].srsUpdatedAt ?? 0).toBeGreaterThan(0);
+    expect(nextGroups[0].cards[0].srsUpdatedAt).toBeGreaterThan(0);
     expect(nextHeatmap['2026-06-05']).toBe(1);
   });
 

@@ -12,9 +12,11 @@ function createGroup(id: string): FlashcardGroup {
     cards: [],
     activeModeId: 'mode-1',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: 'sequential',
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,
+    updatedAt: 0,
   };
 }
 

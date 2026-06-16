@@ -48,7 +48,13 @@ jest.mock('expo-router', () => ({
 import { useStudyPageController } from '../useStudyPageController';
 
 function makeDueCard(): Flashcard {
-  return { id: 'c1', pages: ['front'], srsState: createNewSrsState() };
+  return {
+    id: 'c1',
+    pages: ['front'],
+    srsState: createNewSrsState(),
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
+  };
 }
 
 describe('useStudyPageController — exit flow', () => {

@@ -1,11 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { STORAGE_KEYS } from '@/constants/storageKeys';
-import {
-  getSeedVersion,
-  loadLocalData,
-  SEED_VERSION_READ_FAILED,
-} from '../localPersistence';
+import { loadLocalData } from '../localPersistence';
 
 describe('localPersistence', () => {
   beforeEach(async () => {
@@ -41,21 +37,5 @@ describe('localPersistence', () => {
     expect(loaded?.groups).toEqual([]);
     expect(loaded?.activityHeatmap).toEqual({ '2026-06-04': 3 });
     expect(errorSpy).toHaveBeenCalledWith('Failed to normalize local groups item 0:', expect.any(Error));
-  });
-
-  it('returns 0 for a corrupted non-numeric seed version value', async () => {
-    await AsyncStorage.setItem(STORAGE_KEYS.SEED_VERSION, 'abc');
-
-    const version = await getSeedVersion();
-
-    expect(version).toBe(0);
-  });
-
-  it('returns a distinct sentinel when seed version cannot be read', async () => {
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('storage unavailable'));
-
-    await expect(getSeedVersion()).resolves.toBe(SEED_VERSION_READ_FAILED);
-    expect(errorSpy).toHaveBeenCalledWith('Failed to read seed version:', expect.any(Error));
   });
 });

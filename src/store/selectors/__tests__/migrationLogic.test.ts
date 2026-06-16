@@ -11,9 +11,7 @@ jest.mock('../../persistence/firebasePersistence', () => ({
 }));
 
 jest.mock('../../persistence/localPersistence', () => ({
-  getSeedVersion: jest.fn(),
   loadLocalData: jest.fn(),
-  setSeedVersion: jest.fn(),
 }));
 
 function makeGuestData(groups: FlashcardGroup[]): { groups: FlashcardGroup[]; studyModes: StudyMode[]; activityHeatmap: Record<string, number> } {
@@ -50,7 +48,18 @@ describe('migrationLogic', () => {
 
     it('returns true when guest has at least one group', () => {
       expect(
-        getGuestHasData(makeGuestData([{ id: 'g1', name: 'Test', cards: [], activeModeId: '', studyFilter: 'all', pageLanguages: [], pageNames: [], activePageCount: 0 }])),
+        getGuestHasData(makeGuestData([{
+          id: 'g1',
+          name: 'Test',
+          cards: [],
+          activeModeId: '',
+          studyFilter: 'all',
+          cardOrder: 'sequential',
+          pageLanguages: [],
+          pageNames: [],
+          activePageCount: 0,
+          updatedAt: 0,
+        }])),
       ).toBe(true);
     });
   });

@@ -1,4 +1,3 @@
-import type { Flashcard } from '@/types/models';
 import { MIN_PAGE_COUNT, MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 
 export interface ImportDeckCardInput {
@@ -16,7 +15,7 @@ export interface NormalizedImportDeckPayload {
   name: string;
   languages: string[];
   pageNames: string[];
-  cards: Omit<Flashcard, 'id' | 'srsState'>[];
+  cards: ImportDeckCardInput[];
 }
 
 export type ImportDeckResult =

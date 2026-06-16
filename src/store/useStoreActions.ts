@@ -147,7 +147,7 @@ export function useStoreActionsCore({
       name: string,
       languages: string[],
       pageNames: string[],
-      cards: Omit<Flashcard, 'id' | 'srsState'>[],
+      cards: { pages: string[] }[],
     ) => {
       const { nextGroups, newGroupId } = addGroupWithCardsAction(
         groupsRef.current,

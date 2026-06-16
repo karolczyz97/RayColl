@@ -165,20 +165,6 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         step.pageIndex,
         `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`,
       );
-      // Legacy pola (pauseMultiplier/extraPauseMs) bywają w starych backupach —
-      // akceptujemy i ignorujemy przy normalizacji (TTS już nie pauzuje).
-      if (step.pauseMultiplier !== undefined) {
-        assertNonNegativeNumber(
-          step.pauseMultiplier,
-          `Step ${index + 1} in study mode ${modeId} has invalid pauseMultiplier.`,
-        );
-      }
-      if (step.extraPauseMs !== undefined) {
-        assertNonNegativeNumber(
-          step.extraPauseMs,
-          `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
-        );
-      }
       return;
     case 'dynamic_pause':
       assertNonNegativeNumber(
@@ -189,12 +175,6 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         assertNonNegativeNumber(
           step.pauseMultiplier,
           `Step ${index + 1} in study mode ${modeId} has invalid pauseMultiplier.`,
-        );
-      }
-      if (step.extraPauseMs !== undefined) {
-        assertNonNegativeNumber(
-          step.extraPauseMs,
-          `Step ${index + 1} in study mode ${modeId} has invalid extraPauseMs.`,
         );
       }
       return;
@@ -239,12 +219,6 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
     case 'auto_rate_from_answer':
     case 'mark_failed':
     case 'next_card':
-      return;
-    // Legacy typy (reveal_on_tap, listen_and_branch, rate) — wciąż akceptowane,
-    // żeby stare backupy się walidowały; normalizacja usuwa je przy imporcie.
-    case 'reveal_on_tap':
-    case 'listen_and_branch':
-    case 'rate':
       return;
     default:
       throw new Error(`Step ${index + 1} in study mode ${modeId} has an unsupported type.`);

@@ -20,13 +20,17 @@ function makeValidGroup(): FlashcardGroup {
           lastReviewTimestamp: Date.now(),
           nextReviewTimestamp: Date.now() + 86400000,
         },
+        contentUpdatedAt: 0,
+        srsUpdatedAt: 0,
       },
     ],
     activeModeId: 'classic',
     studyFilter: 'new+review',
+    cardOrder: 'sequential',
     pageLanguages: ['en-US', 'pl-PL'],
     pageNames: ['Word', 'Translation'],
     activePageCount: 2,
+    updatedAt: 0,
   };
 }
 
@@ -39,6 +43,8 @@ function makeValidMode(): StudyMode {
       { type: 'show_ratings' },
     ],
     isBuiltIn: true,
+    builtInSourceId: 'classic',
+    updatedAt: 0,
   };
 }
 
@@ -90,11 +96,14 @@ describe('backupValidation', () => {
     expect(() => validateBackupData(bad)).toThrow();
   });
 
-  it('accepts legacy reveal_on_tap steps so older backups can be normalized', () => {
-    const legacy = makeValidBackup();
-    legacy.studyModes[0].steps.push({ type: 'reveal_on_tap' } as never);
-    expect(() => validateBackupData(legacy)).not.toThrow();
-  });
+  it.each(['reveal_on_tap', 'listen_and_branch', 'rate'])(
+    'rejects legacy %s steps as unsupported',
+    (type) => {
+      const legacy = makeValidBackup();
+      legacy.studyModes[0].steps.push({ type } as never);
+      expect(() => validateBackupData(legacy)).toThrow('unsupported type');
+    },
+  );
 
   it('accepts the single tap-to-reveal primitive step', () => {
     const backup = makeValidBackup();

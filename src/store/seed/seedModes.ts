@@ -8,6 +8,7 @@ const SEED_MODES: StudyMode[] = [
     name: 'Klasyczny',
     isBuiltIn: true,
     builtInSourceId: 'classic',
+    updatedAt: 0,
     steps: [
       { type: 'show_page', pageIndex: 0 },
       { type: 'speak_page', pageIndex: 0 },
@@ -21,6 +22,7 @@ const SEED_MODES: StudyMode[] = [
     name: 'Audio',
     isBuiltIn: true,
     builtInSourceId: 'listen-speak',
+    updatedAt: 0,
     // STT z auto-oceną na correct/wrong. Skip (tap w STT) -> status skipped:
     // gałęzie correct/wrong się nie odpalają, więc spada na terminal "zawsze"
     // (Pokaż wszystkie strony + Pokaż przyciski oceny) -> ręczna ocena. Karta
@@ -55,7 +57,9 @@ export function createSeedModes(): StudyMode[] {
   }));
 }
 
-const BUILT_IN_SOURCE_IDS = SEED_MODES.map((mode) => mode.builtInSourceId ?? mode.id);
+const BUILT_IN_SOURCE_IDS = SEED_MODES.map((mode) => mode.builtInSourceId).filter(
+  (id): id is string => id !== undefined,
+);
 
 export function getBuiltInModeSourceIds(): string[] {
   return BUILT_IN_SOURCE_IDS;

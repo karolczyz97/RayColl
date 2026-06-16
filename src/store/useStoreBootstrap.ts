@@ -4,12 +4,12 @@ import type { User } from 'firebase/auth';
 import type { FlashcardGroup, StudyMode, StoreData, ModeStep } from '@/types/models';
 import { onAuthChange } from '@/services/firebase';
 import { loadCloudData } from './persistence/firebasePersistence';
-import { createSeedGroups, SEED_VERSION } from './seed/seedGroups';
+import { createSeedGroups } from './seed/seedGroups';
 import { createSeedModes } from './seed/seedModes';
 import { deepEqual } from '@/utils/deepEqual';
 import { mergeUserData } from './selectors/merge';
-import { getSeedVersion, loadLocalData, setSeedVersion } from './persistence/localPersistence';
-import { normalizeStoreData, normalizeStudyModes } from './storeDataNormalization';
+import { loadLocalData } from './persistence/localPersistence';
+import { normalizeStoreData } from './storeDataNormalization';
 import { getErrorMessage } from '@/utils/errors';
 import { withTimeout } from '@/utils/withTimeout';
 import { purgeExpiredArchivesAction } from './actions/groupActions';
@@ -35,9 +35,10 @@ function stepsWithoutIds(steps: ModeStep[]): Omit<ModeStep, 'id'>[] {
 /** A custom mode, or a built-in whose name/steps the user edited, counts as data. */
 function isUserAuthoredMode(mode: StudyMode): boolean {
   if (!mode.isBuiltIn) return true;
-  const sourceId = mode.builtInSourceId ?? mode.id;
+  const sourceId = mode.builtInSourceId;
+  if (!sourceId) return true;
   const seed = createSeedModes().find(
-    (seedMode) => (seedMode.builtInSourceId ?? seedMode.id) === sourceId,
+    (seedMode) => seedMode.builtInSourceId === sourceId,
   );
   if (!seed) return true;
   // Step ids are stripped during normalization, so compare without them.
@@ -102,16 +103,9 @@ export function useStoreBootstrap({
     function prepareCollections(
       groups: FlashcardGroup[],
       modes: StudyMode[],
-      seedVer: number,
     ): { groups: FlashcardGroup[]; modes: StudyMode[] } {
       let nextGroups = groups;
       let nextModes = modes;
-      if (seedVer < SEED_VERSION) {
-        if (seedVer === 0 && nextGroups.length === 0) {
-          nextGroups = createSeedGroups();
-        }
-        nextModes = normalizeStudyModes(nextModes);
-      }
       if (nextGroups.length === 0) {
         nextGroups = createSeedGroups();
       }
@@ -139,25 +133,15 @@ export function useStoreBootstrap({
     async function loadData() {
       setIsLoading(true);
       try {
-        const seedVer = await getSeedVersion();
-
         const localCache = await loadLocalData(targetUid || undefined);
         let loadedGroups: FlashcardGroup[] = localCache?.groups ?? [];
         let loadedModes: StudyMode[] = localCache?.studyModes ?? [];
         let loadedHeatmap: Record<string, number> = localCache?.activityHeatmap ?? {};
         const hadNoLocalGroups = loadedGroups.length === 0;
 
-        // Persist the bumped seed version once, up front (was previously done
-        // inside the now-removed finishBootstrap).
-        if (seedVer < SEED_VERSION) {
-          await setSeedVersion(SEED_VERSION).catch((err) => {
-            setLastPersistenceError(getErrorMessage(err));
-          });
-        }
-
         // Guest: no cloud. Apply + persist locally and we are done.
         if (!targetUid) {
-          const prepared = prepareCollections(loadedGroups, loadedModes, seedVer);
+          const prepared = prepareCollections(loadedGroups, loadedModes);
           const snapshot = buildSnapshot(prepared.groups, prepared.modes, loadedHeatmap, false);
           if (!active) return;
           applySnapshot(snapshot);
@@ -207,7 +191,7 @@ export function useStoreBootstrap({
           }
         }
 
-        const prepared = prepareCollections(loadedGroups, loadedModes, seedVer);
+        const prepared = prepareCollections(loadedGroups, loadedModes);
         const finalSnapshot = buildSnapshot(prepared.groups, prepared.modes, loadedHeatmap, cloudSynced);
 
         if (!active) return;

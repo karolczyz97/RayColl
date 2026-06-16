@@ -11,8 +11,6 @@ import { validateBackupData, validateGroup, validateStudyMode } from '@/utils/ba
 
 export type { StoreData };
 
-export const SEED_VERSION_READ_FAILED = -1;
-
 function parseStoredItems<T>(
   raw: string | null,
   label: string,
@@ -132,25 +130,6 @@ export async function saveLocalData(userId: string | undefined, data: StoreData)
     await AsyncStorage.multiSet(entries);
   } catch (err) {
     console.error('Failed to save local data:', err);
-    throw err;
-  }
-}
-export async function getSeedVersion(): Promise<number> {
-  try {
-    const ver = await AsyncStorage.getItem(STORAGE_KEYS.SEED_VERSION);
-    const n = Number(ver);
-    return Number.isNaN(n) ? 0 : n;
-  } catch (err) {
-    console.error('Failed to read seed version:', err);
-    return SEED_VERSION_READ_FAILED;
-  }
-}
-
-export async function setSeedVersion(version: number): Promise<void> {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.SEED_VERSION, String(version));
-  } catch (err) {
-    console.error('Failed to save seed version:', err);
     throw err;
   }
 }

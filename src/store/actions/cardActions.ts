@@ -118,11 +118,10 @@ export function addFlashcardsBulkAction(
   groupId: string,
   cards: Flashcard[],
 ): FlashcardGroup[] {
-  const now = Date.now();
   const stampedCards = cards.map((c) => ({
     ...c,
-    contentUpdatedAt: c.contentUpdatedAt ?? now,
-    srsUpdatedAt: c.srsUpdatedAt ?? 0,
+    contentUpdatedAt: c.contentUpdatedAt,
+    srsUpdatedAt: c.srsUpdatedAt,
   }));
   return groups.map((g) =>
     g.id === groupId

@@ -9,6 +9,8 @@ export function createSeedGroups(): FlashcardGroup[] {
     id: uid(),
     pages,
     srsState: createNewSrsState(),
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
   });
 
   return [
@@ -21,6 +23,7 @@ export function createSeedGroups(): FlashcardGroup[] {
       pageLanguages: ['en-US', 'pl-PL'],
       pageNames: ['Phrase', 'Tłumaczenie'],
       activePageCount: 2,
+      updatedAt: 0,
       cards: [
         mk(['Good morning', 'Dzień dobry']),
         mk(['Thank you', 'Dziękuję']),
@@ -38,6 +41,7 @@ export function createSeedGroups(): FlashcardGroup[] {
       pageLanguages: ['es-ES', 'pl-PL'],
       pageNames: ['Palabra', 'Tłumaczenie'],
       activePageCount: 2,
+      updatedAt: 0,
       cards: [
         mk(['Hola', 'Cześć']),
         mk(['Gracias', 'Dziękuję']),
@@ -47,4 +51,3 @@ export function createSeedGroups(): FlashcardGroup[] {
     },
   ];
 }
-export const SEED_VERSION = 3;

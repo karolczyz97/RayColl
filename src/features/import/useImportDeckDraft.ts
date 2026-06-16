@@ -357,6 +357,7 @@ export function useImportDeckDraft() {
       pageLanguages: pageLangs.slice(0, pageCount),
       pageNames: pageNames.slice(0, pageCount),
       activePageCount: Math.min(pageCount, MAX_VISIBLE_PAGE_COUNT),
+      updatedAt: 0,
     }),
     [name, pageCount, pageLangs, pageNames],
   );

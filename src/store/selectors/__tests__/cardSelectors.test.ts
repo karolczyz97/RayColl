@@ -7,6 +7,8 @@ function makeCard(id: string, difficulty: number, nextReviewTimestamp = 0): Flas
   return {
     id,
     pages: [id],
+    contentUpdatedAt: 0,
+    srsUpdatedAt: 0,
     srsState: {
       difficulty,
       stability: 1,

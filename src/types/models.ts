@@ -14,8 +14,8 @@ export interface Flashcard {
   id: string;
   pages: string[];
   srsState: SrsState;
-  contentUpdatedAt?: number;
-  srsUpdatedAt?: number;
+  contentUpdatedAt: number;
+  srsUpdatedAt: number;
   deletedAt?: number | null;
 }
 
@@ -25,11 +25,11 @@ export interface FlashcardGroup {
   cards: Flashcard[];
   activeModeId: string;
   studyFilter: CardFilter;
-  cardOrder?: CardOrder;
+  cardOrder: CardOrder;
   pageLanguages: string[];
   pageNames: string[];
   activePageCount: number;
-  updatedAt?: number;
+  updatedAt: number;
   deletedAt?: number | null;
   archivedAt?: number | null;
 }
@@ -134,7 +134,7 @@ export interface StudyMode {
   steps: ModeStep[];
   isBuiltIn: boolean;
   builtInSourceId?: string;
-  updatedAt?: number;
+  updatedAt: number;
   deletedAt?: number | null;
 }
 

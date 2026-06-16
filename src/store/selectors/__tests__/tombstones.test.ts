@@ -6,8 +6,8 @@ import { createNewSrsState } from '../../../srs/srsEngine';
 
 describe('tombstones', () => {
   const now = Date.now();
-  const liveCard = { id: 'c1', pages: ['a', 'b'], srsState: createNewSrsState() };
-  const tombstoneCard = { id: 'c2', pages: ['x', 'y'], srsState: createNewSrsState(), deletedAt: now };
+  const liveCard = { id: 'c1', pages: ['a', 'b'], srsState: createNewSrsState(), contentUpdatedAt: 0, srsUpdatedAt: 0 };
+  const tombstoneCard = { id: 'c2', pages: ['x', 'y'], srsState: createNewSrsState(), contentUpdatedAt: 0, srsUpdatedAt: 0, deletedAt: now };
 
   const group = {
     id: 'g1',
@@ -15,9 +15,11 @@ describe('tombstones', () => {
     cards: [liveCard, tombstoneCard],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: 'sequential' as const,
     pageLanguages: ['en-US', 'en-US'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,
+    updatedAt: 0,
   };
 
   const tombstoneGroup = {
@@ -26,15 +28,17 @@ describe('tombstones', () => {
     cards: [],
     activeModeId: 'classic',
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: 'sequential' as const,
     pageLanguages: ['en-US', 'en-US'],
     pageNames: ['Front', 'Back'],
     activePageCount: 2,
+    updatedAt: 0,
     deletedAt: now,
   };
 
   describe('selectLiveStudyModes', () => {
-    const liveMode = { id: 'm1', name: 'Live', steps: [], isBuiltIn: false };
-    const tombstoneMode = { id: 'm2', name: 'Dead', steps: [], isBuiltIn: false, deletedAt: now };
+    const liveMode = { id: 'm1', name: 'Live', steps: [], isBuiltIn: false, updatedAt: 0 };
+    const tombstoneMode = { id: 'm2', name: 'Dead', steps: [], isBuiltIn: false, updatedAt: 0, deletedAt: now };
 
     it('filters out tombstone modes', () => {
       const result = selectLiveStudyModes([liveMode, tombstoneMode]);

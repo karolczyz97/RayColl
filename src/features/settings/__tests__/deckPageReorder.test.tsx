@@ -10,13 +10,17 @@ function makeGroup(): FlashcardGroup {
     activeModeId: 'classic',
     activePageCount: 3,
     studyFilter: DEFAULT_STUDY_FILTER,
+    cardOrder: 'sequential',
     pageNames: ['Front', 'Back', 'Example', 'Note', 'Hint'],
     pageLanguages: ['en-US', 'pl-PL', 'es-ES', 'de-DE', 'it-IT'],
+    updatedAt: 0,
     cards: [
       {
         id: 'card-1',
         pages: ['front', 'back', 'example', 'note', 'hint'],
         srsState: createNewSrsState(),
+        contentUpdatedAt: 0,
+        srsUpdatedAt: 0,
       },
     ],
   };

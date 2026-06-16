@@ -1,7 +1,6 @@
 import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
-import { getStoredPageCount, normalizeStudyFilter } from '@/store/storeDataNormalization';
+import { normalizeStudyFilter } from '@/store/storeDataNormalization';
 import { normalizeCardOrder } from '@/constants/cardOrder';
-import { coerceStringArray } from '@/utils/array';
 import { assertStudyModeStep } from '@/utils/backupValidation';
 import { isRecord } from '@/utils/types';
 
@@ -13,10 +12,10 @@ export interface FirestoreDeckDoc {
   activeModeId: string;
   pageLanguages: string[];
   pageNames: string[];
-  activePageCount?: number;
-  studyFilter?: FlashcardGroup['studyFilter'];
-  cardOrder?: FlashcardGroup['cardOrder'];
-  updatedAt?: number;
+  activePageCount: number;
+  studyFilter: FlashcardGroup['studyFilter'];
+  cardOrder: FlashcardGroup['cardOrder'];
+  updatedAt: number;
   deletedAt?: number | null;
   archivedAt?: number | null;
 }
@@ -25,10 +24,9 @@ export interface FirestoreCardDoc {
   id: string;
   pages: string[];
   srsState: SrsState;
-  contentUpdatedAt?: number;
-  srsUpdatedAt?: number;
+  contentUpdatedAt: number;
+  srsUpdatedAt: number;
   deletedAt?: number | null;
-  updatedAt?: number;
 }
 
 export interface FirestoreStudyModeDoc {
@@ -37,7 +35,7 @@ export interface FirestoreStudyModeDoc {
   steps: StudyMode['steps'];
   isBuiltIn: boolean;
   builtInSourceId?: string;
-  updatedAt?: number;
+  updatedAt: number;
   deletedAt?: number | null;
 }
 
@@ -51,6 +49,14 @@ function requireString(value: unknown, label: string): string {
 
 function requireFiniteNumber(value: unknown, label: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Firestore document is missing a valid ${label}.`);
+  }
+
+  return value;
+}
+
+function requireStringArray(value: unknown, label: string): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
     throw new Error(`Firestore document is missing a valid ${label}.`);
   }
 
@@ -131,15 +137,16 @@ export function deserializeCardDoc(docId: string, rawData: unknown): Flashcard {
   if (!Array.isArray(rawData.pages)) {
     throw new Error(`Firestore card ${docId} is missing pages or srsState.`);
   }
+  if (!rawData.pages.every((page) => typeof page === 'string')) {
+    throw new Error(`Firestore card ${docId} has invalid pages.`);
+  }
 
   return {
     id: typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId,
-    pages: rawData.pages.filter((page): page is string => typeof page === 'string'),
+    pages: rawData.pages,
     srsState: deserializeSrsState(docId, rawData.srsState),
-    ...(typeof rawData.contentUpdatedAt === 'number'
-      ? { contentUpdatedAt: rawData.contentUpdatedAt }
-      : {}),
-    ...(typeof rawData.srsUpdatedAt === 'number' ? { srsUpdatedAt: rawData.srsUpdatedAt } : {}),
+    contentUpdatedAt: requireFiniteNumber(rawData.contentUpdatedAt, `contentUpdatedAt for card ${docId}`),
+    srsUpdatedAt: requireFiniteNumber(rawData.srsUpdatedAt, `srsUpdatedAt for card ${docId}`),
     ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
       ? { deletedAt: rawData.deletedAt }
       : {}),
@@ -155,30 +162,28 @@ export function deserializeDeckDoc(
     throw new Error(`Firestore deck ${docId} is malformed.`);
   }
 
-  const pageNames = coerceStringArray(rawData.pageNames);
-  const pageLanguages = coerceStringArray(rawData.pageLanguages);
-  const fallbackPageCount = getStoredPageCount(
-    { cards } as FlashcardGroup,
-    pageNames,
-    pageLanguages,
-  );
-  const rawActivePageCount = rawData.activePageCount;
-  const activePageCount =
-    typeof rawActivePageCount === 'number' && Number.isFinite(rawActivePageCount)
-      ? rawActivePageCount
-      : fallbackPageCount;
+  const pageNames = requireStringArray(rawData.pageNames, `pageNames for deck ${docId}`);
+  const pageLanguages = requireStringArray(rawData.pageLanguages, `pageLanguages for deck ${docId}`);
+  const studyFilter = normalizeStudyFilter(rawData.studyFilter);
+  if (studyFilter !== rawData.studyFilter) {
+    throw new Error(`Firestore deck ${docId} has invalid studyFilter.`);
+  }
+  const cardOrder = normalizeCardOrder(rawData.cardOrder);
+  if (cardOrder !== rawData.cardOrder) {
+    throw new Error(`Firestore deck ${docId} has invalid cardOrder.`);
+  }
 
   return {
     id: typeof rawData.id === 'string' && rawData.id.trim().length > 0 ? rawData.id : docId,
     name: requireString(rawData.name, 'name'),
     cards,
-    activeModeId: typeof rawData.activeModeId === 'string' ? rawData.activeModeId : '',
+    activeModeId: requireString(rawData.activeModeId, `activeModeId for deck ${docId}`),
     pageLanguages,
     pageNames,
-    activePageCount,
-    studyFilter: normalizeStudyFilter(rawData.studyFilter),
-    cardOrder: normalizeCardOrder(rawData.cardOrder),
-    ...(typeof rawData.updatedAt === 'number' ? { updatedAt: rawData.updatedAt } : {}),
+    activePageCount: requireFiniteNumber(rawData.activePageCount, `activePageCount for deck ${docId}`),
+    studyFilter,
+    cardOrder,
+    updatedAt: requireFiniteNumber(rawData.updatedAt, `updatedAt for deck ${docId}`),
     ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
       ? { deletedAt: rawData.deletedAt }
       : {}),
@@ -199,16 +204,25 @@ export function deserializeStudyModeDoc(docId: string, rawData: unknown): StudyM
   rawData.steps.forEach((step, index) => {
     assertStudyModeStep(step, modeId, index);
   });
+  if (typeof rawData.isBuiltIn !== 'boolean') {
+    throw new Error(`Firestore study mode ${modeId} has an invalid isBuiltIn flag.`);
+  }
+  if (rawData.isBuiltIn && (typeof rawData.builtInSourceId !== 'string' || rawData.builtInSourceId.trim().length === 0)) {
+    throw new Error(`Firestore study mode ${modeId} has an invalid builtInSourceId.`);
+  }
+  if (!rawData.isBuiltIn && rawData.builtInSourceId !== undefined) {
+    throw new Error(`Firestore study mode ${modeId} has an invalid builtInSourceId.`);
+  }
 
   return {
     id: modeId,
     name: requireString(rawData.name, 'study mode name'),
     steps: rawData.steps as StudyMode['steps'],
-    isBuiltIn: rawData.isBuiltIn === true,
+    isBuiltIn: rawData.isBuiltIn,
     ...(typeof rawData.builtInSourceId === 'string'
       ? { builtInSourceId: rawData.builtInSourceId }
       : {}),
-    ...(typeof rawData.updatedAt === 'number' ? { updatedAt: rawData.updatedAt } : {}),
+    updatedAt: requireFiniteNumber(rawData.updatedAt, `updatedAt for study mode ${modeId}`),
     ...(rawData.deletedAt != null && typeof rawData.deletedAt === 'number'
       ? { deletedAt: rawData.deletedAt }
       : {}),
