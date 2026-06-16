@@ -1,10 +1,10 @@
 import { describe, it, expect } from '@jest/globals';
-import type { ModeStep } from '@/types/models';
+import type { AtomicStep } from '@/types/models';
 import { hasBlockingStepIssue, validateModeSteps } from '../validateModeSteps';
 
 describe('validateModeSteps', () => {
   it('flags a page index out of range as a blocking error', () => {
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'show_page', pageIndex: 5 },
       { type: 'show_ratings' },
     ];
@@ -19,7 +19,7 @@ describe('validateModeSteps', () => {
   });
 
   it('accepts in-range page indexes with a terminal', () => {
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'show_page', pageIndex: 0 },
       { type: 'listen_and_check', pageIndex: 1, successThreshold: 70 },
       { type: 'show_ratings' },
@@ -28,7 +28,7 @@ describe('validateModeSteps', () => {
   });
 
   it('warns (non-blocking) when there is no terminal step', () => {
-    const steps: ModeStep[] = [{ type: 'show_all_pages' }];
+    const steps: AtomicStep[] = [{ type: 'show_all_pages' }];
     const issues = validateModeSteps(steps, 3);
     expect(issues).toEqual([
       { severity: 'warning', messageKey: 'settings.validation.no_terminal' },
@@ -37,12 +37,12 @@ describe('validateModeSteps', () => {
   });
 
   it('treats next_card as a valid terminal', () => {
-    const steps: ModeStep[] = [{ type: 'show_all_pages' }, { type: 'next_card' }];
+    const steps: AtomicStep[] = [{ type: 'show_all_pages' }, { type: 'next_card' }];
     expect(validateModeSteps(steps, 3)).toEqual([]);
   });
 
   it('checks dynamic_pause nextPageIndex against the page range', () => {
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'dynamic_pause', nextPageIndex: 9, pauseMultiplier: 1 },
       { type: 'next_card' },
     ];

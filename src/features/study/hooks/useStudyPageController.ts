@@ -5,6 +5,7 @@ import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useStudySession } from '@/hooks/useStudySession';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
+import { expandModeSteps } from '@/features/settings/compoundSteps';
 
 const NARROW_CONTROLS_WIDTH = 480;
 
@@ -36,7 +37,7 @@ export function useStudyPageController({
   const mode =
     studyModes.find((studyMode) => studyMode.id === activeGroup?.activeModeId) ||
     studyModes[0];
-  const steps = useMemo(() => mode?.steps || [], [mode]);
+  const steps = useMemo(() => expandModeSteps(mode?.steps ?? []), [mode]);
 
   const onCardReviewed = useCallback(
     (activeGroupId: string, cardId: string, rating: number) => {

@@ -2,12 +2,12 @@ import type { CardFilter } from '@/constants/cardFilters';
 import type { CardOrder } from '@/constants/cardOrder';
 
 export interface SrsState {
-  difficulty: number; // Difficulty (1-10)
-  stability: number; // Stability
-  repetitions: number; // Repetition count (repetitions >= 1 means the card has been "learned")
-  state: 0 | 1 | 2 | 3; // Stan FSRS (0: New, 1: Learning, 2: Review, 3: Relearning)
-  lastReviewTimestamp: number; // Timestamp of the last review
-  nextReviewTimestamp: number; // Timestamp of the next scheduled review
+  difficulty: number;
+  stability: number;
+  repetitions: number;
+  state: 0 | 1 | 2 | 3;
+  lastReviewTimestamp: number;
+  nextReviewTimestamp: number;
 }
 
 export interface Flashcard {
@@ -26,58 +26,107 @@ export interface FlashcardGroup {
   activeModeId: string;
   studyFilter: CardFilter;
   cardOrder?: CardOrder;
-  pageLanguages: string[]; // tagi BCP-47 dla stron
-  pageNames: string[]; // e.g. ['Word', 'Translation', 'Example']
-  activePageCount: number; // liczba widocznych/aktywnych stron
+  pageLanguages: string[];
+  pageNames: string[];
+  activePageCount: number;
   updatedAt?: number;
   deletedAt?: number | null;
   archivedAt?: number | null;
 }
 
-/**
- * Warunek wykonania kroku względem ostatniego wyniku odpowiedzi na tej karcie
- * (krok "Sprawdź wymowę"). `correct` → status `correct`; `wrong` → status
- * `incorrect`. Statusy `skipped`/`error`/`none` NIGDY nie pasują do warunku,
- * więc tap podczas STT (skipped) nie odpala kroków `correct`/`wrong`.
- */
 export type StepCondition = 'correct' | 'wrong';
 
-interface ModeStepBase {
+interface StepBase {
   id?: string;
-  // Krok z warunkiem wykonuje się tylko przy pasującym wyniku ostatniego
-  // "Sprawdź wymowę"; brak warunku (undefined) = wykonuj zawsze.
+}
+
+interface AtomicStepBase extends StepBase {
+  // A conditional atomic step runs only after a matching listen_and_check result.
   condition?: StepCondition;
 }
 
-/**
- * Pojedynczy primitive step. Runner jest głupim interpreterem tej listy —
- * każdy krok robi DOKŁADNIE jedną rzecz. Żadnych makro-kroków: STT nie ocenia,
- * TTS nie pauzuje, feedback nie branchuje, ocena nie przechodzi do następnej karty.
- */
-export type ModeStep = ModeStepBase &
+export type AtomicStep = AtomicStepBase &
   (
-    // --- Odsłanianie / oceny ---
     | { type: 'show_page'; pageIndex: number }
     | { type: 'show_all_pages' }
     | { type: 'wait_for_tap_to_reveal_next' }
     | { type: 'wait_for_tap_to_reveal' }
     | { type: 'show_ratings' }
-    // --- Audio / czas ---
     | { type: 'speak_page'; pageIndex: number }
     | { type: 'dynamic_pause'; nextPageIndex: number; pauseMultiplier: number }
     | { type: 'wait'; ms: number }
-    // --- STT ---
     | { type: 'listen_and_check'; pageIndex: number; successThreshold: number }
-    // --- Feedback ---
     | { type: 'feedback_success' }
     | { type: 'feedback_error' }
-    // --- Ocena SRS / failed list ---
     | { type: 'auto_rate_from_answer' }
     | { type: 'auto_rate_fixed'; rating: number }
     | { type: 'mark_failed' }
-    // --- Przejście ---
     | { type: 'next_card' }
   );
+
+export type CompoundStepKind =
+  | 'present_front'
+  | 'flip_reveal'
+  | 'show_all_grade'
+  | 'speak_pause_next'
+  | 'auto_flip'
+  | 'listen_grade'
+  | 'grade_after_listen'
+  | 'auto_pass_next'
+  | 'fail_next';
+
+export type CompoundPause =
+  | { kind: 'fixed'; ms: number }
+  | { kind: 'dynamic'; page: number; multiplier: number };
+
+export interface CompoundBranch {
+  feedback: boolean;
+  speakPage: number | null;
+  pause: CompoundPause | null;
+  revealAll: boolean;
+  markFailed: boolean;
+  rate: 'fromAnswer' | 'fixed' | 'none';
+  fixedRating: number;
+  advance: boolean;
+}
+
+export type CompoundParams =
+  | { kind: 'present_front'; page: number; speak: boolean }
+  | { kind: 'flip_reveal'; revealStyle: 'all' | 'next' }
+  | { kind: 'show_all_grade' }
+  | { kind: 'speak_pause_next'; page: number; nextPage: number; multiplier: number }
+  | {
+      kind: 'auto_flip';
+      questionPage: number;
+      answerPage: number;
+      multiplier: number;
+      speakQuestion: boolean;
+      speakAnswer: boolean;
+    }
+  | {
+      kind: 'listen_grade';
+      answerPage: number;
+      threshold: number;
+      onCorrect: CompoundBranch;
+      onWrong: CompoundBranch;
+      manualFallback: boolean;
+    }
+  | {
+      kind: 'grade_after_listen';
+      onCorrect: CompoundBranch;
+      onWrong: CompoundBranch;
+      manualFallback: boolean;
+    }
+  | { kind: 'auto_pass_next'; rating: number }
+  | { kind: 'fail_next' };
+
+export interface CompoundStep extends StepBase {
+  type: 'compound';
+  version: 1;
+  params: CompoundParams;
+}
+
+export type ModeStep = AtomicStep | CompoundStep;
 
 export interface StudyMode {
   id: string;

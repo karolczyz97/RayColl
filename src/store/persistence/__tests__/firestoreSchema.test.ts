@@ -12,6 +12,7 @@ import {
   serializeDeckDoc,
   type UserData,
 } from '../firestoreSchema';
+import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 
 describe('firestoreSchema', () => {
   const card = deserializeCardDoc('card-1', {
@@ -88,6 +89,26 @@ describe('firestoreSchema', () => {
         srsState: { ...createNewSrsState(), repetitions: '2' },
       }),
     ).toThrow('srsState.repetitions');
+  });
+
+  it('deserializes valid compound study mode steps', () => {
+    const mode = deserializeStudyModeDoc('custom', {
+      name: 'Custom',
+      steps: [{ type: 'compound', version: 1, params: defaultCompoundParams('listen_grade') }],
+    });
+
+    expect(mode.steps).toEqual([
+      { type: 'compound', version: 1, params: defaultCompoundParams('listen_grade') },
+    ]);
+  });
+
+  it('throws for invalid compound study mode steps', () => {
+    expect(() =>
+      deserializeStudyModeDoc('custom', {
+        name: 'Custom',
+        steps: [{ type: 'compound', version: 1, params: { kind: 'mystery' } }],
+      }),
+    ).toThrow('invalid compound params');
   });
 });
 

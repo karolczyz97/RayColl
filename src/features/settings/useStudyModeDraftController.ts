@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ModeStep, StepCondition, StudyMode } from '@/types/models';
+import type {
+  AtomicStep,
+  CompoundParams,
+  CompoundStep,
+  ModeStep,
+  StepCondition,
+  StudyMode,
+} from '@/types/models';
 import { STUDY_MODE_NEW_ID } from '@/constants/routes';
 import { MAX_VISIBLE_PAGE_COUNT } from '@/constants/pages';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -10,7 +17,9 @@ import { swapElements } from '@/utils/array';
 import { deepEqual } from '@/utils/deepEqual';
 import { uid } from '@/utils/id';
 import { buildModeStep } from './buildModeStep';
-import { hasBlockingStepIssue, validateModeSteps } from './validateModeSteps';
+import { expandWithSource } from './compoundSteps';
+import { createModeFromTemplate, type ModeTemplateId } from './modeTemplates';
+import { hasBlockingStepIssue, validateModeStepSources } from './validateModeSteps';
 
 function cloneStep(step: ModeStep): ModeStep {
   return { ...step };
@@ -39,7 +48,7 @@ function getSeedSteps(mode: StudyMode): ModeStep[] | null {
   return seed ? seed.steps.map(cloneStep) : null;
 }
 
-const STEP_TYPE_ORDER: ModeStep['type'][] = [
+const STEP_TYPE_ORDER: AtomicStep['type'][] = [
   'show_page',
   'show_all_pages',
   'wait_for_tap_to_reveal_next',
@@ -57,7 +66,7 @@ const STEP_TYPE_ORDER: ModeStep['type'][] = [
   'next_card',
 ];
 
-const STEP_TYPE_LABEL_KEYS: Record<ModeStep['type'], string> = {
+const STEP_TYPE_LABEL_KEYS: Record<AtomicStep['type'], string> = {
   show_page: 'step.type.show_page',
   show_all_pages: 'step.type.show_all_pages',
   wait_for_tap_to_reveal_next: 'step.type.wait_for_tap_to_reveal_next',
@@ -102,6 +111,12 @@ export function useStudyModeDraftController({
   const { draft, original, initializedModeId } = draftState;
 
   const [stepDialogOpen, setStepDialogOpen] = useState(false);
+  const [compoundDialogOpen, setCompoundDialogOpen] = useState(false);
+  const [compoundDialogKey, setCompoundDialogKey] = useState(0);
+  const [editingCompoundIndex, setEditingCompoundIndex] = useState<number | null>(null);
+  const [compoundDialogStep, setCompoundDialogStep] = useState<CompoundStep | null>(null);
+  const [expertMode, setExpertMode] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ModeTemplateId>('blank');
   const [newStepType, setNewStepType] = useState<string>('show_page');
   const [newPageIdx, setNewPageIdx] = useState(0);
   const [newMs, setNewMs] = useState(500);
@@ -117,6 +132,7 @@ export function useStudyModeDraftController({
       const nextDraft = createDraftMode();
       initializedModeIdRef.current = modeId;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- route draft initializes once when the route id becomes available
+      setSelectedTemplate('blank');
       setDraftState({ initializedModeId: modeId, draft: nextDraft, original: null });
       return;
     }
@@ -163,8 +179,27 @@ export function useStudyModeDraftController({
   }, []);
 
   const addStepToMode = useCallback(() => {
-    setStepDialogOpen(true);
-  }, []);
+    if (expertMode) {
+      setStepDialogOpen(true);
+      return;
+    }
+    setEditingCompoundIndex(null);
+    setCompoundDialogStep(null);
+    setCompoundDialogKey((key) => key + 1);
+    setCompoundDialogOpen(true);
+  }, [expertMode]);
+
+  const editStep = useCallback(
+    (_mode: StudyMode, index: number) => {
+      const step = draft?.steps[index];
+      if (!step || step.type !== 'compound') return;
+      setEditingCompoundIndex(index);
+      setCompoundDialogStep(step);
+      setCompoundDialogKey((key) => key + 1);
+      setCompoundDialogOpen(true);
+    },
+    [draft],
+  );
 
   const resetSteps = useCallback((_mode: StudyMode) => {
     setDraftState((current) => {
@@ -173,6 +208,20 @@ export function useStudyModeDraftController({
       return seedSteps
         ? { ...current, draft: { ...current.draft, steps: seedSteps } }
         : current;
+    });
+  }, []);
+
+  const applyTemplate = useCallback((templateId: ModeTemplateId) => {
+    setSelectedTemplate(templateId);
+    setDraftState((current) => {
+      if (!current.draft) return current;
+      return {
+        ...current,
+        draft: {
+          ...current.draft,
+          steps: createModeFromTemplate(templateId),
+        },
+      };
     });
   }, []);
 
@@ -209,6 +258,32 @@ export function useStudyModeDraftController({
     pageCount,
   ]);
 
+  const confirmCompoundStep = useCallback((params: CompoundParams) => {
+    setDraftState((current) => {
+      if (!current.draft) return current;
+
+      if (editingCompoundIndex !== null) {
+        const currentStep = current.draft.steps[editingCompoundIndex];
+        if (!currentStep || currentStep.type !== 'compound') return current;
+        const nextSteps = current.draft.steps.map((step, index) =>
+          index === editingCompoundIndex
+            ? { ...currentStep, params, version: 1 as const }
+            : step,
+        );
+        return { ...current, draft: { ...current.draft, steps: nextSteps } };
+      }
+
+      const step: CompoundStep = { id: uid(), type: 'compound', version: 1, params };
+      return {
+        ...current,
+        draft: { ...current.draft, steps: [...current.draft.steps, step] },
+      };
+    });
+    setCompoundDialogOpen(false);
+    setEditingCompoundIndex(null);
+    setCompoundDialogStep(null);
+  }, [editingCompoundIndex]);
+
   const isDirty = useMemo(() => {
     if (!draft) return false;
     if (isCreate) {
@@ -218,7 +293,7 @@ export function useStudyModeDraftController({
   }, [draft, isCreate, original]);
 
   const stepIssues = useMemo(
-    () => (draft ? validateModeSteps(draft.steps, pageCount) : []),
+    () => (draft ? validateModeStepSources(expandWithSource(draft.steps), pageCount) : []),
     [draft, pageCount],
   );
   const isNameValid = !draft || draft.isBuiltIn || draft.name.trim().length > 0;
@@ -273,6 +348,15 @@ export function useStudyModeDraftController({
     isInitializing: !!modeId && initializedModeId !== modeId,
     stepDialogOpen,
     setStepDialogOpen,
+    compoundDialogOpen,
+    compoundDialogKey,
+    setCompoundDialogOpen,
+    compoundDialogStep,
+    compoundDialogMode: editingCompoundIndex === null ? 'add' as const : 'edit' as const,
+    expertMode,
+    setExpertMode,
+    selectedTemplate,
+    applyTemplate,
     newStepType,
     setNewStepType,
     newPageIdx,
@@ -291,8 +375,10 @@ export function useStudyModeDraftController({
     moveStep,
     deleteStep,
     addStepToMode,
+    editStep,
     resetSteps,
     confirmAddStep,
+    confirmCompoundStep,
     save,
     stepLabels,
   };

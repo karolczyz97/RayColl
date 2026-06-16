@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { ZoomIn } from 'react-native-reanimated';
-import { Button, Dialog, HelperText, Portal, Text } from 'react-native-paper';
+import { Button, Dialog, HelperText, Portal, SegmentedButtons, Text } from 'react-native-paper';
 import { useI18n } from '@/i18n';
 import { getModeName } from '@/i18n/modeHelpers';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -18,8 +18,10 @@ import { SectionCard } from '@/components/layout/SectionCard';
 import { AppTextInput } from '@/components/forms/AppTextInput';
 import { StudyModeStepsEditor } from '@/components/settings/StudyModeStepsEditor';
 import { AddStepDialog } from '@/components/settings/AddStepDialog';
+import { CompoundStepDialog } from '@/components/settings/CompoundStepDialog';
 import { formatStepSummary, getModeCustomization } from './studyModeUtils';
 import { useStudyModeDraftController } from './useStudyModeDraftController';
+import { MODE_TEMPLATE_IDS, type ModeTemplateId } from './modeTemplates';
 
 export function StudyModeDetailScreen() {
   const { modeId, selectForGroup } = useLocalSearchParams<{
@@ -145,6 +147,23 @@ export function StudyModeDetailScreen() {
             </SectionCard>
           )}
 
+          {isCreate ? (
+            <SectionCard title={t('study_modes.template_title')}>
+              <SegmentedButtons
+                value={draftController.selectedTemplate}
+                onValueChange={(value) => {
+                  if (MODE_TEMPLATE_IDS.includes(value as ModeTemplateId)) {
+                    draftController.applyTemplate(value as ModeTemplateId);
+                  }
+                }}
+                buttons={MODE_TEMPLATE_IDS.map((templateId) => ({
+                  value: templateId,
+                  label: t(`study_modes.template.${templateId}`),
+                }))}
+              />
+            </SectionCard>
+          ) : null}
+
           <View>
             <StudyModeStepsEditor
               activeMode={draft}
@@ -153,8 +172,11 @@ export function StudyModeDetailScreen() {
               moveStep={draftController.moveStep}
               deleteStep={draftController.deleteStep}
               addStepToMode={draftController.addStepToMode}
+              editStep={draftController.editStep}
               onResetMode={draftController.resetSteps}
               formatStepSummary={formatStepSummary}
+              expertMode={draftController.expertMode}
+              setExpertMode={draftController.setExpertMode}
             />
             {showStepsError ? (
               <HelperText type="error" visible>
@@ -194,6 +216,16 @@ export function StudyModeDetailScreen() {
         setNewCondition={draftController.setNewCondition}
         confirmAddStep={draftController.confirmAddStep}
         stepLabels={draftController.stepLabels}
+      />
+
+      <CompoundStepDialog
+        key={draftController.compoundDialogKey}
+        visible={draftController.compoundDialogOpen}
+        mode={draftController.compoundDialogMode}
+        initialStep={draftController.compoundDialogStep}
+        pageCount={MAX_VISIBLE_PAGE_COUNT}
+        onDismiss={() => draftController.setCompoundDialogOpen(false)}
+        onConfirm={draftController.confirmCompoundStep}
       />
 
       <Portal>

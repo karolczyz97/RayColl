@@ -1,5 +1,6 @@
 import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { normalizeCardOrder } from '@/constants/cardOrder';
+import { isCompoundStepKind } from '@/features/settings/compoundSteps';
 import { isRecord } from './types';
 
 export interface BackupData {
@@ -21,6 +22,129 @@ function assertNonNegativeNumber(value: unknown, message: string): asserts value
   assertNumber(value, message);
   if (value < 0) {
     throw new Error(message);
+  }
+}
+
+function assertBoolean(value: unknown, message: string): asserts value is boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(message);
+  }
+}
+
+function assertOptionalPage(value: unknown, message: string): void {
+  if (value !== null) {
+    assertNonNegativeNumber(value, message);
+  }
+}
+
+function assertCompoundPause(value: unknown, modeId: string, index: number): void {
+  if (value === null) return;
+  if (!isRecord(value)) {
+    throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid compound pause.`);
+  }
+  if (value.kind === 'fixed') {
+    assertNonNegativeNumber(
+      value.ms,
+      `Step ${index + 1} in study mode ${modeId} has invalid compound pause.`,
+    );
+    return;
+  }
+  if (value.kind === 'dynamic') {
+    assertNonNegativeNumber(
+      value.page,
+      `Step ${index + 1} in study mode ${modeId} has invalid compound pause.`,
+    );
+    assertNonNegativeNumber(
+      value.multiplier,
+      `Step ${index + 1} in study mode ${modeId} has invalid compound pause.`,
+    );
+    return;
+  }
+  throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid compound pause.`);
+}
+
+function assertCompoundBranch(value: unknown, modeId: string, index: number): void {
+  if (!isRecord(value)) {
+    throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid compound branch.`);
+  }
+  assertBoolean(
+    value.feedback,
+    `Step ${index + 1} in study mode ${modeId} has invalid compound branch.`,
+  );
+  assertOptionalPage(
+    value.speakPage,
+    `Step ${index + 1} in study mode ${modeId} has invalid compound branch.`,
+  );
+  assertCompoundPause(value.pause, modeId, index);
+  assertBoolean(
+    value.revealAll,
+    `Step ${index + 1} in study mode ${modeId} has invalid compound branch.`,
+  );
+  assertBoolean(
+    value.markFailed,
+    `Step ${index + 1} in study mode ${modeId} has invalid compound branch.`,
+  );
+  if (value.rate !== 'fromAnswer' && value.rate !== 'fixed' && value.rate !== 'none') {
+    throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid compound branch.`);
+  }
+  assertNonNegativeNumber(
+    value.fixedRating,
+    `Step ${index + 1} in study mode ${modeId} has invalid compound branch.`,
+  );
+  assertBoolean(
+    value.advance,
+    `Step ${index + 1} in study mode ${modeId} has invalid compound branch.`,
+  );
+}
+
+function assertCompoundParams(params: unknown, modeId: string, index: number): void {
+  if (!isRecord(params) || !isCompoundStepKind(params.kind)) {
+    throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+  }
+
+  switch (params.kind) {
+    case 'present_front':
+      assertNonNegativeNumber(params.page, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertBoolean(params.speak, `Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+      return;
+    case 'flip_reveal':
+      if (params.revealStyle !== 'all' && params.revealStyle !== 'next') {
+        throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+      }
+      return;
+    case 'show_all_grade':
+    case 'fail_next':
+      return;
+    case 'speak_pause_next':
+      assertNonNegativeNumber(params.page, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(params.nextPage, `Step ${index + 1} in study mode ${modeId} has invalid nextPageIndex.`);
+      assertNonNegativeNumber(params.multiplier, `Step ${index + 1} in study mode ${modeId} has invalid pauseMultiplier.`);
+      return;
+    case 'auto_flip':
+      assertNonNegativeNumber(params.questionPage, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(params.answerPage, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(params.multiplier, `Step ${index + 1} in study mode ${modeId} has invalid pauseMultiplier.`);
+      assertBoolean(params.speakQuestion, `Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+      assertBoolean(params.speakAnswer, `Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+      return;
+    case 'listen_grade':
+      assertNonNegativeNumber(params.answerPage, `Step ${index + 1} in study mode ${modeId} has invalid pageIndex.`);
+      assertNonNegativeNumber(params.threshold, `Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
+      if (params.threshold > 100) {
+        throw new Error(`Step ${index + 1} in study mode ${modeId} has invalid successThreshold.`);
+      }
+      assertCompoundBranch(params.onCorrect, modeId, index);
+      assertCompoundBranch(params.onWrong, modeId, index);
+      assertBoolean(params.manualFallback, `Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+      return;
+    case 'grade_after_listen':
+      assertCompoundBranch(params.onCorrect, modeId, index);
+      assertCompoundBranch(params.onWrong, modeId, index);
+      assertBoolean(params.manualFallback, `Step ${index + 1} in study mode ${modeId} has invalid compound params.`);
+      return;
+    case 'auto_pass_next':
+      assertNonNegativeNumber(params.rating, `Step ${index + 1} in study mode ${modeId} has invalid rating.`);
+      return;
   }
 }
 
@@ -95,6 +219,15 @@ export function assertStudyModeStep(step: unknown, modeId: string, index: number
         step.rating,
         `Step ${index + 1} in study mode ${modeId} has invalid rating.`,
       );
+      return;
+    case 'compound':
+      if (step.version !== undefined) {
+        assertNumber(
+          step.version,
+          `Step ${index + 1} in study mode ${modeId} has invalid compound version.`,
+        );
+      }
+      assertCompoundParams(step.params, modeId, index);
       return;
     // Primitive steps bez parametrów.
     case 'show_all_pages':

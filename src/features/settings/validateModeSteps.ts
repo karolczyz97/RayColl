@@ -1,4 +1,4 @@
-import type { ModeStep } from '@/types/models';
+import type { AtomicStep } from '@/types/models';
 
 export type ModeStepIssueSeverity = 'error' | 'warning';
 
@@ -6,13 +6,14 @@ export interface ModeStepIssue {
   severity: ModeStepIssueSeverity;
   messageKey: string;
   params?: Record<string, string | number>;
+  sourceIndex?: number;
 }
 
 // Kroki opuszczające kartę / kończące ją oceną — każda sensowna konfiguracja
 // powinna mieć przynajmniej jeden taki terminal, inaczej karta utknie.
-const TERMINAL_STEP_TYPES = new Set<ModeStep['type']>(['show_ratings', 'next_card']);
+const TERMINAL_STEP_TYPES = new Set<AtomicStep['type']>(['show_ratings', 'next_card']);
 
-function stepPageIndex(step: ModeStep): number | null {
+function stepPageIndex(step: AtomicStep): number | null {
   if (
     step.type === 'show_page' ||
     step.type === 'speak_page' ||
@@ -31,21 +32,35 @@ function stepPageIndex(step: ModeStep): number | null {
  * - error: krok wskazuje stronę poza zakresem (blokuje zapis).
  * - warning: lista nie ma jawnego terminala (show_ratings / next_card).
  */
-export function validateModeSteps(steps: ModeStep[], pageCount: number): ModeStepIssue[] {
+export function validateModeSteps(steps: AtomicStep[], pageCount: number): ModeStepIssue[] {
+  return validateModeStepSources(
+    steps.map((step, sourceIndex) => ({ step, sourceIndex })),
+    pageCount,
+  ).map(({ sourceIndex: _sourceIndex, ...issue }) => issue);
+}
+
+export function validateModeStepSources(
+  stepSources: { step: AtomicStep; sourceIndex: number }[],
+  pageCount: number,
+): ModeStepIssue[] {
   const issues: ModeStepIssue[] = [];
 
-  steps.forEach((step, index) => {
+  stepSources.forEach(({ step, sourceIndex }) => {
     const pageIndex = stepPageIndex(step);
     if (pageIndex !== null && (pageIndex < 0 || pageIndex >= pageCount)) {
       issues.push({
         severity: 'error',
         messageKey: 'settings.validation.step_page_out_of_range',
-        params: { index: index + 1, page: pageIndex + 1 },
+        params: { index: sourceIndex + 1, page: pageIndex + 1 },
+        sourceIndex,
       });
     }
   });
 
-  if (steps.length > 0 && !steps.some((step) => TERMINAL_STEP_TYPES.has(step.type))) {
+  if (
+    stepSources.length > 0 &&
+    !stepSources.some(({ step }) => TERMINAL_STEP_TYPES.has(step.type))
+  ) {
     issues.push({ severity: 'warning', messageKey: 'settings.validation.no_terminal' });
   }
 

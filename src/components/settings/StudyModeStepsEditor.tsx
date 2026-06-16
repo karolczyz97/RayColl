@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Divider, List, Button } from 'react-native-paper';
+import { Divider, List, Button, SegmentedButtons } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '@/types/models';
 import { useI18n, type TranslationFn } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
@@ -15,8 +15,11 @@ interface StudyModeStepsEditorProps {
   moveStep: (mode: StudyMode, index: number, dir: -1 | 1) => void;
   deleteStep: (mode: StudyMode, index: number) => void;
   addStepToMode: (mode: StudyMode) => void;
+  editStep: (mode: StudyMode, index: number) => void;
   onResetMode: (mode: StudyMode) => void;
   formatStepSummary: (step: ModeStep, t: TranslationFn) => string;
+  expertMode: boolean;
+  setExpertMode: (enabled: boolean) => void;
 }
 
 export function StudyModeStepsEditor({
@@ -26,8 +29,11 @@ export function StudyModeStepsEditor({
   moveStep,
   deleteStep,
   addStepToMode,
+  editStep,
   onResetMode,
   formatStepSummary,
+  expertMode,
+  setExpertMode,
 }: StudyModeStepsEditorProps) {
   const { t } = useI18n();
 
@@ -35,6 +41,14 @@ export function StudyModeStepsEditor({
     <SectionCard
       title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}
     >
+      <SegmentedButtons
+        value={expertMode ? 'expert' : 'simple'}
+        onValueChange={(value) => setExpertMode(value === 'expert')}
+        buttons={[
+          { value: 'simple', label: t('settings.steps_mode.simple') },
+          { value: 'expert', label: t('settings.steps_mode.expert') },
+        ]}
+      />
       <View style={styles.stepsList}>
         {activeMode.steps.map((step, index) => (
           <View key={step.id ?? index}>
@@ -42,6 +56,7 @@ export function StudyModeStepsEditor({
             <List.Item
               style={styles.listItem}
               title={`${index + 1}. ${formatStepSummary(step, t)}`}
+              onPress={step.type === 'compound' ? () => editStep(activeMode, index) : undefined}
               right={() => (
                 <StepReorderControls
                   index={index}

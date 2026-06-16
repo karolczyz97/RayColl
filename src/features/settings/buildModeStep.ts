@@ -1,4 +1,4 @@
-import type { ModeStep, StepCondition } from '@/types/models';
+import type { AtomicStep, StepCondition } from '@/types/models';
 import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
 import { clamp } from '@/utils/math';
 
@@ -18,15 +18,15 @@ function toFiniteInteger(value: number, fallback: number): number {
   return Number.isFinite(value) ? Math.trunc(value) : fallback;
 }
 
-function withCondition(step: ModeStep, condition: 'always' | StepCondition): ModeStep {
+function withCondition(step: AtomicStep, condition: 'always' | StepCondition): AtomicStep {
   return condition === 'always' ? step : { ...step, condition };
 }
 
-function withId(id: string | undefined): Pick<ModeStep, 'id'> {
+function withId(id: string | undefined): Pick<AtomicStep, 'id'> {
   return id ? { id } : {};
 }
 
-export function buildModeStep(form: BuildModeStepForm): ModeStep | null {
+export function buildModeStep(form: BuildModeStepForm): AtomicStep | null {
   const safePageCount = Math.max(1, toFiniteInteger(form.pageCount, 1));
   const safePageIdx = clamp(toFiniteInteger(form.newPageIdx, 0), 0, safePageCount - 1);
   const safeMultiplier = clamp(
@@ -36,7 +36,7 @@ export function buildModeStep(form: BuildModeStepForm): ModeStep | null {
   );
   const safeRating = clamp(toFiniteInteger(form.newRating, 3), 1, 4);
 
-  let step: ModeStep;
+  let step: AtomicStep;
   switch (form.newStepType) {
     case 'show_page':
       step = { ...withId(form.id), type: 'show_page', pageIndex: safePageIdx };

@@ -2,6 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 
 import { validateBackupData, type BackupData } from '../backupValidation';
 import type { FlashcardGroup, StudyMode } from '../../types/models';
+import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 
 function makeValidGroup(): FlashcardGroup {
   return {
@@ -99,6 +100,26 @@ describe('backupValidation', () => {
     const backup = makeValidBackup();
     backup.studyModes[0].steps.push({ type: 'wait_for_tap_to_reveal_next' });
     expect(() => validateBackupData(backup)).not.toThrow();
+  });
+
+  it('accepts valid compound steps', () => {
+    const backup = makeValidBackup();
+    backup.studyModes[0].steps.push({
+      type: 'compound',
+      version: 1,
+      params: defaultCompoundParams('listen_grade'),
+    });
+    expect(() => validateBackupData(backup)).not.toThrow();
+  });
+
+  it('throws on invalid compound steps', () => {
+    const backup = makeValidBackup();
+    backup.studyModes[0].steps.push({
+      type: 'compound',
+      version: 1,
+      params: { kind: 'mystery' },
+    } as never);
+    expect(() => validateBackupData(backup)).toThrow('invalid compound params');
   });
 
   it('throws on empty object', () => {

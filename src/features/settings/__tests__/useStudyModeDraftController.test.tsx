@@ -25,6 +25,8 @@ jest.mock('@/i18n', () => ({
 
 // eslint-disable-next-line import/first
 import { useStudyModeDraftController } from '../useStudyModeDraftController';
+// eslint-disable-next-line import/first
+import { defaultCompoundParams } from '../compoundSteps';
 
 function makeMode(overrides: Partial<StudyMode> = {}): StudyMode {
   return {
@@ -120,6 +122,85 @@ describe('useStudyModeDraftController', () => {
       'auto_rate_fixed',
       'mark_failed',
       'next_card',
+    ]);
+  });
+
+  it('adds a compound as one saved step', () => {
+    mockUid.mockReturnValueOnce('new-mode').mockReturnValueOnce('compound-1');
+    const { result } = renderHook(() =>
+      useStudyModeDraftController({ modeId: STUDY_MODE_NEW_ID }),
+    );
+
+    act(() => {
+      result.current.setName('Compound mode');
+      result.current.confirmCompoundStep(defaultCompoundParams('listen_grade'));
+    });
+
+    expect(result.current.draft?.steps).toHaveLength(1);
+    expect(result.current.draft?.steps[0]).toMatchObject({
+      id: 'compound-1',
+      type: 'compound',
+      version: 1,
+      params: { kind: 'listen_grade' },
+    });
+  });
+
+  it('edits compound params without expanding the step list', () => {
+    const mode = makeMode({
+      steps: [{ type: 'compound', version: 1, params: defaultCompoundParams('present_front') }],
+    });
+    mockStore.studyModes = [mode];
+    const { result } = renderHook(() => useStudyModeDraftController({ modeId: 'custom' }));
+
+    act(() => {
+      result.current.editStep(mode, 0);
+    });
+    expect(result.current.compoundDialogMode).toBe('edit');
+
+    act(() => {
+      result.current.confirmCompoundStep({ kind: 'present_front', page: 2, speak: false });
+    });
+
+    expect(result.current.draft?.steps).toEqual([
+      { type: 'compound', version: 1, params: { kind: 'present_front', page: 2, speak: false } },
+    ]);
+  });
+
+  it('switches add dialog by expert mode without expanding existing compounds', () => {
+    const { result } = renderHook(() =>
+      useStudyModeDraftController({ modeId: STUDY_MODE_NEW_ID }),
+    );
+
+    act(() => {
+      result.current.addStepToMode();
+    });
+    expect(result.current.compoundDialogOpen).toBe(true);
+    expect(result.current.stepDialogOpen).toBe(false);
+
+    act(() => {
+      result.current.setCompoundDialogOpen(false);
+      result.current.setExpertMode(true);
+    });
+    act(() => {
+      result.current.addStepToMode();
+    });
+    expect(result.current.stepDialogOpen).toBe(true);
+  });
+
+  it('applies the audio template as two compound steps', () => {
+    mockUid.mockReturnValueOnce('new-mode');
+    const { result } = renderHook(() =>
+      useStudyModeDraftController({ modeId: STUDY_MODE_NEW_ID }),
+    );
+
+    act(() => {
+      result.current.applyTemplate('audio');
+    });
+
+    expect(result.current.selectedTemplate).toBe('audio');
+    expect(result.current.draft?.steps).toEqual([
+      { type: 'compound', version: 1, params: defaultCompoundParams('present_front') },
+      { type: 'compound', version: 1, params: defaultCompoundParams('listen_grade') },
     ]);
   });
 });

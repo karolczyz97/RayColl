@@ -1,7 +1,8 @@
-import type { ModeStep, StudyMode } from '@/types/models';
+import type { AtomicStep, CompoundStep, ModeStep, StudyMode } from '@/types/models';
 import type { TranslationFn } from '@/i18n';
 import { createSeedModes } from '@/store/seed/seedModes';
 import { deepEqual } from '@/utils/deepEqual';
+import { COMPOUND_LABEL_KEYS } from './compoundSteps';
 
 /** Czy tryb jest wbudowany i czy jego kroki odbiegają od seedów (można je zresetować). */
 export function getModeCustomization(mode: StudyMode): {
@@ -20,13 +21,33 @@ export function getModeCustomization(mode: StudyMode): {
 }
 
 export function formatStepSummary(step: ModeStep, t: TranslationFn): string {
+  if (step.type === 'compound') {
+    return formatCompoundSummary(step, t);
+  }
   const body = formatStepBody(step, t);
   if (step.condition === 'correct') return `${t('step.condition.correct')}: ${body}`;
   if (step.condition === 'wrong') return `${t('step.condition.wrong')}: ${body}`;
   return body;
 }
 
-function formatStepBody(step: ModeStep, t: TranslationFn): string {
+export function formatCompoundSummary(step: CompoundStep, t: TranslationFn): string {
+  const name = t(COMPOUND_LABEL_KEYS[step.params.kind]);
+  switch (step.params.kind) {
+    case 'present_front':
+      return `${name} (${t('compound.summary.page', { page: step.params.page + 1 })})`;
+    case 'listen_grade':
+      return `${name} (${t('compound.summary.stt', {
+        page: step.params.answerPage + 1,
+        threshold: step.params.threshold,
+      })})`;
+    case 'auto_pass_next':
+      return `${name} (${t('compound.summary.rating', { rating: step.params.rating })})`;
+    default:
+      return name;
+  }
+}
+
+function formatStepBody(step: AtomicStep, t: TranslationFn): string {
   switch (step.type) {
     case 'show_page':
       return t('step.show_page', { index: step.pageIndex + 1 });

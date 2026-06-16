@@ -10,14 +10,17 @@ import type {
   Flashcard,
   FlashcardGroup,
   ModeStep,
+  AtomicStep,
   SrsState,
   StepCondition,
   StudyMode,
   StoreData,
 } from '@/types/models';
+import { MAX_PAUSE_MULTIPLIER } from '@/constants/studySteps';
 import { createSeedModes, isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
 import { isRecord } from '@/utils/types';
+import { normalizeCompoundStep } from '@/features/settings/compoundSteps';
 
 const VALID_SRS_STATES: ReadonlySet<SrsState['state']> = new Set([0, 1, 2, 3]);
 
@@ -107,7 +110,7 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
   };
 }
 
-export const MAX_PAUSE_MULTIPLIER = 5;
+export { MAX_PAUSE_MULTIPLIER };
 
 // Znane primitive steps. Wszystko spoza tego zbioru (legacy reveal_on_tap,
 // listen_and_branch, rate, albo nieznane typy z uszkodzonego backupu) jest
@@ -128,6 +131,7 @@ const VALID_STEP_TYPES = new Set<ModeStep['type']>([
   'auto_rate_fixed',
   'mark_failed',
   'next_card',
+  'compound',
 ]);
 
 function clampStepRating(value: unknown): number {
@@ -138,7 +142,7 @@ function clampStepRating(value: unknown): number {
 // `pauseMultiplier` = wielokrotność czasu odsłuchu strony. Legacy `extraPauseMs`
 // (stała pauza w ms) oraz brak pola mapują się na domyślne 1× (dynamic_pause zawsze
 // trwał 1× odsłuch). Używane już tylko przez dynamic_pause — TTS nie pauzuje.
-function normalizePauseMultiplier(step: ModeStep): number {
+function normalizePauseMultiplier(step: AtomicStep): number {
   const raw = step as { pauseMultiplier?: unknown };
   const multiplier =
     typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)
@@ -148,12 +152,16 @@ function normalizePauseMultiplier(step: ModeStep): number {
 }
 
 // Nieznane wartości warunku (np. z uszkodzonego backupu) są usuwane.
-function normalizeStepCondition(step: ModeStep): { condition?: StepCondition } {
+function normalizeStepCondition(step: AtomicStep): { condition?: StepCondition } {
   const raw = (step as { condition?: unknown }).condition;
   return raw === 'correct' || raw === 'wrong' ? { condition: raw } : {};
 }
 
-function normalizeModeStep(step: ModeStep): ModeStep {
+function normalizeModeStep(step: ModeStep): ModeStep | null {
+  if (step.type === 'compound') {
+    return normalizeCompoundStep(step);
+  }
+
   const base = normalizeStepCondition(step);
   if (step.type === 'speak_page') {
     // TTS już nie pauzuje — ewentualny legacy pauseMultiplier jest tu usuwany.
@@ -207,7 +215,8 @@ export function normalizeStudyMode(mode: StudyMode): StudyMode {
       .filter((step) =>
         VALID_STEP_TYPES.has((step as { type?: unknown }).type as ModeStep['type']),
       )
-      .map(({ id: _id, ...step }) => normalizeModeStep(step as ModeStep)),
+      .map(({ id: _id, ...step }) => normalizeModeStep(step as ModeStep))
+      .filter((step): step is ModeStep => step !== null),
     isBuiltIn,
     ...(sourceId ? { builtInSourceId: sourceId } : {}),
     updatedAt: (mode as { updatedAt?: number }).updatedAt ?? 0,

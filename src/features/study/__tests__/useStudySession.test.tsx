@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { render, act, waitFor } from '@testing-library/react-native';
 import { Text, View } from 'react-native';
-import type { FlashcardGroup, Flashcard, ModeStep } from '@/types/models';
+import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
 import { createNewSrsState } from '@/srs/srsEngine';
 
 jest.mock('@/services/ttsService', () => ({
@@ -64,7 +64,7 @@ function makeGroup(
 
 // Domyślny tryb manualny: pokaż stronę, odkryj resztę tapnięciami,
 // jawnie pokaż całą kartę, pokaż ratingi.
-function manualSteps(): ModeStep[] {
+function manualSteps(): AtomicStep[] {
   return [
     { type: 'show_page', pageIndex: 0 },
     { type: 'wait_for_tap_to_reveal' },
@@ -128,7 +128,7 @@ function TestHookWrapper({
   hookRef,
 }: {
   group: FlashcardGroup | null;
-  steps: ModeStep[];
+  steps: AtomicStep[];
   onCardReviewed: (groupId: string, cardId: string, rating: number) => void;
   hookRef: HookResult;
 }) {
@@ -146,7 +146,7 @@ function TestHookWrapper({
   );
 }
 
-function renderSession(group: FlashcardGroup | null, steps: ModeStep[]) {
+function renderSession(group: FlashcardGroup | null, steps: AtomicStep[]) {
   const onCardReviewed = jest.fn();
   const hookRef: HookResult = { current: null };
   render(
@@ -206,7 +206,7 @@ describe('useStudySession', () => {
 
   it('gate auto-completes when all pages are already revealed (show_all_pages -> tap gate -> ratings)', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'show_all_pages' },
       { type: 'wait_for_tap_to_reveal' },
       { type: 'show_ratings' },
@@ -223,7 +223,7 @@ describe('useStudySession', () => {
 
   it('single tap reveal gate resumes after one page so STT can run before the rest is shown', async () => {
     const card1 = makeCard('c1', ['front', 'spoken answer', 'extra note']);
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'show_page', pageIndex: 0 },
       { type: 'wait_for_tap_to_reveal_next' },
       { type: 'listen_and_check', pageIndex: 1, successThreshold: 70 },
@@ -255,7 +255,7 @@ describe('useStudySession', () => {
 
   it('STT correct path auto-rates once and advances to the next card without manual input', async () => {
     const card1 = makeCard('c1', ['hello']);
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'listen_and_check', pageIndex: 0, successThreshold: 60 },
       { type: 'auto_rate_from_answer', condition: 'correct' },
       { type: 'next_card', condition: 'correct' },
@@ -275,7 +275,7 @@ describe('useStudySession', () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const card1 = makeCard('c1', ['hello', 'world']);
-      const steps: ModeStep[] = [
+      const steps: AtomicStep[] = [
         { type: 'listen_and_check', pageIndex: 0, successThreshold: 60 },
         { type: 'auto_rate_from_answer', condition: 'correct' },
         { type: 'next_card', condition: 'correct' },
@@ -307,7 +307,7 @@ describe('useStudySession', () => {
   it('next_card advances without recording an SRS rating', async () => {
     const card1 = makeCard('c1', ['hello']);
     const card2 = makeCard('c2', ['world']);
-    const steps: ModeStep[] = [{ type: 'show_all_pages' }, { type: 'next_card' }];
+    const steps: AtomicStep[] = [{ type: 'show_all_pages' }, { type: 'next_card' }];
     const { onCardReviewed, hookRef } = renderSession(makeGroup(1, 1, [card1, card2]), steps);
 
     await startSession(hookRef, [card1, card2]);
@@ -321,7 +321,7 @@ describe('useStudySession', () => {
   it('STT incorrect path can auto-rate a fixed rating and mark the card failed', async () => {
     mockedSttService.startListening.mockImplementation(() => Promise.resolve('totally different'));
     const card1 = makeCard('c1', ['hello']);
-    const steps: ModeStep[] = [
+    const steps: AtomicStep[] = [
       { type: 'listen_and_check', pageIndex: 0, successThreshold: 90 },
       { type: 'mark_failed', condition: 'wrong' },
       { type: 'auto_rate_fixed', rating: 1, condition: 'wrong' },

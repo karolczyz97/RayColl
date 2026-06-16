@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react';
-import type { Flashcard, FlashcardGroup, ModeStep } from '@/types/models';
+import type { Flashcard, FlashcardGroup, AtomicStep } from '@/types/models';
 import { mapMatchToRating, matchSpeech } from '@/srs/srsEngine';
 import { playErrorSound, playSuccessSound } from '@/services/audioFeedback';
 import { playErrorHaptic, playSuccessHaptic } from '@/services/hapticFeedback';
@@ -42,7 +42,7 @@ interface StepExecutorContext {
   // jednego łańcucha kroków (brak re-renderu), a auto-complete tap-gate i show_*
   // muszą widzieć świeży zestaw odsłoniętych stron.
   revealedPagesRef: MutableRefObject<number[]>;
-  activeStepsRef: MutableRefObject<ModeStep[]>;
+  activeStepsRef: MutableRefObject<AtomicStep[]>;
   groupRef: MutableRefObject<FlashcardGroup | null>;
   stateRef: MutableRefObject<StudySessionState>;
   skipRef: MutableRefObject<StudySkipState>;
@@ -86,7 +86,7 @@ function buildAnswerResult(
 async function executeSpeakPageStep(
   card: Flashcard,
   stepIndex: number,
-  step: Extract<ModeStep, { type: 'speak_page' }>,
+  step: Extract<AtomicStep, { type: 'speak_page' }>,
   group: FlashcardGroup,
   context: StepRunContext,
 ) {
@@ -122,7 +122,7 @@ async function executeTimedWaitStep(
 async function executeListenAndCheckStep(
   card: Flashcard,
   stepIndex: number,
-  step: Extract<ModeStep, { type: 'listen_and_check' }>,
+  step: Extract<AtomicStep, { type: 'listen_and_check' }>,
   group: FlashcardGroup,
   context: StepRunContext,
 ) {
@@ -337,7 +337,7 @@ export async function executeStudyStep(
 
     default: {
       const _exhaustive: never = step;
-      throw new Error(`Unknown step type: ${(_exhaustive as ModeStep).type}`);
+      throw new Error(`Unknown step type: ${(_exhaustive as AtomicStep).type}`);
     }
   }
 }

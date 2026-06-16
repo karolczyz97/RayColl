@@ -5,6 +5,7 @@ import {
   normalizeStudyMode,
 } from '../storeDataNormalization';
 import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
+import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 
 describe('normalizeStoreData', () => {
   it('normalizes invalid activity heatmap values to a safe object', () => {
@@ -199,5 +200,37 @@ describe('normalizeStudyMode', () => {
       { type: 'dynamic_pause', nextPageIndex: 0, pauseMultiplier: 1 },
       { type: 'dynamic_pause', nextPageIndex: 2, pauseMultiplier: 3 },
     ]);
+  });
+
+  it('normalizes compound steps idempotently and drops unknown compound kinds', () => {
+    const steps = [
+      {
+        id: 'temp-id',
+        type: 'compound',
+        version: 99,
+        params: { kind: 'auto_pass_next', rating: 99 },
+      },
+      {
+        type: 'compound',
+        version: 1,
+        params: { kind: 'mystery' },
+      },
+    ] as unknown as StudyMode['steps'];
+
+    const normalized = normalizeStudyMode(makeMode({ steps }));
+    expect(normalized.steps).toEqual([
+      { type: 'compound', version: 1, params: { kind: 'auto_pass_next', rating: 4 } },
+    ]);
+    expect(normalizeStudyMode(makeMode({ steps: normalized.steps })).steps).toEqual(
+      normalized.steps,
+    );
+  });
+
+  it('preserves a valid listen_grade compound through normalization', () => {
+    const steps = [
+      { type: 'compound', version: 1, params: defaultCompoundParams('listen_grade') },
+    ] as StudyMode['steps'];
+
+    expect(normalizeStudyMode(makeMode({ steps })).steps).toEqual(steps);
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect, useMemo, useReducer } from 'react';
-import type { FlashcardGroup, Flashcard, ModeStep } from '@/types/models';
+import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
 import { useSyncedRef } from './useSyncedRef';
@@ -16,7 +16,7 @@ import {
 
 export function useStudySession(
   group: FlashcardGroup | null,
-  steps: ModeStep[],
+  steps: AtomicStep[],
   onCardReviewed: (groupId: string, cardId: string, rating: number) => void,
 ) {
   const [state, dispatch] = useReducer(sessionReducer, INITIAL_STUDY_SESSION_STATE);
@@ -36,7 +36,7 @@ export function useStudySession(
   const isMountedRef = useRef(true);
   const holdingRef = useRef(false);
   const groupRef = useSyncedRef(group);
-  const activeStepsRef = useRef<ModeStep[]>([]);
+  const activeStepsRef = useRef<AtomicStep[]>([]);
   const stateRef = useSyncedRef(state);
   const ttsRateRef = useSyncedRef(ttsRate);
   const onCardReviewedRef = useSyncedRef(onCardReviewed);
