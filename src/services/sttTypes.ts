@@ -8,12 +8,6 @@ export interface SttOptions {
 export const DEFAULT_STT_TIMEOUT_MS = 15000;
 export const DEFAULT_STT_INACTIVITY_MS = 1500;
 
-export interface SttSession {
-  resolved: () => boolean;
-  setResolved: () => void;
-  cancelTimers: () => void;
-  resetInactivity: () => void;
-}
 
 export interface SttService {
   startListening(options: SttOptions): Promise<string>;

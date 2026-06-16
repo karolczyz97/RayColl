@@ -1,4 +1,5 @@
 import { TOKENS } from '@/theme/tokens';
+import { clamp } from './math';
 
 export function getDeterministicContainerWidth(
   windowWidth: number,
@@ -16,18 +17,19 @@ export function getDeterministicContainerWidth(
     const scrollbarGutterWidth = 16;
     const availableWidth = usableWindow - scrollbarGutterWidth;
     const webCardInnerWidth = Math.min(TOKENS.layout.maxWidth, availableWidth) - TOKENS.spacing.lg * 2;
-    return Math.max(0, Math.min(screenMaxWidth, webCardInnerWidth));
+    return clamp(webCardInnerWidth, 0, screenMaxWidth);
   } else {
     // Native: contentRegion has nativePadding (TOKENS.spacing.lg on each side = 32px total).
     const availableWidth = usableWindow - TOKENS.spacing.lg * 2;
-    return Math.max(0, Math.min(screenMaxWidth, availableWidth));
+    return clamp(availableWidth, 0, screenMaxWidth);
   }
 }
 
 export function getGridGap(containerWidth: number): number {
-  return Math.max(
+  return clamp(
+    Math.floor(containerWidth * TOKENS.layout.gapRatio),
     TOKENS.layout.minGap,
-    Math.min(TOKENS.layout.maxGap, Math.floor(containerWidth * TOKENS.layout.gapRatio)),
+    TOKENS.layout.maxGap,
   );
 }
 
@@ -39,8 +41,8 @@ export function getGridColumns(
   gap: number,
 ): number {
   const calculatedCols = Math.floor((containerWidth + gap) / (minItemWidth + gap));
-  const boundedCols = Math.max(1, Math.min(maxCols, calculatedCols));
-  return Math.min(boundedCols, Math.max(1, itemCount));
+  const boundedCols = clamp(calculatedCols, 1, maxCols);
+  return clamp(itemCount, 1, boundedCols);
 }
 
 export function getGridItemWidth(

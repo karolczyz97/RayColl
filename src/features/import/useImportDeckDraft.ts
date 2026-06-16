@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { swapElements } from '@/utils/array';
 import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -10,12 +10,29 @@ import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
 import { DEFAULT_CARD_ORDER } from '@/constants/cardOrder';
 import { MAX_STORED_PAGE_COUNT, MAX_VISIBLE_PAGE_COUNT, MIN_PAGE_COUNT } from '@/constants/pages';
 import {
+  detectFirstRowHeader,
+  detectLangFromHeader,
+  detectPageCount,
+} from '@/import/importParser';
+import {
+  buildImportSyncKey,
+  getHeaderRowFromText,
   getPreviewRows,
   replaceHeaderRowInText,
   serializeImportSourceText,
 } from './importDraftHelpers';
-import { getActiveSepValue, pickAndReadFile } from './importDraftUtils';
-import { useImportTextSync } from './useImportTextSync';
+import {
+  buildCardsFromText,
+  detectTextProperties,
+  getActiveSepValue,
+  IMPORT_LINE_LIMIT,
+  limitImportLines,
+  pickAndReadFile,
+} from './importDraftUtils';
+
+// Joins header fields into a collision-proof comparison key. A control char is
+// used because it cannot appear in a normalized (de-quoted, single-row) header.
+const HEADER_KEY_SEP = String.fromCharCode(0);
 import { importDraftReducer, createInitialDraftState } from './importDraftReducer';
 
 export function useImportDeckDraft() {
@@ -106,23 +123,176 @@ export function useImportDeckDraft() {
     },
   });
 
-  // --- Text sync hook ------------------------------------------------------
-  const { syncDraftFromText, applyDetectedText, syncHeaderConfigFromText } = useImportTextSync({
-    debouncedRawText,
-    sepKey,
+  // --- Text sync -----------------------------------------------------------
+  const rebuildPreviewFromText = useCallback(
+    (text: string, currentSepKey: string, currentPageCount: number, skipHeader: boolean) => {
+      const newCards = buildCardsFromText(
+        text,
+        currentSepKey,
+        currentPageCount,
+        skipHeader,
+        draftRef.current.cards,
+      );
+      dispatch({ type: 'SET_CARDS', value: newCards });
+    },
+    [dispatch, draftRef],
+  );
+
+  const syncHeaderConfigFromText = useCallback(
+    (text: string, currentSepKey: string, currentPageCount: number) => {
+      const headerRow = getHeaderRowFromText(text, currentSepKey, currentPageCount);
+      const headerKey = headerRow.join(HEADER_KEY_SEP);
+      if (headerKey === lastAppliedHeaderKeyRef.current) {
+        return;
+      }
+
+      lastAppliedHeaderKeyRef.current = headerKey;
+
+      const nextNames = [...pageNamesRef.current];
+      headerRow.forEach((part, index) => {
+        if (index < MAX_STORED_PAGE_COUNT) {
+          nextNames[index] = part;
+        }
+      });
+      dispatch({ type: 'SET_PAGE_NAMES', value: nextNames });
+
+      const nextLangs = [...pageLangsRef.current];
+      headerRow.forEach((part, index) => {
+        if (index < MAX_STORED_PAGE_COUNT) {
+          nextLangs[index] = detectLangFromHeader(part);
+        }
+      });
+      dispatch({ type: 'SET_PAGE_LANGS', value: nextLangs });
+    },
+    [dispatch, pageNamesRef, pageLangsRef],
+  );
+
+  const syncDraftFromText = useCallback(
+    (text: string, currentSepKey: string, currentPageCount: number) => {
+      const syncKey = buildImportSyncKey(
+        text,
+        currentSepKey,
+        currentPageCount,
+        firstRowIsHeaderRef.current,
+      );
+      if (syncKey === lastSyncedKeyRef.current) return;
+      lastSyncedKeyRef.current = syncKey;
+
+      if (!text.trim()) {
+        lastAppliedHeaderKeyRef.current = null;
+        dispatch({ type: 'SET_CARDS', value: [] });
+        return;
+      }
+
+      const detection = detectFirstRowHeader(text, currentSepKey, currentPageCount);
+      const effectiveFirstRowIsHeader = headerSettingTouchedRef.current
+        ? firstRowIsHeaderRef.current
+        : detection.isLikelyHeader;
+
+      if (
+        !headerSettingTouchedRef.current &&
+        effectiveFirstRowIsHeader !== firstRowIsHeaderRef.current
+      ) {
+        firstRowIsHeaderRef.current = effectiveFirstRowIsHeader;
+        dispatch({ type: 'SET_FIRST_ROW_IS_HEADER', value: effectiveFirstRowIsHeader });
+      }
+
+      if (effectiveFirstRowIsHeader) {
+        if (preHeaderPageNamesRef.current === null) {
+          preHeaderPageNamesRef.current = [...pageNamesRef.current];
+        }
+        syncHeaderConfigFromText(text, currentSepKey, currentPageCount);
+      } else {
+        lastAppliedHeaderKeyRef.current = null;
+      }
+
+      rebuildPreviewFromText(text, currentSepKey, currentPageCount, effectiveFirstRowIsHeader);
+    },
+    [
+      firstRowIsHeaderRef,
+      pageNamesRef,
+      rebuildPreviewFromText,
+      dispatch,
+      syncHeaderConfigFromText,
+    ],
+  );
+
+  const applyDetectedText = useCallback(
+    (text: string, nextName?: string) => {
+      const { safeText, wasLimited } = limitImportLines(text, IMPORT_LINE_LIMIT);
+
+      if (nextName) {
+        dispatch({ type: 'SET_NAME', value: nextName });
+      }
+
+      preHeaderPageNamesRef.current = null;
+      headerSettingTouchedRef.current = false;
+      lastAppliedHeaderKeyRef.current = null;
+      dispatch({
+        type: 'SET_IMPORT_ERROR',
+        value: wasLimited ? 'import.err.too_many_lines' : '',
+      });
+      dispatch({ type: 'SET_RAW_TEXT', value: safeText });
+
+      if (!safeText.trim()) {
+        dispatch({ type: 'SET_RAW_COLUMN_COUNT', value: MIN_PAGE_COUNT });
+        dispatch({ type: 'SET_CARDS', value: [] });
+        return;
+      }
+
+      dispatch({
+        type: 'SET_PAGE_NAMES',
+        value: Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''),
+      });
+      dispatch({
+        type: 'SET_PAGE_LANGS',
+        value: Array.from({ length: MAX_STORED_PAGE_COUNT }, () => ''),
+      });
+
+      const { detectedSep, detectedCount } = detectTextProperties(safeText);
+
+      if (detectedCount > MAX_STORED_PAGE_COUNT) {
+        dispatch({ type: 'SET_IMPORT_ERROR', value: 'import.err.too_many_columns' });
+        dispatch({ type: 'SET_CARDS', value: [] });
+        return;
+      }
+
+      dispatch({ type: 'SET_RAW_COLUMN_COUNT', value: detectedCount });
+
+      const effectiveSep = sepTouchedRef.current ? sepKey : detectedSep;
+
+      if (!sepTouchedRef.current) {
+        dispatch({ type: 'SET_SEP_KEY', value: detectedSep });
+        dispatch({ type: 'SET_CUSTOM_SEP', value: '' });
+      }
+
+      const nextPageCount = Math.max(MIN_PAGE_COUNT, detectedCount);
+      dispatch({ type: 'SET_PAGE_COUNT', value: nextPageCount });
+      syncDraftFromText(safeText, effectiveSep, nextPageCount);
+    },
+    [dispatch, sepKey, syncDraftFromText],
+  );
+
+  useEffect(() => {
+    if (debouncedRawText.trim()) {
+      const activeSep = getActiveSepValue(sepKey, customSep);
+      const detectedCount = detectPageCount(
+        debouncedRawText,
+        activeSep,
+        firstRowIsHeaderRef.current,
+      );
+      dispatch({ type: 'SET_RAW_COLUMN_COUNT', value: detectedCount });
+    }
+    syncDraftFromText(debouncedRawText, getActiveSepValue(sepKey, customSep), pageCount);
+  }, [
     customSep,
-    pageCount,
-    dispatch,
-    draftRef,
+    debouncedRawText,
     firstRowIsHeaderRef,
-    pageNamesRef,
-    pageLangsRef,
-    headerSettingTouchedRef,
-    lastAppliedHeaderKeyRef,
-    preHeaderPageNamesRef,
-    sepTouchedRef,
-    lastSyncedKeyRef,
-  });
+    pageCount,
+    sepKey,
+    dispatch,
+    syncDraftFromText,
+  ]);
 
   // --- Handlers ------------------------------------------------------------
   const handlePaste = useCallback(() => {

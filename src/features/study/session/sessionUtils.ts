@@ -1,5 +1,6 @@
 import type { FlashcardGroup } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
+import { clamp } from '@/utils/math';
 
 export const PEEK_HOLD_THRESHOLD_MS = 500;
 
@@ -48,7 +49,7 @@ export function getBottomAlignedScrollY(
   viewportHeight: number,
 ): number {
   const bottomAligned = pageTop + pageHeight - viewportHeight;
-  return Math.max(0, Math.min(pageTop, bottomAligned));
+  return clamp(bottomAligned, 0, pageTop);
 }
 
 export function sleep(ms: number): Promise<void> {

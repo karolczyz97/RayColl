@@ -9,6 +9,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useI18n, type LanguageCode } from '@/i18n';
 import { APP_NAME } from '@/constants/app';
 import { releaseInfo } from '@/config/releaseInfo';
+import { clamp } from '@/utils/math';
 
 export const LANGUAGE_OPTIONS = [
   { label: 'Polski', value: 'pl' },
@@ -50,7 +51,7 @@ export function useAppSettingsController() {
 
   const handleTtsRateChange = useCallback(
     async (rate: number) => {
-      const clampedRate = Math.max(0.5, Math.min(2.0, rate));
+      const clampedRate = clamp(rate, 0.5, 2.0);
       await setTtsRate(clampedRate);
     },
     [setTtsRate],

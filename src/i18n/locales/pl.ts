@@ -1,6 +1,5 @@
 export const pl: Record<string, string> = {
   // Common
-  'app.title': 'RayColl',
   'nav.dashboard': 'Panel',
   'route.study': 'Nauka',
   'route.browse': 'Przegląd fiszek',
@@ -15,7 +14,6 @@ export const pl: Record<string, string> = {
   'btn.login': 'Zaloguj się przez Google',
   'btn.logout': 'Wyloguj się',
   'auth.local': 'Tryb lokalny',
-  'auth.welcome': 'Witaj, {name}',
   'auth.migration.title': 'Dane lokalne',
   'auth.migration.desc':
     'Masz lokalne talie z poprzedniej sesji. Czy chcesz przenieść je na konto, czy zacząć od nowa?',
@@ -32,7 +30,6 @@ export const pl: Record<string, string> = {
   'sync.status.syncing': 'Synchronizowanie zmian...',
   'sync.status.offline':
     'Tryb offline — zmiany są zapisywane na tym urządzeniu i zsynchronizują się po odzyskaniu połączenia.',
-  'dialog.delete.title': 'Czy na pewno?',
   'dialog.delete.desc': 'Tej operacji nie można cofnąć.',
   'dialog.delete_permanent.title': 'Usunąć trwale?',
   'dialog.delete_permanent.desc':
@@ -54,22 +51,12 @@ export const pl: Record<string, string> = {
   'cards_count.many': '{count} fiszek',
   'cards_count.other': '{count} fiszek',
   'dashboard.no_groups': 'Brak zestawów. Kliknij +, aby dodać.',
-  'dashboard.create_title': 'Stwórz zestaw',
   'dashboard.name_label': 'Nazwa zestawu',
-  'dashboard.langs_label': 'Języki stron (np. en-US, pl-PL)',
-  'dashboard.pages_label': 'Nazwy stron (np. Słowo, Tłumaczenie)',
   'dashboard.due_count': 'Pozostało: {count}',
-  'dashboard.mastery': 'Opanowane: {percent}%',
-  'dashboard.tooltip.study': 'Ucz się',
-  'dashboard.tooltip.browse': 'Przeglądaj karty',
-  'dashboard.tooltip.settings': 'Ustawienia zestawu',
 
   // Study
-  'study.finished': 'Koniec sesji powtórek! 🎉',
   'study.finished_desc': 'Wszystkie zaplanowane fiszki na dzisiaj zostały opanowane.',
   'study.no_due': 'Brak fiszek do powtórki.',
-  'study.status.listening': 'Słuchanie...',
-  'study.status.speaking': 'Mówienie...',
   'study.match_percent': 'Dopasowanie: {percent}%',
   'study.match_percent_threshold': 'Dopasowanie: {percent}% / próg {threshold}%',
   'study.rating.1': 'Powtórz (Again)',
@@ -93,7 +80,6 @@ export const pl: Record<string, string> = {
 
   // Browse
   'browse.search_placeholder': 'Szukaj fiszek...',
-  'browse.add_card': 'Dodaj fiszkę',
   'browse.edit_card': 'Edytuj fiszkę',
   'browse.no_cards': 'Nie znaleziono fiszek.',
   'browse.min_filled_pages': 'Wypełnij przynajmniej 2 pola, aby zapisać fiszkę.',
@@ -106,14 +92,11 @@ export const pl: Record<string, string> = {
   'import.separator': 'Separator',
   'import.preview': 'Podgląd',
   'import.btn': 'Importuj {count} kart',
-  'import.success': 'Pomyślnie zaimportowano {count} kart!',
   'import.name_placeholder': 'Wklej dane — separator i liczba stron zostaną wykryte automatycznie',
-  'import.upload_btn': 'Wgraj plik (.csv, .txt, .json)',
   'import.sep.tab': 'Tabulator',
   'import.sep.semicolon': 'Średnik (;)',
   'import.sep.comma': 'Przecinek (,)',
   'import.sep.pipe': 'Kreska (|)',
-  'import.sep.custom': 'Własny',
   'import.sep.current_custom': 'Aktualny',
   'import.sep.set_custom': 'Ustaw własny',
   'import.first_row_header': 'Pierwsza linia to nagłówki',
@@ -122,8 +105,6 @@ export const pl: Record<string, string> = {
   'import.validation.source_required': 'Wklej albo wgraj przynajmniej jedna fiszke.',
   'import.pages_count': 'Strony:',
   'import.page_label': 'Strona {index}',
-  'import.import_create_btn': 'Importuj i utwórz grupę',
-  'import.preview_rows': 'Podgląd ({count} wierszy)',
   'import.page_hidden': ' (ukryta)',
 
   // Stats
@@ -131,7 +112,6 @@ export const pl: Record<string, string> = {
   'stats.decks_title': 'Talie',
   'stats.cards_title': 'Fiszki',
   'stats.heatmap_title': 'Aktywność w ostatnich 140 dniach',
-  'stats.progress_title': 'Postęp w zestawach',
   'stats.streak': 'Seria dni',
   'stats.active_days': 'Dni aktywności',
   'stats.due_cards': 'Do powtórki',
@@ -150,24 +130,19 @@ export const pl: Record<string, string> = {
   'settings.section.general': 'Ogólne',
   'settings.section.cards': 'Karty',
   'settings.section.study': 'Nauka',
-  'settings.modes_title': 'Tryb nauki',
-  'settings.steps_title': 'Sekwencja kroków',
   'settings.archive_btn': 'Archiwizuj zestaw',
   'settings.rename_label': 'Nazwa zestawu',
   'settings.pages_config': 'Konfiguracja stron',
-  'settings.reorder_columns': 'Zmień kolejność kolumn',
   'settings.active_mode': 'Aktywny tryb nauki',
   'settings.study_scope': 'Zakres nauki',
   'settings.card_order': 'Kolejność kart',
   'settings.card_order.sequential': 'Po kolei',
   'settings.card_order.random': 'Losowo',
   'settings.card_order.hardest': 'Od najtrudniejszych',
-  'settings.which_cards': 'Które fiszki uczyć',
   'settings.mode_steps': 'Kroki trybu „{name}"',
   'settings.add_step_btn': 'Dodaj krok',
   'settings.reset_mode_btn': 'Przywróć domyślne',
   'settings.create_mode_btn': 'Stwórz nowy tryb',
-  'settings.new_mode_name': 'Nazwa trybu',
   'settings.save_mode_btn': 'Zapisz tryb',
   'settings.dialog.add_step.title': 'Dodaj krok',
   'settings.dialog.add_step.type': 'Typ',
@@ -199,8 +174,6 @@ export const pl: Record<string, string> = {
   'app_settings.tts_rate': 'Prędkość lektora (TTS)',
   'app_settings.export_import': 'Eksport / Import danych',
   'app_settings.export_btn': 'Eksportuj stan do JSON',
-  'app_settings.import_placeholder': 'Wklej wyeksportowany JSON tutaj...',
-  'app_settings.import_btn': 'Importuj stan',
   'app_settings.import_file_btn': 'Importuj z pliku',
   'app_settings.export_error': 'Eksport nie powiódł się.',
   'app_settings.import_success': 'Import zakończony!',
@@ -210,10 +183,6 @@ export const pl: Record<string, string> = {
   'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
   'app_settings.dynamic_colors.desc':
     'Pobieraj kolory akcentów bezpośrednio z systemu (Android 12+ / Material You).',
-  'app_settings.dynamic_colors.enabled': 'Włączone',
-  'app_settings.dynamic_colors.disabled': 'Wyłączone',
-  'app_settings.archived': 'Zarchiwizowane',
-  'app_settings.archived_open': 'Otwórz archiwum',
 
   // Archive
   'archive.title': 'Zarchiwizowane',
@@ -222,7 +191,6 @@ export const pl: Record<string, string> = {
   'archive.auto_delete_tomorrow': 'Usuwa się jutro',
   'archive.auto_delete_today': 'Usuwa się dzisiaj',
   'archive.delete_permanently': 'Usuń trwale',
-  'archive.decks_count': '{count} zarchiwizowanych',
 
   // Mode names
   'mode.classic.name': 'Klasyczny',
@@ -314,7 +282,6 @@ export const pl: Record<string, string> = {
 
   // Study modes screen
   'app_settings.study_modes': 'Tryby nauki',
-  'app_settings.study_modes.desc': 'Edytuj lub usuń tryby nauki',
   'study_modes.title': 'Tryby nauki',
   'study_modes.steps_count': 'Kroki: {count}',
   'study_modes.built_in': 'wbudowany',
@@ -344,17 +311,12 @@ export const pl: Record<string, string> = {
   'srs.badge.now': 'Teraz',
 
   // Additional Filters
-  'filter.learning': 'W toku',
   'filter.mastered': 'Opanowane',
 
   // Tooltips in Browse
-  'browse.tooltip.mastery': 'Opanowanie: {percent}%',
-  'browse.tooltip.repetitions': 'Powtórzeń: {count}',
-  'browse.tooltip.review_in': 'Powtórka za: {time}',
   'browse.delete_card': 'Usuń fiszkę',
 
   // Danger zone in App Settings
-  'app_settings.danger_zone': 'Strefa zagrożenia',
 
   // Update notification
   'update.updated': 'Zaktualizowano aplikację',

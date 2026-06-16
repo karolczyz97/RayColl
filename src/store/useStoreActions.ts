@@ -78,7 +78,7 @@ export function normalizeBackupImportData(data: unknown): StoreData {
   return normalized;
 }
 
-interface UseStoreActionsParams {
+interface StoreMutationContext {
   groupsRef: MutableRefObject<FlashcardGroup[]>;
   studyModesRef: MutableRefObject<StudyMode[]>;
   heatmapRef: MutableRefObject<Record<string, number>>;
@@ -118,7 +118,7 @@ export function useStoreActionsCore({
   commitStudyModes,
   commitHeatmap,
   commitGroupsAndHeatmap,
-}: UseStoreActionsParams) {
+}: StoreMutationContext) {
   const setStoreError = useCallback(
     (message: string) => {
       setLastPersistenceError(message);

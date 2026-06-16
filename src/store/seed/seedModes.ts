@@ -61,10 +61,6 @@ const BUILT_IN_SOURCE_IDS = SEED_MODES.map((mode) => mode.builtInSourceId).filte
   (id): id is string => id !== undefined,
 );
 
-export function getBuiltInModeSourceIds(): string[] {
-  return BUILT_IN_SOURCE_IDS;
-}
-
 export function isBuiltInModeSourceId(value: string): boolean {
   return BUILT_IN_SOURCE_IDS.includes(value);
 }

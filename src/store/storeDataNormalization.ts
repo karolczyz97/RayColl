@@ -6,6 +6,7 @@ import {
   MAX_STORED_PAGE_COUNT,
   clampActivePageCount,
 } from '@/constants/pages';
+import { clamp } from '@/utils/math';
 import type {
   Flashcard,
   FlashcardGroup,
@@ -135,7 +136,7 @@ const VALID_STEP_TYPES = new Set<ModeStep['type']>([
 
 function clampStepRating(value: unknown): number {
   const n = typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : 3;
-  return Math.max(1, Math.min(4, n));
+  return clamp(n, 1, 4);
 }
 
 // `pauseMultiplier` = multiplier for the next page listen duration.
@@ -145,7 +146,7 @@ function normalizePauseMultiplier(step: AtomicStep): number {
     typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)
       ? raw.pauseMultiplier
       : 1;
-  return Math.max(0, Math.min(MAX_PAUSE_MULTIPLIER, Math.trunc(multiplier)));
+  return clamp(Math.trunc(multiplier), 0, MAX_PAUSE_MULTIPLIER);
 }
 
 // Nieznane wartości warunku (np. z uszkodzonego backupu) są usuwane.

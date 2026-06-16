@@ -1,6 +1,5 @@
 export const de: Record<string, string> = {
   // Common
-  'app.title': 'RayColl',
   'nav.dashboard': 'Dashboard',
   'route.study': 'Lernen',
   'route.browse': 'Karten durchsuchen',
@@ -15,7 +14,6 @@ export const de: Record<string, string> = {
   'btn.login': 'Mit Google anmelden',
   'btn.logout': 'Abmelden',
   'auth.local': 'Lokaler Modus',
-  'auth.welcome': 'Willkommen, {name}',
   'auth.migration.title': 'Lokale Daten gefunden',
   'auth.migration.desc':
     'Du hast lokale Decks aus einer früheren Sitzung. Möchtest du sie auf dein Konto übertragen oder neu beginnen?',
@@ -31,7 +29,6 @@ export const de: Record<string, string> = {
   'sync.status.syncing': 'Änderungen werden synchronisiert...',
   'sync.status.offline':
     'Offline-Modus — Änderungen werden auf diesem Gerät gespeichert und synchronisiert, sobald du wieder online bist.',
-  'dialog.delete.title': 'Sind Sie sicher?',
   'dialog.delete.desc': 'Diese Aktion kann nicht rückgängig gemacht werden.',
   'dialog.delete_permanent.title': 'Endgültig löschen?',
   'dialog.delete_permanent.desc':
@@ -53,22 +50,12 @@ export const de: Record<string, string> = {
   'cards_count.many': '{count} Karten',
   'cards_count.other': '{count} Karten',
   'dashboard.no_groups': 'Keine Decks gefunden. Klicken Sie auf +, um eines hinzuzufügen.',
-  'dashboard.create_title': 'Deck erstellen',
   'dashboard.name_label': 'Deckname',
-  'dashboard.langs_label': 'Seitensprachen (z. B. en-US, pl-PL)',
-  'dashboard.pages_label': 'Seitennamen (z. B. Wort, Übersetzung)',
   'dashboard.due_count': 'Fällig: {count}',
-  'dashboard.mastery': 'Gemeistert: {percent}%',
-  'dashboard.tooltip.study': 'Lernen',
-  'dashboard.tooltip.browse': 'Karten durchsuchen',
-  'dashboard.tooltip.settings': 'Deck-Einstellungen',
 
   // Study
-  'study.finished': 'Lernsitzung beendet! 🎉',
   'study.finished_desc': 'Alle für heute geplanten Karten wurden überprüft.',
   'study.no_due': 'Keine fälligen Karten zur Überprüfung.',
-  'study.status.listening': 'Hören...',
-  'study.status.speaking': 'Sprechen...',
   'study.match_percent': 'Übereinstimmung: {percent}%',
   'study.match_percent_threshold': 'Übereinstimmung: {percent}% / Schwelle {threshold}%',
   'study.rating.1': 'Nochmal',
@@ -92,7 +79,6 @@ export const de: Record<string, string> = {
 
   // Browse
   'browse.search_placeholder': 'Karteikarten suchen...',
-  'browse.add_card': 'Karte hinzufügen',
   'browse.edit_card': 'Karte bearbeiten',
   'browse.no_cards': 'Keine Karteikarten gefunden.',
   'browse.min_filled_pages': 'Fülle mindestens 2 Felder aus, um diese Karte zu speichern.',
@@ -105,15 +91,12 @@ export const de: Record<string, string> = {
   'import.separator': 'Trennzeichen',
   'import.preview': 'Vorschau',
   'import.btn': 'Importieren Sie {count} Karten',
-  'import.success': 'Erfolgreich {count} Karten importiert!',
   'import.name_placeholder':
     'Fügen Sie Daten ein — Trennzeichen und Seitenanzahl werden automatisch erkannt',
-  'import.upload_btn': 'Datei hochladen (.csv, .txt, .json)',
   'import.sep.tab': 'Tabstopp',
   'import.sep.semicolon': 'Semikolon (;)',
   'import.sep.comma': 'Komma (,)',
   'import.sep.pipe': 'Senkrechter Strich (|)',
-  'import.sep.custom': 'Benutzerdefiniert',
   'import.sep.current_custom': 'Aktuell',
   'import.sep.set_custom': 'Eigenes festlegen',
   'import.first_row_header': 'Erste Zeile ist eine Kopfzeile',
@@ -122,8 +105,6 @@ export const de: Record<string, string> = {
   'import.validation.source_required': 'Paste or upload at least one flashcard.',
   'import.pages_count': 'Seiten:',
   'import.page_label': 'Seite {index}',
-  'import.import_create_btn': 'Importieren & Deck erstellen',
-  'import.preview_rows': 'Vorschau ({count} Zeilen)',
   'import.page_hidden': ' (ausgeblendet)',
 
   // Stats
@@ -131,7 +112,6 @@ export const de: Record<string, string> = {
   'stats.decks_title': 'Stapel',
   'stats.cards_title': 'Karten',
   'stats.heatmap_title': 'Aktivität in den letzten 140 Tagen',
-  'stats.progress_title': 'Deck-Fortschritt',
   'stats.streak': 'Tage in Folge',
   'stats.active_days': 'Aktive Tage',
   'stats.due_cards': 'Fällig',
@@ -150,24 +130,19 @@ export const de: Record<string, string> = {
   'settings.section.general': 'Allgemein',
   'settings.section.cards': 'Karten',
   'settings.section.study': 'Lernen',
-  'settings.modes_title': 'Lernmodus',
-  'settings.steps_title': 'Schrittfolge',
   'settings.archive_btn': 'Deck archivieren',
   'settings.rename_label': 'Deckname',
   'settings.pages_config': 'Seitenkonfiguration',
-  'settings.reorder_columns': 'Spalten neu ordnen',
   'settings.active_mode': 'Aktiver Lernmodus',
   'settings.study_scope': 'Lernumfang',
   'settings.card_order': 'Kartenreihenfolge',
   'settings.card_order.sequential': 'Der Reihe nach',
   'settings.card_order.random': 'Zufällig',
   'settings.card_order.hardest': 'Schwierigste zuerst',
-  'settings.which_cards': 'Welche Karten lernen',
   'settings.mode_steps': 'Schritte des Modus "{name}"',
   'settings.add_step_btn': 'Schritt hinzufügen',
   'settings.reset_mode_btn': 'Auf Standard zurücksetzen',
   'settings.create_mode_btn': 'Neuen Modus erstellen',
-  'settings.new_mode_name': 'Modusname',
   'settings.save_mode_btn': 'Modus speichern',
   'settings.dialog.add_step.title': 'Schritt hinzufügen',
   'settings.dialog.add_step.type': 'Typ',
@@ -198,8 +173,6 @@ export const de: Record<string, string> = {
   'app_settings.tts_rate': 'TTS-Sprachgeschwindigkeit',
   'app_settings.export_import': 'Daten exportieren / importieren',
   'app_settings.export_btn': 'Zustand nach JSON exportieren',
-  'app_settings.import_placeholder': 'Fügen Sie exportiertes JSON hier ein...',
-  'app_settings.import_btn': 'Zustand importieren',
   'app_settings.import_file_btn': 'Aus Datei importieren',
   'app_settings.export_error': 'Export fehlgeschlagen.',
   'app_settings.import_success': 'Import erfolgreich!',
@@ -209,10 +182,6 @@ export const de: Record<string, string> = {
   'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
   'app_settings.dynamic_colors.desc':
     'Akzent- und Systemfarben direkt vom Gerät extrahieren (Android 12+ / Material You).',
-  'app_settings.dynamic_colors.enabled': 'Aktiviert',
-  'app_settings.dynamic_colors.disabled': 'Deaktiviert',
-  'app_settings.archived': 'Archivierte',
-  'app_settings.archived_open': 'Archiv öffnen',
   // Archive
   'archive.title': 'Archivierte',
   'archive.empty': 'Keine archivierten Decks.',
@@ -220,7 +189,6 @@ export const de: Record<string, string> = {
   'archive.auto_delete_tomorrow': 'Wird morgen gelöscht',
   'archive.auto_delete_today': 'Wird heute gelöscht',
   'archive.delete_permanently': 'Endgültig löschen',
-  'archive.decks_count': '{count} archiviert',
 
   // Mode names
   'mode.classic.name': 'Klassisch',
@@ -312,7 +280,6 @@ export const de: Record<string, string> = {
 
   // Study modes screen
   'app_settings.study_modes': 'Lernmodi',
-  'app_settings.study_modes.desc': 'Lernmodi bearbeiten oder löschen',
   'study_modes.title': 'Lernmodi',
   'study_modes.steps_count': 'Schritte: {count}',
   'study_modes.built_in': 'integriert',
@@ -342,17 +309,12 @@ export const de: Record<string, string> = {
   'srs.badge.now': 'Jetzt',
 
   // Additional Filters
-  'filter.learning': 'Lernen',
   'filter.mastered': 'Gemeistert',
 
   // Tooltips in Browse
-  'browse.tooltip.mastery': 'Meisterschaft: {percent}%',
-  'browse.tooltip.repetitions': 'Wiederholungen: {count}',
-  'browse.tooltip.review_in': 'Überprüfung in: {time}',
   'browse.delete_card': 'Karteikarte löschen',
 
   // Danger zone in App Settings
-  'app_settings.danger_zone': 'Gefahrenzone',
 
   // Update notification
   'update.updated': 'App aktualisiert',

@@ -25,9 +25,7 @@ export function getSuccessColor(theme: MD3Theme): string {
   return SUCCESS_COLORS[theme.dark ? 'dark' : 'light'].color;
 }
 
-export function getSuccessBgColor(theme: MD3Theme): string {
-  return SUCCESS_COLORS[theme.dark ? 'dark' : 'light'].bg;
-}
+
 
 export function getWarningColor(theme: MD3Theme): string {
   return theme.dark ? theme.colors.primary : TOKENS.colors.warning;
@@ -49,17 +47,7 @@ export function getInfoColor(theme: MD3Theme): string {
   return theme.colors.primary;
 }
 
-export function getInfoBgColor(theme: MD3Theme): string {
-  return theme.colors.primaryContainer;
-}
 
-export function getSecondaryColor(theme: MD3Theme): string {
-  return theme.colors.secondary;
-}
-
-export function getSecondaryBgColor(theme: MD3Theme): string {
-  return theme.colors.secondaryContainer;
-}
 
 // The "contained" surface (MD3 filled-card container): a tonal fill with no
 // shadow and no outline, used by cards and grouped settings tiles so they read

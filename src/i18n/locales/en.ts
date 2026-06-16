@@ -1,6 +1,5 @@
 export const en: Record<string, string> = {
   // Common
-  'app.title': 'RayColl',
   'nav.dashboard': 'Dashboard',
   'route.study': 'Study',
   'route.browse': 'Browse cards',
@@ -15,7 +14,6 @@ export const en: Record<string, string> = {
   'btn.login': 'Sign in with Google',
   'btn.logout': 'Sign out',
   'auth.local': 'Local Mode',
-  'auth.welcome': 'Welcome, {name}',
   'auth.migration.title': 'Local data found',
   'auth.migration.desc':
     'You have local decks from a previous session. Would you like to transfer them to your account or start fresh?',
@@ -31,7 +29,6 @@ export const en: Record<string, string> = {
   'sync.status.syncing': 'Syncing changes...',
   'sync.status.offline':
     "Offline mode — changes are saved on this device and will sync when you're back online.",
-  'dialog.delete.title': 'Are you sure?',
   'dialog.delete.desc': 'This action cannot be undone.',
   'dialog.delete_permanent.title': 'Delete permanently?',
   'dialog.delete_permanent.desc':
@@ -53,22 +50,12 @@ export const en: Record<string, string> = {
   'cards_count.many': '{count} cards',
   'cards_count.other': '{count} cards',
   'dashboard.no_groups': 'No decks found. Click + to add one.',
-  'dashboard.create_title': 'Create Deck',
   'dashboard.name_label': 'Deck Name',
-  'dashboard.langs_label': 'Page Languages (e.g. en-US, pl-PL)',
-  'dashboard.pages_label': 'Page Names (e.g. Word, Translation)',
   'dashboard.due_count': 'Due: {count}',
-  'dashboard.mastery': 'Mastered: {percent}%',
-  'dashboard.tooltip.study': 'Study',
-  'dashboard.tooltip.browse': 'Browse Cards',
-  'dashboard.tooltip.settings': 'Deck Settings',
 
   // Study
-  'study.finished': 'Review Session Finished! 🎉',
   'study.finished_desc': 'All scheduled cards for today have been reviewed.',
   'study.no_due': 'No cards due for review.',
-  'study.status.listening': 'Listening...',
-  'study.status.speaking': 'Speaking...',
   'study.match_percent': 'Match: {percent}%',
   'study.match_percent_threshold': 'Match: {percent}% / threshold {threshold}%',
   'study.rating.1': 'Again',
@@ -92,7 +79,6 @@ export const en: Record<string, string> = {
 
   // Browse
   'browse.search_placeholder': 'Search flashcards...',
-  'browse.add_card': 'Add Flashcard',
   'browse.edit_card': 'Edit Flashcard',
   'browse.no_cards': 'No flashcards found.',
   'browse.min_filled_pages': 'Fill at least 2 pages to save this flashcard.',
@@ -105,14 +91,11 @@ export const en: Record<string, string> = {
   'import.separator': 'Separator',
   'import.preview': 'Preview',
   'import.btn': 'Import {count} cards',
-  'import.success': 'Successfully imported {count} cards!',
   'import.name_placeholder': 'Paste data — separator and page count will be auto-detected',
-  'import.upload_btn': 'Upload file (.csv, .txt, .json)',
   'import.sep.tab': 'Tab',
   'import.sep.semicolon': 'Semicolon (;)',
   'import.sep.comma': 'Comma (,)',
   'import.sep.pipe': 'Pipe (|)',
-  'import.sep.custom': 'Custom',
   'import.sep.current_custom': 'Current',
   'import.sep.set_custom': 'Set custom',
   'import.first_row_header': 'First row is header',
@@ -121,8 +104,6 @@ export const en: Record<string, string> = {
   'import.validation.source_required': 'Paste or upload at least one flashcard.',
   'import.pages_count': 'Pages:',
   'import.page_label': 'Page {index}',
-  'import.import_create_btn': 'Import & Create Deck',
-  'import.preview_rows': 'Preview ({count} rows)',
   'import.page_hidden': ' (hidden)',
 
   // Stats
@@ -130,7 +111,6 @@ export const en: Record<string, string> = {
   'stats.decks_title': 'Decks',
   'stats.cards_title': 'Cards',
   'stats.heatmap_title': 'Activity in the last 140 days',
-  'stats.progress_title': 'Deck Progress',
   'stats.streak': 'Day streak',
   'stats.active_days': 'Active days',
   'stats.due_cards': 'Due cards',
@@ -149,24 +129,19 @@ export const en: Record<string, string> = {
   'settings.section.general': 'General',
   'settings.section.cards': 'Cards',
   'settings.section.study': 'Study',
-  'settings.modes_title': 'Study Mode',
-  'settings.steps_title': 'Step Sequence',
   'settings.archive_btn': 'Archive Deck',
   'settings.rename_label': 'Deck Name',
   'settings.pages_config': 'Pages Configuration',
-  'settings.reorder_columns': 'Reorder Columns',
   'settings.active_mode': 'Active Study Mode',
   'settings.study_scope': 'Study Scope',
   'settings.card_order': 'Card order',
   'settings.card_order.sequential': 'In order',
   'settings.card_order.random': 'Random',
   'settings.card_order.hardest': 'Hardest first',
-  'settings.which_cards': 'Which cards to study',
   'settings.mode_steps': 'Steps of Mode "{name}"',
   'settings.add_step_btn': 'Add step',
   'settings.reset_mode_btn': 'Reset to default',
   'settings.create_mode_btn': 'Create new mode',
-  'settings.new_mode_name': 'Mode name',
   'settings.save_mode_btn': 'Save mode',
   'settings.dialog.add_step.title': 'Add step',
   'settings.dialog.add_step.type': 'Type',
@@ -198,8 +173,6 @@ export const en: Record<string, string> = {
   'app_settings.tts_rate': 'TTS Speech Rate',
   'app_settings.export_import': 'Export / Import Data',
   'app_settings.export_btn': 'Export State to JSON',
-  'app_settings.import_placeholder': 'Paste exported JSON here...',
-  'app_settings.import_btn': 'Import State',
   'app_settings.import_file_btn': 'Import from file',
   'app_settings.export_error': 'Export failed.',
   'app_settings.import_success': 'Import completed!',
@@ -209,10 +182,6 @@ export const en: Record<string, string> = {
   'app_settings.dynamic_colors.title': 'Dynamic system colors',
   'app_settings.dynamic_colors.desc':
     'Extract accent and system colors directly from the device (Android 12+ / Material You).',
-  'app_settings.dynamic_colors.enabled': 'Enabled',
-  'app_settings.dynamic_colors.disabled': 'Disabled',
-  'app_settings.archived': 'Archived',
-  'app_settings.archived_open': 'Open archive',
 
   // Archive
   'archive.title': 'Archived',
@@ -221,7 +190,6 @@ export const en: Record<string, string> = {
   'archive.auto_delete_tomorrow': 'Deletes tomorrow',
   'archive.auto_delete_today': 'Deletes today',
   'archive.delete_permanently': 'Delete permanently',
-  'archive.decks_count': '{count} archived',
 
   // Mode names
   'mode.classic.name': 'Classic',
@@ -313,7 +281,6 @@ export const en: Record<string, string> = {
 
   // Study modes screen
   'app_settings.study_modes': 'Study modes',
-  'app_settings.study_modes.desc': 'Edit or delete study modes',
   'study_modes.title': 'Study modes',
   'study_modes.steps_count': 'Steps: {count}',
   'study_modes.built_in': 'built-in',
@@ -342,17 +309,12 @@ export const en: Record<string, string> = {
   'srs.badge.now': 'Now',
 
   // Additional Filters
-  'filter.learning': 'Learning',
   'filter.mastered': 'Mastered',
 
   // Tooltips in Browse
-  'browse.tooltip.mastery': 'Mastery: {percent}%',
-  'browse.tooltip.repetitions': 'Repetitions: {count}',
-  'browse.tooltip.review_in': 'Review in: {time}',
   'browse.delete_card': 'Delete Flashcard',
 
   // Danger zone in App Settings
-  'app_settings.danger_zone': 'Danger Zone',
 
   // Update notification
   'update.updated': 'App updated',

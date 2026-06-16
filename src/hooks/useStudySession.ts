@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useRef, useEffect, useMemo, useReducer, useState } from 'react';
 import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
@@ -6,7 +6,12 @@ import { useSyncedRef } from './useSyncedRef';
 import { executeStudyStep } from '@/features/study/session/stepExecutor';
 import { useStudyAudio } from '@/features/study/hooks/useStudyAudio';
 import { useStudyCardGestures } from '@/features/study/hooks/useStudyCardGestures';
-import { useStudyReviewFlow } from '@/features/study/hooks/useStudyReviewFlow';
+import {
+  startReviewAttempt,
+  tryMarkCardReviewed,
+} from '@/features/study/session/sessionReview';
+import { sleep } from '@/features/study/session/sessionUtils';
+import { playRatingHaptic } from '@/services/hapticFeedback';
 import {
   type SessionAction,
   type CardReviewState,
@@ -66,27 +71,122 @@ export function useStudySession(
     lastExecutedCardIndexRef.current = null;
   }, []);
 
-  const {
-    dueCards,
-    dueCardsRef,
-    failedCount,
-    startSession,
-    processCardReview,
-    advanceToNextCard,
-    handleRating,
-    restartSession,
-    restartFailed,
-    markCardFailed,
-  } = useStudyReviewFlow({
-    groupRef,
-    stateRef,
-    holdingRef,
-    currentCardReviewStateRef,
-    onCardReviewedRef,
-    dispatchIfMounted,
-    isMountedRef,
-    prepareStartSession,
-  });
+  // --- Study Review Flow ---------------------------------------------------
+  const WAIT_RELEASE_POLL_MS = 100;
+
+  const [dueCards, setDueCards] = useState<Flashcard[]>([]);
+  const [failedCount, setFailedCount] = useState(0);
+  const allCardsRef = useRef<Flashcard[]>([]);
+  const failedCardsRef = useRef<Flashcard[]>([]);
+  const reviewedAttemptKeysRef = useRef<Set<string>>(new Set());
+  const sessionAttemptRef = useRef(0);
+  const dueCardsRef = useSyncedRef(dueCards);
+
+  const syncFailedCount = useCallback(() => {
+    if (isMountedRef.current) {
+      setFailedCount(failedCardsRef.current.length);
+    }
+  }, []);
+
+  const markCardFailed = useCallback(
+    (card: Flashcard) => {
+      if (failedCardsRef.current.find((item) => item.id === card.id)) return;
+      failedCardsRef.current.push(card);
+      syncFailedCount();
+    },
+    [syncFailedCount],
+  );
+
+  const startSession = useCallback(
+    (cards: Flashcard[]) => {
+      prepareStartSession();
+      allCardsRef.current = cards;
+      failedCardsRef.current = [];
+      setFailedCount(0);
+      sessionAttemptRef.current = startReviewAttempt(
+        reviewedAttemptKeysRef.current,
+        sessionAttemptRef.current,
+      );
+      setDueCards(cards);
+      dispatchIfMounted({ type: 'START_SESSION' });
+    },
+    [dispatchIfMounted, prepareStartSession],
+  );
+
+  const processCardReview = useCallback(
+    (card: Flashcard, rating: number) => {
+      const currentGroup = groupRef.current;
+      if (!currentGroup) return;
+      if (
+        tryMarkCardReviewed(reviewedAttemptKeysRef.current, sessionAttemptRef.current, card.id)
+      ) {
+        onCardReviewedRef.current(currentGroup.id, card.id, rating);
+      }
+    },
+    [groupRef, onCardReviewedRef],
+  );
+
+  const waitUntilReleased = useCallback(async () => {
+    while (holdingRef.current) {
+      await sleep(WAIT_RELEASE_POLL_MS);
+    }
+  }, []);
+
+  const advanceToNextCard = useCallback(async () => {
+    await waitUntilReleased();
+    const nextIndex = stateRef.current.currentCardIndex + 1;
+    if (nextIndex >= dueCardsRef.current.length) {
+      dispatchIfMounted({ type: 'FINISH_SESSION' });
+    } else {
+      dispatchIfMounted({ type: 'ADVANCE_CARD', nextCardIndex: nextIndex });
+    }
+  }, [dispatchIfMounted, dueCardsRef, stateRef, waitUntilReleased]);
+
+  const handleRating = useCallback(
+    async (rating: number) => {
+      if (currentCardReviewStateRef.current !== 'none') return;
+      const index = stateRef.current.currentCardIndex;
+      if (index >= dueCardsRef.current.length || !groupRef.current) return;
+      const card = dueCardsRef.current[index];
+      if (!card) return;
+      playRatingHaptic(rating);
+      if (rating === 1) {
+        markCardFailed(card);
+      }
+      processCardReview(card, rating);
+      currentCardReviewStateRef.current = 'manuallyRated';
+      await advanceToNextCard();
+    },
+    [
+      advanceToNextCard,
+      dueCardsRef,
+      groupRef,
+      markCardFailed,
+      processCardReview,
+      stateRef,
+    ],
+  );
+
+  const getFreshCards = useCallback(
+    (cards: Flashcard[]) => {
+      const currentGroup = groupRef.current;
+      if (!currentGroup) return cards;
+
+      const cardsById = new Map(currentGroup.cards.map((card) => [card.id, card]));
+      return cards.map((card) => cardsById.get(card.id) ?? card);
+    },
+    [groupRef],
+  );
+
+  const restartSession = useCallback(() => {
+    startSession(getFreshCards(allCardsRef.current));
+  }, [getFreshCards, startSession]);
+
+  const restartFailed = useCallback(() => {
+    if (failedCardsRef.current.length > 0) {
+      startSession(getFreshCards(failedCardsRef.current));
+    }
+  }, [getFreshCards, startSession]);
 
   useEffect(() => {
     return () => {

@@ -1,6 +1,5 @@
 export const es: Record<string, string> = {
   // Common
-  'app.title': 'RayColl',
   'nav.dashboard': 'Panel',
   'route.study': 'Estudiar',
   'route.browse': 'Explorar tarjetas',
@@ -15,7 +14,6 @@ export const es: Record<string, string> = {
   'btn.logout': 'Cerrar sesión',
   'btn.discard': 'Descartar',
   'auth.local': 'Modo local',
-  'auth.welcome': 'Bienvenido, {name}',
   'auth.migration.title': 'Datos locales encontrados',
   'auth.migration.desc':
     'Tienes barajas locales de una sesión anterior. ¿Quieres transferirlas a tu cuenta o empezar desde cero?',
@@ -31,7 +29,6 @@ export const es: Record<string, string> = {
   'sync.status.syncing': 'Sincronizando cambios...',
   'sync.status.offline':
     'Modo sin conexión — los cambios se guardan en este dispositivo y se sincronizarán cuando vuelvas a estar en línea.',
-  'dialog.delete.title': '¿Estás seguro?',
   'dialog.delete.desc': 'Esta acción no se puede deshacer.',
   'dialog.delete_permanent.title': '¿Eliminar permanentemente?',
   'dialog.delete_permanent.desc':
@@ -53,22 +50,12 @@ export const es: Record<string, string> = {
   'cards_count.many': '{count} tarjetas',
   'cards_count.other': '{count} tarjetas',
   'dashboard.no_groups': 'No se encontraron barajas. Haz clic en + para añadir una.',
-  'dashboard.create_title': 'Crear baraja',
   'dashboard.name_label': 'Nombre de la baraja',
-  'dashboard.langs_label': 'Idiomas de las páginas (ej. en-US, pl-PL)',
-  'dashboard.pages_label': 'Nombres de las páginas (ej. Palabra, Traducción)',
   'dashboard.due_count': 'Pendiente: {count}',
-  'dashboard.mastery': 'Dominado: {percent}%',
-  'dashboard.tooltip.study': 'Estudiar',
-  'dashboard.tooltip.browse': 'Ver tarjetas',
-  'dashboard.tooltip.settings': 'Ajustes de baraja',
 
   // Study
-  'study.finished': '¡Sesión de repaso terminada! 🎉',
   'study.finished_desc': 'Todas las tarjetas programadas para hoy han sido repasadas.',
   'study.no_due': 'No hay tarjetas pendientes de repaso.',
-  'study.status.listening': 'Escuchando...',
-  'study.status.speaking': 'Hablando...',
   'study.match_percent': 'Coincidencia: {percent}%',
   'study.match_percent_threshold': 'Coincidencia: {percent}% / umbral {threshold}%',
   'study.rating.1': 'Otra vez',
@@ -92,7 +79,6 @@ export const es: Record<string, string> = {
 
   // Browse
   'browse.search_placeholder': 'Buscar tarjetas...',
-  'browse.add_card': 'Añadir tarjeta',
   'browse.edit_card': 'Editar tarjeta',
   'browse.no_cards': 'No se encontraron tarjetas.',
   'browse.min_filled_pages': 'Rellena al menos 2 campos para guardar esta tarjeta.',
@@ -105,15 +91,12 @@ export const es: Record<string, string> = {
   'import.separator': 'Separador',
   'import.preview': 'Vista previa',
   'import.btn': 'Importar {count} tarjetas',
-  'import.success': '¡Se importaron con éxito {count} tarjetas!',
   'import.name_placeholder':
     'Pegue datos — el separador y número de páginas se detectarán automáticamente',
-  'import.upload_btn': 'Subir archivo (.csv, .txt, .json)',
   'import.sep.tab': 'Tabulador',
   'import.sep.semicolon': 'Punto y coma (;)',
   'import.sep.comma': 'Coma (,)',
   'import.sep.pipe': 'Barra (|)',
-  'import.sep.custom': 'Personalizado',
   'import.sep.current_custom': 'Actual',
   'import.sep.set_custom': 'Establecer personalizado',
   'import.first_row_header': 'La primera fila es un encabezado',
@@ -122,8 +105,6 @@ export const es: Record<string, string> = {
   'import.validation.source_required': 'Paste or upload at least one flashcard.',
   'import.pages_count': 'Páginas:',
   'import.page_label': 'Página {index}',
-  'import.import_create_btn': 'Importar y crear baraja',
-  'import.preview_rows': 'Vista previa ({count} filas)',
   'import.page_hidden': ' (oculta)',
 
   // Stats
@@ -131,7 +112,6 @@ export const es: Record<string, string> = {
   'stats.decks_title': 'Mazos',
   'stats.cards_title': 'Tarjetas',
   'stats.heatmap_title': 'Actividad en los últimos 140 días',
-  'stats.progress_title': 'Progreso de la baraja',
   'stats.streak': 'Racha de días',
   'stats.active_days': 'Días activos',
   'stats.due_cards': 'Pendientes',
@@ -150,24 +130,19 @@ export const es: Record<string, string> = {
   'settings.section.general': 'General',
   'settings.section.cards': 'Tarjetas',
   'settings.section.study': 'Estudio',
-  'settings.modes_title': 'Modo de estudio',
-  'settings.steps_title': 'Secuencia de pasos',
   'settings.archive_btn': 'Archivar mazo',
   'settings.rename_label': 'Nombre de la baraja',
   'settings.pages_config': 'Configuración de páginas',
-  'settings.reorder_columns': 'Reordenar columnas',
   'settings.active_mode': 'Modo de estudio activo',
   'settings.study_scope': 'Alcance del estudio',
   'settings.card_order': 'Orden de tarjetas',
   'settings.card_order.sequential': 'En orden',
   'settings.card_order.random': 'Aleatorio',
   'settings.card_order.hardest': 'Más difíciles primero',
-  'settings.which_cards': 'Qué tarjetas estudiar',
   'settings.mode_steps': 'Pasos del Modo "{name}"',
   'settings.add_step_btn': 'Añadir paso',
   'settings.reset_mode_btn': 'Restablecer predeterminado',
   'settings.create_mode_btn': 'Crear nuevo modo',
-  'settings.new_mode_name': 'Nombre del modo',
   'settings.save_mode_btn': 'Guardar modo',
   'settings.dialog.add_step.title': 'Añadir paso',
   'settings.dialog.add_step.type': 'Tipo',
@@ -198,8 +173,6 @@ export const es: Record<string, string> = {
   'app_settings.tts_rate': 'Velocidad de voz de TTS',
   'app_settings.export_import': 'Exportar / Importar datos',
   'app_settings.export_btn': 'Exportar estado a JSON',
-  'app_settings.import_placeholder': 'Pegue el JSON exportado aquí...',
-  'app_settings.import_btn': 'Importar estado',
   'app_settings.import_file_btn': 'Importar desde archivo',
   'app_settings.export_error': 'Export fallido.',
   'app_settings.import_success': '¡Import completado!',
@@ -209,10 +182,6 @@ export const es: Record<string, string> = {
   'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
   'app_settings.dynamic_colors.desc':
     'Extraer colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
-  'app_settings.dynamic_colors.enabled': 'Activado',
-  'app_settings.dynamic_colors.disabled': 'Desactivado',
-  'app_settings.archived': 'Archivados',
-  'app_settings.archived_open': 'Abrir archivo',
   // Archive
   'archive.title': 'Archivados',
   'archive.empty': 'No hay mazos archivados.',
@@ -220,7 +189,6 @@ export const es: Record<string, string> = {
   'archive.auto_delete_tomorrow': 'Se elimina mañana',
   'archive.auto_delete_today': 'Se elimina hoy',
   'archive.delete_permanently': 'Eliminar permanentemente',
-  'archive.decks_count': '{count} archivados',
 
   // Mode names
   'mode.classic.name': 'Clásico',
@@ -312,7 +280,6 @@ export const es: Record<string, string> = {
 
   // Study modes screen
   'app_settings.study_modes': 'Modos de estudio',
-  'app_settings.study_modes.desc': 'Edita o elimina los modos de estudio',
   'study_modes.title': 'Modos de estudio',
   'study_modes.steps_count': 'Pasos: {count}',
   'study_modes.built_in': 'integrado',
@@ -342,17 +309,12 @@ export const es: Record<string, string> = {
   'srs.badge.now': 'Ahora',
 
   // Additional Filters
-  'filter.learning': 'Aprendiendo',
   'filter.mastered': 'Dominada',
 
   // Tooltips in Browse
-  'browse.tooltip.mastery': 'Dominio: {percent}%',
-  'browse.tooltip.repetitions': 'Repeticiones: {count}',
-  'browse.tooltip.review_in': 'Repaso en: {time}',
   'browse.delete_card': 'Eliminar tarjeta',
 
   // Danger zone in App Settings
-  'app_settings.danger_zone': 'Zona de peligro',
 
   // Update notification
   'update.updated': 'App actualizada',

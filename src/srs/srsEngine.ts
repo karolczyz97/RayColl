@@ -59,7 +59,7 @@ function nextForgetStability(d: number, s: number, r: number): number {
 }
 
 export function calculateFsrs(current: SrsState, rawRating: number): SrsState {
-  const rating = Math.max(1, Math.min(4, Math.round(rawRating)));
+  const rating = clamp(Math.round(rawRating), 1, 4);
   const now = Date.now();
   const elapsedMs = now - (current.lastReviewTimestamp || now);
   const elapsedDays = Math.max(elapsedMs / (1000 * 60 * 60 * 24), 0);

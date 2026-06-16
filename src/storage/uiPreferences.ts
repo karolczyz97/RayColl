@@ -40,9 +40,6 @@ export async function setUiPreference(
   uiPreferenceCache.set(key, value);
 }
 
-export function clearUiPreferenceCache() {
-  uiPreferenceCache.clear();
-}
 
 function isUiPreferenceStorageKey(key: string): key is UiPreferenceStorageKey {
   return UI_PREFERENCE_STORAGE_KEYS.includes(key as UiPreferenceStorageKey);

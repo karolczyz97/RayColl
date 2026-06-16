@@ -102,6 +102,38 @@ describe('useImportDeckDraft cascade', () => {
     expect(hookRef.current!.pageNames.slice(0, 2)).toEqual(['a', 'b']);
   });
 
+  it('reacts to separator changes', () => {
+    const hookRef = renderDraft();
+
+    act(() => {
+      hookRef.current!.handlePaste();
+      hookRef.current!.handleTextChange('a,b\nc,d');
+    });
+    settle();
+
+    // Default separator is auto-detected.
+    expect(hookRef.current!.rawColumnCount).toBe(2);
+
+    // Force incorrect separator.
+    act(() => {
+      hookRef.current!.handleSepKeyChange('tab');
+    });
+    settle();
+
+    expect(hookRef.current!.rawColumnCount).toBe(2);
+    expect(hookRef.current!.cards[0].pages[0]).toBe('a,b');
+    expect(hookRef.current!.cards[0].pages[1]).toBe('');
+
+    // Restore correct custom separator.
+    act(() => {
+      hookRef.current!.handleSepKeyChange('custom', ',');
+    });
+    settle();
+
+    expect(hookRef.current!.rawColumnCount).toBe(2);
+    expect(hookRef.current!.cards[0].pages).toEqual(['a', 'b']);
+  });
+
   it('clears the preview when the source text is emptied', () => {
     const hookRef = renderDraft();
 
