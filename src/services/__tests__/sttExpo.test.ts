@@ -35,7 +35,7 @@ jest.mock('expo-speech-recognition', () => {
 });
 
 // eslint-disable-next-line import/first
-import { ExpoSttService } from '../sttExpo';
+import { ExpoSttService } from '@/services/sttExpo';
 // eslint-disable-next-line import/first
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 

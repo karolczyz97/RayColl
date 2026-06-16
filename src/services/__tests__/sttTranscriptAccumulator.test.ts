@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { createSttTranscriptAccumulator } from '../sttTranscriptAccumulator';
+import { createSttTranscriptAccumulator } from '@/services/sttTranscriptAccumulator';
 
 describe('createSttTranscriptAccumulator', () => {
   it('accumulates multiple final segments', () => {

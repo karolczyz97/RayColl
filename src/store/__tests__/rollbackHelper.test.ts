@@ -1,4 +1,4 @@
-import { captureSnapshot, persistWithRollback } from '../rollbackHelper';
+import { captureSnapshot, persistWithRollback } from '@/store/rollbackHelper';
 import type { StoreData } from '@/types/models';
 
 function makeSnapshot(label: string): StoreData {

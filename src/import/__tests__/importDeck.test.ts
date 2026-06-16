@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { validateImportDeckPayload } from '../importDeck';
+import { validateImportDeckPayload } from '@/import/importDeck';
 import { MAX_STORED_PAGE_COUNT } from '@/constants/pages';
 
 describe('importDeck', () => {

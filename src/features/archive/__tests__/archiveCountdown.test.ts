@@ -2,7 +2,7 @@ import { ARCHIVE_RETENTION_MS } from '@/constants/archive';
 import {
   getArchiveCountdownLabelKey,
   getArchiveDaysRemaining,
-} from '../archiveCountdown';
+} from '@/features/archive/archiveCountdown';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

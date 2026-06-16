@@ -1,5 +1,5 @@
 import type { Flashcard } from '@/types/models';
-import { pairFlashcardRows } from '../FlashcardList';
+import { pairFlashcardRows } from '@/features/flashcards/FlashcardList';
 
 function makeCard(id: string): Flashcard {
   return {

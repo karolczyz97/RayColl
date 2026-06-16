@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { validateBackupData, type BackupData } from '../backupValidation';
-import type { FlashcardGroup, StudyMode } from '../../types/models';
+import { validateBackupData, type BackupData } from '@/utils/backupValidation';
+import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 
 function makeValidGroup(): FlashcardGroup {

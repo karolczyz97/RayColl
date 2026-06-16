@@ -1,9 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { createPersistenceQueueController } from '../persistenceQueue';
-import type { PersistenceSnapshot, PersistenceQueueCallbacks } from '../persistenceQueue';
-import type { FlashcardGroup } from '../../../types/models';
-import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
+import { createPersistenceQueueController } from '@/store/persistence/persistenceQueue';
+import type { PersistenceSnapshot, PersistenceQueueCallbacks } from '@/store/persistence/persistenceQueue';
+import type { FlashcardGroup } from '@/types/models';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
 
 function createGroup(id: string): FlashcardGroup {
   return {

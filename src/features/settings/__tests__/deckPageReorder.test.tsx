@@ -1,4 +1,4 @@
-import { reorderDeckPages } from '../deckPageReorder';
+import { reorderDeckPages } from '@/features/settings/deckPageReorder';
 import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
 import { createNewSrsState } from '@/srs/srsEngine';
 import type { FlashcardGroup } from '@/types/models';

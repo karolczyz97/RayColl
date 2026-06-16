@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { deepEqual } from '../deepEqual';
+import { deepEqual } from '@/utils/deepEqual';
 
 describe('deepEqual', () => {
   it('primitives', () => {

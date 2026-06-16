@@ -7,7 +7,7 @@ import {
   expandModeSteps,
   expandWithSource,
   normalizeCompoundStep,
-} from '../compoundSteps';
+} from '@/features/settings/compoundSteps';
 
 function compound(step: CompoundStep['params']): CompoundStep {
   return { type: 'compound', version: 1, params: step };

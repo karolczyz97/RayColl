@@ -1,6 +1,6 @@
 import { describe, it, expect, jest } from '@jest/globals';
-import { shouldTriggerMigration, getGuestHasData } from '../../useStoreBootstrap';
-import type { FlashcardGroup, StudyMode } from '../../../types/models';
+import { shouldTriggerMigration, getGuestHasData } from '@/store/useStoreBootstrap';
+import type { FlashcardGroup, StudyMode } from '@/types/models';
 
 jest.mock('@/services/firebase', () => ({
   onAuthChange: jest.fn(),

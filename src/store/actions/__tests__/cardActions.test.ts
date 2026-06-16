@@ -1,13 +1,13 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { createNewSrsState } from '../../../srs/srsEngine';
+import { createNewSrsState } from '@/srs/srsEngine';
 import {
   addFlashcardsBulkAction,
   deleteFlashcardAction,
   reviewCardAction,
   updateFlashcardAction,
-} from '../cardActions';
-import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
+} from '@/store/actions/cardActions';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
 
 describe('cardActions', () => {
   const originalCard = {

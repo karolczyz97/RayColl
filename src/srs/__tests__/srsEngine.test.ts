@@ -6,19 +6,19 @@ import {
   matchSpeech,
   mapMatchToRating,
   getCardCategory,
-} from '../srsEngine';
+} from '@/srs/srsEngine';
 import {
   getVisiblePages,
   getVisiblePageNames,
-} from '../../store/selectors/pages';
-import { filterCards } from '../../store/selectors/cardSelectors';
+} from '@/store/selectors/pages';
+import { filterCards } from '@/store/selectors/cardSelectors';
 import {
   DEFAULT_CARD_ORDER,
   DEFAULT_STUDY_FILTER,
   normalizeStoreData,
-} from '../../store/storeDataNormalization';
-import { validateBackupData } from '../../utils/backupValidation';
-import type { Flashcard, FlashcardGroup } from '../../types/models';
+} from '@/store/storeDataNormalization';
+import { validateBackupData } from '@/utils/backupValidation';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
 
 function makeCard(overrides: Partial<Flashcard> = {}): Flashcard {
   return {

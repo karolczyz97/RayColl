@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import type { AtomicStep } from '@/types/models';
-import { hasBlockingStepIssue, validateModeSteps } from '../validateModeSteps';
+import { hasBlockingStepIssue, validateModeSteps } from '@/features/settings/validateModeSteps';
 
 describe('validateModeSteps', () => {
   it('flags a page index out of range as a blocking error', () => {

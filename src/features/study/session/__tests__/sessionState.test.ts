@@ -1,27 +1,27 @@
 import { describe, it, expect } from '@jest/globals';
 
-import type { Flashcard, FlashcardGroup } from '../../../../types/models';
-import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '../sessionReducer';
-import type { SessionAction, StudySessionState } from '../sessionTypes';
-import { NO_ANSWER_RESULT } from '../sessionTypes';
+import type { Flashcard, FlashcardGroup } from '@/types/models';
+import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
+import type { SessionAction, StudySessionState } from '@/features/study/session/sessionTypes';
+import { NO_ANSWER_RESULT } from '@/features/study/session/sessionTypes';
 import {
   areAllActivePagesRevealed,
   getActivePageIndexes,
   getNextHiddenPageIndex,
   uniquePageIndexes,
-} from '../sessionUtils';
+} from '@/features/study/session/sessionUtils';
 import {
   buildSessionProgressItems,
   getSessionProgressSegments,
-} from '../sessionProgress';
+} from '@/features/study/session/sessionProgress';
 import {
   getReviewAttemptKey,
   startReviewAttempt,
   tryMarkCardReviewed,
-} from '../sessionReview';
-import { formatStepSummary } from '../../../settings/studyModeUtils';
-import { calculateFsrs, createNewSrsState } from '../../../../srs/srsEngine';
-import { recordActivityAction } from '../../../../store/actions/cardActions';
+} from '@/features/study/session/sessionReview';
+import { formatStepSummary } from '@/features/settings/studyModeUtils';
+import { calculateFsrs, createNewSrsState } from '@/srs/srsEngine';
+import { recordActivityAction } from '@/store/actions/cardActions';
 
 function makeGroup(pageCount: number, activePageCount: number): FlashcardGroup {
   return {

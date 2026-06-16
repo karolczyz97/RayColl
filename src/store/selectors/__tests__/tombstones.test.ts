@@ -1,8 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { selectLiveStudyModes, selectActiveGroups, selectArchivedGroups, isArchived } from '../liveSelectors';
-import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
-import { createNewSrsState } from '../../../srs/srsEngine';
+import { selectLiveStudyModes, selectActiveGroups, selectArchivedGroups, isArchived } from '@/store/selectors/liveSelectors';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
+import { createNewSrsState } from '@/srs/srsEngine';
 
 describe('tombstones', () => {
   const now = Date.now();

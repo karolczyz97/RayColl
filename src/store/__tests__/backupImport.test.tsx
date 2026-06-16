@@ -2,7 +2,7 @@ import {
   IMPORT_STATE_JSON_ERROR,
   normalizeBackupImportData,
   parseBackupJson,
-} from '../useStoreActions';
+} from '@/store/useStoreActions';
 
 describe('parseBackupJson', () => {
   it('parses valid JSON', () => {

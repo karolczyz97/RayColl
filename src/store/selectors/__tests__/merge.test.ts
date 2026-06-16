@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { createNewSrsState } from '../../../srs/srsEngine';
+import { createNewSrsState } from '@/srs/srsEngine';
 import {
   mergeCards,
   mergeGroups,
@@ -9,8 +9,8 @@ import {
   getLatestEdit,
   mergeSrsStateNeverRegress,
   mergeActivityHeatmap,
-} from '../merge';
-import { DEFAULT_CARD_ORDER, DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
+} from '@/store/selectors/merge';
+import { DEFAULT_CARD_ORDER, DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
 
 describe('merge', () => {
   const now = Date.now();

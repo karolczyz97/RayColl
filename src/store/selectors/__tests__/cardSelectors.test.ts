@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { CARD_ORDERS } from '@/constants/cardOrder';
 import type { Flashcard } from '@/types/models';
-import { getDueCards } from '../cardSelectors';
+import { getDueCards } from '@/store/selectors/cardSelectors';
 
 function makeCard(id: string, difficulty: number, nextReviewTimestamp = 0): Flashcard {
   return {

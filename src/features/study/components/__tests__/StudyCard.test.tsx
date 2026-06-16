@@ -2,8 +2,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import type { Flashcard, FlashcardGroup } from '@/types/models';
 import { createNewSrsState } from '@/srs/srsEngine';
-import { StudyCard } from '../StudyCard';
-import { CardPageSection } from '../CardPageSection';
+import { StudyCard } from '@/features/study/components/StudyCard';
+import { CardPageSection } from '@/features/study/components/CardPageSection';
 
 jest.mock('@/i18n', () => ({
   useI18n: () => ({ t: (key: string) => key }),

@@ -3,9 +3,9 @@ import { act, render } from '@testing-library/react-native';
 import type { SetStateAction } from 'react';
 import type { Flashcard, FlashcardGroup, StoreData, StudyMode } from '@/types/models';
 import { createNewSrsState } from '@/srs/srsEngine';
-import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
-import { useStoreActionsCore } from '../useStoreActions';
-import type { PersistOptions } from '../FlashcardStoreTypes';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
+import { useStoreActionsCore } from '@/store/useStoreActions';
+import type { PersistOptions } from '@/store/FlashcardStoreTypes';
 
 function makeCard(id = 'card-1'): Flashcard {
   return {

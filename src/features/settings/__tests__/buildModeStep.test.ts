@@ -1,6 +1,6 @@
 import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
-import type { BuildModeStepForm } from '../buildModeStep';
-import { buildModeStep } from '../buildModeStep';
+import type { BuildModeStepForm } from '@/features/settings/buildModeStep';
+import { buildModeStep } from '@/features/settings/buildModeStep';
 
 function makeForm(overrides: Partial<BuildModeStepForm> = {}): BuildModeStepForm {
   return {

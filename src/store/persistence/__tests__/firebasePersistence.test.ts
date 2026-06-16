@@ -78,7 +78,7 @@ describe('loadCloudData', () => {
     mockLoadUserData.mockResolvedValueOnce(rawData);
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { loadCloudData } = require('../firebasePersistence');
+    const { loadCloudData } = require('@/store/persistence/firebasePersistence');
 
     const result = await loadCloudData('uid-1');
     expect(result).toBe(rawData);
@@ -90,7 +90,7 @@ describe('loadCloudData', () => {
     mockLoadUserData.mockResolvedValueOnce(null);
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { loadCloudData } = require('../firebasePersistence');
+    const { loadCloudData } = require('@/store/persistence/firebasePersistence');
 
     const result = await loadCloudData('uid-2');
     expect(result).toBeNull();
@@ -104,7 +104,7 @@ describe('loadCloudData', () => {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { loadCloudData } = require('../firebasePersistence');
+    const { loadCloudData } = require('@/store/persistence/firebasePersistence');
 
     await expect(loadCloudData('uid-3')).rejects.toThrow('Invalid backup data');
   });
@@ -124,7 +124,7 @@ describe('saveCloudData', () => {
     const data = { groups: [], studyModes: [], activityHeatmap: {} };
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { saveCloudData } = require('../firebasePersistence');
+    const { saveCloudData } = require('@/store/persistence/firebasePersistence');
 
     await saveCloudData('uid-save-1', data);
     expect(mockValidateBackupData).toHaveBeenCalledWith(data);
@@ -139,7 +139,7 @@ describe('saveCloudData', () => {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { saveCloudData } = require('../firebasePersistence');
+    const { saveCloudData } = require('@/store/persistence/firebasePersistence');
 
     await expect(saveCloudData('uid-save-2', data)).rejects.toThrow('Validation failed');
     expect(mockSaveUserData).not.toHaveBeenCalled();
@@ -161,7 +161,7 @@ describe('saveCloudData', () => {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { saveCloudData } = require('../firebasePersistence');
+    const { saveCloudData } = require('@/store/persistence/firebasePersistence');
 
     await saveCloudData(userId, initialData);
     mockSaveUserData.mockClear();

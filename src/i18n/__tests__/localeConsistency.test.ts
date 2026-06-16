@@ -2,11 +2,11 @@ import { describe, expect, it } from '@jest/globals';
 import { readdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { en } from '../locales/en';
-import { pl } from '../locales/pl';
-import { de } from '../locales/de';
-import { es } from '../locales/es';
-import { it as itLocale } from '../locales/it';
+import { en } from '@/i18n/locales/en';
+import { pl } from '@/i18n/locales/pl';
+import { de } from '@/i18n/locales/de';
+import { es } from '@/i18n/locales/es';
+import { it as itLocale } from '@/i18n/locales/it';
 
 const LOCALES = { pl, de, es, it: itLocale } as const;
 

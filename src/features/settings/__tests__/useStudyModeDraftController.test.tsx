@@ -24,9 +24,9 @@ jest.mock('@/i18n', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import { useStudyModeDraftController } from '../useStudyModeDraftController';
+import { useStudyModeDraftController } from '@/features/settings/useStudyModeDraftController';
 // eslint-disable-next-line import/first
-import { defaultCompoundParams } from '../compoundSteps';
+import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 
 function makeMode(overrides: Partial<StudyMode> = {}): StudyMode {
   return {

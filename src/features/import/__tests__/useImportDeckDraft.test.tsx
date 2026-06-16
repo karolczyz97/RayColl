@@ -10,9 +10,9 @@ jest.mock('expo-document-picker', () => ({
 const mockImportDeck = jest.fn(async () => ({ ok: true }));
 
 // eslint-disable-next-line import/first
-import { getActiveSepValue } from '../importDraftUtils';
+import { getActiveSepValue } from '@/features/import/importDraftUtils';
 // eslint-disable-next-line import/first
-import { useImportDeckDraft } from '../useImportDeckDraft';
+import { useImportDeckDraft } from '@/features/import/useImportDeckDraft';
 
 type Draft = ReturnType<typeof useImportDeckDraft>;
 

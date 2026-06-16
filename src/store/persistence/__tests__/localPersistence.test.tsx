@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { STORAGE_KEYS } from '@/constants/storageKeys';
-import { loadLocalData } from '../localPersistence';
+import { loadLocalData } from '@/store/persistence/localPersistence';
 
 describe('localPersistence', () => {
   beforeEach(async () => {

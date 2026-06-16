@@ -6,7 +6,7 @@ import {
   getPreviewRows,
   replaceHeaderRowInText,
   serializeImportSourceText,
-} from '../importDraftHelpers';
+} from '@/features/import/importDraftHelpers';
 
 describe('importDraftHelpers', () => {
   describe('getPreviewRows', () => {

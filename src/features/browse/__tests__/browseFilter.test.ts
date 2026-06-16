@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { toggleCategoryReducer, shouldShowCard } from '../browseFilter';
-import type { SrsCardCategory } from '../../../srs/srsEngine';
+import { toggleCategoryReducer, shouldShowCard } from '@/features/browse/browseFilter';
+import type { SrsCardCategory } from '@/srs/srsEngine';
 
 const ALL: SrsCardCategory[] = ['new', 'learning', 'review', 'mastered'];
 

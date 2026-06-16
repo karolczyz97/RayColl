@@ -1,5 +1,5 @@
 import { getLocalDateString } from '@/utils/date';
-import { recordActivityAction } from '../cardActions';
+import { recordActivityAction } from '@/store/actions/cardActions';
 
 describe('activityActions', () => {
   afterEach(() => {

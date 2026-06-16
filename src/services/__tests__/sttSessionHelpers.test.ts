@@ -1,4 +1,4 @@
-import { createSttSession } from '../sttSessionHelpers';
+import { createSttSession } from '@/services/sttSessionHelpers';
 
 describe('createSttSession', () => {
   beforeEach(() => {

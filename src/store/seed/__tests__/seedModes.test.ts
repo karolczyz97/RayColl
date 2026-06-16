@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { createSeedModes } from '../seedModes';
+import { createSeedModes } from '@/store/seed/seedModes';
 
 describe('createSeedModes', () => {
   it('makes the classic preset reveal all pages explicitly before ratings', () => {

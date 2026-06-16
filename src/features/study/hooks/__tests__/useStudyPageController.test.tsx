@@ -45,7 +45,7 @@ jest.mock('expo-router', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import { useStudyPageController } from '../useStudyPageController';
+import { useStudyPageController } from '@/features/study/hooks/useStudyPageController';
 
 function makeDueCard(): Flashcard {
   return {

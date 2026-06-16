@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { computeStreak } from '../stats';
+import { computeStreak } from '@/store/selectors/stats';
 import { getLocalDateString } from '@/utils/date';
 
 function daysAgo(n: number): string {

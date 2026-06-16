@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { importDraftReducer, createInitialDraftState } from '../importDraftReducer';
+import { importDraftReducer, createInitialDraftState } from '@/features/import/importDraftReducer';
 
 describe('importDraftReducer', () => {
   it('dismissing the snackbar keeps the blocking importError (cannot unblock a stale import)', () => {

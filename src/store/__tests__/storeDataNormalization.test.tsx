@@ -3,7 +3,7 @@ import {
   normalizeStoreData,
   normalizeGroup,
   normalizeStudyMode,
-} from '../storeDataNormalization';
+} from '@/store/storeDataNormalization';
 import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
 import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 

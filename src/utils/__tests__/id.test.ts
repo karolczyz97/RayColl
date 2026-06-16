@@ -24,7 +24,7 @@ function loadUid(expoRandomUUID?: () => string) {
     randomUUID: expoRandomUUID,
   }));
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../id').uid as typeof import('../id').uid;
+  return require('@/utils/id').uid as typeof import('@/utils/id').uid;
 }
 
 describe('uid', () => {

@@ -9,7 +9,7 @@ import {
   normalizeImportCell,
   parseCSV,
   serializeCSV,
-} from '../importParser';
+} from '@/import/importParser';
 
 describe('importParser', () => {
   describe('detectSeparator', () => {

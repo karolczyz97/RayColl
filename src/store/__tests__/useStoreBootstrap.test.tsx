@@ -3,12 +3,12 @@ import { describe, it, jest, expect, beforeEach } from '@jest/globals';
 import { render, act, waitFor } from '@testing-library/react-native';
 import type { User } from 'firebase/auth';
 import type { StoreData, FlashcardGroup, StudyMode } from '@/types/models';
-import { DEFAULT_STUDY_FILTER } from '../storeDataNormalization';
-import { useStoreBootstrap, getGuestHasData } from '../useStoreBootstrap';
-import { loadCloudData } from '../persistence/firebasePersistence';
-import { loadLocalData } from '../persistence/localPersistence';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
+import { useStoreBootstrap, getGuestHasData } from '@/store/useStoreBootstrap';
+import { loadCloudData } from '@/store/persistence/firebasePersistence';
+import { loadLocalData } from '@/store/persistence/localPersistence';
 import { onAuthChange } from '@/services/firebase';
-import { createSeedModes } from '../seed/seedModes';
+import { createSeedModes } from '@/store/seed/seedModes';
 
 // Default mock: fires the callback synchronously with null (mirrors the
 // "unconfigured Firebase" contract from src/services/firebase.ts:78-84 and

@@ -8,10 +8,10 @@ import {
   restoreGroupAction,
   purgeExpiredArchivesAction,
   setCardOrderAction,
-} from '../groupActions';
+} from '@/store/actions/groupActions';
 import { CARD_ORDERS } from '@/constants/cardOrder';
-import { DEFAULT_STUDY_FILTER } from '../../storeDataNormalization';
-import { createNewSrsState } from '../../../srs/srsEngine';
+import { DEFAULT_STUDY_FILTER } from '@/store/storeDataNormalization';
+import { createNewSrsState } from '@/srs/srsEngine';
 import type { Flashcard } from '@/types/models';
 
 describe('groupActions', () => {

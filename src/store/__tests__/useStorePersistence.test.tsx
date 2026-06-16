@@ -3,10 +3,10 @@ import { describe, it, jest, expect, beforeEach } from '@jest/globals';
 import { render, act } from '@testing-library/react-native';
 import type { User } from 'firebase/auth';
 import type { FlashcardGroup, StudyMode } from '@/types/models';
-import { useStorePersistence } from '../useStorePersistence';
-import { saveLocalData } from '../persistence/localPersistence';
-import { saveCloudData } from '../persistence/firebasePersistence';
-import { usePersistenceQueue } from '../persistence/persistenceQueue';
+import { useStorePersistence } from '@/store/useStorePersistence';
+import { saveLocalData } from '@/store/persistence/localPersistence';
+import { saveCloudData } from '@/store/persistence/firebasePersistence';
+import { usePersistenceQueue } from '@/store/persistence/persistenceQueue';
 
 jest.mock('../persistence/localPersistence', () => ({
   saveLocalData: jest.fn(() => Promise.resolve()),

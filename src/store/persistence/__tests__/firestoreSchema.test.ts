@@ -1,8 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
 
-import { createNewSrsState } from '../../../srs/srsEngine';
-import { normalizeStoreData } from '../../storeDataNormalization';
-import { deepEqual } from '../../../utils/deepEqual';
+import { createNewSrsState } from '@/srs/srsEngine';
+import { normalizeStoreData } from '@/store/storeDataNormalization';
+import { deepEqual } from '@/utils/deepEqual';
 import { DEFAULT_CARD_ORDER } from '@/constants/cardOrder';
 import {
   cloneUserData,
@@ -11,7 +11,7 @@ import {
   deserializeStudyModeDoc,
   serializeDeckDoc,
   type UserData,
-} from '../firestoreSchema';
+} from '@/store/persistence/firestoreSchema';
 import { defaultCompoundParams } from '@/features/settings/compoundSteps';
 
 describe('firestoreSchema', () => {

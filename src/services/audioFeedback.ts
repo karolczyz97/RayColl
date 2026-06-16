@@ -22,17 +22,17 @@ async function playSound(asset: AudioSource) {
 }
 
 export function playMicOnSound(): void {
-  playSound(require('../../assets/sounds/mic_on.mp3'));
+  playSound(require('@/assets/sounds/mic_on.mp3'));
 }
 
 export function playMicOffSound(): void {
-  playSound(require('../../assets/sounds/mic_off.mp3'));
+  playSound(require('@/assets/sounds/mic_off.mp3'));
 }
 
 export function playSuccessSound(): void {
-  playSound(require('../../assets/sounds/success.wav'));
+  playSound(require('@/assets/sounds/success.wav'));
 }
 
 export function playErrorSound(): void {
-  playSound(require('../../assets/sounds/error.wav'));
+  playSound(require('@/assets/sounds/error.wav'));
 }
