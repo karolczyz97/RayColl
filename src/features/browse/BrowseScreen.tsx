@@ -115,7 +115,7 @@ export function BrowseScreen() {
       {hasHiddenPages && (
         <AppMenuButton
           align="right"
-          menuWidth={300}
+          menuWidth={TOKENS.menu.wideWidth}
           items={[
             {
               label: t('browse.show_hidden_pages'),

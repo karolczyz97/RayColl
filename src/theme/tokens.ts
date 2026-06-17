@@ -75,6 +75,8 @@ export const TOKENS = {
     gap: 4,
     itemHeight: 48,
     minWidth: 200,
+    // Wider variant for menus holding a label + control row (e.g. a toggle).
+    wideWidth: 300,
   },
   dialog: {
     width: '92%',

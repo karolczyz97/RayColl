@@ -80,18 +80,18 @@ export function AppMenuButton({
               <View style={styles.switchInner}>
                 <Text
                   variant="bodyLarge"
-                  style={{
-                    color: item.destructive ? theme.colors.error : theme.colors.onSurface,
-                    fontWeight: TOKENS.typography.weight.medium,
-                  }}
+                  numberOfLines={1}
+                  style={[
+                    styles.switchLabel,
+                    { color: item.destructive ? theme.colors.error : theme.colors.onSurface },
+                  ]}
                 >
                   {item.label}
                 </Text>
-                <Switch
-                  value={item.selected}
-                  disabled={item.disabled}
-                  pointerEvents="none"
-                />
+                {/* Wrapper delegates all touches to the parent row so the Switch only mirrors state. */}
+                <View pointerEvents="none">
+                  <Switch value={item.selected} disabled={item.disabled} />
+                </View>
               </View>
             </TouchableRipple>
           );
@@ -127,6 +127,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: TOKENS.spacing.md,
     width: '100%',
+  },
+  switchLabel: {
+    flex: 1,
+    fontWeight: TOKENS.typography.weight.medium,
   },
 });
