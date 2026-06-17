@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TOKENS.spacing.md,
+    gap: TOKENS.spacing.xl,
     minWidth: 0,
   },
   backBtn: {
