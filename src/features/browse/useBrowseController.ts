@@ -11,6 +11,7 @@ import { computeCardStats } from '@/store/selectors/stats';
 import { CATEGORY_TO_STATS_KEY, SRS_CATEGORY_ORDER } from '@/theme/srsTokens';
 import { useFlashcardListEditing } from '@/features/flashcards/useFlashcardListEditing';
 import { shouldShowCard, toggleCategoryReducer } from './browseFilter';
+import { groupHasHiddenPages, getVisiblePages } from '@/store/selectors/pages';
 
 export function useBrowseController() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -23,6 +24,19 @@ export function useBrowseController() {
   const isReadOnly = activeGroup ? (activeGroup.archivedAt ?? 0) > 0 : false;
   const [search, setSearch] = useState('');
   const [activeCategories, setActiveCategories] = useState<SrsCardCategory[]>([]);
+  const [prevGroupId, setPrevGroupId] = useState(groupId);
+  const [viewHidden, setViewHidden] = useState(false);
+
+  const hasHiddenPages = activeGroup ? groupHasHiddenPages(activeGroup) : false;
+
+  if (groupId !== prevGroupId) {
+    setPrevGroupId(groupId);
+    setViewHidden(false);
+  }
+
+  if (!hasHiddenPages && viewHidden) {
+    setViewHidden(false);
+  }
   const [editTouchedPageIndexes, setEditTouchedPageIndexes] = useState<Set<number>>(
     () => new Set(),
   );
@@ -40,7 +54,7 @@ export function useBrowseController() {
 
   const toggleCategory = useCallback((category: SrsCardCategory) => {
     setActiveCategories((prev) => toggleCategoryReducer(prev, category, nonEmptyCategories));
-  }, [nonEmptyCategories]);
+  }, [setActiveCategories, nonEmptyCategories]);
 
   const filteredCards = useMemo(() => {
     if (!activeGroup) {
@@ -53,11 +67,16 @@ export function useBrowseController() {
 
     const query = search.toLowerCase();
     if (query) {
-      cards = cards.filter((card) => card.pages.some((page) => page.toLowerCase().includes(query)));
+      cards = cards.filter((card) => {
+        const searchPages = viewHidden 
+          ? card.pages 
+          : getVisiblePages(card, activeGroup);
+        return searchPages.some((page) => page.toLowerCase().includes(query));
+      });
     }
 
     return cards;
-  }, [activeGroup, activeCategories, search]);
+  }, [activeGroup, activeCategories, search, viewHidden]);
 
   const {
     editingId,
@@ -71,7 +90,7 @@ export function useBrowseController() {
     saveEdit: saveEditDraft,
     confirmDeleteCard,
   } = useFlashcardListEditing({
-    pageCount: activeGroup?.activePageCount ?? 0,
+    pageCount: activeGroup?.pageNames.length ?? 0,
     onCreateCard: (pages) => {
       if (activeGroup) {
         store.addFlashcard(activeGroup.id, pages);
@@ -165,5 +184,8 @@ export function useBrowseController() {
     cancelEdit,
     stats,
     toggleCategory,
+    viewHidden,
+    setViewHidden,
+    hasHiddenPages,
   };
 }

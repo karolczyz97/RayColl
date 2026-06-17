@@ -11,3 +11,12 @@ export function getVisiblePages(card: Flashcard, group: FlashcardGroup): string[
 export function getVisiblePageNames(group: FlashcardGroup): string[] {
   return group.pageNames.slice(0, group.activePageCount);
 }
+
+export function groupHasHiddenPages(group: FlashcardGroup): boolean {
+  return group.pageNames.length > group.activePageCount;
+}
+
+export function getAllPages(card: Flashcard, group: FlashcardGroup): string[] {
+  return padArray(card.pages, group.pageNames.length, '');
+}
+

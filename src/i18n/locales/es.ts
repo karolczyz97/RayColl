@@ -83,6 +83,7 @@ export const es: Record<string, string> = {
   'browse.no_cards': 'No se encontraron tarjetas.',
   'browse.min_filled_pages': 'Rellena al menos 2 campos para guardar esta tarjeta.',
   'browse.show_hidden_pages': 'Mostrar páginas ocultas',
+  'browse.options': 'Más opciones',
   'import.upload_file': 'Subir archivo (.csv, .txt, .md)',
 
   // Import

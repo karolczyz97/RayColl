@@ -83,6 +83,7 @@ export const en: Record<string, string> = {
   'browse.no_cards': 'No flashcards found.',
   'browse.min_filled_pages': 'Fill at least 2 pages to save this flashcard.',
   'browse.show_hidden_pages': 'Show hidden pages',
+  'browse.options': 'More options',
   'import.upload_file': 'Upload file (.csv, .txt, .md)',
 
   // Import

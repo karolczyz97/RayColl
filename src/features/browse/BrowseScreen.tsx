@@ -17,6 +17,8 @@ import { TOKENS, getTokenMotionEnterDelay } from '@/theme/tokens';
 import { FlashcardList } from '@/features/flashcards/FlashcardList';
 import { useBrowseController } from './useBrowseController';
 import { useBrowseFilterButtons } from './useBrowseFilterButtons';
+import { useI18n } from '@/i18n';
+import { AppMenuButton } from '@/components/AppMenuButton';
 
 export function BrowseScreen() {
   const scrollbarProps = useStableScrollbarProps();
@@ -49,7 +51,12 @@ export function BrowseScreen() {
     cancelEdit,
     stats,
     toggleCategory,
+    viewHidden,
+    setViewHidden,
+    hasHiddenPages,
   } = controller;
+
+  const { t } = useI18n();
 
   const { showNavigationRail } = useResponsiveLayout();
   const filterButtons = useBrowseFilterButtons(stats, showNavigationRail);
@@ -98,12 +105,34 @@ export function BrowseScreen() {
       />
     ) : undefined
   ) : (
-    <IconButton
-      icon="magnify"
-      iconColor={theme.colors.onBackground}
-      onPress={() => setSearchActive(true)}
-      accessibilityLabel="Search"
-    />
+    <View style={styles.topActionsRow}>
+      <IconButton
+        icon="magnify"
+        iconColor={theme.colors.onBackground}
+        onPress={() => setSearchActive(true)}
+        accessibilityLabel="Search"
+      />
+      {hasHiddenPages && (
+        <AppMenuButton
+          align="right"
+          items={[
+            {
+              label: t('browse.show_hidden_pages'),
+              selected: viewHidden,
+              onPress: () => setViewHidden((v) => !v),
+            },
+          ]}
+          renderAnchor={({ open }) => (
+            <IconButton
+              icon="dots-vertical"
+              iconColor={theme.colors.onBackground}
+              onPress={open}
+              accessibilityLabel={t('browse.options')}
+            />
+          )}
+        />
+      )}
+    </View>
   );
 
   return (
@@ -129,6 +158,7 @@ export function BrowseScreen() {
           emptyLabel={emptyLabel}
           listHeaderContent={listHeaderContent}
           itemAnimationOffset={3}
+          viewHidden={viewHidden}
         />
       </View>
 
@@ -175,6 +205,10 @@ export function BrowseScreen() {
 const styles = StyleSheet.create({
   listHeader: {
     gap: TOKENS.spacing.lg,
+  },
+  topActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   screenContent: {

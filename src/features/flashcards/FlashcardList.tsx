@@ -27,6 +27,7 @@ interface FlashcardListProps {
   itemAnimationOffset?: number;
   className?: string;
   readOnly?: boolean;
+  viewHidden?: boolean;
 }
 
 export function FlashcardList({
@@ -44,13 +45,14 @@ export function FlashcardList({
   itemAnimationOffset = 0,
   className,
   readOnly,
+  viewHidden,
 }: FlashcardListProps) {
   const theme = useTheme();
   const { contentWidth } = useNavigationShell();
   const useTwoColumnLayout = isExpandedWindowSize(contentWidth);
   const fillerCount = useTwoColumnLayout && cards.length % 2 === 1 ? 1 : 0;
 
-  const pageNames = getVisiblePageNames(group);
+  const pageNames = viewHidden ? group.pageNames : getVisiblePageNames(group);
 
   const pageNamesHeader =
     showHeader && cards.length > 0 ? (
@@ -117,13 +119,14 @@ export function FlashcardList({
                 order={itemOrderOffset + index}
                 style={useTwoColumnLayout && styles.cardStretch}
               >
-                <FlashcardListItem
+                 <FlashcardListItem
                   card={item}
                   group={group}
                   onStartEdit={() => onStartEdit(item)}
                   onDelete={() => onDelete(item.id)}
                   readOnly={readOnly}
                   fill={useTwoColumnLayout}
+                  viewHidden={viewHidden}
                 />
               </AnimatedSection>
             </Animated.View>

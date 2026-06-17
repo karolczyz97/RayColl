@@ -83,6 +83,7 @@ export const de: Record<string, string> = {
   'browse.no_cards': 'Keine Karteikarten gefunden.',
   'browse.min_filled_pages': 'Fülle mindestens 2 Felder aus, um diese Karte zu speichern.',
   'browse.show_hidden_pages': 'Ausgeblendete Seiten anzeigen',
+  'browse.options': 'Mehr Optionen',
   'import.upload_file': 'Datei hochladen (.csv, .txt, .md)',
 
   // Import

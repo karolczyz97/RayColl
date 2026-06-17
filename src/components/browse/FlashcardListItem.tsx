@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, IconButton, useTheme, Switch, MD3Theme } from 'react-native-paper';
+import { Text, IconButton, useTheme, MD3Theme } from 'react-native-paper';
 import type { Flashcard, FlashcardGroup, SrsState } from '@/types/models';
 import { getCardCategory } from '@/srs/srsEngine';
 import { AppIcon } from '@/components/AppIcon';
 import { AppCard } from '@/components/AppCard';
 import { SRS_CATEGORIES_TOKENS, getMasteryPercent, getDaysUntilReview } from '@/theme/srsTokens';
 import { TOKENS } from '@/theme/tokens';
-import { getVisiblePages } from '@/store/selectors/pages';
+import { getVisiblePages, getAllPages } from '@/store/selectors/pages';
 import { getReviewStatusColor } from '@/theme/semanticColors';
 import { useI18n } from '@/i18n';
 
@@ -18,6 +18,7 @@ interface FlashcardListItemProps {
   onDelete: () => void;
   readOnly?: boolean;
   fill?: boolean;
+  viewHidden?: boolean;
 }
 
 function srsChip(
@@ -50,14 +51,12 @@ export function FlashcardListItem({
   onDelete,
   readOnly,
   fill,
+  viewHidden = false,
 }: FlashcardListItemProps) {
   const theme = useTheme();
   const { t } = useI18n();
-  const [viewHidden, setViewHidden] = useState(false);
 
   const activeCount = group.activePageCount;
-  const totalCount = card.pages.length;
-  const hasHiddenPages = totalCount > activeCount;
 
   const srs = srsChip(card.srsState, theme, t);
   const mastery = getMasteryPercent(card.srsState);
@@ -65,9 +64,7 @@ export function FlashcardListItem({
 
   const visiblePages = getVisiblePages(card, group);
 
-  const displayPages = viewHidden ? card.pages : visiblePages;
-
-  const toggleLabel = t('browse.show_hidden_pages');
+  const displayPages = viewHidden ? getAllPages(card, group) : visiblePages;
 
   return (
     <AppCard
@@ -97,19 +94,6 @@ export function FlashcardListItem({
           );
         })}
 
-        {hasHiddenPages && (
-          <View style={[styles.toggleRow, { borderTopColor: theme.colors.outlineVariant }]}>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
-              {toggleLabel}
-            </Text>
-            <Switch
-              value={viewHidden}
-              onValueChange={setViewHidden}
-              style={styles.switch}
-              accessibilityLabel={t('browse.show_hidden_pages')}
-            />
-          </View>
-        )}
       </AppCard.Content>
       <AppCard.Actions style={[styles.cardActions, fill && styles.cardActionsPinned]}>
         <View style={styles.cardActionsLeft}>
@@ -190,17 +174,6 @@ const styles = StyleSheet.create({
   },
   pageLine: {
     flexWrap: 'wrap',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: TOKENS.spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: TOKENS.spacing.xs,
-  },
-  switch: {
-    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
   cardActions: {
     padding: TOKENS.spacing.sm,
