@@ -115,7 +115,6 @@ export function BrowseScreen() {
       {hasHiddenPages && (
         <AppMenuButton
           align="right"
-          menuWidth={260}
           items={[
             {
               label: t('browse.show_hidden_pages'),

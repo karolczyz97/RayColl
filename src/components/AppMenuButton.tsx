@@ -26,7 +26,7 @@ export function AppMenuButton({
   renderAnchor,
   items,
   header,
-  menuWidth = TOKENS.menu.minWidth,
+  menuWidth,
   align = 'left',
 }: AppMenuButtonProps) {
   const theme = useTheme();
@@ -44,6 +44,14 @@ export function AppMenuButton({
     setVisible(true);
   }, []);
 
+  const calculatedWidth = React.useMemo(() => {
+    if (menuWidth !== undefined) return menuWidth;
+    const longestLabel = items.reduce((max, item) => (item.label.length > max.length ? item.label : max), '');
+    const hasAnyIcon = items.some(item => item.leadingIcon !== undefined || item.selected !== undefined);
+    const extraSpace = hasAnyIcon ? 80 : 36;
+    return Math.max(TOKENS.menu.minWidth, Math.ceil(longestLabel.length * 8.5 + extraSpace));
+  }, [items, menuWidth]);
+
   return (
     <Menu
       visible={visible}
@@ -57,7 +65,7 @@ export function AppMenuButton({
       contentStyle={[
         menuStyles.menuContent,
         { backgroundColor: theme.colors.elevation.level2 },
-        { width: menuWidth, maxWidth: menuWidth },
+        { width: calculatedWidth, maxWidth: calculatedWidth },
         { transformOrigin: align === 'right' ? 'top right' : 'top left' },
       ]}
       anchor={
