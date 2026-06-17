@@ -75,6 +75,9 @@ export function AppMenuButton({
               key={item.label}
               onPress={item.onPress}
               disabled={item.disabled}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: !!item.selected, disabled: !!item.disabled }}
+              accessibilityLabel={item.label}
               style={[styles.switchRow, { height: TOKENS.menu.itemHeight }]}
             >
               <View style={styles.switchInner}>
@@ -88,8 +91,13 @@ export function AppMenuButton({
                 >
                   {item.label}
                 </Text>
-                {/* Wrapper delegates all touches to the parent row so the Switch only mirrors state. */}
-                <View pointerEvents="none">
+                {/* Decorative: the row above is the accessible switch; this only mirrors
+                    state and is hidden from touches and screen readers. */}
+                <View
+                  pointerEvents="none"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
                   <Switch value={item.selected} disabled={item.disabled} />
                 </View>
               </View>
