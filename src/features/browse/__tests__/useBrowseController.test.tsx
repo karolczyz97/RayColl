@@ -70,8 +70,8 @@ function Harness({ hookRef }: { hookRef: { current: Controller | null } }) {
 
 function renderController() {
   const hookRef: { current: Controller | null } = { current: null };
-  render(<Harness hookRef={hookRef} />);
-  return hookRef;
+  const { rerender } = render(<Harness hookRef={hookRef} />);
+  return { hookRef, rerender };
 }
 
 describe('useBrowseController', () => {
@@ -84,49 +84,70 @@ describe('useBrowseController', () => {
   });
 
   it('correctly initializes state and hasHiddenPages flag', () => {
-    const ref = renderController();
-    expect(ref.current?.viewHidden).toBe(false);
-    expect(ref.current?.hasHiddenPages).toBe(true);
+    const { hookRef } = renderController();
+    expect(hookRef.current?.viewHidden).toBe(false);
+    expect(hookRef.current?.hasHiddenPages).toBe(true);
   });
 
   it('resets viewHidden when hasHiddenPages becomes false', () => {
-    const ref = renderController();
+    const { hookRef, rerender } = renderController();
     act(() => {
-      ref.current?.setViewHidden(true);
+      hookRef.current?.setViewHidden(true);
     });
-    expect(ref.current?.viewHidden).toBe(true);
+    expect(hookRef.current?.viewHidden).toBe(true);
 
     // Simulate page count updated in settings so no hidden pages exist
     act(() => {
       mockStore.groups[0].activePageCount = 3;
     });
 
-    // Render again to trigger useEffect with updated group config
-    const ref2 = renderController();
-    expect(ref2.current?.hasHiddenPages).toBe(false);
-    expect(ref2.current?.viewHidden).toBe(false);
+    // Re-render the same component to run the state adjustment
+    act(() => {
+      rerender(<Harness hookRef={hookRef} />);
+    });
+    expect(hookRef.current?.hasHiddenPages).toBe(false);
+    expect(hookRef.current?.viewHidden).toBe(false);
+  });
+
+  it('resets viewHidden when groupId changes', () => {
+    const { hookRef, rerender } = renderController();
+    act(() => {
+      hookRef.current?.setViewHidden(true);
+    });
+    expect(hookRef.current?.viewHidden).toBe(true);
+
+    // Simulate switching groups
+    act(() => {
+      mockGroupId.groupId = 'g2';
+    });
+
+    // Re-render the same component to run the state adjustment
+    act(() => {
+      rerender(<Harness hookRef={hookRef} />);
+    });
+    expect(hookRef.current?.viewHidden).toBe(false);
   });
 
   it('correctly performs search filtering based on viewHidden state', () => {
-    const ref = renderController();
+    const { hookRef } = renderController();
 
     // When viewHidden is false, searching for text in hidden page ('hidden_1') returns no results
     act(() => {
-      ref.current?.setSearch('hidden_1');
+      hookRef.current?.setSearch('hidden_1');
     });
-    expect(ref.current?.filteredCards.length).toBe(0);
+    expect(hookRef.current?.filteredCards.length).toBe(0);
 
     // Searching for text in visible page ('front_1') returns results
     act(() => {
-      ref.current?.setSearch('front_1');
+      hookRef.current?.setSearch('front_1');
     });
-    expect(ref.current?.filteredCards.length).toBe(1);
+    expect(hookRef.current?.filteredCards.length).toBe(1);
 
     // When viewHidden is true, searching for text in hidden page ('hidden_1') returns results
     act(() => {
-      ref.current?.setSearch('hidden_1');
-      ref.current?.setViewHidden(true);
+      hookRef.current?.setSearch('hidden_1');
+      hookRef.current?.setViewHidden(true);
     });
-    expect(ref.current?.filteredCards.length).toBe(1);
+    expect(hookRef.current?.filteredCards.length).toBe(1);
   });
 });

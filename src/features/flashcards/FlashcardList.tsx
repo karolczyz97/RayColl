@@ -119,7 +119,7 @@ export function FlashcardList({
                 order={itemOrderOffset + index}
                 style={useTwoColumnLayout && styles.cardStretch}
               >
-                 <FlashcardListItem
+                <FlashcardListItem
                   card={item}
                   group={group}
                   onStartEdit={() => onStartEdit(item)}

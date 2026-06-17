@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
   topActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: TOKENS.spacing.xs,
   },
 
   screenContent: {
