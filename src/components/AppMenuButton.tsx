@@ -1,6 +1,6 @@
 import React, { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Menu, useTheme } from 'react-native-paper';
+import { Menu, useTheme, TouchableRipple, Text, Switch } from 'react-native-paper';
 import { TOKENS } from '@/theme/tokens';
 import { menuStyles } from '@/theme/menuStyles';
 import { AppMenuItem } from './AppMenuItem';
@@ -12,6 +12,7 @@ export interface AppMenuButtonItem {
   destructive?: boolean;
   disabled?: boolean;
   selected?: boolean;
+  isSwitch?: boolean;
 }
 
 export interface AppMenuButtonProps {
@@ -26,7 +27,7 @@ export function AppMenuButton({
   renderAnchor,
   items,
   header,
-  menuWidth,
+  menuWidth = TOKENS.menu.minWidth,
   align = 'left',
 }: AppMenuButtonProps) {
   const theme = useTheme();
@@ -44,14 +45,6 @@ export function AppMenuButton({
     setVisible(true);
   }, []);
 
-  const calculatedWidth = React.useMemo(() => {
-    if (menuWidth !== undefined) return menuWidth;
-    const longestLabel = items.reduce((max, item) => (item.label.length > max.length ? item.label : max), '');
-    const hasAnyIcon = items.some(item => item.leadingIcon !== undefined || item.selected !== undefined);
-    const extraSpace = hasAnyIcon ? 80 : 36;
-    return Math.max(TOKENS.menu.minWidth, Math.ceil(longestLabel.length * 8.5 + extraSpace));
-  }, [items, menuWidth]);
-
   return (
     <Menu
       visible={visible}
@@ -65,7 +58,7 @@ export function AppMenuButton({
       contentStyle={[
         menuStyles.menuContent,
         { backgroundColor: theme.colors.elevation.level2 },
-        { width: calculatedWidth, maxWidth: calculatedWidth },
+        { width: menuWidth, maxWidth: menuWidth },
         { transformOrigin: align === 'right' ? 'top right' : 'top left' },
       ]}
       anchor={
@@ -75,20 +68,49 @@ export function AppMenuButton({
       }
     >
       {header}
-      {items.map((item) => (
-        <AppMenuItem
-          key={item.label}
-          label={item.label}
-          icon={item.leadingIcon}
-          selected={item.selected}
-          destructive={item.destructive}
-          disabled={item.disabled}
-          onPress={() => {
-            close();
-            item.onPress();
-          }}
-        />
-      ))}
+      {items.map((item) => {
+        if (item.isSwitch) {
+          return (
+            <TouchableRipple
+              key={item.label}
+              onPress={item.onPress}
+              disabled={item.disabled}
+              style={[styles.switchRow, { height: TOKENS.menu.itemHeight }]}
+            >
+              <View style={styles.switchInner}>
+                <Text
+                  variant="bodyLarge"
+                  style={{
+                    color: item.destructive ? theme.colors.error : theme.colors.onSurface,
+                    fontWeight: TOKENS.typography.weight.medium,
+                  }}
+                >
+                  {item.label}
+                </Text>
+                <Switch
+                  value={item.selected}
+                  onValueChange={item.onPress}
+                  disabled={item.disabled}
+                />
+              </View>
+            </TouchableRipple>
+          );
+        }
+        return (
+          <AppMenuItem
+            key={item.label}
+            label={item.label}
+            icon={item.leadingIcon}
+            selected={item.selected}
+            destructive={item.destructive}
+            disabled={item.disabled}
+            onPress={() => {
+              close();
+              item.onPress();
+            }}
+          />
+        );
+      })}
     </Menu>
   );
 }
@@ -96,5 +118,15 @@ export function AppMenuButton({
 const styles = StyleSheet.create({
   rightAlignedMenu: {
     alignSelf: 'flex-end',
+  },
+  switchRow: {
+    paddingHorizontal: TOKENS.spacing.md,
+    justifyContent: 'center',
+  },
+  switchInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
 });

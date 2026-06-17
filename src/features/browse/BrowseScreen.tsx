@@ -115,11 +115,13 @@ export function BrowseScreen() {
       {hasHiddenPages && (
         <AppMenuButton
           align="right"
+          menuWidth={300}
           items={[
             {
               label: t('browse.show_hidden_pages'),
               selected: viewHidden,
               onPress: () => setViewHidden((v) => !v),
+              isSwitch: true,
             },
           ]}
           renderAnchor={({ open }) => (
