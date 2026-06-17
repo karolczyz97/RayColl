@@ -39,7 +39,6 @@ export function AppTopBar({ title, onBack, right, brand }: AppTopBarProps) {
             icon="arrow-left"
             size={TOKENS.iconSize.md}
             iconColor={fg}
-            containerColor={theme.colors.surfaceVariant}
             onPress={onBack}
             style={styles.backBtn}
             accessibilityLabel="Go back"
@@ -63,18 +62,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: TOKENS.layout.topBarHeight,
-    paddingHorizontal: TOKENS.spacing.xs,
+    paddingHorizontal: TOKENS.spacing.sm,
     gap: TOKENS.spacing.sm,
   },
   leftGroup: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TOKENS.spacing.xl,
+    gap: TOKENS.spacing.md,
     minWidth: 0,
   },
   backBtn: {
-    margin: 0,
+    // Let default margin align it symmetrically with trailing icon buttons
   },
   title: {
     fontWeight: TOKENS.typography.weight.bold,

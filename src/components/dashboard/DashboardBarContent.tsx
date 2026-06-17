@@ -131,6 +131,7 @@ const styles = StyleSheet.create({
   actionsGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: TOKENS.spacing.xs,
   },
   avatarAnchor: {
     alignItems: 'center',
