@@ -155,6 +155,7 @@ export const en: Record<string, string> = {
   'settings.dialog.compound.edit_title': 'Edit compound step',
   'settings.steps_mode.simple': 'Simple',
   'settings.steps_mode.expert': 'Expert',
+  'settings.expert_mode': 'Expert mode',
   'step.condition.always': 'Always',
   'step.condition.correct': 'If correct',
   'step.condition.wrong': 'If wrong',

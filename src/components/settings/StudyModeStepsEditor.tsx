@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Divider, List, Button, SegmentedButtons } from 'react-native-paper';
+import { Divider, List, Button, Switch, Text } from 'react-native-paper';
 import type { StudyMode, ModeStep } from '@/types/models';
 import { useI18n, type TranslationFn } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
@@ -41,14 +41,14 @@ export function StudyModeStepsEditor({
     <SectionCard
       title={t('settings.mode_steps', { name: getModeName(t, activeMode.id, activeMode.name) })}
     >
-      <SegmentedButtons
-        value={expertMode ? 'expert' : 'simple'}
-        onValueChange={(value) => setExpertMode(value === 'expert')}
-        buttons={[
-          { value: 'simple', label: t('settings.steps_mode.simple') },
-          { value: 'expert', label: t('settings.steps_mode.expert') },
-        ]}
-      />
+      <View style={styles.expertModeRow}>
+        <Text variant="titleMedium">{t('settings.expert_mode')}</Text>
+        <Switch
+          value={expertMode}
+          onValueChange={setExpertMode}
+          accessibilityLabel={t('settings.expert_mode')}
+        />
+      </View>
       <View style={styles.stepsList}>
         {activeMode.steps.map((step, index) => (
           <View key={step.id ?? index}>
@@ -96,6 +96,12 @@ export function StudyModeStepsEditor({
 }
 
 const styles = StyleSheet.create({
+  expertModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: TOKENS.spacing.md,
+  },
   stepsList: {
     borderRadius: TOKENS.control.borderRadius,
     overflow: 'hidden',

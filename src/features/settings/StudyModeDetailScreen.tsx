@@ -198,24 +198,10 @@ export function StudyModeDetailScreen() {
 
       <AddStepDialog
         visible={draftController.stepDialogOpen}
-        onDismiss={() => draftController.setStepDialogOpen(false)}
-        newStepType={draftController.newStepType}
-        setNewStepType={draftController.setNewStepType}
-        newPageIdx={draftController.newPageIdx}
+        key={draftController.stepDialogKey}
         pageCount={MAX_VISIBLE_PAGE_COUNT}
-        setNewPageIdx={draftController.setNewPageIdx}
-        newMs={draftController.newMs}
-        setNewMs={draftController.setNewMs}
-        newPauseMultiplier={draftController.newPauseMultiplier}
-        setNewPauseMultiplier={draftController.setNewPauseMultiplier}
-        newThreshold={draftController.newThreshold}
-        setNewThreshold={draftController.setNewThreshold}
-        newRating={draftController.newRating}
-        setNewRating={draftController.setNewRating}
-        newCondition={draftController.newCondition}
-        setNewCondition={draftController.setNewCondition}
-        confirmAddStep={draftController.confirmAddStep}
-        stepLabels={draftController.stepLabels}
+        onDismiss={() => draftController.setStepDialogOpen(false)}
+        onConfirm={draftController.addAtomicStep}
       />
 
       <CompoundStepDialog

@@ -156,6 +156,7 @@ export const pl: Record<string, string> = {
   'settings.dialog.compound.edit_title': 'Edytuj krok zlozony',
   'settings.steps_mode.simple': 'Prosty',
   'settings.steps_mode.expert': 'Ekspert',
+  'settings.expert_mode': 'Tryb eksperta',
   'step.condition.always': 'Zawsze',
   'step.condition.correct': 'Jeśli dobrze',
   'step.condition.wrong': 'Jeśli źle',

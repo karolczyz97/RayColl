@@ -4,7 +4,6 @@ import type {
   CompoundParams,
   CompoundStep,
   ModeStep,
-  StepCondition,
   StudyMode,
 } from '@/types/models';
 import { STUDY_MODE_NEW_ID } from '@/constants/routes';
@@ -12,11 +11,9 @@ import { MAX_VISIBLE_PAGE_COUNT } from '@/constants/pages';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { createSeedModes } from '@/store/seed/seedModes';
 import { normalizeStudyMode } from '@/store/storeDataNormalization';
-import { useI18n } from '@/i18n';
 import { swapElements } from '@/utils/array';
 import { deepEqual } from '@/utils/deepEqual';
 import { uid } from '@/utils/id';
-import { buildModeStep } from './buildModeStep';
 import { expandWithSource } from './compoundSteps';
 import { createModeFromTemplate, type ModeTemplateId } from './modeTemplates';
 import { hasBlockingStepIssue, validateModeStepSources } from './validateModeSteps';
@@ -50,41 +47,6 @@ function getSeedSteps(mode: StudyMode): ModeStep[] | null {
   return seed ? seed.steps.map(cloneStep) : null;
 }
 
-const STEP_TYPE_ORDER: AtomicStep['type'][] = [
-  'show_page',
-  'show_all_pages',
-  'wait_for_tap_to_reveal_next',
-  'wait_for_tap_to_reveal',
-  'speak_page',
-  'listen_and_check',
-  'dynamic_pause',
-  'wait',
-  'feedback_success',
-  'feedback_error',
-  'show_ratings',
-  'auto_rate_from_answer',
-  'auto_rate_fixed',
-  'mark_failed',
-  'next_card',
-];
-
-const STEP_TYPE_LABEL_KEYS: Record<AtomicStep['type'], string> = {
-  show_page: 'step.type.show_page',
-  show_all_pages: 'step.type.show_all_pages',
-  wait_for_tap_to_reveal_next: 'step.type.wait_for_tap_to_reveal_next',
-  wait_for_tap_to_reveal: 'step.type.wait_for_tap_to_reveal',
-  speak_page: 'step.type.speak_page',
-  listen_and_check: 'step.type.listen_and_check',
-  dynamic_pause: 'step.type.dynamic_pause',
-  wait: 'step.type.wait',
-  feedback_success: 'step.type.feedback_success',
-  feedback_error: 'step.type.feedback_error',
-  show_ratings: 'step.type.show_ratings',
-  auto_rate_from_answer: 'step.type.auto_rate_from_answer',
-  auto_rate_fixed: 'step.type.auto_rate_fixed',
-  mark_failed: 'step.type.mark_failed',
-  next_card: 'step.type.next_card',
-};
 
 interface DraftState {
   initializedModeId: string | null;
@@ -102,7 +64,6 @@ export function useStudyModeDraftController({
   pageCount?: number;
 }) {
   const store = useFlashcardStore();
-  const { t } = useI18n();
   const isCreate = modeId === STUDY_MODE_NEW_ID;
   const initializedModeIdRef = useRef<string | null>(null);
   const [draftState, setDraftState] = useState<DraftState>({
@@ -113,19 +74,13 @@ export function useStudyModeDraftController({
   const { draft, original, initializedModeId } = draftState;
 
   const [stepDialogOpen, setStepDialogOpen] = useState(false);
+  const [stepDialogKey, setStepDialogKey] = useState(0);
   const [compoundDialogOpen, setCompoundDialogOpen] = useState(false);
   const [compoundDialogKey, setCompoundDialogKey] = useState(0);
   const [editingCompoundIndex, setEditingCompoundIndex] = useState<number | null>(null);
   const [compoundDialogStep, setCompoundDialogStep] = useState<CompoundStep | null>(null);
   const [expertMode, setExpertMode] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ModeTemplateId>('blank');
-  const [newStepType, setNewStepType] = useState<string>('show_page');
-  const [newPageIdx, setNewPageIdx] = useState(0);
-  const [newMs, setNewMs] = useState(500);
-  const [newPauseMultiplier, setNewPauseMultiplier] = useState(1);
-  const [newThreshold, setNewThreshold] = useState(70);
-  const [newRating, setNewRating] = useState(3);
-  const [newCondition, setNewCondition] = useState<'always' | StepCondition>('always');
 
   useEffect(() => {
     if (!modeId || initializedModeIdRef.current === modeId) return;
@@ -182,6 +137,7 @@ export function useStudyModeDraftController({
 
   const addStepToMode = useCallback(() => {
     if (expertMode) {
+      setStepDialogKey((key) => key + 1);
       setStepDialogOpen(true);
       return;
     }
@@ -227,38 +183,14 @@ export function useStudyModeDraftController({
     });
   }, []);
 
-  const confirmAddStep = useCallback(() => {
-    const step = buildModeStep({
-      id: uid(),
-      newStepType,
-      pageCount,
-      newPageIdx,
-      newMs,
-      newPauseMultiplier,
-      newThreshold,
-      newRating,
-      newCondition,
+  const addAtomicStep = useCallback((step: AtomicStep) => {
+    setDraftState((current) => {
+      if (!current.draft) return current;
+      const stepWithId = { ...step, id: uid() };
+      return { ...current, draft: { ...current.draft, steps: [...current.draft.steps, stepWithId] } };
     });
-    if (!step) return;
-
-    setDraftState((current) => ({
-      ...current,
-      draft: current.draft
-        ? { ...current.draft, steps: [...current.draft.steps, step] }
-        : current.draft,
-    }));
     setStepDialogOpen(false);
-    setNewCondition('always');
-  }, [
-    newCondition,
-    newMs,
-    newPageIdx,
-    newPauseMultiplier,
-    newRating,
-    newStepType,
-    newThreshold,
-    pageCount,
-  ]);
+  }, []);
 
   const confirmCompoundStep = useCallback((params: CompoundParams) => {
     setDraftState((current) => {
@@ -330,14 +262,6 @@ export function useStudyModeDraftController({
     return true;
   }, [draft, isCreate, isValid, selectForGroup, store]);
 
-  // Kolejność = kolejność w dropdownie. Tylko primitive steps — żadnych makro-kroków.
-  const stepLabels = useMemo<Record<string, string>>(
-    () =>
-      Object.fromEntries(
-        STEP_TYPE_ORDER.map((type) => [type, t(STEP_TYPE_LABEL_KEYS[type])]),
-      ) as Record<string, string>,
-    [t],
-  );
 
   return {
     draft,
@@ -349,6 +273,7 @@ export function useStudyModeDraftController({
     stepIssues,
     isInitializing: !!modeId && initializedModeId !== modeId,
     stepDialogOpen,
+    stepDialogKey,
     setStepDialogOpen,
     compoundDialogOpen,
     compoundDialogKey,
@@ -359,29 +284,14 @@ export function useStudyModeDraftController({
     setExpertMode,
     selectedTemplate,
     applyTemplate,
-    newStepType,
-    setNewStepType,
-    newPageIdx,
-    setNewPageIdx,
-    newMs,
-    setNewMs,
-    newPauseMultiplier,
-    setNewPauseMultiplier,
-    newThreshold,
-    setNewThreshold,
-    newRating,
-    setNewRating,
-    newCondition,
-    setNewCondition,
     setName,
     moveStep,
     deleteStep,
     addStepToMode,
     editStep,
     resetSteps,
-    confirmAddStep,
+    addAtomicStep,
     confirmCompoundStep,
     save,
-    stepLabels,
   };
 }
