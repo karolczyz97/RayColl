@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     gap: TOKENS.spacing.lg,
-    // Horizontal padding lives in AppScreen's contentRegion — not here.
+    // Horizontal padding lives on AppScreen's scroll content container, not here.
     paddingVertical: TOKENS.spacing.sm,
   },
   fill: {

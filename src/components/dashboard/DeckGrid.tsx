@@ -1,18 +1,11 @@
 import React, { useMemo } from 'react';
-import { Platform, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { GroupCard } from './GroupCard';
 import type { FlashcardGroup, StudyMode } from '@/types/models';
 import { TOKENS } from '@/theme/tokens';
-import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { AnimatedSection } from '@/components/layout/AnimatedSection';
-import {
-  getGridColumns,
-  getDeterministicContainerWidth,
-  getGridGap,
-  getGridItemWidth,
-} from '@/utils/gridLayout';
 
 interface DeckGridProps {
   baseOrder?: number;
@@ -32,38 +25,32 @@ export function DeckGrid({
   studyModes,
   renderItem,
 }: DeckGridProps) {
-  const { width: windowWidth } = useResponsiveLayout();
-  const { navWidth } = useNavigationShell();
+  const { contentWidth } = useNavigationShell();
 
-  const currentWidth = useMemo(() => {
-    return getDeterministicContainerWidth(
-      windowWidth,
-      TOKENS.layout.maxWidth,
-      Platform.OS === 'web',
-      navWidth,
-    );
-  }, [windowWidth, navWidth]);
+  const gap = TOKENS.spacing.lg;
+  const currentWidth = Math.min(
+    TOKENS.layout.maxWidth,
+    Math.max(0, contentWidth - TOKENS.spacing.lg * 2),
+  );
 
-  const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
+  const columns = useMemo(() => {
+    const min = TOKENS.layout.minCardWidth;
 
-  const { cardWidth, columns } = useMemo(() => {
-    const minCardWidth = TOKENS.layout.minCardWidth;
-    const maxCols = TOKENS.layout.maxCols;
-
-    // Column count is driven by the available width (capped at maxCols), not by
-    // the number of decks. This keeps each card at a normal column's width so a
-    // single deck doesn't stretch to fill the whole row.
-    const columns = getGridColumns(currentWidth, maxCols, minCardWidth, maxCols, gap);
-    return { cardWidth: getGridItemWidth(currentWidth, columns, gap), columns };
+    if (currentWidth >= min * 4 + gap * 3) return 4;
+    if (currentWidth >= min * 3 + gap * 2) return 3;
+    if (currentWidth >= min * 2 + gap) return 2;
+    return 1;
   }, [currentWidth, gap]);
 
-  const widthStyle = useMemo(() => {
-    return {
-      width: cardWidth,
-      maxWidth: cardWidth,
-      flexBasis: cardWidth,
-    };
-  }, [cardWidth]);
+  const widthStyle =
+    columns === 4
+      ? styles.fourColumnItem
+      : columns === 3
+        ? styles.threeColumnItem
+        : columns === 2
+          ? styles.twoColumnItem
+          : styles.oneColumnItem;
+  const fillerCount = groups.length > 0 ? (columns - (groups.length % columns)) % columns : 0;
 
   return (
     <View style={[styles.grid, { gap }]}>
@@ -82,6 +69,13 @@ export function DeckGrid({
           </AnimatedSection>
         </Animated.View>
       ))}
+      {Array.from({ length: fillerCount }).map((_, index) => (
+        <View
+          key={`filler-${index}`}
+          pointerEvents="none"
+          style={[styles.gridItem, widthStyle, styles.fillerItem]}
+        />
+      ))}
     </View>
   );
 }
@@ -95,5 +89,24 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     overflow: 'visible',
+  },
+  fillerItem: {
+    opacity: 0,
+  },
+  fourColumnItem: {
+    flexBasis: '23%',
+    flexGrow: 1,
+  },
+  threeColumnItem: {
+    flexBasis: '31%',
+    flexGrow: 1,
+  },
+  twoColumnItem: {
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
+  oneColumnItem: {
+    flexBasis: '100%',
+    flexGrow: 1,
   },
 });

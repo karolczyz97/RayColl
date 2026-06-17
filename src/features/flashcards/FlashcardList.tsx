@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
@@ -12,14 +12,6 @@ import { useNavigationShell } from '@/contexts/NavigationShellContext';
 import { TOKENS } from '@/theme/tokens';
 import { isExpandedWindowSize } from '@/utils/windowSizeClass';
 
-export interface FlashcardPairRow {
-  id: string;
-  rowIndex: number;
-  cards: [Flashcard, Flashcard?];
-}
-
-type FlashcardListEntry = Flashcard | FlashcardPairRow;
-
 interface FlashcardListProps {
   cards: Flashcard[];
   group: FlashcardGroup;
@@ -29,36 +21,12 @@ interface FlashcardListProps {
   scrollEnabled?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
   keyboardShouldPersistTaps?: 'always' | 'never' | 'handled';
-  initialNumToRender?: number;
-  maxToRenderPerBatch?: number;
-  windowSize?: number;
   showHeader?: boolean;
   emptyLabel?: string;
   listHeaderContent?: React.ReactNode;
   itemAnimationOffset?: number;
   className?: string;
   readOnly?: boolean;
-}
-
-export function pairFlashcardRows(cards: Flashcard[]): FlashcardPairRow[] {
-  const rows: FlashcardPairRow[] = [];
-
-  for (let index = 0; index < cards.length; index += 2) {
-    const left = cards[index];
-    const right = cards[index + 1];
-
-    rows.push({
-      id: `row-${left.id}`,
-      rowIndex: index / 2,
-      cards: [left, right],
-    });
-  }
-
-  return rows;
-}
-
-function isFlashcardPairRow(item: FlashcardListEntry): item is FlashcardPairRow {
-  return 'cards' in item;
 }
 
 export function FlashcardList({
@@ -70,9 +38,6 @@ export function FlashcardList({
   scrollEnabled = true,
   contentContainerStyle,
   keyboardShouldPersistTaps = 'handled',
-  initialNumToRender = 12,
-  maxToRenderPerBatch = 12,
-  windowSize = 7,
   showHeader = true,
   emptyLabel,
   listHeaderContent,
@@ -83,12 +48,7 @@ export function FlashcardList({
   const theme = useTheme();
   const { contentWidth } = useNavigationShell();
   const useTwoColumnLayout = isExpandedWindowSize(contentWidth);
-
-  const data = useMemo<FlashcardListEntry[]>(
-    () => (useTwoColumnLayout ? pairFlashcardRows(cards) : cards),
-    [cards, useTwoColumnLayout],
-  );
-
+  const fillerCount = useTwoColumnLayout && cards.length % 2 === 1 ? 1 : 0;
 
   const pageNames = getVisiblePageNames(group);
 
@@ -134,8 +94,6 @@ export function FlashcardList({
   // start one step later.
   const itemOrderOffset = itemAnimationOffset + 1;
 
-
-
   const listHeader =
     listHeaderContent || pageNamesHeader ? (
       <View style={styles.listHeaderWrapper}>
@@ -144,116 +102,86 @@ export function FlashcardList({
       </View>
     ) : null;
 
-  return (
-    <Animated.FlatList
-      key={`flashcard-list-${useTwoColumnLayout ? 'grid' : 'list'}`}
-      className={className}
-      data={data}
-      keyExtractor={(item: FlashcardListEntry) => item.id}
-      itemLayoutAnimation={LinearTransition.springify()}
-      renderItem={({ item, index }) => {
-        if (isFlashcardPairRow(item)) {
-          return (
-            <FlashcardPairRowView
-              row={item}
-              group={group}
-              onStartEdit={onStartEdit}
-              onDelete={onDelete}
-              readOnly={readOnly}
-              itemAnimationOffset={itemOrderOffset}
+  const content = (
+    <>
+      {listHeader}
+      {cards.length > 0 ? (
+        <View style={styles.grid}>
+          {cards.map((item, index) => (
+            <Animated.View
+              key={item.id}
+              layout={LinearTransition.duration(TOKENS.motion.duration.medium)}
+              style={useTwoColumnLayout ? styles.gridCardCell : styles.listCardCell}
+            >
+              <AnimatedSection
+                order={itemOrderOffset + index}
+                style={useTwoColumnLayout && styles.cardStretch}
+              >
+                <FlashcardListItem
+                  card={item}
+                  group={group}
+                  onStartEdit={() => onStartEdit(item)}
+                  onDelete={() => onDelete(item.id)}
+                  readOnly={readOnly}
+                  fill={useTwoColumnLayout}
+                />
+              </AnimatedSection>
+            </Animated.View>
+          ))}
+          {Array.from({ length: fillerCount }).map((_, index) => (
+            <View
+              key={`filler-${index}`}
+              pointerEvents="none"
+              style={[styles.gridCardCell, styles.fillerItem]}
             />
-          );
-        }
+          ))}
+        </View>
+      ) : emptyLabel ? (
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+            {emptyLabel}
+          </Text>
+        </View>
+      ) : null}
+    </>
+  );
 
-        return (
-          <AnimatedSection order={itemOrderOffset + index}>
-            <FlashcardListItem
-              card={item}
-              group={group}
-              onStartEdit={() => onStartEdit(item)}
-              onDelete={() => onDelete(item.id)}
-              readOnly={readOnly}
-            />
-          </AnimatedSection>
-        );
-      }}
-      ListHeaderComponent={listHeader}
-      ListEmptyComponent={
-        emptyLabel ? (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
-              {emptyLabel}
-            </Text>
-          </View>
-        ) : null
-      }
+  if (!scrollEnabled) {
+    return (
+      <Animated.View
+        className={className}
+        style={[style, styles.listContainer, contentContainerStyle]}
+      >
+        {content}
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.ScrollView
+      className={className}
       style={style}
-      scrollEnabled={scrollEnabled}
       contentContainerStyle={[styles.listContainer, contentContainerStyle]}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
-      initialNumToRender={initialNumToRender}
-      maxToRenderPerBatch={maxToRenderPerBatch}
-      windowSize={windowSize}
-    />
-  );
-}
-
-interface FlashcardPairRowViewProps {
-  row: FlashcardPairRow;
-  group: FlashcardGroup;
-  onStartEdit: (card: Flashcard) => void;
-  onDelete: (cardId: string) => void;
-  readOnly?: boolean;
-  itemAnimationOffset: number;
-}
-
-function FlashcardPairRowView({
-  row,
-  group,
-  onStartEdit,
-  onDelete,
-  readOnly,
-  itemAnimationOffset,
-}: FlashcardPairRowViewProps) {
-  const [leftCard, rightCard] = row.cards;
-
-  return (
-    <View style={styles.gridRow}>
-      <View style={styles.columnCell}>
-        <AnimatedSection order={itemAnimationOffset + row.rowIndex} style={styles.itemAnimation}>
-          <FlashcardListItem
-            card={leftCard}
-            group={group}
-            onStartEdit={() => onStartEdit(leftCard)}
-            onDelete={() => onDelete(leftCard.id)}
-            readOnly={readOnly}
-            fill
-          />
-        </AnimatedSection>
-      </View>
-      <View style={styles.columnCell}>
-        {rightCard ? (
-          <AnimatedSection order={itemAnimationOffset + row.rowIndex} style={styles.itemAnimation}>
-            <FlashcardListItem
-              card={rightCard}
-              group={group}
-              onStartEdit={() => onStartEdit(rightCard)}
-              onDelete={() => onDelete(rightCard.id)}
-              readOnly={readOnly}
-              fill
-            />
-          </AnimatedSection>
-        ) : null}
-      </View>
-    </View>
+    >
+      {content}
+    </Animated.ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   listHeaderWrapper: {
     gap: TOKENS.spacing.lg,
+    width: '100%',
   },
   listContainer: { gap: TOKENS.spacing.lg },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    gap: TOKENS.spacing.lg,
+    width: '100%',
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -279,23 +207,25 @@ const styles = StyleSheet.create({
   pageNameText: {
     fontWeight: TOKENS.typography.weight.medium,
   },
-  gridRow: {
-    flexDirection: 'row',
-    gap: TOKENS.spacing.lg,
-    alignItems: 'stretch',
+  listCardCell: {
+    width: '100%',
   },
-  columnCell: {
-    flex: 1,
-    flexBasis: 0,
-    minWidth: 0,
+  gridCardCell: {
     alignSelf: 'stretch',
+    flexBasis: '47%',
+    flexGrow: 1,
+    minWidth: 0,
   },
-  itemAnimation: {
+  cardStretch: {
     flex: 1,
+  },
+  fillerItem: {
+    opacity: 0,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: TOKENS.spacing.xxl,
+    width: '100%',
   },
   emptyText: {
     textAlign: 'center',

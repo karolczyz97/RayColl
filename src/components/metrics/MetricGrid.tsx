@@ -1,16 +1,10 @@
-import React, { useMemo } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import type { MetricItem } from './MetricCard';
 import { MetricCard } from './MetricCard';
 import { TOKENS } from '@/theme/tokens';
-import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useNavigationShell } from '@/contexts/NavigationShellContext';
-import {
-  getDeterministicContainerWidth,
-  getGridColumns,
-  getGridGap,
-  getGridItemWidth,
-} from '@/utils/gridLayout';
 
 interface MetricGridProps {
   items: MetricItem[];
@@ -21,36 +15,23 @@ export function MetricGrid({
   items,
   screenMaxWidth = TOKENS.layout.maxWidth,
 }: MetricGridProps) {
-  const { width: windowWidth } = useResponsiveLayout();
-  const { navWidth } = useNavigationShell();
+  const { contentWidth } = useNavigationShell();
 
-  const currentWidth = useMemo(() => {
-    return getDeterministicContainerWidth(
-      windowWidth,
-      screenMaxWidth,
-      Platform.OS === 'web',
-      navWidth,
-    );
-  }, [windowWidth, screenMaxWidth, navWidth]);
-
-  const gap = useMemo(() => getGridGap(currentWidth), [currentWidth]);
-  // Use same threshold as DeckGrid: expand to 4 cols when 2 deck-sized cards fit side by side.
-  const deckCols = getGridColumns(currentWidth, 4, TOKENS.layout.minCardWidth, 2, gap);
-  const columns = Math.min(items.length, deckCols >= 2 ? 4 : 2);
-  const itemWidth = useMemo(
-    () => getGridItemWidth(currentWidth, columns, gap),
-    [columns, currentWidth, gap],
-  );
+  const gap = TOKENS.spacing.lg;
+  const availableWidth = Math.min(screenMaxWidth, Math.max(0, contentWidth - TOKENS.spacing.lg * 2));
+  const columns = availableWidth >= TOKENS.layout.minCardWidth * 2 + gap ? 4 : 2;
+  const cellStyle = columns === 4 ? styles.fourColumnCell : styles.twoColumnCell;
 
   return (
     <View style={[styles.grid, { gap }]}>
       {items.map((item) => (
-        <View
-          key={`${item.label}-${item.value}`}
-          style={[styles.cell, { width: itemWidth, maxWidth: itemWidth, flexBasis: itemWidth }]}
+        <Animated.View
+          key={item.label}
+          layout={LinearTransition.duration(TOKENS.motion.duration.medium)}
+          style={[styles.cell, cellStyle]}
         >
           <MetricCard item={item} />
-        </View>
+        </Animated.View>
       ))}
     </View>
   );
@@ -60,10 +41,17 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
     width: '100%',
   },
   cell: {
     minWidth: 0,
+  },
+  fourColumnCell: {
+    flexBasis: 0,
+    flexGrow: 1,
+  },
+  twoColumnCell: {
+    flexBasis: '45%',
+    flexGrow: 1,
   },
 });
