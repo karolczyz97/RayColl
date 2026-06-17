@@ -89,8 +89,8 @@ export function AppMenuButton({
                 </Text>
                 <Switch
                   value={item.selected}
-                  onValueChange={item.onPress}
                   disabled={item.disabled}
+                  pointerEvents="none"
                 />
               </View>
             </TouchableRipple>
