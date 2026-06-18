@@ -1,9 +1,12 @@
 name: CI/CD – Deploy Web to Firebase & OTA Update to Expo EAS
 
 on:
-  push:
-    branches:
-      - main
+  # Runs after the "CI - Lint & Typecheck" workflow succeeds on main, so the
+  # checks run once in CI and gate this deploy instead of being duplicated here.
+  workflow_run:
+    workflows: ["CI - Lint & Typecheck"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -16,9 +19,15 @@ jobs:
   deploy-web:
     name: 🌐 Build & Deploy Web → Firebase Hosting
     runs-on: ubuntu-latest
+    # Deploy only when the CI run that triggered us passed (or on manual dispatch).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Pin to the exact commit CI validated — workflow_run otherwise checks
+          # out the default branch HEAD, which can race ahead of the tested SHA.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,20 +38,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Linter
-        run: npm run lint
-
-      - name: Run TypeScript Typecheck
-        run: npm run typecheck
-
-      - name: Run Tests
-        run: npm run test
-
-      - name: Check UI Constraints
-        run: npm run check-ui
-
-      - name: Check Asset References
-        run: npm run check-assets
+      # Lint / typecheck / tests / check-ui / check-assets already ran in the
+      # "CI - Lint & Typecheck" workflow that gated this deploy — not repeated.
 
       - name: Validate commit message format
         run: |
@@ -168,6 +165,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

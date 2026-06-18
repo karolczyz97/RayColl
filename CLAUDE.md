@@ -28,7 +28,7 @@ Before every refactor step:
   - `npm run test`
 - Preserve behavior unless the change is explicitly about behavior. Visual unification is intentional, not opportunistic restyling.
 - Do not delete code by guesswork. Verify with grep and typecheck. If something might be needed indirectly (Expo, web, Paper), mark it "to audit" instead of removing it blindly.
-- Every change needs a manual regression checklist. Passing TypeScript does not mean the feature works.
+- UI / behavior / navigation / sync changes need a manual regression checklist; pure-logic changes fully covered by unit tests do not. Passing TypeScript does not mean the feature works.
 - Do not introduce abstractions for hypothetical future needs.
 - A split or extraction must **reduce** coupling across its boundary. If pulling logic into a separate file/hook forces you to pass most of the parent's state back into it (many setters/refs/props), that boundary is fake — the two pieces are really one cohesive unit. Prefer one honest file over a split held together by a firehose of parameters. If a long file genuinely must be split, make the seam real first (e.g. a single `dispatch`/reducer or a small typed value object) instead of threading individual setters.
 
@@ -38,7 +38,7 @@ Before every refactor step:
   - `AppCard`, `AppSelect`, `AppSplitButton`, `AppMenuButton`, `AppIcon`, `GroupNotFound`, `SegmentedProgressBar`
   - `AppTextInput`, `SectionCard`, `AppScreen`, `AnimatedSection`, `MetricGrid`
   - `ConfirmDialog`, `AppSnackbar`, `SyncStatusBanner`, `ChangelogDialog`
-- Spacing, radius, control height, motion durations, and layout breakpoints come from **`TOKENS`** in `src/theme/tokens.ts`. No magic numbers for those values in `StyleSheet.create`.
+- Spacing, radius, control height, motion durations, and layout breakpoints come from **`TOKENS`** in `src/theme/tokens.ts`. No magic numbers for those values in `StyleSheet.create`. Use a `TOKENS` entry when the value belongs to the design scale **or** is shared by ≥2 places; for a genuine one-off in a single component, a named local `const` with a `// why` comment beats bloating the global scale.
 - Colors come from `theme.colors.*` and `src/theme/semanticColors.ts`. No raw hex in screens unless there is a strong reason and it belongs in the theme layer.
 - Dialogs should use `dialogStyles.dialog` from `src/theme/dialogStyles.ts` and be wrapped in `<Portal>`.
 - Animations should use Reanimated and shared motion tokens.
@@ -73,7 +73,8 @@ Before every refactor step:
 
 ## Testing rules
 
-- `npm run test` runs `jest --runInBand`; keep that the single entry point for unit tests.
+- `npm run test` runs `jest` (parallel); keep that the single entry point for unit tests.
+- When a test fails after an **intentional** behavior change, update the test to the new expected behavior — do **not** revert the feature to make a stale test pass. Treat a failing test as a blocker only when it reveals an **unintended** regression. If unsure whether the change was intentional, ask instead of guessing.
 - Add or extend a unit test whenever you touch:
   - SRS engine
   - import parser

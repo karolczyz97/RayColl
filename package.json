@@ -64,7 +64,7 @@
     "web": "expo start --web",
     "lint": "expo lint --no-cache",
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand",
+    "test": "jest",
     "check-assets": "node scripts/check-assets.mjs",
     "check-ui": "node scripts/check-ui-constraints.mjs"
   },
