@@ -29,11 +29,11 @@ import {
   limitImportLines,
   pickAndReadFile,
 } from './importDraftUtils';
+import { importDraftReducer, createInitialDraftState } from './importDraftReducer';
 
 // Joins header fields into a collision-proof comparison key. A control char is
 // used because it cannot appear in a normalized (de-quoted, single-row) header.
 const HEADER_KEY_SEP = String.fromCharCode(0);
-import { importDraftReducer, createInitialDraftState } from './importDraftReducer';
 
 export function useImportDeckDraft() {
   const store = useFlashcardStore();
