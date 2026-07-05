@@ -347,11 +347,13 @@ export function expandCompound(step: CompoundStep): AtomicStep[] {
           ]
         : [{ type: 'show_page', pageIndex: params.page }];
     case 'flip_reveal':
-      return [
-        { type: params.revealStyle === 'next' ? 'wait_for_tap_to_reveal_next' : 'wait_for_tap_to_reveal' },
-        { type: 'show_all_pages' },
-        { type: 'show_ratings' },
-      ];
+      return params.revealStyle === 'next'
+        ? [{ type: 'wait_for_tap_to_reveal_next' }, { type: 'show_ratings' }]
+        : [
+            { type: 'wait_for_tap_to_reveal' },
+            { type: 'show_all_pages' },
+            { type: 'show_ratings' },
+          ];
     case 'show_all_grade':
       return [{ type: 'show_all_pages' }, { type: 'show_ratings' }];
     case 'speak_pause_next':

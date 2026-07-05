@@ -34,6 +34,13 @@ describe('compoundSteps', () => {
     expect(expanded).toEqual(audio?.steps);
   });
 
+  it('expands flip_reveal with revealStyle "next" without force-revealing the rest', () => {
+    expect(expandCompound(compound({ kind: 'flip_reveal', revealStyle: 'next' }))).toEqual([
+      { type: 'wait_for_tap_to_reveal_next' },
+      { type: 'show_ratings' },
+    ]);
+  });
+
   it('keeps atomic steps untouched while tracking source indexes', () => {
     const atom: AtomicStep = { type: 'show_ratings' };
 
