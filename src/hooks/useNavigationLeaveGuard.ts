@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useNavigation } from 'expo-router';
-// usePreventRemove is not re-exported from expo-router, but the ExperimentalStack
-// this app uses relies on the underlying React Navigation hook for native gestures.
+// usePreventRemove is not re-exported from expo-router; imported from the bundled
+// React Navigation core, which the stack relies on for native gesture handling.
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { useNavigationBlocker } from '@/contexts/NavigationBlockerContext';
 import { useBrowserBackBlocker } from '@/hooks/useBrowserBackBlocker';

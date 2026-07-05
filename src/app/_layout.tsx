@@ -1,7 +1,7 @@
 import React from 'react';
 // eslint-disable-next-line no-restricted-imports -- required as PaperProvider icon renderer
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ExperimentalStack as Stack, usePathname } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider, useTheme } from 'react-native-paper';
 import { Platform, View, StyleSheet } from 'react-native';

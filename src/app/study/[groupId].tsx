@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-// usePreventRemove isn't re-exported from the expo-router entry, but the ExperimentalStack
-// (Stack v5) this app uses is built around it: it drives each screen's native
-// preventNativeDismiss, the only reliable way to intercept Android's native back gesture on
-// this stack. Imported from the bundled react-navigation core since there's no public alias.
+// usePreventRemove isn't re-exported from the expo-router entry. It drives the stack's native
+// preventNativeDismiss, the only reliable way to intercept Android's native back gesture.
+// Imported from the bundled react-navigation core since there's no public alias.
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 import { GroupNotFound } from '@/components/GroupNotFound';
@@ -60,11 +59,11 @@ function StudyPageContent() {
     return unsubscribe;
   }, [isExitBlocked, navigation, requestExit]);
 
-  // usePreventRemove blocks the native swipe-back, but the experimental stack reports a *blocked*
-  // swipe as a 'gestureCancel' event rather than invoking the callback above (which only fires
-  // for JS-driven removals). Without this an edge-swipe is silently swallowed with no dialog, so
-  // bridge it to the same confirm flow as the in-app back button. useNavigation()'s base typing
-  // doesn't surface this stack-specific event, hence the cast.
+  // usePreventRemove blocks the native swipe-back, but the stack reports a *blocked* swipe as a
+  // 'gestureCancel' event rather than invoking the callback above (which only fires for JS-driven
+  // removals). Without this an edge-swipe is silently swallowed with no dialog, so bridge it to
+  // the same confirm flow as the in-app back button. useNavigation()'s base typing doesn't
+  // surface this stack-specific event, hence the cast.
   useEffect(() => {
     if (!isExitBlocked) return;
     const addGestureListener = navigation.addListener as unknown as (
