@@ -146,6 +146,7 @@ export const pl: Record<string, string> = {
   'settings.create_mode_btn': 'Stwórz nowy tryb',
   'settings.save_mode_btn': 'Zapisz tryb',
   'settings.dialog.add_step.title': 'Dodaj krok',
+  'settings.dialog.edit_step.title': 'Edytuj krok',
   'settings.dialog.add_step.type': 'Typ',
   'settings.dialog.add_step.page_idx': 'Strona (od 1)',
   'settings.dialog.add_step.time': 'Czas (ms)',

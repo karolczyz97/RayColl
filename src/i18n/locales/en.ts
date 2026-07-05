@@ -145,6 +145,7 @@ export const en: Record<string, string> = {
   'settings.create_mode_btn': 'Create new mode',
   'settings.save_mode_btn': 'Save mode',
   'settings.dialog.add_step.title': 'Add step',
+  'settings.dialog.edit_step.title': 'Edit step',
   'settings.dialog.add_step.type': 'Type',
   'settings.dialog.add_step.page_idx': 'Page (starts at 1)',
   'settings.dialog.add_step.time': 'Time (ms)',

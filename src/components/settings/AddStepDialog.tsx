@@ -15,26 +15,52 @@ const PAGE_INDEX_STEP_TYPES = ['show_page', 'speak_page', 'listen_and_check', 'd
 
 interface AddStepDialogProps {
   visible: boolean;
+  mode: 'add' | 'edit';
+  initialStep: AtomicStep | null;
   pageCount: number;
   onDismiss: () => void;
   onConfirm: (step: AtomicStep) => void;
 }
 
+function stepPageIndex(step: AtomicStep | null): number | null {
+  if (!step) return null;
+  switch (step.type) {
+    case 'show_page':
+    case 'speak_page':
+    case 'listen_and_check':
+      return step.pageIndex;
+    case 'dynamic_pause':
+      return step.nextPageIndex;
+    default:
+      return null;
+  }
+}
+
 export function AddStepDialog({
   visible,
+  mode,
+  initialStep,
   pageCount,
   onDismiss,
   onConfirm,
 }: AddStepDialogProps) {
   const { t } = useI18n();
 
-  const [newStepType, setNewStepType] = useState<string>('show_page');
-  const [newPageIdx, setNewPageIdx] = useState(0);
-  const [newMs, setNewMs] = useState(500);
-  const [newPauseMultiplier, setNewPauseMultiplier] = useState(1);
-  const [newThreshold, setNewThreshold] = useState(70);
-  const [newRating, setNewRating] = useState(3);
-  const [newCondition, setNewCondition] = useState<'always' | StepCondition>('always');
+  const [newStepType, setNewStepType] = useState<string>(initialStep?.type ?? 'show_page');
+  const [newPageIdx, setNewPageIdx] = useState(stepPageIndex(initialStep) ?? 0);
+  const [newMs, setNewMs] = useState(initialStep?.type === 'wait' ? initialStep.ms : 500);
+  const [newPauseMultiplier, setNewPauseMultiplier] = useState(
+    initialStep?.type === 'dynamic_pause' ? initialStep.pauseMultiplier : 1,
+  );
+  const [newThreshold, setNewThreshold] = useState(
+    initialStep?.type === 'listen_and_check' ? initialStep.successThreshold : 70,
+  );
+  const [newRating, setNewRating] = useState(
+    initialStep?.type === 'auto_rate_fixed' ? initialStep.rating : 3,
+  );
+  const [newCondition, setNewCondition] = useState<'always' | StepCondition>(
+    initialStep?.condition ?? 'always',
+  );
 
   const confirmAddStep = useCallback(() => {
     const step = buildModeStep({
@@ -76,13 +102,16 @@ export function AddStepDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={dialogStyles.dialog}>
-        <Dialog.Title>{t('settings.dialog.add_step.title')}</Dialog.Title>
+        <Dialog.Title>
+          {mode === 'edit' ? t('settings.dialog.edit_step.title') : t('settings.dialog.add_step.title')}
+        </Dialog.Title>
         <Dialog.Content style={styles.dialogContent}>
           <AppSelect
             label={t('settings.dialog.add_step.type')}
             value={newStepType}
             options={stepOptions}
             onChange={setNewStepType}
+            disabled={mode === 'edit'}
             accessibilityLabel="Select step type"
           />
 
@@ -154,8 +183,12 @@ export function AddStepDialog({
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onDismiss}>{t('btn.cancel')}</Button>
-          <Button mode="contained" onPress={confirmAddStep} accessibilityLabel="Add step button">
-            {t('btn.add')}
+          <Button
+            mode="contained"
+            onPress={confirmAddStep}
+            accessibilityLabel={mode === 'edit' ? 'Save step button' : 'Add step button'}
+          >
+            {mode === 'edit' ? t('btn.save') : t('btn.add')}
           </Button>
         </Dialog.Actions>
       </Dialog>

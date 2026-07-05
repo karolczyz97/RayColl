@@ -199,9 +199,11 @@ export function StudyModeDetailScreen() {
       <AddStepDialog
         visible={draftController.stepDialogOpen}
         key={draftController.stepDialogKey}
+        mode={draftController.atomicDialogMode}
+        initialStep={draftController.editingAtomicStep}
         pageCount={MAX_VISIBLE_PAGE_COUNT}
         onDismiss={() => draftController.setStepDialogOpen(false)}
-        onConfirm={draftController.addAtomicStep}
+        onConfirm={draftController.confirmAtomicStep}
       />
 
       <CompoundStepDialog

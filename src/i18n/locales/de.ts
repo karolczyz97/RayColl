@@ -146,6 +146,7 @@ export const de: Record<string, string> = {
   'settings.create_mode_btn': 'Neuen Modus erstellen',
   'settings.save_mode_btn': 'Modus speichern',
   'settings.dialog.add_step.title': 'Schritt hinzufügen',
+  'settings.dialog.edit_step.title': 'Schritt bearbeiten',
   'settings.dialog.add_step.type': 'Typ',
   'settings.dialog.add_step.page_idx': 'Seite (ab 1)',
   'settings.dialog.add_step.time': 'Zeit (ms)',

@@ -59,7 +59,7 @@ describe('useStudyModeDraftController', () => {
 
     act(() => {
       result.current.setName('  New mode  ');
-      result.current.addAtomicStep({ type: 'show_page', pageIndex: 0 });
+      result.current.confirmAtomicStep({ type: 'show_page', pageIndex: 0 });
     });
     expect(result.current.isValid).toBe(true);
 
@@ -142,6 +142,26 @@ describe('useStudyModeDraftController', () => {
     expect(result.current.draft?.steps).toEqual([
       { type: 'compound', version: 1, params: { kind: 'present_front', page: 2, speak: false } },
     ]);
+  });
+
+  it('edits an atomic step in place, keeping its id', () => {
+    const mode = makeMode({
+      steps: [{ id: 'step-1', type: 'wait', ms: 500 }],
+    });
+    mockStore.studyModes = [mode];
+    const { result } = renderHook(() => useStudyModeDraftController({ modeId: 'custom' }));
+
+    act(() => {
+      result.current.editStep(mode, 0);
+    });
+    expect(result.current.atomicDialogMode).toBe('edit');
+    expect(result.current.editingAtomicStep).toEqual({ id: 'step-1', type: 'wait', ms: 500 });
+
+    act(() => {
+      result.current.confirmAtomicStep({ type: 'wait', ms: 800 });
+    });
+
+    expect(result.current.draft?.steps).toEqual([{ id: 'step-1', type: 'wait', ms: 800 }]);
   });
 
   it('switches add dialog by expert mode without expanding existing compounds', () => {

@@ -56,7 +56,7 @@ export function StudyModeStepsEditor({
             <List.Item
               style={styles.listItem}
               title={`${index + 1}. ${formatStepSummary(step, t)}`}
-              onPress={step.type === 'compound' ? () => editStep(activeMode, index) : undefined}
+              onPress={() => editStep(activeMode, index)}
               right={() => (
                 <StepReorderControls
                   index={index}
@@ -64,6 +64,7 @@ export function StudyModeStepsEditor({
                   isLast={index === activeMode.steps.length - 1}
                   onMoveUp={() => moveStep(activeMode, index, -1)}
                   onMoveDown={() => moveStep(activeMode, index, 1)}
+                  onEdit={() => editStep(activeMode, index)}
                   onDelete={() => deleteStep(activeMode, index)}
                 />
               )}

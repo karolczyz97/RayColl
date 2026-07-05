@@ -9,6 +9,7 @@ interface StepReorderControlsProps {
   isLast: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
@@ -18,6 +19,7 @@ export function StepReorderControls({
   isLast,
   onMoveUp,
   onMoveDown,
+  onEdit,
   onDelete,
 }: StepReorderControlsProps) {
   const theme = useTheme();
@@ -40,6 +42,13 @@ export function StepReorderControls({
         onPress={onMoveDown}
         disabled={isLast}
         accessibilityLabel={`Move step ${position} down`}
+      />
+      <IconButton
+        icon="pencil"
+        size={TOKENS.iconSize.xs}
+        style={styles.button}
+        onPress={onEdit}
+        accessibilityLabel={`Edit step ${position}`}
       />
       <IconButton
         icon="delete"

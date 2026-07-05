@@ -79,6 +79,8 @@ export function useStudyModeDraftController({
   const [compoundDialogKey, setCompoundDialogKey] = useState(0);
   const [editingCompoundIndex, setEditingCompoundIndex] = useState<number | null>(null);
   const [compoundDialogStep, setCompoundDialogStep] = useState<CompoundStep | null>(null);
+  const [editingAtomicIndex, setEditingAtomicIndex] = useState<number | null>(null);
+  const [editingAtomicStep, setEditingAtomicStep] = useState<AtomicStep | null>(null);
   const [expertMode, setExpertMode] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ModeTemplateId>('blank');
 
@@ -137,6 +139,8 @@ export function useStudyModeDraftController({
 
   const addStepToMode = useCallback(() => {
     if (expertMode) {
+      setEditingAtomicIndex(null);
+      setEditingAtomicStep(null);
       setStepDialogKey((key) => key + 1);
       setStepDialogOpen(true);
       return;
@@ -150,11 +154,18 @@ export function useStudyModeDraftController({
   const editStep = useCallback(
     (_mode: StudyMode, index: number) => {
       const step = draft?.steps[index];
-      if (!step || step.type !== 'compound') return;
-      setEditingCompoundIndex(index);
-      setCompoundDialogStep(step);
-      setCompoundDialogKey((key) => key + 1);
-      setCompoundDialogOpen(true);
+      if (!step) return;
+      if (step.type === 'compound') {
+        setEditingCompoundIndex(index);
+        setCompoundDialogStep(step);
+        setCompoundDialogKey((key) => key + 1);
+        setCompoundDialogOpen(true);
+        return;
+      }
+      setEditingAtomicIndex(index);
+      setEditingAtomicStep(step);
+      setStepDialogKey((key) => key + 1);
+      setStepDialogOpen(true);
     },
     [draft],
   );
@@ -183,14 +194,26 @@ export function useStudyModeDraftController({
     });
   }, []);
 
-  const addAtomicStep = useCallback((step: AtomicStep) => {
+  const confirmAtomicStep = useCallback((step: AtomicStep) => {
     setDraftState((current) => {
       if (!current.draft) return current;
+
+      if (editingAtomicIndex !== null) {
+        const currentStep = current.draft.steps[editingAtomicIndex];
+        if (!currentStep) return current;
+        const nextSteps = current.draft.steps.map((existingStep, index) =>
+          index === editingAtomicIndex ? { ...step, id: currentStep.id } : existingStep,
+        );
+        return { ...current, draft: { ...current.draft, steps: nextSteps } };
+      }
+
       const stepWithId = { ...step, id: uid() };
       return { ...current, draft: { ...current.draft, steps: [...current.draft.steps, stepWithId] } };
     });
     setStepDialogOpen(false);
-  }, []);
+    setEditingAtomicIndex(null);
+    setEditingAtomicStep(null);
+  }, [editingAtomicIndex]);
 
   const confirmCompoundStep = useCallback((params: CompoundParams) => {
     setDraftState((current) => {
@@ -275,6 +298,8 @@ export function useStudyModeDraftController({
     stepDialogOpen,
     stepDialogKey,
     setStepDialogOpen,
+    editingAtomicStep,
+    atomicDialogMode: editingAtomicIndex === null ? 'add' as const : 'edit' as const,
     compoundDialogOpen,
     compoundDialogKey,
     setCompoundDialogOpen,
@@ -290,7 +315,7 @@ export function useStudyModeDraftController({
     addStepToMode,
     editStep,
     resetSteps,
-    addAtomicStep,
+    confirmAtomicStep,
     confirmCompoundStep,
     save,
   };
