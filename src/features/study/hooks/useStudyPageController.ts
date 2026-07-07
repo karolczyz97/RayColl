@@ -3,7 +3,7 @@ import { useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
-import { useStudySession } from '@/hooks/useStudySession';
+import { useStudySession } from '@/features/study/hooks/useStudySession';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
 import { expandModeSteps } from '@/features/settings/compoundSteps';
 

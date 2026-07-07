@@ -25,7 +25,7 @@ const mockSession = {
 const mockFlushPersistence = jest.fn().mockResolvedValue(undefined);
 const mockGetDueCards = jest.fn().mockReturnValue([]);
 
-jest.mock('@/hooks/useStudySession', () => ({
+jest.mock('@/features/study/hooks/useStudySession', () => ({
   useStudySession: () => mockSession,
 }));
 

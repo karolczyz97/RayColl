@@ -32,7 +32,7 @@ jest.mock('@/contexts/UserPreferencesContext', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import { useStudySession } from '@/hooks/useStudySession';
+import { useStudySession } from '@/features/study/hooks/useStudySession';
 // eslint-disable-next-line import/first
 import { ttsService } from '@/services/ttsService';
 // eslint-disable-next-line import/first

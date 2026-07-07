@@ -234,6 +234,20 @@ describe('useStoreActionsCore persistence behavior', () => {
     expect(mocks.persistNow).not.toHaveBeenCalled();
   });
 
+  it('does not apply snapshot when importState pre-flush fails', async () => {
+    const initial = makeSnapshot();
+    const { actions, mocks, refs } = renderStoreActions(initial);
+    const validBackupJson = JSON.stringify(initial);
+    mocks.flushPersistence.mockRejectedValueOnce(new Error('flush failed'));
+
+    await expect(actions.importState(validBackupJson)).rejects.toThrow('flush failed');
+
+    expect(refs.groupsRef.current).toBe(initial.groups);
+    expect(mocks.applySnapshot).not.toHaveBeenCalled();
+    expect(mocks.persistNow).not.toHaveBeenCalled();
+    expect(mocks.setLastStoreError).toHaveBeenCalledWith('flush failed');
+  });
+
   it('rolls back and rejects when a critical group op fails to persist', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const { actions, mocks, refs } = renderStoreActions();

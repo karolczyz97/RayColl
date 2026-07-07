@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect, useMemo, useReducer, useState } from 'r
 import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
-import { useSyncedRef } from './useSyncedRef';
+import { useSyncedRef } from '@/hooks/useSyncedRef';
 import { executeStudyStep } from '@/features/study/session/stepExecutor';
 import { useStudyAudio } from '@/features/study/hooks/useStudyAudio';
 import { useStudyCardGestures } from '@/features/study/hooks/useStudyCardGestures';

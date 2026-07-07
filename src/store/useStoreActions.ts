@@ -439,6 +439,14 @@ export function useStoreActionsCore({
 
   const importState = useCallback(
     async (json: string) => {
+      try {
+        await flushPersistence();
+      } catch (err) {
+        const message = getErrorMessage(err);
+        setStoreError(message);
+        throw err;
+      }
+
       const previousSnapshot: StoreData = captureSnapshot(groupsRef, studyModesRef, heatmapRef);
 
       const data = parseBackupJson(json);
@@ -455,7 +463,7 @@ export function useStoreActionsCore({
         'Import state',
       );
     },
-    [applySnapshot, getCurrentUid, groupsRef, heatmapRef, persistNow, studyModesRef],
+    [applySnapshot, flushPersistence, getCurrentUid, groupsRef, heatmapRef, persistNow, setStoreError, studyModesRef],
   );
 
   return useMemo(
