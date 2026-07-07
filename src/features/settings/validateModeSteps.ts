@@ -1,4 +1,5 @@
 import type { AtomicStep } from '@/types/models';
+import { getStepPageIndex } from './stepRegistry';
 
 export type ModeStepIssueSeverity = 'error' | 'warning';
 
@@ -12,18 +13,6 @@ export interface ModeStepIssue {
 // Kroki opuszczające kartę / kończące ją oceną — każda sensowna konfiguracja
 // powinna mieć przynajmniej jeden taki terminal, inaczej karta utknie.
 const TERMINAL_STEP_TYPES = new Set<AtomicStep['type']>(['show_ratings', 'next_card']);
-
-function stepPageIndex(step: AtomicStep): number | null {
-  if (
-    step.type === 'show_page' ||
-    step.type === 'speak_page' ||
-    step.type === 'listen_and_check'
-  ) {
-    return step.pageIndex;
-  }
-  if (step.type === 'dynamic_pause') return step.nextPageIndex;
-  return null;
-}
 
 /**
  * Waliduje konfigurację trybu. NIE naprawia niczego automatycznie i NIE dodaje
@@ -46,7 +35,7 @@ export function validateModeStepSources(
   const issues: ModeStepIssue[] = [];
 
   stepSources.forEach(({ step, sourceIndex }) => {
-    const pageIndex = stepPageIndex(step);
+    const pageIndex = getStepPageIndex(step);
     if (pageIndex !== null && (pageIndex < 0 || pageIndex >= pageCount)) {
       issues.push({
         severity: 'error',

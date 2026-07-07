@@ -6,7 +6,6 @@ import {
   MAX_STORED_PAGE_COUNT,
   clampActivePageCount,
 } from '@/constants/pages';
-import { clamp } from '@/utils/math';
 import type {
   Flashcard,
   FlashcardGroup,
@@ -17,11 +16,11 @@ import type {
   StudyMode,
   StoreData,
 } from '@/types/models';
-import { MAX_PAUSE_MULTIPLIER } from '@/constants/studySteps';
 import { isBuiltInModeSourceId } from './seed/seedModes';
 import { coerceStringArray } from '@/utils/array';
 import { isRecord } from '@/utils/types';
 import { normalizeCompoundStep } from '@/features/settings/compoundSteps';
+import { ATOMIC_STEP_TYPE_ORDER, clampStepNumberField } from '@/features/settings/stepRegistry';
 
 const VALID_SRS_STATES: ReadonlySet<SrsState['state']> = new Set([0, 1, 2, 3]);
 
@@ -111,42 +110,21 @@ export function normalizeGroup(group: FlashcardGroup): FlashcardGroup {
   };
 }
 
-export { MAX_PAUSE_MULTIPLIER };
-
 // Known primitive steps. Unknown types are stripped defensively so the runner
 // never receives a step it cannot execute.
-const VALID_STEP_TYPES = new Set<ModeStep['type']>([
-  'show_page',
-  'show_all_pages',
-  'wait_for_tap_to_reveal_next',
-  'wait_for_tap_to_reveal',
-  'show_ratings',
-  'speak_page',
-  'dynamic_pause',
-  'wait',
-  'listen_and_check',
-  'feedback_success',
-  'feedback_error',
-  'auto_rate_from_answer',
-  'auto_rate_fixed',
-  'mark_failed',
-  'next_card',
-  'compound',
-]);
+const VALID_STEP_TYPES = new Set<ModeStep['type']>([...ATOMIC_STEP_TYPE_ORDER, 'compound']);
 
 function clampStepRating(value: unknown): number {
-  const n = typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : 3;
-  return clamp(n, 1, 4);
+  return clampStepNumberField('auto_rate_fixed', 'rating', value);
 }
 
 // `pauseMultiplier` = multiplier for the next page listen duration.
 function normalizePauseMultiplier(step: AtomicStep): number {
-  const raw = step as { pauseMultiplier?: unknown };
-  const multiplier =
-    typeof raw.pauseMultiplier === 'number' && Number.isFinite(raw.pauseMultiplier)
-      ? raw.pauseMultiplier
-      : 1;
-  return clamp(Math.trunc(multiplier), 0, MAX_PAUSE_MULTIPLIER);
+  return clampStepNumberField(
+    'dynamic_pause',
+    'pauseMultiplier',
+    (step as { pauseMultiplier?: unknown }).pauseMultiplier,
+  );
 }
 
 // Nieznane wartości warunku (np. z uszkodzonego backupu) są usuwane.
