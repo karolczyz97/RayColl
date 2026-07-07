@@ -1,4 +1,3 @@
-import type { MutableRefObject } from 'react';
 import type { AtomicStep, Flashcard, FlashcardGroup } from '@/types/models';
 import type { SpeechRecognitionOutcome, StudySkipState } from '@/features/study/hooks/useStudyAudio';
 import { playRatingHaptic } from '@/services/hapticFeedback';
@@ -228,13 +227,13 @@ export class SessionEngine {
     await this.advanceToNextCard();
   };
 
-  private markCardFailed = (card: Flashcard): void => {
+  markCardFailed = (card: Flashcard): void => {
     if (this.failedCards.find((item) => item.id === card.id)) return;
     this.failedCards.push(card);
     this.bumpAndNotify();
   };
 
-  private processCardReview = (card: Flashcard, rating: number): void => {
+  processCardReview = (card: Flashcard, rating: number): void => {
     if (!this.group || !this.deps) return;
     if (tryMarkCardReviewed(this.reviewedAttemptKeys, this.sessionAttempt, card.id)) {
       this.deps.onCardReviewed(this.group.id, card.id, rating);
@@ -255,7 +254,7 @@ export class SessionEngine {
     }
   }
 
-  private advanceToNextCard = async (): Promise<void> => {
+  advanceToNextCard = async (): Promise<void> => {
     await this.waitUntilReleased();
     const nextIndex = this.state.currentCardIndex + 1;
     if (nextIndex >= this.dueCards.length) {
@@ -307,85 +306,53 @@ export class SessionEngine {
   }
 
   executeStep = async (card: Flashcard, stepIndex: number): Promise<void> => {
-    const deps = this.deps;
-    if (!deps) return;
-    await executeStudyStep(card, stepIndex, {
-      abortRef: this.fieldRef(
-        () => this.aborted,
-        (value) => {
-          this.aborted = value;
-        },
-      ),
-      runEpochRef: this.fieldRef(
-        () => this.runEpoch,
-        (value) => {
-          this.runEpoch = value;
-        },
-      ),
-      lastAnswerResultRef: this.fieldRef(
-        () => this.lastAnswerResult,
-        (value) => {
-          this.lastAnswerResult = value;
-        },
-      ),
-      currentCardReviewStateRef: this.fieldRef(
-        () => this.cardReviewState,
-        (value) => {
-          this.cardReviewState = value;
-        },
-      ),
-      revealedPagesRef: this.fieldRef(
-        () => this.revealedPages,
-        (value) => {
-          this.revealedPages = value;
-        },
-      ),
-      activeStepsRef: this.fieldRef(
-        () => this.activeSteps,
-        (value) => {
-          this.activeSteps = value;
-        },
-      ),
-      groupRef: this.fieldRef(
-        () => this.group,
-        (value) => {
-          this.group = value;
-        },
-      ),
-      stateRef: this.fieldRef(
-        () => this.state,
-        () => {},
-      ),
-      skipRef: this.fieldRef(
-        () => deps.skip,
-        () => {},
-      ),
-      lastTtsDurationRef: this.fieldRef(
-        () => deps.getLastTtsDuration(),
-        () => {},
-      ),
-      dispatchIfMounted: this.dispatch,
-      guardedAwait: deps.guardedAwait,
-      playTts: deps.playTts,
-      runSpeechRecognition: deps.runSpeechRecognition,
-      processCardReview: this.processCardReview,
-      advanceToNextCard: this.advanceToNextCard,
-      markCardFailed: this.markCardFailed,
-      executeNext: this.executeStep,
-    });
+    if (!this.deps) return;
+    await executeStudyStep(card, stepIndex, this);
   };
 
-  // Most kompatybilności do czasu przepięcia stepExecutor bezpośrednio na
-  // silnik: MutableRefObject<T> to strukturalnie { current: T }, więc pola
-  // silnika udajemy accessorami.
-  private fieldRef<T>(get: () => T, set: (value: T) => void): MutableRefObject<T> {
-    return {
-      get current() {
-        return get();
-      },
-      set current(value: T) {
-        set(value);
-      },
-    } as MutableRefObject<T>;
-  }
+  // ---------------------------------------------------- API runnera (kroki)
+  // stepExecutor czyta/pisze pola silnika wyłącznie przez te akcesory.
+
+  isAborted = (): boolean => this.aborted;
+
+  getRunEpoch = (): number => this.runEpoch;
+
+  getActiveSteps = (): AtomicStep[] => this.activeSteps;
+
+  getLastAnswerResult = (): LastAnswerResult => this.lastAnswerResult;
+
+  setLastAnswerResult = (result: LastAnswerResult): void => {
+    this.lastAnswerResult = result;
+  };
+
+  getCardReviewState = (): CardReviewState => this.cardReviewState;
+
+  setCardReviewState = (reviewState: CardReviewState): void => {
+    this.cardReviewState = reviewState;
+  };
+
+  getRevealedPages = (): number[] => this.revealedPages;
+
+  setRevealedPages = (pages: number[]): void => {
+    this.revealedPages = pages;
+  };
+
+  getLastTtsDuration = (): number => this.deps?.getLastTtsDuration() ?? 0;
+
+  guardedAwait = async <T>(promise: Promise<T>): Promise<T | undefined> => {
+    if (!this.deps) return undefined;
+    return this.deps.guardedAwait(promise);
+  };
+
+  playTts = async (text: string, lang: string): Promise<void> => {
+    await this.deps?.playTts(text, lang);
+  };
+
+  runSpeechRecognition = async (
+    lang: string,
+    timeoutMs: number,
+  ): Promise<SpeechRecognitionOutcome> => {
+    if (!this.deps) return { status: 'error' };
+    return this.deps.runSpeechRecognition(lang, timeoutMs);
+  };
 }
