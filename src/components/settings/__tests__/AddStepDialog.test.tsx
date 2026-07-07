@@ -132,4 +132,71 @@ describe('AddStepDialog', () => {
     expect(getByLabelText('Page number input')).toBeTruthy();
     expect(queryByLabelText('Duration in milliseconds input')).toBeNull();
   });
+
+  it('allows changing step type in edit mode and resets/restores values', () => {
+    const mockConfirm = jest.fn();
+    const { getByLabelText, getByText, queryByLabelText } = render(
+      <PaperProvider>
+        <Portal.Host>
+          <AddStepDialog
+            visible={true}
+            mode="edit"
+            initialStep={{ id: 'step-1', type: 'wait', ms: 500 }}
+            pageCount={3}
+            onDismiss={jest.fn()}
+            onConfirm={mockConfirm}
+          />
+        </Portal.Host>
+      </PaperProvider>
+    );
+
+    // Verify it starts as 'wait' with duration input visible
+    expect(getByLabelText('Duration in milliseconds input')).toBeTruthy();
+
+    // Open select type dropdown and switch to 'show_page'
+    fireEvent.press(getByLabelText('Select step type'));
+    fireEvent.press(getByText('step.type.show_page'));
+
+    // Verify 'wait' fields are gone, 'show_page' fields (page) are visible
+    expect(queryByLabelText('Duration in milliseconds input')).toBeNull();
+    expect(getByLabelText('Page number input')).toBeTruthy();
+
+    // Confirm to verify step type was changed
+    fireEvent.press(getByLabelText('Save step button'));
+    expect(mockConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'show_page', pageIndex: 0 })
+    );
+  });
+
+  it('restores initial values when toggled back to original step type', () => {
+    const mockConfirm = jest.fn();
+    const { getByLabelText, getByText } = render(
+      <PaperProvider>
+        <Portal.Host>
+          <AddStepDialog
+            visible={true}
+            mode="edit"
+            initialStep={{ id: 'step-1', type: 'wait', ms: 750 }}
+            pageCount={3}
+            onDismiss={jest.fn()}
+            onConfirm={mockConfirm}
+          />
+        </Portal.Host>
+      </PaperProvider>
+    );
+
+    // Switch to 'show_page'
+    fireEvent.press(getByLabelText('Select step type'));
+    fireEvent.press(getByText('step.type.show_page'));
+
+    // Switch back to 'wait'
+    fireEvent.press(getByLabelText('Select step type'));
+    fireEvent.press(getByText('step.type.wait'));
+
+    // Confirm to verify values are restored to 750 (not default 500)
+    fireEvent.press(getByLabelText('Save step button'));
+    expect(mockConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'wait', ms: 750 })
+    );
+  });
 });

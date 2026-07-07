@@ -62,6 +62,27 @@ export function AddStepDialog({
     setValues((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const handleStepTypeChange = useCallback(
+    (newType: string) => {
+      if (!isAtomicStepType(newType)) return;
+      setStepType(newType);
+
+      if (initialStep && newType === initialStep.type) {
+        setValues(initialValues(initialStep));
+      } else {
+        const newValues: Record<string, number> = { page: values.page ?? 0 };
+        const specFields = getStepDefinition(newType).fields as Record<string, StepFieldSpec>;
+        for (const [param, spec] of Object.entries(specFields)) {
+          if (spec.kind === 'number') {
+            newValues[param] = spec.defaultValue;
+          }
+        }
+        setValues(newValues);
+      }
+    },
+    [initialStep, values.page],
+  );
+
   const fieldEntries = isAtomicStepType(stepType)
     ? Object.entries(getStepDefinition(stepType).fields as Record<string, StepFieldSpec>)
     : [];
@@ -108,8 +129,7 @@ export function AddStepDialog({
             label={t('settings.dialog.add_step.type')}
             value={stepType}
             options={stepOptions}
-            onChange={setStepType}
-            disabled={mode === 'edit'}
+            onChange={handleStepTypeChange}
             accessibilityLabel="Select step type"
           />
 

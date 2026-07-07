@@ -78,7 +78,11 @@ export function CompoundStepDialog({
   const setNextKind = (value: string) => {
     const nextKind = asKind(value);
     setKind(nextKind);
-    setParams(defaultCompoundParams(nextKind, { pageCount }));
+    if (initialStep && nextKind === initialStep.params.kind) {
+      setParams(initialStep.params);
+    } else {
+      setParams(defaultCompoundParams(nextKind, { pageCount }));
+    }
   };
 
   const updateBranch = (
@@ -369,7 +373,6 @@ export function CompoundStepDialog({
               value={kind}
               options={kindOptions}
               onChange={setNextKind}
-              disabled={mode === 'edit'}
             />
             {renderFields()}
           </ScrollView>

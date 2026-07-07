@@ -1,9 +1,6 @@
-Fixes for session engine, data normalization, and EAS runtimeVersion
+Allow changing step type when editing study mode steps
 
-- Fixed session ending immediately when starting with an empty card list
-- Fixed potential loop in waitUntilReleased during session abort
-- Fixed speak_all_pages to skip remaining pages when user taps
-- Fixed German, Spanish, and Italian translations for mode steps validation
-- Added normalization and clamps for listen_and_check, show_page, and wait parameters
-- Ignored .claude/ and .agents/ directories in Jest config
-- Changed runtimeVersion policy to fingerprint to ensure native compatibility for OTA updates
+- Enabled changing the step type during study mode step editing
+- Automatically resets other parameters to defaults (preserving page number) when switching types
+- Restores original parameters if user switches back to the initial step type
+- Added test coverage in AddStepDialog tests for step type transitions
