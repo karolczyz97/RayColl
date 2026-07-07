@@ -55,7 +55,7 @@ export const NO_INTERACTION_GATE: InteractionGate = {
 /**
  * Stan oceny bieżącej karty. Jedna karta = maksymalnie jedna ocena: gdy stan
  * jest inny niż `none`, kolejne auto/manual oceny i `show_ratings` są no-op.
- * Trzymany jako ref w useStudySession (runner czyta go synchronicznie w łańcuchu
+ * Trzymany jako pole w SessionEngine (runner czyta go synchronicznie w łańcuchu
  * kroków; dispatch reducera byłby asynchroniczny i nieczytelny w tym samym ticku).
  */
 export type CardReviewState = 'none' | 'autoRated' | 'manuallyRated';
@@ -67,14 +67,14 @@ export interface StudySessionState {
   revealedPages: number[];
   peekedPageIndex: number | null;
   // Wynik ostatniego STT — mirror dla UI. Synchronicznym źródłem prawdy dla
-  // runnera/warunków jest lastAnswerResultRef w useStudySession.
+  // runnera/warunków jest lastAnswerResult w SessionEngine.
   lastAnswerResult: LastAnswerResult;
   // Page currently being spoken (TTS) or listened to (STT), so the card can show
   // a per-page audio indicator. Null when no audio step is active.
   audioPageIndex: number | null;
   interactionGate: InteractionGate;
   // Ustawiane przez gate / gesty; efekt w useStudySession podejmuje od tego kroku
-  // na bieżącej karcie (omija blokadę lastExecutedCardIndexRef auto-runa).
+  // na bieżącej karcie (omija blokadę lastExecutedCardIndex auto-runa).
   pendingStepIndexToRun: number | null;
   errorMsg?: string;
 }

@@ -39,7 +39,6 @@ export function useStudyAudio(
   // Bumped whenever a recognition run starts or audio is stopped/skipped, so we can
   // discard partial-result callbacks that belong to a previous (zombie) run.
   const sttTokenRef = useRef(0);
-  const lastPartialTextRef = useRef('');
 
   const stopAudio = useCallback(() => {
     sttTokenRef.current += 1;
@@ -64,7 +63,6 @@ export function useStudyAudio(
   const runSpeechRecognition = useCallback(
     async (lang: string, timeoutMs: number): Promise<SpeechRecognitionOutcome> => {
       const token = (sttTokenRef.current += 1);
-      lastPartialTextRef.current = '';
       playStudyActionHaptic();
       playMicOnSound();
       try {
@@ -74,7 +72,6 @@ export function useStudyAudio(
           onPartialResult: (partial) => {
             // Drop partials from a superseded/cancelled run (zombie callback).
             if (token !== sttTokenRef.current) return;
-            lastPartialTextRef.current = partial;
             dispatchIfMounted({ type: 'UPDATE_PARTIAL_STT', text: partial });
           },
           onListeningStateChange: (listening) => {
@@ -123,6 +120,5 @@ export function useStudyAudio(
     stopAudio,
     lastTtsDurationRef,
     skipRef,
-    lastPartialTextRef,
   };
 }

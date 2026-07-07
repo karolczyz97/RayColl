@@ -162,7 +162,7 @@ export const it: Record<string, string> = {
   'step.condition.always': 'Sempre',
   'step.condition.correct': 'Se corretto',
   'step.condition.wrong': 'Se sbagliato',
-  'settings.validation.mode_steps_required': 'Add at least one step.',
+  'settings.validation.mode_steps_required': 'Aggiungi almeno un passaggio.',
   'settings.validation.step_page_out_of_range': 'Il passaggio {index} usa la pagina {page}, fuori intervallo.',
   'settings.validation.no_terminal': 'Nessun passaggio finale: aggiungi «Mostra i pulsanti di valutazione» o «Carta successiva».',
   'settings.validation.auto_rate_without_stt':

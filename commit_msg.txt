@@ -1,5 +1,9 @@
-﻿Usunięcie przestarzałych formatów i usztywnienie modelu
+Fixes for session engine, data normalization, and EAS runtimeVersion
 
-- Zakończono wsparcie dla bardzo starych wersji formatów danych i kopii zapasowych
-- Wprowadzono rygorystyczną walidację struktury danych podczas importu plików kopii zapasowych
-- Zwiększono stabilność działania dzięki usunięciu ukrytych mechanizmów uzupełniania brakujących danych
+- Fixed session ending immediately when starting with an empty card list
+- Fixed potential loop in waitUntilReleased during session abort
+- Fixed speak_all_pages to skip remaining pages when user taps
+- Fixed German, Spanish, and Italian translations for mode steps validation
+- Added normalization and clamps for listen_and_check, show_page, and wait parameters
+- Ignored .claude/ and .agents/ directories in Jest config
+- Changed runtimeVersion policy to fingerprint to ensure native compatibility for OTA updates

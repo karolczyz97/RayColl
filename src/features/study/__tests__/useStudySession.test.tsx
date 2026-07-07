@@ -332,6 +332,36 @@ describe('useStudySession', () => {
     );
   });
 
+  it('speak_all_pages stops immediately and breaks the loop when a skip is requested', async () => {
+    const card1 = makeCard('c1', ['front', 'middle', 'back']);
+    const steps: AtomicStep[] = [
+      { type: 'speak_all_pages' },
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ];
+    const { hookRef } = renderSession(makeGroup(3, 2, [card1]), steps);
+
+    // Simulate a tap (skip request) during the first page TTS.
+    mockedTtsService.speak.mockImplementationOnce(async () => {
+      // Trigger a skip dynamically when speak starts.
+      await act(async () => {
+        hookRef.current!.handleCardPress();
+      });
+    });
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    // It should speak 'front', get skipped, and break without speaking 'middle'.
+    expect(mockedTtsService.speak).toHaveBeenCalledTimes(1);
+    expect(mockedTtsService.speak).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ text: 'front' }),
+    );
+  });
+
   it('wait_for_tap stops the runner until a tap, without revealing any page', async () => {
     const card1 = makeCard('c1', ['hello', 'world']);
     const steps: AtomicStep[] = [

@@ -240,4 +240,22 @@ describe('normalizeStudyMode', () => {
 
     expect(normalizeStudyMode(makeMode({ steps })).steps).toEqual(steps);
   });
+
+  it('clamps listen_and_check, show_page, and wait parameters', () => {
+    const steps = [
+      { type: 'listen_and_check', pageIndex: -2, successThreshold: 150 },
+      { type: 'listen_and_check', pageIndex: NaN, successThreshold: NaN },
+      { type: 'show_page', pageIndex: -100 },
+      { type: 'wait', ms: -500 },
+      { type: 'wait', ms: NaN },
+    ] as unknown as StudyMode['steps'];
+    const normalized = normalizeStudyMode(makeMode({ steps }));
+    expect(normalized.steps).toEqual([
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 100 },
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'wait', ms: 0 },
+      { type: 'wait', ms: 500 },
+    ]);
+  });
 });

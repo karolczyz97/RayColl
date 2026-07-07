@@ -162,7 +162,7 @@ export const es: Record<string, string> = {
   'step.condition.always': 'Siempre',
   'step.condition.correct': 'Si es correcto',
   'step.condition.wrong': 'Si es incorrecto',
-  'settings.validation.mode_steps_required': 'Add at least one step.',
+  'settings.validation.mode_steps_required': 'Añade al menos un paso.',
   'settings.validation.step_page_out_of_range': 'El paso {index} usa la página {page}, que está fuera de rango.',
   'settings.validation.no_terminal': 'Sin paso final: añade «Mostrar botones de valoración» o «Siguiente tarjeta».',
   'settings.validation.auto_rate_without_stt':

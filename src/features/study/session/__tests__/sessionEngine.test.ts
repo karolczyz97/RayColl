@@ -219,6 +219,16 @@ describe('SessionEngine', () => {
     engine.dispatch({ type: 'SHOW_RATINGS' });
     expect(engine.getState().status).toBe('idle');
   });
+
+  it('finishes immediately when started with an empty card list', async () => {
+    const { engine } = makeEngine(makeGroup(1, 1, []), [
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ]);
+    engine.start([]);
+    await flush();
+    expect(engine.getState().status).toBe('finished');
+  });
 });
 
 describe('buildSessionViewModel', () => {

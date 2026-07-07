@@ -162,7 +162,7 @@ export const de: Record<string, string> = {
   'step.condition.always': 'Immer',
   'step.condition.correct': 'Wenn richtig',
   'step.condition.wrong': 'Wenn falsch',
-  'settings.validation.mode_steps_required': 'Add at least one step.',
+  'settings.validation.mode_steps_required': 'Fügen Sie mindestens einen Schritt hinzu.',
   'settings.validation.step_page_out_of_range': 'Schritt {index} verwendet Seite {page}, die außerhalb des Bereichs liegt.',
   'settings.validation.no_terminal': 'Kein Abschlussschritt: füge „Bewertungstasten zeigen” oder „Nächste Karte” hinzu.',
   'settings.validation.auto_rate_without_stt':

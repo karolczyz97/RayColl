@@ -80,7 +80,7 @@ module.exports = {
     },
     owner: "karolczyz97",
     runtimeVersion: {
-      policy: "appVersion"
+      policy: "fingerprint"
     },
     updates: {
       url: "https://u.expo.dev/077bddf4-8cc0-4aff-8297-71a6b2ca2e37"

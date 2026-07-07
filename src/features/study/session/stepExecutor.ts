@@ -265,11 +265,13 @@ export async function executeStudyStep(
       break;
 
     case 'speak_all_pages': {
-      // Czyta kolejno wszystkie aktywne strony. Tap przerywa TYLKO bieżące TTS
-      // (guardedAwait); kolejne strony lecą dalej — chyba że łańcuch jest stale.
+      // Czyta kolejno wszystkie aktywne strony. Tap przerywa TTS i pomija
+      // odtwarzanie kolejnych stron tej karty (break pętli).
+      const skip = engine.getSkip();
       for (const pageIndex of getActivePageIndexes(currentGroup)) {
         await speakSinglePage(card, stepIndex, pageIndex, currentGroup, run);
         if (run.isStale()) return;
+        if (skip?.requested) break;
       }
       await continueIfActive(card, stepIndex + 1, run);
       break;

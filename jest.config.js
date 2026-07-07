@@ -4,6 +4,10 @@ module.exports = {
   testMatch: [
     '**/__tests__/**/*.test.{ts,tsx}',
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '[\\\\/]\\.(?:claude|agents)[\\\\/]',
+  ],
   // Mirrors jest-expo's default allowlist, plus @pchmn/expo-material3-theme and
   // its @material/material-color-utilities dependency, which ship ESM and would
   // otherwise fail to parse once the theme imports the Material You generator.

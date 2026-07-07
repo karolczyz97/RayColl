@@ -144,6 +144,9 @@ export class SessionEngine {
     this.dueCards = cards;
     this.bumpAndNotify();
     this.dispatch({ type: 'START_SESSION' });
+    if (cards.length === 0) {
+      this.dispatch({ type: 'FINISH_SESSION' });
+    }
   };
 
   restart = (): void => {
@@ -249,7 +252,7 @@ export class SessionEngine {
   // ------------------------------------------------------------ runner
 
   private async waitUntilReleased(): Promise<void> {
-    while (this.holding) {
+    while (this.holding && !this.aborted) {
       await sleep(WAIT_RELEASE_POLL_MS);
     }
   }

@@ -127,6 +127,12 @@ function normalizePauseMultiplier(step: AtomicStep): number {
   );
 }
 
+function normalizePageIndex(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(0, Math.trunc(value))
+    : 0;
+}
+
 // Nieznane wartości warunku (np. z uszkodzonego backupu) są usuwane.
 function normalizeStepCondition(step: AtomicStep): { condition?: StepCondition } {
   const raw = (step as { condition?: unknown }).condition;
@@ -140,13 +146,17 @@ function normalizeModeStep(step: ModeStep): ModeStep | null {
 
   const base = normalizeStepCondition(step);
   if (step.type === 'speak_page') {
-    return { ...base, type: 'speak_page', pageIndex: step.pageIndex };
+    return {
+      ...base,
+      type: 'speak_page',
+      pageIndex: normalizePageIndex((step as { pageIndex?: unknown }).pageIndex),
+    };
   }
   if (step.type === 'dynamic_pause') {
     return {
       ...base,
       type: 'dynamic_pause',
-      nextPageIndex: step.nextPageIndex,
+      nextPageIndex: normalizePageIndex((step as { nextPageIndex?: unknown }).nextPageIndex),
       pauseMultiplier: normalizePauseMultiplier(step),
     };
   }
@@ -155,6 +165,32 @@ function normalizeModeStep(step: ModeStep): ModeStep | null {
       ...base,
       type: 'auto_rate_fixed',
       rating: clampStepRating((step as { rating?: unknown }).rating),
+    };
+  }
+  if (step.type === 'listen_and_check') {
+    return {
+      ...base,
+      type: 'listen_and_check',
+      pageIndex: normalizePageIndex((step as { pageIndex?: unknown }).pageIndex),
+      successThreshold: clampStepNumberField(
+        'listen_and_check',
+        'successThreshold',
+        (step as { successThreshold?: unknown }).successThreshold,
+      ),
+    };
+  }
+  if (step.type === 'show_page') {
+    return {
+      ...base,
+      type: 'show_page',
+      pageIndex: normalizePageIndex((step as { pageIndex?: unknown }).pageIndex),
+    };
+  }
+  if (step.type === 'wait') {
+    return {
+      ...base,
+      type: 'wait',
+      ms: clampStepNumberField('wait', 'ms', (step as { ms?: unknown }).ms),
     };
   }
   if ('condition' in step && base.condition === undefined) {
