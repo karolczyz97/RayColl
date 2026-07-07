@@ -81,10 +81,15 @@ export function AddStepDialog({
     }
   }, [stepType, values, pageCount, condition, onConfirm]);
 
-  const stepOptions = ATOMIC_STEP_REGISTRY.map((def) => ({
-    label: t(def.labelKey),
-    value: def.type,
-  }));
+  const stepOptions = ATOMIC_STEP_REGISTRY.map((def) => {
+    // Klucz konstruowany dynamicznie — parytet kluczy pilnuje test inwariantów rejestru.
+    const sectionKey = `step.category.${def.category}`;
+    return {
+      label: t(def.labelKey),
+      value: def.type,
+      section: t(sectionKey),
+    };
+  });
 
   const conditionOptions = [
     { label: t('step.condition.always'), value: 'always' },

@@ -9,6 +9,8 @@ export interface SelectOption {
   label: string;
   value: string;
   icon?: string;
+  /** Nazwa sekcji; przed pierwszą opcją nowej sekcji renderuje się nagłówek. */
+  section?: string;
 }
 
 export interface AppSelectProps {
@@ -119,17 +121,26 @@ export function AppSelect({
             </TouchableRipple>
           }
         >
-          {options.map((option) => (
-            <AppMenuItem
-              key={option.value}
-              label={option.label}
-              icon={option.icon}
-              selected={option.value === value}
-              onPress={() => {
-                onChange(option.value);
-                setOpen(false);
-              }}
-            />
+          {options.map((option, index) => (
+            <React.Fragment key={option.value}>
+              {option.section && option.section !== options[index - 1]?.section ? (
+                <Text
+                  variant="labelSmall"
+                  style={[styles.sectionHeader, { color: theme.colors.onSurfaceVariant }]}
+                >
+                  {option.section}
+                </Text>
+              ) : null}
+              <AppMenuItem
+                label={option.label}
+                icon={option.icon}
+                selected={option.value === value}
+                onPress={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              />
+            </React.Fragment>
           ))}
         </Menu>
       </View>
@@ -173,5 +184,10 @@ const styles = StyleSheet.create({
   fieldText: {
     flex: 1,
     paddingRight: TOKENS.spacing.sm,
+  },
+  sectionHeader: {
+    paddingHorizontal: TOKENS.spacing.lg,
+    paddingTop: TOKENS.spacing.sm,
+    paddingBottom: TOKENS.spacing.xs,
   },
 });
