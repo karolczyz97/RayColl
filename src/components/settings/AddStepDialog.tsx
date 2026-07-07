@@ -6,12 +6,15 @@ import { useI18n } from '@/i18n';
 import { TOKENS } from '@/theme/tokens';
 import { dialogStyles } from '@/theme/dialogStyles';
 import { AppNumberInput } from '@/components/forms/AppNumberInput';
-import { MAX_PAUSE_MULTIPLIER } from '@/store/storeDataNormalization';
 import type { AtomicStep, StepCondition } from '@/types/models';
-import { ATOMIC_STEP_TYPE_ORDER, ATOMIC_STEP_LABEL_KEYS, buildModeStep } from '@/features/settings/buildModeStep';
-
-// Kroki, które operują na konkretnej stronie (pageIndex / nextPageIndex).
-const PAGE_INDEX_STEP_TYPES = ['show_page', 'speak_page', 'listen_and_check', 'dynamic_pause'];
+import {
+  ATOMIC_STEP_REGISTRY,
+  buildAtomicStep,
+  getStepDefinition,
+  getStepPageIndex,
+  isAtomicStepType,
+  type StepFieldSpec,
+} from '@/features/settings/stepRegistry';
 
 interface AddStepDialogProps {
   visible: boolean;
@@ -22,18 +25,21 @@ interface AddStepDialogProps {
   onConfirm: (step: AtomicStep) => void;
 }
 
-function stepPageIndex(step: AtomicStep | null): number | null {
-  if (!step) return null;
-  switch (step.type) {
-    case 'show_page':
-    case 'speak_page':
-    case 'listen_and_check':
-      return step.pageIndex;
-    case 'dynamic_pause':
-      return step.nextPageIndex;
-    default:
-      return null;
+// Wartości pól formularza. Pole strony ma zawsze wspólny klucz 'page' —
+// dzięki temu wybrana strona przenosi się przy przełączaniu typu kroku
+// (parytet z dotychczasowym zachowaniem). Pola liczbowe leżą pod nazwą parametru.
+function initialValues(step: AtomicStep | null): Record<string, number> {
+  const values: Record<string, number> = { page: step ? (getStepPageIndex(step) ?? 0) : 0 };
+  if (step) {
+    for (const [param, spec] of Object.entries(
+      getStepDefinition(step.type).fields as Record<string, StepFieldSpec>,
+    )) {
+      if (spec.kind === 'number') {
+        values[param] = (step as unknown as Record<string, number>)[param];
+      }
+    }
   }
+  return values;
 }
 
 export function AddStepDialog({
@@ -46,51 +52,38 @@ export function AddStepDialog({
 }: AddStepDialogProps) {
   const { t } = useI18n();
 
-  const [newStepType, setNewStepType] = useState<string>(initialStep?.type ?? 'show_page');
-  const [newPageIdx, setNewPageIdx] = useState(stepPageIndex(initialStep) ?? 0);
-  const [newMs, setNewMs] = useState(initialStep?.type === 'wait' ? initialStep.ms : 500);
-  const [newPauseMultiplier, setNewPauseMultiplier] = useState(
-    initialStep?.type === 'dynamic_pause' ? initialStep.pauseMultiplier : 1,
-  );
-  const [newThreshold, setNewThreshold] = useState(
-    initialStep?.type === 'listen_and_check' ? initialStep.successThreshold : 70,
-  );
-  const [newRating, setNewRating] = useState(
-    initialStep?.type === 'auto_rate_fixed' ? initialStep.rating : 3,
-  );
-  const [newCondition, setNewCondition] = useState<'always' | StepCondition>(
+  const [stepType, setStepType] = useState<string>(initialStep?.type ?? 'show_page');
+  const [values, setValues] = useState<Record<string, number>>(() => initialValues(initialStep));
+  const [condition, setCondition] = useState<'always' | StepCondition>(
     initialStep?.condition ?? 'always',
   );
 
+  const setValue = useCallback((key: string, value: number) => {
+    setValues((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const fieldEntries = isAtomicStepType(stepType)
+    ? Object.entries(getStepDefinition(stepType).fields as Record<string, StepFieldSpec>)
+    : [];
+
   const confirmAddStep = useCallback(() => {
-    const step = buildModeStep({
-      newStepType,
-      pageCount,
-      newPageIdx,
-      newMs,
-      newPauseMultiplier,
-      newThreshold,
-      newRating,
-      newCondition,
-    });
+    if (!isAtomicStepType(stepType)) return;
+    const collected: Record<string, number> = {};
+    for (const [param, spec] of Object.entries(
+      getStepDefinition(stepType).fields as Record<string, StepFieldSpec>,
+    )) {
+      collected[param] =
+        spec.kind === 'page' ? (values.page ?? 0) : (values[param] ?? spec.defaultValue);
+    }
+    const step = buildAtomicStep(stepType, collected, { pageCount }, condition);
     if (step) {
       onConfirm(step);
     }
-  }, [
-    newStepType,
-    pageCount,
-    newPageIdx,
-    newMs,
-    newPauseMultiplier,
-    newThreshold,
-    newRating,
-    newCondition,
-    onConfirm,
-  ]);
+  }, [stepType, values, pageCount, condition, onConfirm]);
 
-  const stepOptions = ATOMIC_STEP_TYPE_ORDER.map((type) => ({
-    label: t(ATOMIC_STEP_LABEL_KEYS[type]),
-    value: type,
+  const stepOptions = ATOMIC_STEP_REGISTRY.map((def) => ({
+    label: t(def.labelKey),
+    value: def.type,
   }));
 
   const conditionOptions = [
@@ -108,74 +101,44 @@ export function AddStepDialog({
         <Dialog.Content style={styles.dialogContent}>
           <AppSelect
             label={t('settings.dialog.add_step.type')}
-            value={newStepType}
+            value={stepType}
             options={stepOptions}
-            onChange={setNewStepType}
+            onChange={setStepType}
             disabled={mode === 'edit'}
             accessibilityLabel="Select step type"
           />
 
-          {PAGE_INDEX_STEP_TYPES.includes(newStepType) && (
-            <AppNumberInput
-              label={t('settings.dialog.add_step.page_idx')}
-              value={newPageIdx + 1}
-              onChange={(page) => setNewPageIdx(page - 1)}
-              min={1}
-              max={Math.max(1, pageCount)}
-              accessibilityLabel="Page number input"
-            />
-          )}
-
-          {newStepType === 'dynamic_pause' && (
-            <AppNumberInput
-              label={t('settings.dialog.add_step.pause_multiplier')}
-              value={newPauseMultiplier}
-              onChange={setNewPauseMultiplier}
-              min={0}
-              max={MAX_PAUSE_MULTIPLIER}
-              accessibilityLabel="Pause multiplier input"
-            />
-          )}
-
-          {newStepType === 'wait' && (
-            <AppNumberInput
-              label={t('settings.dialog.add_step.time')}
-              value={newMs}
-              onChange={setNewMs}
-              min={0}
-              accessibilityLabel="Duration in milliseconds input"
-            />
-          )}
-
-          {newStepType === 'listen_and_check' && (
-            <AppNumberInput
-              label={t('settings.dialog.add_step.threshold')}
-              value={newThreshold}
-              onChange={setNewThreshold}
-              min={0}
-              max={100}
-              accessibilityLabel="Success threshold input"
-            />
-          )}
-
-          {newStepType === 'auto_rate_fixed' && (
-            <AppNumberInput
-              label={t('settings.dialog.add_step.rating')}
-              value={newRating}
-              onChange={setNewRating}
-              min={1}
-              max={4}
-              accessibilityLabel="Rating input"
-            />
+          {fieldEntries.map(([param, spec]) =>
+            spec.kind === 'page' ? (
+              <AppNumberInput
+                key={param}
+                label={t(spec.labelKey)}
+                value={(values.page ?? spec.defaultValue) + 1}
+                onChange={(page) => setValue('page', page - 1)}
+                min={1}
+                max={Math.max(1, pageCount)}
+                accessibilityLabel={spec.accessibilityLabel}
+              />
+            ) : (
+              <AppNumberInput
+                key={param}
+                label={t(spec.labelKey)}
+                value={values[param] ?? spec.defaultValue}
+                onChange={(value) => setValue(param, value)}
+                min={spec.min}
+                max={spec.max}
+                accessibilityLabel={spec.accessibilityLabel}
+              />
+            ),
           )}
 
           <AppSelect
             label={t('settings.dialog.add_step.condition')}
-            value={newCondition}
+            value={condition}
             options={conditionOptions}
             onChange={(value) => {
               if (value === 'always' || value === 'correct' || value === 'wrong') {
-                setNewCondition(value);
+                setCondition(value);
               }
             }}
             accessibilityLabel="Select step condition"

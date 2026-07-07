@@ -218,6 +218,13 @@ export const it: Record<string, string> = {
   'step.next_card': 'Passa alla carta successiva (senza valutazione)',
   'step.unknown': 'Passo sconosciuto',
 
+  // Step categories (picker sections)
+  'step.category.display': 'Visualizzazione',
+  'step.category.audio': 'Audio',
+  'step.category.timing': 'Tempo',
+  'step.category.rating': 'Valutazione',
+  'step.category.flow': 'Flusso',
+
   // Step types (labels)
   'step.type.show_page': 'Mostra pagina',
   'step.type.show_all_pages': 'Mostra tutte le pagine',

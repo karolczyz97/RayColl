@@ -219,6 +219,13 @@ export const en: Record<string, string> = {
   'step.next_card': 'Go to next card (no rating)',
   'step.unknown': 'Unknown step',
 
+  // Step categories (picker sections)
+  'step.category.display': 'Display',
+  'step.category.audio': 'Audio',
+  'step.category.timing': 'Timing',
+  'step.category.rating': 'Rating',
+  'step.category.flow': 'Flow',
+
   // Step types (labels)
   'step.type.show_page': 'Show page',
   'step.type.show_all_pages': 'Show all pages',

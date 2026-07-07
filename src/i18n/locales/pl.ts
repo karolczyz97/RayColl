@@ -220,6 +220,13 @@ export const pl: Record<string, string> = {
   'step.next_card': 'Przejdź do kolejnej karty (bez oceny)',
   'step.unknown': 'Nieznany krok',
 
+  // Step categories (picker sections)
+  'step.category.display': 'Pokazywanie',
+  'step.category.audio': 'Dźwięk',
+  'step.category.timing': 'Czas',
+  'step.category.rating': 'Ocenianie',
+  'step.category.flow': 'Przebieg',
+
   // Step types (labels)
   'step.type.show_page': 'Pokaż stronę',
   'step.type.show_all_pages': 'Pokaż wszystkie strony',
