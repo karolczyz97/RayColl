@@ -257,6 +257,20 @@ describe('sessionReducer', () => {
       expect(gated.currentStepIndex).toBe(4);
     });
 
+    it("START_TAP_REVEAL_GATE opens a plain wait gate with revealMode 'none'", () => {
+      const gated = reduce(INITIAL_STUDY_SESSION_STATE, {
+        type: 'START_TAP_REVEAL_GATE',
+        revealMode: 'none',
+        continueStepIndex: 2,
+      });
+      expect(gated.status).toBe('idle');
+      expect(gated.interactionGate).toEqual({
+        kind: 'tap_to_reveal',
+        revealMode: 'none',
+        continueStepIndex: 2,
+      });
+    });
+
     it('COMPLETE_INTERACTION_GATE clears the gate', () => {
       const gated = reduce(INITIAL_STUDY_SESSION_STATE, {
         type: 'START_TAP_REVEAL_GATE',

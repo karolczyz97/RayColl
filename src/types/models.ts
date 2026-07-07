@@ -53,6 +53,7 @@ export type AtomicStep = AtomicStepBase &
     | { type: 'wait_for_tap_to_reveal' }
     | { type: 'show_ratings' }
     | { type: 'speak_page'; pageIndex: number }
+    | { type: 'speak_all_pages' }
     | { type: 'dynamic_pause'; nextPageIndex: number; pauseMultiplier: number }
     | { type: 'wait'; ms: number }
     | { type: 'listen_and_check'; pageIndex: number; successThreshold: number }
@@ -61,6 +62,7 @@ export type AtomicStep = AtomicStepBase &
     | { type: 'auto_rate_from_answer' }
     | { type: 'auto_rate_fixed'; rating: number }
     | { type: 'mark_failed' }
+    | { type: 'wait_for_tap' }
     | { type: 'next_card' }
   );
 

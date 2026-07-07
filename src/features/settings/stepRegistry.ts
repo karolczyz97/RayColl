@@ -80,6 +80,13 @@ export const ATOMIC_STEP_REGISTRY: readonly StepDefinition[] = [
     fields: { pageIndex: PAGE_FIELD },
   }),
   defineStep({
+    type: 'speak_all_pages',
+    category: 'audio',
+    labelKey: 'step.type.speak_all_pages',
+    summaryKey: 'step.speak_all_pages',
+    fields: {},
+  }),
+  defineStep({
     type: 'listen_and_check',
     category: 'audio',
     labelKey: 'step.type.listen_and_check',
@@ -181,6 +188,13 @@ export const ATOMIC_STEP_REGISTRY: readonly StepDefinition[] = [
     category: 'rating',
     labelKey: 'step.type.mark_failed',
     summaryKey: 'step.mark_failed',
+    fields: {},
+  }),
+  defineStep({
+    type: 'wait_for_tap',
+    category: 'flow',
+    labelKey: 'step.type.wait_for_tap',
+    summaryKey: 'step.wait_for_tap',
     fields: {},
   }),
   defineStep({

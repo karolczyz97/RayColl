@@ -165,6 +165,8 @@ export const de: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   'settings.validation.step_page_out_of_range': 'Schritt {index} verwendet Seite {page}, die außerhalb des Bereichs liegt.',
   'settings.validation.no_terminal': 'Kein Abschlussschritt: füge „Bewertungstasten zeigen” oder „Nächste Karte” hinzu.',
+  'settings.validation.auto_rate_without_stt':
+    '„Automatisch aus Ergebnis bewerten” benötigt einen früheren Schritt „Sprache prüfen (STT)”.',
   // App Settings
   'app_settings.title': 'App-Einstellungen',
   'app_settings.section.appearance': 'Darstellung',
@@ -207,6 +209,7 @@ export const de: Record<string, string> = {
   'step.wait_for_tap_to_reveal': 'Restliche Seiten durch Tippen aufdecken',
   'step.show_ratings': 'Bewertungstasten zeigen',
   'step.speak_page': 'TTS Seite {index}',
+  'step.speak_all_pages': 'TTS alle Seiten',
   'step.dynamic_pause': 'Dynamische Pause (Seite {index}, ×{multiplier})',
   'step.wait': 'Warte {ms}ms',
   'step.listen_and_check': 'Sprache prüfen S. {index} (Schwellenwert {threshold}%)',
@@ -215,6 +218,7 @@ export const de: Record<string, string> = {
   'step.auto_rate_from_answer': 'Automatisch aus Ergebnis bewerten',
   'step.auto_rate_fixed': 'Automatisch mit Bewertung {rating}',
   'step.mark_failed': 'Als nicht bestanden markieren',
+  'step.wait_for_tap': 'Auf Tippen warten',
   'step.next_card': 'Zur nächsten Karte (ohne Bewertung)',
   'step.unknown': 'Unbekannter Schritt',
 
@@ -232,6 +236,7 @@ export const de: Record<string, string> = {
   'step.type.wait_for_tap_to_reveal': 'Restliche Seiten nacheinander durch Tippen aufdecken',
   'step.type.show_ratings': 'Bewertungstasten zeigen',
   'step.type.speak_page': 'Seite sprechen (TTS)',
+  'step.type.speak_all_pages': 'Alle Seiten vorlesen (TTS)',
   'step.type.dynamic_pause': 'Wartezeit je nach Seitenlänge',
   'step.type.wait': 'Warten (ms)',
   'step.type.listen_and_check': 'Sprache prüfen (STT)',
@@ -240,6 +245,7 @@ export const de: Record<string, string> = {
   'step.type.auto_rate_from_answer': 'Automatisch aus Ergebnis bewerten',
   'step.type.auto_rate_fixed': 'Automatisch (feste Bewertung)',
   'step.type.mark_failed': 'Als nicht bestanden markieren',
+  'step.type.wait_for_tap': 'Auf Tippen warten',
   'step.type.next_card': 'Nächste Karte (ohne Bewertung)',
 
   // Compound steps

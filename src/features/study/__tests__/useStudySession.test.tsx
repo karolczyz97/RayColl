@@ -306,6 +306,60 @@ describe('useStudySession', () => {
     }
   });
 
+  it('speak_all_pages speaks every active page in order and continues to the next step', async () => {
+    const card1 = makeCard('c1', ['front', 'middle', 'back']);
+    const steps: AtomicStep[] = [
+      { type: 'speak_all_pages' },
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ];
+    // activePageCount 2: trzecia strona jest nieaktywna i NIE powinna być czytana.
+    const { hookRef } = renderSession(makeGroup(3, 2, [card1]), steps);
+
+    await startSession(hookRef, [card1]);
+
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    expect(mockedTtsService.speak).toHaveBeenCalledTimes(2);
+    expect(mockedTtsService.speak).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ text: 'front' }),
+    );
+    expect(mockedTtsService.speak).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ text: 'middle' }),
+    );
+  });
+
+  it('wait_for_tap stops the runner until a tap, without revealing any page', async () => {
+    const card1 = makeCard('c1', ['hello', 'world']);
+    const steps: AtomicStep[] = [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'wait_for_tap' },
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ];
+    const { hookRef } = renderSession(makeGroup(2, 2, [card1]), steps);
+
+    await startSession(hookRef, [card1]);
+
+    // Gate otwarty: czekamy na tap, nic się nie odsłoniło poza show_page.
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.waitingForTap).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0]);
+    expect(hookRef.current!.sessionState.showRatingButtons).toBe(false);
+
+    await tapCard(hookRef);
+
+    // Tap niczego sam nie odsłania — domyka gate; resztę odsłania krok show_all_pages.
+    await waitFor(() => {
+      expect(hookRef.current!.sessionState.showRatingButtons).toBe(true);
+    });
+    expect(hookRef.current!.sessionState.revealedPages).toEqual([0, 1]);
+  });
+
   it('next_card advances without recording an SRS rating', async () => {
     const card1 = makeCard('c1', ['hello']);
     const card2 = makeCard('c2', ['world']);

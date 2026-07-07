@@ -164,6 +164,8 @@ export const en: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   'settings.validation.step_page_out_of_range': 'Step {index} uses page {page}, which is out of range.',
   'settings.validation.no_terminal': 'No terminal step: add "Show rating buttons" or "Next card".',
+  'settings.validation.auto_rate_without_stt':
+    '"Auto-rate from answer" needs an earlier "Check speech (STT)" step.',
 
   // App Settings
   'app_settings.title': 'App Settings',
@@ -208,6 +210,7 @@ export const en: Record<string, string> = {
   'step.wait_for_tap_to_reveal': 'Reveal remaining pages by tapping',
   'step.show_ratings': 'Show rating buttons',
   'step.speak_page': 'TTS page {index}',
+  'step.speak_all_pages': 'TTS all pages',
   'step.dynamic_pause': 'Dynamic pause (page {index}, ×{multiplier})',
   'step.wait': 'Wait {ms}ms',
   'step.listen_and_check': 'Check speech p. {index} (threshold {threshold}%)',
@@ -216,6 +219,7 @@ export const en: Record<string, string> = {
   'step.auto_rate_from_answer': 'Auto-rate from answer',
   'step.auto_rate_fixed': 'Auto-rate fixed: {rating}',
   'step.mark_failed': 'Mark as failed',
+  'step.wait_for_tap': 'Wait for a tap',
   'step.next_card': 'Go to next card (no rating)',
   'step.unknown': 'Unknown step',
 
@@ -233,6 +237,7 @@ export const en: Record<string, string> = {
   'step.type.wait_for_tap_to_reveal': 'Reveal remaining pages by tapping (until all shown)',
   'step.type.show_ratings': 'Show rating buttons',
   'step.type.speak_page': 'Speak page (TTS)',
+  'step.type.speak_all_pages': 'Speak all pages (TTS)',
   'step.type.dynamic_pause': 'Wait based on page length',
   'step.type.wait': 'Wait (ms)',
   'step.type.listen_and_check': 'Check speech (STT)',
@@ -241,6 +246,7 @@ export const en: Record<string, string> = {
   'step.type.auto_rate_from_answer': 'Auto-rate from answer',
   'step.type.auto_rate_fixed': 'Auto-rate (fixed rating)',
   'step.type.mark_failed': 'Mark as failed',
+  'step.type.wait_for_tap': 'Wait for a tap',
   'step.type.next_card': 'Next card (no rating)',
 
   // Compound steps

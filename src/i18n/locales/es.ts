@@ -165,6 +165,8 @@ export const es: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   'settings.validation.step_page_out_of_range': 'El paso {index} usa la página {page}, que está fuera de rango.',
   'settings.validation.no_terminal': 'Sin paso final: añade «Mostrar botones de valoración» o «Siguiente tarjeta».',
+  'settings.validation.auto_rate_without_stt':
+    '«Valorar automáticamente según resultado» necesita un paso anterior «Comprobar voz (STT)».',
   // App Settings
   'app_settings.title': 'Ajustes de la aplicación',
   'app_settings.section.appearance': 'Apariencia',
@@ -207,6 +209,7 @@ export const es: Record<string, string> = {
   'step.wait_for_tap_to_reveal': 'Revelar páginas restantes tocando',
   'step.show_ratings': 'Mostrar botones de valoración',
   'step.speak_page': 'TTS página {index}',
+  'step.speak_all_pages': 'TTS todas las páginas',
   'step.dynamic_pause': 'Pausa dinámica (pág. {index}, ×{multiplier})',
   'step.wait': 'Esperar {ms}ms',
   'step.listen_and_check': 'Comprobar voz pág. {index} (umbral {threshold}%)',
@@ -215,6 +218,7 @@ export const es: Record<string, string> = {
   'step.auto_rate_from_answer': 'Valorar automáticamente según resultado',
   'step.auto_rate_fixed': 'Valorar automáticamente con {rating}',
   'step.mark_failed': 'Marcar como fallida',
+  'step.wait_for_tap': 'Espera un toque',
   'step.next_card': 'Pasar a la siguiente tarjeta (sin valoración)',
   'step.unknown': 'Paso desconocido',
 
@@ -232,6 +236,7 @@ export const es: Record<string, string> = {
   'step.type.wait_for_tap_to_reveal': 'Revela las páginas restantes tocando (hasta el final)',
   'step.type.show_ratings': 'Mostrar botones de valoración',
   'step.type.speak_page': 'Hablar página (TTS)',
+  'step.type.speak_all_pages': 'Leer todas las páginas (TTS)',
   'step.type.dynamic_pause': 'Espera según la longitud de la página',
   'step.type.wait': 'Esperar (ms)',
   'step.type.listen_and_check': 'Comprobar voz (STT)',
@@ -240,6 +245,7 @@ export const es: Record<string, string> = {
   'step.type.auto_rate_from_answer': 'Valorar automáticamente según resultado',
   'step.type.auto_rate_fixed': 'Valorar automáticamente (nota fija)',
   'step.type.mark_failed': 'Marcar como fallida',
+  'step.type.wait_for_tap': 'Espera un toque',
   'step.type.next_card': 'Siguiente tarjeta (sin valoración)',
 
   // Compound steps

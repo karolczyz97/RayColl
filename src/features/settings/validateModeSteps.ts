@@ -53,6 +53,24 @@ export function validateModeStepSources(
     issues.push({ severity: 'warning', messageKey: 'settings.validation.no_terminal' });
   }
 
+  // auto_rate_from_answer czyta wynik ostatniego listen_and_check — bez
+  // wcześniejszego STT jest zawsze no-opem, co niemal na pewno jest pomyłką.
+  const firstListenIndex = stepSources.find(
+    ({ step }) => step.type === 'listen_and_check',
+  )?.sourceIndex;
+  const orphanAutoRate = stepSources.find(
+    ({ step, sourceIndex }) =>
+      step.type === 'auto_rate_from_answer' &&
+      (firstListenIndex === undefined || sourceIndex < firstListenIndex),
+  );
+  if (orphanAutoRate) {
+    issues.push({
+      severity: 'warning',
+      messageKey: 'settings.validation.auto_rate_without_stt',
+      sourceIndex: orphanAutoRate.sourceIndex,
+    });
+  }
+
   return issues;
 }
 

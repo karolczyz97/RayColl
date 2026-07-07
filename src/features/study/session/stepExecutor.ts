@@ -282,6 +282,24 @@ export async function executeStudyStep(
       await executeSpeakPageStep(card, stepIndex, step, currentGroup, context);
       break;
 
+    case 'speak_all_pages': {
+      // Czyta kolejno wszystkie aktywne strony. Tap przerywa TYLKO bieżące TTS
+      // (guardedAwait); kolejne strony lecą dalej — chyba że łańcuch jest stale.
+      for (const pageIndex of getActivePageIndexes(currentGroup)) {
+        context.skipRef.current.armed = true;
+        context.dispatchIfMounted({ type: 'START_SPEAKING', stepIndex, pageIndex });
+        const pageText = card.pages[pageIndex] || '';
+        await context.guardedAwait(
+          context.playTts(pageText, currentGroup.pageLanguages[pageIndex] || 'en-US'),
+        );
+        context.skipRef.current.armed = false;
+        context.dispatchIfMounted({ type: 'END_SPEAKING' });
+        if (context.isStale()) return;
+      }
+      await continueIfActive(card, stepIndex + 1, context);
+      break;
+    }
+
     case 'dynamic_pause': {
       const text = card.pages[step.nextPageIndex] || '';
       await executeTimedWaitStep(card, stepIndex, text.length * 60 * step.pauseMultiplier, context);
@@ -327,6 +345,16 @@ export async function executeStudyStep(
       // Failed list != ocena SRS. Sam dodaje kartę do failed, nic więcej.
       context.markCardFailed(card);
       await continueIfActive(card, stepIndex + 1, context);
+      break;
+
+    case 'wait_for_tap':
+      // STOP: zawsze czeka na tap (bez odsłaniania stron i bez auto-complete).
+      // Tap przy revealMode 'none' tylko domyka gate i wznawia od kolejnego kroku.
+      context.dispatchIfMounted({
+        type: 'START_TAP_REVEAL_GATE',
+        revealMode: 'none',
+        continueStepIndex: stepIndex + 1,
+      });
       break;
 
     case 'next_card':

@@ -94,6 +94,13 @@ export function useStudyCardGestures({
         }
       };
 
+      // Prosty gate (wait_for_tap): tap niczego nie odsłania, tylko domyka gate.
+      if (currentState.interactionGate.revealMode === 'none') {
+        playSelectionHaptic();
+        completeGate();
+        return;
+      }
+
       const nextHiddenPageIndex = getNextHiddenPageIndex(currentGroup, currentState.revealedPages);
       if (nextHiddenPageIndex === null) {
         // Defensywnie: gate nie powinien być otwarty bez ukrytych stron.

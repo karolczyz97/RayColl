@@ -27,8 +27,8 @@ function build(type: string, overrides: Record<string, number> = {}) {
 
 describe('stepRegistry', () => {
   describe('registry invariants', () => {
-    it('has 15 unique entries in the approved picker order', () => {
-      expect(ATOMIC_STEP_REGISTRY).toHaveLength(15);
+    it('has 17 unique entries in the approved picker order', () => {
+      expect(ATOMIC_STEP_REGISTRY).toHaveLength(17);
       expect(new Set(ATOMIC_STEP_TYPE_ORDER).size).toBe(ATOMIC_STEP_TYPE_ORDER.length);
       expect(ATOMIC_STEP_TYPE_ORDER).toEqual([
         'show_page',
@@ -36,6 +36,7 @@ describe('stepRegistry', () => {
         'wait_for_tap_to_reveal_next',
         'wait_for_tap_to_reveal',
         'speak_page',
+        'speak_all_pages',
         'listen_and_check',
         'feedback_success',
         'feedback_error',
@@ -45,6 +46,7 @@ describe('stepRegistry', () => {
         'auto_rate_from_answer',
         'auto_rate_fixed',
         'mark_failed',
+        'wait_for_tap',
         'next_card',
       ]);
     });
@@ -66,6 +68,8 @@ describe('stepRegistry', () => {
       ['wait_for_tap_to_reveal', { type: 'wait_for_tap_to_reveal' }],
       ['show_ratings', { type: 'show_ratings' }],
       ['speak_page', { type: 'speak_page', pageIndex: 1 }],
+      ['speak_all_pages', { type: 'speak_all_pages' }],
+      ['wait_for_tap', { type: 'wait_for_tap' }],
       [
         'dynamic_pause',
         { type: 'dynamic_pause', nextPageIndex: 1, pauseMultiplier: 2 },

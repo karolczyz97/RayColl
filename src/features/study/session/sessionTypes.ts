@@ -30,7 +30,8 @@ export const NO_ANSWER_RESULT: LastAnswerResult = {
 };
 
 export type InteractionGateKind = 'none' | 'tap_to_reveal';
-export type TapRevealMode = 'single' | 'remaining';
+// 'none' = prosty gate (wait_for_tap): tap niczego nie odsłania, tylko domyka gate.
+export type TapRevealMode = 'single' | 'remaining' | 'none';
 
 /**
  * Gdy runner dochodzi do kroku `wait_for_tap_to_reveal`, zatrzymuje się i otwiera

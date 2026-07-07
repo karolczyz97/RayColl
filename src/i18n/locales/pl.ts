@@ -165,6 +165,8 @@ export const pl: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Dodaj przynajmniej jeden krok.',
   'settings.validation.step_page_out_of_range': 'Krok {index} używa strony {page}, która jest poza zakresem.',
   'settings.validation.no_terminal': 'Brak kroku końcowego: dodaj „Pokaż przyciski oceny” albo „Kolejna karta”.',
+  'settings.validation.auto_rate_without_stt':
+    'Krok „Oceń automatycznie z wyniku odpowiedzi” wymaga wcześniejszego kroku „Sprawdź wymowę (STT)”.',
 
   // App Settings
   'app_settings.title': 'Ustawienia aplikacji',
@@ -209,6 +211,7 @@ export const pl: Record<string, string> = {
   'step.wait_for_tap_to_reveal': 'Odkrywaj resztę stron tapnięciami',
   'step.show_ratings': 'Pokaż przyciski oceny',
   'step.speak_page': 'TTS strona {index}',
+  'step.speak_all_pages': 'TTS wszystkie strony',
   'step.dynamic_pause': 'Pauza dyn. (str. {index}, ×{multiplier})',
   'step.wait': 'Odczekaj {ms}ms',
   'step.listen_and_check': 'Sprawdź wymowę str. {index} (próg {threshold}%)',
@@ -217,6 +220,7 @@ export const pl: Record<string, string> = {
   'step.auto_rate_from_answer': 'Oceń automatycznie z wyniku',
   'step.auto_rate_fixed': 'Oceń automatycznie oceną {rating}',
   'step.mark_failed': 'Oznacz jako nieudaną',
+  'step.wait_for_tap': 'Czekaj na tapnięcie',
   'step.next_card': 'Przejdź do kolejnej karty (bez oceny)',
   'step.unknown': 'Nieznany krok',
 
@@ -234,6 +238,7 @@ export const pl: Record<string, string> = {
   'step.type.wait_for_tap_to_reveal': 'Odkrywaj kolejne strony tapnięciami (do końca)',
   'step.type.show_ratings': 'Pokaż przyciski oceny',
   'step.type.speak_page': 'Wymawiaj stronę (TTS)',
+  'step.type.speak_all_pages': 'Wymawiaj wszystkie strony (TTS)',
   'step.type.dynamic_pause': 'Odczekaj zależnie od długości strony',
   'step.type.wait': 'Odczekaj (ms)',
   'step.type.listen_and_check': 'Sprawdź wymowę (STT)',
@@ -242,6 +247,7 @@ export const pl: Record<string, string> = {
   'step.type.auto_rate_from_answer': 'Oceń automatycznie z wyniku odpowiedzi',
   'step.type.auto_rate_fixed': 'Oceń automatycznie stałą oceną',
   'step.type.mark_failed': 'Oznacz jako nieudaną',
+  'step.type.wait_for_tap': 'Czekaj na tapnięcie',
   'step.type.next_card': 'Kolejna karta (bez oceny)',
 
   // Compound steps

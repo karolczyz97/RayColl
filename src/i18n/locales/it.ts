@@ -165,6 +165,8 @@ export const it: Record<string, string> = {
   'settings.validation.mode_steps_required': 'Add at least one step.',
   'settings.validation.step_page_out_of_range': 'Il passaggio {index} usa la pagina {page}, fuori intervallo.',
   'settings.validation.no_terminal': 'Nessun passaggio finale: aggiungi «Mostra i pulsanti di valutazione» o «Carta successiva».',
+  'settings.validation.auto_rate_without_stt':
+    '«Valuta automaticamente dal risultato» richiede un passaggio precedente «Verifica voce (STT)».',
   // App Settings
   'app_settings.title': 'Impostazioni app',
   'app_settings.section.appearance': 'Aspetto',
@@ -207,6 +209,7 @@ export const it: Record<string, string> = {
   'step.wait_for_tap_to_reveal': 'Rivela le pagine rimanenti toccando',
   'step.show_ratings': 'Mostra i pulsanti di valutazione',
   'step.speak_page': 'TTS pagina {index}',
+  'step.speak_all_pages': 'TTS tutte le pagine',
   'step.dynamic_pause': 'Pausa dinamica (pag. {index}, ×{multiplier})',
   'step.wait': 'Attendi {ms}ms',
   'step.listen_and_check': 'Verifica voce pag. {index} (soglia {threshold}%)',
@@ -215,6 +218,7 @@ export const it: Record<string, string> = {
   'step.auto_rate_from_answer': 'Valuta automaticamente dal risultato',
   'step.auto_rate_fixed': 'Valuta automaticamente con {rating}',
   'step.mark_failed': 'Segna come non riuscita',
+  'step.wait_for_tap': 'Attendi un tocco',
   'step.next_card': 'Passa alla carta successiva (senza valutazione)',
   'step.unknown': 'Passo sconosciuto',
 
@@ -232,6 +236,7 @@ export const it: Record<string, string> = {
   'step.type.wait_for_tap_to_reveal': 'Rivela le pagine restanti toccando (fino alla fine)',
   'step.type.show_ratings': 'Mostra i pulsanti di valutazione',
   'step.type.speak_page': 'Pronuncia pagina (TTS)',
+  'step.type.speak_all_pages': 'Leggi tutte le pagine (TTS)',
   'step.type.dynamic_pause': 'Attendi in base alla lunghezza della pagina',
   'step.type.wait': 'Attendi (ms)',
   'step.type.listen_and_check': 'Verifica voce (STT)',
@@ -240,6 +245,7 @@ export const it: Record<string, string> = {
   'step.type.auto_rate_from_answer': 'Valuta automaticamente dal risultato',
   'step.type.auto_rate_fixed': 'Valuta automaticamente (voto fisso)',
   'step.type.mark_failed': 'Segna come non riuscita',
+  'step.type.wait_for_tap': 'Attendi un tocco',
   'step.type.next_card': 'Carta successiva (senza valutazione)',
 
   // Compound steps

@@ -52,4 +52,39 @@ describe('validateModeSteps', () => {
   it('returns no issues for an empty list', () => {
     expect(validateModeSteps([], 3)).toEqual([]);
   });
+
+  it('warns when auto_rate_from_answer has no earlier listen_and_check', () => {
+    const steps: AtomicStep[] = [
+      { type: 'show_all_pages' },
+      { type: 'auto_rate_from_answer' },
+      { type: 'next_card' },
+    ];
+    const issues = validateModeSteps(steps, 3);
+    expect(issues).toEqual([
+      { severity: 'warning', messageKey: 'settings.validation.auto_rate_without_stt' },
+    ]);
+    expect(hasBlockingStepIssue(issues)).toBe(false);
+  });
+
+  it('warns when listen_and_check comes only after auto_rate_from_answer', () => {
+    const steps: AtomicStep[] = [
+      { type: 'auto_rate_from_answer' },
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
+      { type: 'next_card' },
+    ];
+    expect(
+      validateModeSteps(steps, 3).some(
+        (i) => i.messageKey === 'settings.validation.auto_rate_without_stt',
+      ),
+    ).toBe(true);
+  });
+
+  it('accepts auto_rate_from_answer preceded by listen_and_check', () => {
+    const steps: AtomicStep[] = [
+      { type: 'listen_and_check', pageIndex: 0, successThreshold: 70 },
+      { type: 'auto_rate_from_answer' },
+      { type: 'next_card' },
+    ];
+    expect(validateModeSteps(steps, 3)).toEqual([]);
+  });
 });
