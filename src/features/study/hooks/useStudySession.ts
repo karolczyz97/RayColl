@@ -57,11 +57,20 @@ export function useStudySession(
         onCardReviewed: (groupId: string, cardId: string, rating: number) =>
           onCardReviewedRef.current(groupId, cardId, rating),
       },
-      ttsRateRef.current,
+      ttsRate,
     );
     engine.setGroup(group);
     engine.setActiveSteps(activeSteps);
-  });
+  }, [
+    engine,
+    runSpeechRecognition,
+    guardedAwait,
+    stopAudio,
+    skipRef,
+    group,
+    activeSteps,
+    ttsRate,
+  ]);
 
   const { handleCardPress, setHolding } = useStudyCardGestures({
     engine,
