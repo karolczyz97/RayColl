@@ -1,7 +1,7 @@
-import { useCallback, useRef, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useRef, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
-import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from '@/features/study/session/sessionReducer';
+import { SessionEngine } from '@/features/study/session/SessionEngine';
 import { useSyncedRef } from '@/hooks/useSyncedRef';
 import { executeStudyStep } from '@/features/study/session/stepExecutor';
 import { useStudyAudio } from '@/features/study/hooks/useStudyAudio';
@@ -13,7 +13,6 @@ import {
 import { sleep } from '@/features/study/session/sessionUtils';
 import { playRatingHaptic } from '@/services/hapticFeedback';
 import {
-  type SessionAction,
   type CardReviewState,
   type LastAnswerResult,
   NO_ANSWER_RESULT,
@@ -24,7 +23,10 @@ export function useStudySession(
   steps: AtomicStep[],
   onCardReviewed: (groupId: string, cardId: string, rating: number) => void,
 ) {
-  const [state, dispatch] = useReducer(sessionReducer, INITIAL_STUDY_SESSION_STATE);
+  // Silnik jest jedynym właścicielem stanu reducera; hook subskrybuje zmiany.
+  const [engine] = useState(() => new SessionEngine());
+  useSyncExternalStore(engine.subscribe, engine.getVersion, engine.getVersion);
+  const state = engine.getState();
   const { ttsRate } = useAppTheme();
   const abortRef = useRef(false);
   // Generation counter for step chains; see runEpochRef in stepExecutor.ts.
@@ -48,11 +50,7 @@ export function useStudySession(
   const lastExecutedCardIndexRef = useRef<number | null>(null);
   const activePageCount = group?.activePageCount ?? Infinity;
 
-  const dispatchIfMounted = useCallback((action: SessionAction) => {
-    if (isMountedRef.current) {
-      dispatch(action);
-    }
-  }, []);
+  const dispatchIfMounted = engine.dispatch;
 
   const {
     playTts,
@@ -191,10 +189,11 @@ export function useStudySession(
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      engine.markUnmounted();
       abortRef.current = true;
       stopAudio();
     };
-  }, [stopAudio]);
+  }, [engine, stopAudio]);
 
   const activeSteps = useMemo(
     () =>
