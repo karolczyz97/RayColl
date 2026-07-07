@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { SessionEngine } from '@/features/study/session/SessionEngine';
+import { buildSessionViewModel } from '@/features/study/session/sessionViewModel';
 import { useSyncedRef } from '@/hooks/useSyncedRef';
 import { useStudyAudio } from '@/features/study/hooks/useStudyAudio';
 import { useStudyCardGestures } from '@/features/study/hooks/useStudyCardGestures';
@@ -98,33 +99,11 @@ export function useStudySession(
     [engine],
   );
 
-  const compatibilityState = useMemo(() => {
-    const answer = state.lastAnswerResult;
-    return {
-      currentCardIndex: state.currentCardIndex,
-      currentStepIndex: state.currentStepIndex,
-      revealedPages: state.revealedPages,
-      peekedPageIndex: state.peekedPageIndex,
-      // Pola STT wyprowadzone z kanonicznego lastAnswerResult (mirror dla UI).
-      sttResultText: answer.text,
-      sttMatchPercent: answer.percent ?? 0,
-      sttSuccessThreshold: answer.threshold,
-      answerStatus: answer.status,
-      // Tap-gate napędza wskazówkę "tap to reveal" w UI (dawne waitingForTap).
-      waitingForTap: state.interactionGate.kind === 'tap_to_reveal',
-      audioPageIndex: state.audioPageIndex,
-      isTtsPlaying: state.status === 'speaking',
-      isSttListening: state.status === 'listening',
-      showRatingButtons: state.status === 'revealed',
-      isSessionFinished: state.status === 'finished',
-      status: state.status,
-      errorMsg: state.errorMsg,
-    };
-  }, [state]);
+  const sessionViewModel = useMemo(() => buildSessionViewModel(state), [state]);
 
   return {
     dueCards,
-    sessionState: compatibilityState,
+    sessionState: sessionViewModel,
     handleRating,
     handleCardPress,
     startSession,
