@@ -27,10 +27,8 @@ export type SpeechRecognitionOutcome =
 
 export function useStudyAudio(
   dispatchIfMounted: (action: SessionAction) => void,
-  ttsRateRef: MutableRefObject<number>,
 ) {
   const sttServiceRef = useRef(getSttService());
-  const lastTtsDurationRef = useRef(0);
   const skipRef = useRef<StudySkipState>({
     requested: false,
     armed: false,
@@ -46,19 +44,7 @@ export function useStudyAudio(
     void sttServiceRef.current.stopListening().catch(() => {});
   }, []);
 
-  const playTts = useCallback(
-    async (text: string, lang: string) => {
-      const startTime = Date.now();
-      try {
-        await ttsService.speak({ text, lang, rate: ttsRateRef.current });
-      } catch (err) {
-        console.error('TTS Speak Error:', getErrorMessage(err));
-        dispatchIfMounted({ type: 'SET_ERROR', errorMsg: 'study.error.tts' });
-      }
-      lastTtsDurationRef.current = Date.now() - startTime;
-    },
-    [dispatchIfMounted, ttsRateRef],
-  );
+
 
   const runSpeechRecognition = useCallback(
     async (lang: string, timeoutMs: number): Promise<SpeechRecognitionOutcome> => {
@@ -113,12 +99,10 @@ export function useStudyAudio(
   );
 
   return {
-    playTts,
     runSpeechRecognition,
     requestSkip,
     guardedAwait,
     stopAudio,
-    lastTtsDurationRef,
     skipRef,
   };
 }

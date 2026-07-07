@@ -193,6 +193,40 @@ export async function executeStudyStep(
 
   const step = currentSteps[stepIndex];
 
+  // W tle: substytucja kroków wymagających interakcji na automatyczne
+  if (engine.isBackgroundMode()) {
+    if (
+      step.type === 'wait_for_tap' ||
+      step.type === 'wait_for_tap_to_reveal' ||
+      step.type === 'wait_for_tap_to_reveal_next'
+    ) {
+      // Dynamiczna pauza zależna od długości tekstu (wzór jak w dynamic_pause)
+      const totalTextLength = getActivePageIndexes(currentGroup).reduce(
+        (sum, pi) => sum + (card.pages[pi] || '').length,
+        0,
+      );
+      const waitMs = Math.max(1500, Math.min(totalTextLength * 60 * 2, 15000));
+      if (!run.isStale()) {
+        engine.dispatch({ type: 'SET_CURRENT_STEP', stepIndex });
+        await engine.guardedAwait(sleep(waitMs));
+      }
+      if (run.isStale()) return;
+      // Auto-odsłoń wszystkie aktywne strony
+      const all = getActivePageIndexes(currentGroup);
+      engine.setRevealedPages(all);
+      engine.dispatch({ type: 'REVEAL_PAGES', revealedPages: all });
+      await continueIfActive(card, stepIndex + 1, run);
+      return;
+    }
+
+    // W tle: show_ratings = auto-pauza (teoretycznie nie powinno dojść, bo
+    // isModeHandsFreeCapable filtruje tryby z show_ratings, ale defensywnie)
+    if (step.type === 'show_ratings') {
+      engine.pause();
+      return;
+    }
+  }
+
   // Warunek kroku: 'correct' -> status correct; 'wrong' -> status incorrect.
   // skipped/error/none NIGDY nie pasują (tap w STT nie odpala correct/wrong).
   if (step.condition) {

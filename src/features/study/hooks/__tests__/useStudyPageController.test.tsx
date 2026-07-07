@@ -2,6 +2,14 @@ import { act, renderHook } from '@testing-library/react-native';
 import { createNewSrsState } from '@/srs/srsEngine';
 import type { Flashcard } from '@/types/models';
 
+const mockEngine = {
+  isBackgroundMode: jest.fn().mockReturnValue(false),
+  setBackgroundMode: jest.fn(),
+  setOnBackgroundPause: jest.fn(),
+  skipToNextCard: jest.fn(),
+  goToPreviousCard: jest.fn(),
+};
+
 const mockSession = {
   dueCards: [] as Flashcard[],
   sessionState: { currentCardIndex: 0, isSessionFinished: false } as {
@@ -18,8 +26,11 @@ const mockSession = {
   setHolding: jest.fn(),
   restartSession: jest.fn(),
   restartFailed: jest.fn(),
+  skipToNextCard: jest.fn(),
+  goToPreviousCard: jest.fn(),
   failedCount: 0,
   clearError: jest.fn(),
+  engine: mockEngine,
 };
 
 const mockFlushPersistence = jest.fn().mockResolvedValue(undefined);
@@ -27,6 +38,32 @@ const mockGetDueCards = jest.fn().mockReturnValue([]);
 
 jest.mock('@/features/study/hooks/useStudySession', () => ({
   useStudySession: () => mockSession,
+}));
+
+jest.mock('@/features/study/hooks/useBackgroundStudy', () => ({
+  useBackgroundStudy: () => {},
+}));
+
+jest.mock('expo-keep-awake', () => ({
+  activateKeepAwakeAsync: jest.fn(() => Promise.resolve()),
+  deactivateKeepAwake: jest.fn(),
+}));
+
+jest.mock('@/contexts/UserPreferencesContext', () => ({
+  useAppTheme: () => ({
+    themePref: 'system',
+    setThemePref: jest.fn(),
+    isDark: false,
+    useSystemColors: true,
+    setUseSystemColors: jest.fn(),
+    isThemeLoading: false,
+    ttsRate: 1.0,
+    setTtsRate: jest.fn(),
+    railExpanded: false,
+    setRailExpanded: jest.fn(),
+    backgroundPlayback: false,
+    setBackgroundPlayback: jest.fn(),
+  }),
 }));
 
 jest.mock('@/store/FlashcardStoreContext', () => ({

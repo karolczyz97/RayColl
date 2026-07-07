@@ -18,6 +18,9 @@ interface ThemeContextType {
   /** Whether the rail is expanded (labels) vs collapsed (icons only). */
   railExpanded: boolean;
   setRailExpanded: (val: boolean) => Promise<void>;
+  /** Background playback toggle (Android-only lock screen audio). */
+  backgroundPlayback: boolean;
+  setBackgroundPlayback: (val: boolean) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -73,6 +76,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const [isThemeLoading, setIsThemeLoading] = useState<boolean>(true);
   const [ttsRate, setTtsRateState] = useState<number>(1.0);
   const [railExpanded, setRailExpandedState] = useState<boolean>(false); // collapsed by default
+  const [backgroundPlayback, setBackgroundPlaybackState] = useState<boolean>(false); // off by default
 
   useEffect(() => {
     let active = true;
@@ -98,6 +102,11 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         const savedRailExpanded = settings[STORAGE_KEYS.NAV_RAIL_EXPANDED];
         if (active && savedRailExpanded !== null) {
           setRailExpandedState(savedRailExpanded === 'true');
+        }
+
+        const savedBackgroundPlayback = settings[STORAGE_KEYS.BACKGROUND_PLAYBACK];
+        if (active && savedBackgroundPlayback !== null) {
+          setBackgroundPlaybackState(savedBackgroundPlayback === 'true');
         }
       } catch (err) {
         console.warn('Failed to load theme settings:', err);
@@ -139,6 +148,12 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     serialize: (v) => (v ? 'true' : 'false'),
   });
 
+  const setBackgroundPlayback = createPreferenceSetter<boolean>({
+    setState: setBackgroundPlaybackState,
+    key: STORAGE_KEYS.BACKGROUND_PLAYBACK,
+    serialize: (v) => (v ? 'true' : 'false'),
+  });
+
   const isDark = themePref === 'system' ? systemScheme === 'dark' : themePref === 'dark';
 
   return (
@@ -154,6 +169,8 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         setTtsRate,
         railExpanded,
         setRailExpanded,
+        backgroundPlayback,
+        setBackgroundPlayback,
       }}
     >
       {children}

@@ -1,6 +1,8 @@
 import type { AtomicStep, Flashcard, FlashcardGroup } from '@/types/models';
 import type { SpeechRecognitionOutcome, StudySkipState } from '@/features/study/hooks/useStudyAudio';
 import { playRatingHaptic } from '@/services/hapticFeedback';
+import { ttsService } from '@/services/ttsService';
+import { getErrorMessage } from '@/utils/errors';
 import type {
   CardReviewState,
   LastAnswerResult,
@@ -14,15 +16,14 @@ import { startReviewAttempt, tryMarkCardReviewed } from './sessionReview';
 import { sleep } from './sessionUtils';
 
 const WAIT_RELEASE_POLL_MS = 100;
+const DEFAULT_TTS_RATE = 1.0;
 
 /** Zależności audio/callbacki wstrzykiwane przez hooka (silnik nie zna hooków). */
 export interface SessionEngineDeps {
-  playTts: (text: string, lang: string) => Promise<void>;
   runSpeechRecognition: (lang: string, timeoutMs: number) => Promise<SpeechRecognitionOutcome>;
   guardedAwait: <T>(promise: Promise<T>) => Promise<T | undefined>;
   stopAudio: () => void;
   skip: StudySkipState;
-  getLastTtsDuration: () => number;
   onCardReviewed: (groupId: string, cardId: string, rating: number) => void;
 }
 
@@ -34,6 +35,9 @@ export interface SessionEngineDeps {
  * ref-mirrory (lastAnswerResult, revealedPages, epoch, pause, failed...) są
  * zwykłymi polami silnika. UI subskrybuje przez `subscribe`/`getVersion`
  * (useSyncExternalStore w useStudySession).
+ *
+ * Tryb tła (backgroundMode): TTS używa statycznego singletona ttsService zamiast
+ * wstrzykniętych zależności z hooka, co pozwala działać po odmontowaniu widoku.
  */
 export class SessionEngine {
   private state: StudySessionState = INITIAL_STUDY_SESSION_STATE;
@@ -65,6 +69,13 @@ export class SessionEngine {
   private lastAnswerResult: LastAnswerResult = NO_ANSWER_RESULT;
   private cardReviewState: CardReviewState = 'none';
   private revealedPages: number[] = [];
+
+  // TTS — tryb tła potrzebuje statycznego dostępu przez singleton ttsService.
+  private ttsRate = DEFAULT_TTS_RATE;
+  private lastTtsDuration = 0;
+  private backgroundMode = false;
+  // Callback opcjonalny — wywoływany przy auto-pauzie w tle (zmiana notyfikacji).
+  private onBackgroundPause: (() => void) | null = null;
 
   // ---------------------------------------------------------------- UI store
 
@@ -111,8 +122,9 @@ export class SessionEngine {
   // ------------------------------------------------------------ konfiguracja
 
   /** Wywoływane przy każdym renderze hooka — idempotentne przypisania pól. */
-  configure(deps: SessionEngineDeps): void {
+  configure(deps: SessionEngineDeps, ttsRate: number = DEFAULT_TTS_RATE): void {
     this.deps = deps;
+    this.ttsRate = ttsRate;
   }
 
   setGroup(group: FlashcardGroup | null): void {
@@ -130,6 +142,61 @@ export class SessionEngine {
   };
 
   getSkip = (): StudySkipState | null => this.deps?.skip ?? null;
+
+  // ------------------------------------------------ tryb tła (backgroundMode)
+
+  setBackgroundMode = (enabled: boolean): void => {
+    this.backgroundMode = enabled;
+  };
+
+  isBackgroundMode = (): boolean => this.backgroundMode;
+
+  setOnBackgroundPause = (cb: (() => void) | null): void => {
+    this.onBackgroundPause = cb;
+  };
+
+  /**
+   * Pominięcie reszty bieżącej karty i przejście do następnej.
+   * Przerywa aktywny TTS/STT łańcuch i wymusza ADVANCE_CARD.
+   */
+  skipToNextCard = (): void => {
+    const skip = this.deps?.skip;
+    if (skip && skip.armed) {
+      skip.requested = true;
+      this.deps?.stopAudio();
+      skip.signalResolve();
+    }
+    this.aborted = true;
+    this.runEpoch += 1;
+    this.aborted = false;
+    this.paused = false;
+    void this.advanceToNextCard();
+  };
+
+  /**
+   * Restart bieżącej karty od kroku 0 BEZ ponownego zapisu SRS.
+   * Używane dla przycisku "poprzednia" w tle — nie rusza historii ocen.
+   */
+  goToPreviousCard = (): void => {
+    const cardIndex = this.state.currentCardIndex;
+    const card = this.dueCards[cardIndex];
+    if (!card) return;
+    this.deps?.stopAudio();
+    this.aborted = true;
+    this.runEpoch += 1;
+    // Zerowanie aborted przed dispatchem, żeby setTimeout i maybeAutoRunCard mogły działać.
+    this.aborted = false;
+    this.paused = false;
+    // Blokada auto-runa PRZED dispatchem — replay odpalamy jawnie niżej.
+    this.lastExecutedCardIndex = cardIndex;
+    // ADVANCE_CARD na ten sam index resetuje stan karty bez oceny SRS.
+    this.dispatch({ type: 'ADVANCE_CARD', nextCardIndex: cardIndex });
+    setTimeout(() => {
+      if (!this.aborted && !this.unmounted) {
+        void this.executeStep(card, 0);
+      }
+    }, 0);
+  };
 
   // ------------------------------------------------------------ cykl sesji
 
@@ -175,14 +242,27 @@ export class SessionEngine {
   /**
    * Zamrożenie przebiegu na czas modala (dialog wyjścia): zabij łańcuch w locie
    * i audio. No-op gdy nic nie działa w tle (czekamy na tap / ocenę / koniec).
+   *
+   * W trybie backgroundMode: jeśli stan wymaga interakcji (revealed / gate / error),
+   * wywołuje onBackgroundPause do aktualizacji notyfikacji na lockscreenie.
    */
   pause = (): void => {
     const current = this.state;
-    if (
-      current.status === 'finished' ||
-      current.status === 'revealed' ||
-      current.interactionGate.kind !== 'none'
-    ) {
+    if (current.status === 'finished') return;
+
+    // W tle: revealed i gate to stany wymagające ręcznej interakcji — auto-pauza
+    if (this.backgroundMode) {
+      if (current.status === 'revealed' || current.interactionGate.kind !== 'none') {
+        this.paused = true;
+        this.runEpoch += 1;
+        this.aborted = true;
+        this.deps?.stopAudio();
+        this.onBackgroundPause?.();
+        return;
+      }
+    }
+
+    if (current.status === 'revealed' || current.interactionGate.kind !== 'none') {
       return;
     }
     this.paused = true;
@@ -309,7 +389,6 @@ export class SessionEngine {
   }
 
   executeStep = async (card: Flashcard, stepIndex: number): Promise<void> => {
-    if (!this.deps) return;
     await executeStudyStep(card, stepIndex, this);
   };
 
@@ -340,15 +419,39 @@ export class SessionEngine {
     this.revealedPages = pages;
   };
 
-  getLastTtsDuration = (): number => this.deps?.getLastTtsDuration() ?? 0;
+  getLastTtsDuration = (): number => this.lastTtsDuration;
 
-  guardedAwait = async <T>(promise: Promise<T>): Promise<T | undefined> => {
-    if (!this.deps) return undefined;
-    return this.deps.guardedAwait(promise);
+  /**
+   * TTS przez statyczny singleton ttsService — działa niezależnie od Reacta,
+   * więc przeżywa odmontowanie widoku w trybie tła.
+   */
+  playTts = async (text: string, lang: string): Promise<void> => {
+    const startTime = Date.now();
+    try {
+      await ttsService.speak({ text, lang, rate: this.ttsRate });
+    } catch (err) {
+      console.error('TTS Speak Error:', getErrorMessage(err));
+      // W tle: błąd TTS = auto-pauza + notyfikacja
+      if (this.backgroundMode) {
+        this.paused = true;
+        this.aborted = true;
+        this.onBackgroundPause?.();
+        return;
+      }
+      this.dispatch({ type: 'SET_ERROR', errorMsg: 'study.error.tts' });
+    }
+    this.lastTtsDuration = Date.now() - startTime;
   };
 
-  playTts = async (text: string, lang: string): Promise<void> => {
-    await this.deps?.playTts(text, lang);
+  /**
+   * guardedAwait gdy deps != null (tryb z UI): races z sygnałem skip.
+   * W tle (deps == null): wykonuje promis bez skipu.
+   */
+  guardedAwait = async <T>(promise: Promise<T>): Promise<T | undefined> => {
+    if (!this.deps) {
+      return (await promise.catch(() => undefined)) as T | undefined;
+    }
+    return this.deps.guardedAwait(promise);
   };
 
   runSpeechRecognition = async (

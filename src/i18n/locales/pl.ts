@@ -76,7 +76,8 @@ export const pl: Record<string, string> = {
   'study.exit_confirm_message': 'Jesteś w trybie nauki. Na pewno wyjść?',
   'study.exit_confirm_btn': 'Wyjdź',
   'study.session_ended_title': 'Sesja przerwana',
-  'study.session_ended_desc': 'Wyjście przed końcem. Twój postęp jest zapisany.',
+  'study.session_ended_desc': 'Wyszedłeś przed ukończeniem. Twój postęp jest zapisany.',
+  'study.background_paused': 'Wstrzymano — otwórz aplikację, aby kontynuować',
 
   // Browse
   'browse.search_placeholder': 'Szukaj fiszek...',
@@ -187,7 +188,10 @@ export const pl: Record<string, string> = {
   'app_settings.lang': 'Język',
   'app_settings.dynamic_colors.title': 'Dynamiczne kolory systemu',
   'app_settings.dynamic_colors.desc':
-    'Pobieraj kolory akcentów bezpośrednio z systemu (Android 12+ / Material You).',
+    'Pobierz akcenty i kolory systemu bezpośrednio z urządzenia (Android 12+ / Material You).',
+  'app_settings.background_playback': 'Odtwarzanie w tle',
+  'app_settings.background_playback_desc':
+    'Kontynuuj odtwarzanie audio podczas nauki przy zablokowanym ekranie lub zminimalizowanej aplikacji.',
 
   // Archive
   'archive.title': 'Zarchiwizowane',

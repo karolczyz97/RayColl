@@ -56,6 +56,7 @@ export const de: Record<string, string> = {
   // Study
   'study.finished_desc': 'Alle für heute geplanten Karten wurden überprüft.',
   'study.no_due': 'Keine fälligen Karten zur Überprüfung.',
+  'study.background_paused': 'Pausiert — App öffnen, um fortzufahren',
   'study.match_percent': 'Übereinstimmung: {percent}%',
   'study.match_percent_threshold': 'Übereinstimmung: {percent}% / Schwelle {threshold}%',
   'study.rating.1': 'Nochmal',
@@ -186,7 +187,10 @@ export const de: Record<string, string> = {
   'app_settings.lang': 'Sprache',
   'app_settings.dynamic_colors.title': 'Dynamische Systemfarben',
   'app_settings.dynamic_colors.desc':
-    'Akzent- und Systemfarben direkt vom Gerät extrahieren (Android 12+ / Material You).',
+    'Extrahiere Akzent- und Systemfarben direkt vom Gerät (Android 12+ / Material You).',
+  'app_settings.background_playback': 'Hintergrund-Audio',
+  'app_settings.background_playback_desc':
+    'Audio beim Lernen aktiv lassen, auch wenn der Bildschirm gesperrt ist oder die App im Hintergrund läuft.',
   // Archive
   'archive.title': 'Archivierte',
   'archive.empty': 'Keine archivierten Decks.',

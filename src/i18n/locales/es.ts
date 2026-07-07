@@ -76,6 +76,7 @@ export const es: Record<string, string> = {
   'study.exit_confirm_btn': 'Salir',
   'study.session_ended_title': 'Sesión interrumpida',
   'study.session_ended_desc': 'Saliste antes de terminar. Tu progreso está guardado.',
+  'study.background_paused': 'Pausado — abre la aplicación para continuar',
 
   // Browse
   'browse.search_placeholder': 'Buscar tarjetas...',
@@ -186,7 +187,10 @@ export const es: Record<string, string> = {
   'app_settings.lang': 'Idioma',
   'app_settings.dynamic_colors.title': 'Colores dinámicos del sistema',
   'app_settings.dynamic_colors.desc':
-    'Extraer colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
+    'Extrae los colores de acento y del sistema directamente del dispositivo (Android 12+ / Material You).',
+  'app_settings.background_playback': 'Audio en segundo plano',
+  'app_settings.background_playback_desc':
+    'Mantén el audio de aprendizaje activo cuando la pantalla esté bloqueada o la aplicación esté en segundo plano.',
   // Archive
   'archive.title': 'Archivados',
   'archive.empty': 'No hay mazos archivados.',

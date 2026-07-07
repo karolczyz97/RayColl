@@ -32,7 +32,7 @@ function createBackupFilename(now = new Date()): string {
 export function useAppSettingsController() {
   const { t, language, setLanguage } = useI18n();
   const store = useFlashcardStore();
-  const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate } =
+  const { themePref, setThemePref, useSystemColors, setUseSystemColors, ttsRate, setTtsRate, backgroundPlayback, setBackgroundPlayback } =
     useAppTheme();
   const { formMaxWidth } = useResponsiveLayout();
   const [isImporting, setIsImporting] = useState(false);
@@ -149,6 +149,8 @@ export function useAppSettingsController() {
     themePref,
     ttsRate,
     useSystemColors,
+    backgroundPlayback,
+    setBackgroundPlayback,
     versionLines,
   };
 }

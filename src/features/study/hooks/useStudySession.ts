@@ -30,15 +30,9 @@ export function useStudySession(
   const ttsRateRef = useSyncedRef(ttsRate);
   const onCardReviewedRef = useSyncedRef(onCardReviewed);
 
-  const {
-    playTts,
-    runSpeechRecognition,
-    requestSkip,
-    guardedAwait,
-    stopAudio,
-    lastTtsDurationRef,
-    skipRef,
-  } = useStudyAudio(engine.dispatch, ttsRateRef);
+  const { runSpeechRecognition, requestSkip, guardedAwait, stopAudio, skipRef } = useStudyAudio(
+    engine.dispatch,
+  );
 
   const activePageCount = group?.activePageCount ?? Infinity;
   const activeSteps = useMemo(
@@ -54,16 +48,17 @@ export function useStudySession(
   // Konfiguracja i dane wejściowe silnika po każdym renderze — parytet z
   // dawnymi useSyncedRef, które również aktualizowały się w efekcie.
   useEffect(() => {
-    engine.configure({
-      playTts,
-      runSpeechRecognition,
-      guardedAwait,
-      stopAudio,
-      skip: skipRef.current,
-      getLastTtsDuration: () => lastTtsDurationRef.current,
-      onCardReviewed: (groupId: string, cardId: string, rating: number) =>
-        onCardReviewedRef.current(groupId, cardId, rating),
-    });
+    engine.configure(
+      {
+        runSpeechRecognition,
+        guardedAwait,
+        stopAudio,
+        skip: skipRef.current,
+        onCardReviewed: (groupId: string, cardId: string, rating: number) =>
+          onCardReviewedRef.current(groupId, cardId, rating),
+      },
+      ttsRateRef.current,
+    );
     engine.setGroup(group);
     engine.setActiveSteps(activeSteps);
   });
@@ -74,6 +69,7 @@ export function useStudySession(
     requestSkip,
   });
 
+  // Cleanup: Zawsze zatrzymuj silnik przy odmontowaniu widoku
   useEffect(() => {
     return () => {
       engine.markUnmounted();
@@ -114,7 +110,10 @@ export function useStudySession(
     setHolding,
     restartSession: engine.restart,
     restartFailed: engine.restartFailed,
+    skipToNextCard: engine.skipToNextCard,
+    goToPreviousCard: engine.goToPreviousCard,
     failedCount,
     clearError,
+    engine,
   };
 }

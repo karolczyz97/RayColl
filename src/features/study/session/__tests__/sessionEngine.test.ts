@@ -12,6 +12,16 @@ jest.mock('@/services/audioFeedback', () => ({
   playErrorSound: jest.fn(),
 }));
 
+jest.mock('@/services/ttsService', () => ({
+  ttsService: {
+    speak: jest.fn(() => Promise.resolve()),
+    cancel: jest.fn(),
+  },
+}));
+
+// eslint-disable-next-line import/first
+import { ttsService } from '@/services/ttsService';
+
 function makeCard(id: string, pages: string[]): Flashcard {
   return { id, pages, srsState: createNewSrsState(), contentUpdatedAt: 0, srsUpdatedAt: 0 };
 }
@@ -40,7 +50,6 @@ function flush(ms = 0): Promise<void> {
 interface EngineHarness {
   engine: SessionEngine;
   reviews: [string, string, number][];
-  playTts: jest.Mock;
   stopAudio: jest.Mock;
   skip: StudySkipState;
 }
@@ -49,23 +58,23 @@ function makeEngine(group: FlashcardGroup, steps: AtomicStep[]): EngineHarness {
   const engine = new SessionEngine();
   const reviews: [string, string, number][] = [];
   const skip: StudySkipState = { requested: false, armed: false, signalResolve: () => {} };
-  const playTts = jest.fn(() => Promise.resolve());
   const stopAudio = jest.fn();
-  engine.configure({
-    playTts: playTts as unknown as (text: string, lang: string) => Promise<void>,
-    runSpeechRecognition: () => Promise.resolve({ status: 'ok', text: 'hello' }),
-    guardedAwait: async <T>(promise: Promise<T>) =>
-      (await promise.catch(() => undefined)) as T | undefined,
-    stopAudio,
-    skip,
-    getLastTtsDuration: () => 0,
-    onCardReviewed: (groupId, cardId, rating) => {
-      reviews.push([groupId, cardId, rating]);
+  engine.configure(
+    {
+      runSpeechRecognition: () => Promise.resolve({ status: 'ok', text: 'hello' }),
+      guardedAwait: async <T>(promise: Promise<T>) =>
+        (await promise.catch(() => undefined)) as T | undefined,
+      stopAudio,
+      skip,
+      onCardReviewed: (groupId, cardId, rating) => {
+        reviews.push([groupId, cardId, rating]);
+      },
     },
-  });
+    1.0,
+  );
   engine.setGroup(group);
   engine.setActiveSteps(steps);
-  return { engine, reviews, playTts, stopAudio, skip };
+  return { engine, reviews, stopAudio, skip };
 }
 
 describe('SessionEngine', () => {
@@ -170,7 +179,7 @@ describe('SessionEngine', () => {
 
   it('speaks all active pages via injected TTS', async () => {
     const cards = [makeCard('c1', ['front', 'middle', 'hidden'])];
-    const { engine, playTts } = makeEngine(makeGroup(3, 2, cards), [
+    const { engine } = makeEngine(makeGroup(3, 2, cards), [
       { type: 'speak_all_pages' },
       { type: 'show_all_pages' },
       { type: 'show_ratings' },
@@ -179,9 +188,9 @@ describe('SessionEngine', () => {
     await flush();
 
     expect(engine.getState().status).toBe('revealed');
-    expect(playTts).toHaveBeenCalledTimes(2);
-    expect(playTts).toHaveBeenNthCalledWith(1, 'front', 'en-US');
-    expect(playTts).toHaveBeenNthCalledWith(2, 'middle', 'en-US');
+    expect(ttsService.speak).toHaveBeenCalledTimes(2);
+    expect(ttsService.speak).toHaveBeenNthCalledWith(1, { text: 'front', lang: 'en-US', rate: 1.0 });
+    expect(ttsService.speak).toHaveBeenNthCalledWith(2, { text: 'middle', lang: 'en-US', rate: 1.0 });
   });
 
   it('restartFailed replays only failed cards', async () => {
@@ -228,6 +237,113 @@ describe('SessionEngine', () => {
     engine.start([]);
     await flush();
     expect(engine.getState().status).toBe('finished');
+  });
+
+  it('skipToNextCard interrupts active chain and advances', async () => {
+    const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
+    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ]);
+    engine.start(cards);
+    await flush();
+
+    // TTS jest w toku (status speaking) — skip do następnej karty
+    engine.skipToNextCard();
+    await flush(50);
+
+    // Karta c1 nie została oceniona (pominięta), c2 czeka na rating
+    expect(engine.getState().currentCardIndex).toBe(1);
+    expect(reviews).toEqual([]);
+    // Upewniamy się, że po przeskoku, krok speak_page dla karty c2 faktycznie wystartował
+    expect(ttsService.speak).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'b' })
+    );
+  });
+
+  it('goToPreviousCard replays current card from step 0 without re-rating', async () => {
+    const cards = [makeCard('c1', ['a'])];
+    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ]);
+    engine.start(cards);
+    await flush();
+    expect(engine.getState().status).toBe('revealed');
+
+    // goToPreviousCard restartuje tę samą kartę od kroku 0
+    engine.goToPreviousCard();
+    await flush();
+
+    // Karta replayowana — silnik przechodzi przez speak_page → show_all_pages → show_ratings
+    expect(engine.getState().status).toBe('revealed');
+    expect(engine.getState().currentCardIndex).toBe(0);
+    // Nadal zero wpisów SRS — restart nie wywołał oceny
+    expect(reviews).toEqual([]);
+  });
+
+  it('backgroundMode substitutes wait_for_tap with auto-reveal', async () => {
+    const cards = [makeCard('c1', ['front'])];
+    const { engine } = makeEngine(makeGroup(1, 1, cards), [
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'wait_for_tap' },
+      { type: 'show_all_pages' },
+    ]);
+    engine.setBackgroundMode(true);
+    engine.start(cards);
+    // W tle speak_page → wait_for_tap (substytucja: pauza 1.5s + auto-reveal) → show_all_pages
+    await flush(1600);
+
+    // Wszystkie strony odsłonięte po substytucji
+    expect(engine.getState().revealedPages).toEqual([0]);
+  });
+
+  it('backgroundMode: wait_for_tap_to_reveal auto-reveals and rates', async () => {
+    const cards = [makeCard('c1', ['front', 'back'])];
+    const { engine, reviews } = makeEngine(makeGroup(2, 2, cards), [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'wait_for_tap_to_reveal' },
+      { type: 'auto_rate_fixed', rating: 3 },
+      { type: 'next_card' },
+    ]);
+    engine.setBackgroundMode(true);
+    engine.start(cards);
+    await flush(1600);
+
+    // W tle: karta auto-odsłonięta, oceniona, sesja zakończona
+    expect(engine.getState().status).toBe('finished');
+    expect(reviews).toEqual([['g1', 'c1', 3]]);
+  });
+
+  it('does not rate a card twice on restartFailed after backgroundMode replay', async () => {
+    const cards = [makeCard('c1', ['a'])];
+    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
+      { type: 'show_all_pages' },
+      { type: 'show_ratings' },
+    ]);
+    engine.setBackgroundMode(true);
+    engine.start(cards);
+    await flush();
+    // W tle show_ratings → auto-pauza, nie oceniamy
+    expect(reviews).toEqual([]);
+  });
+
+  it('backgroundMode pause scales with text length', async () => {
+    const longText = 'a'.repeat(50); // 50 chars → waitMs = max(1500, 50*60*2) = 6000
+    const cards = [makeCard('c1', [longText])];
+    const { engine } = makeEngine(makeGroup(1, 1, cards), [
+      { type: 'speak_page', pageIndex: 0 },
+      { type: 'wait_for_tap' },
+    ]);
+    engine.setBackgroundMode(true);
+    engine.start(cards);
+    // Po 3s: speak_page skończyło się, ale wait_for_tap wciąż czeka (6000ms)
+    await flush(3000);
+    expect(engine.getState().status).toBe('idle');
+    expect(engine.getState().revealedPages).toEqual([]);
   });
 });
 

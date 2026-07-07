@@ -4,8 +4,10 @@ import { useLocalSearchParams } from 'expo-router';
 import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
 import { useStudySession } from '@/features/study/hooks/useStudySession';
+import { useBackgroundStudy } from '@/features/study/hooks/useBackgroundStudy';
 import { buildSessionProgressItems } from '@/features/study/session/sessionProgress';
 import { expandModeSteps } from '@/features/settings/compoundSteps';
+import { useAppTheme } from '@/contexts/UserPreferencesContext';
 
 const NARROW_CONTROLS_WIDTH = 480;
 
@@ -19,6 +21,7 @@ export function useStudyPageController({
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const store = useFlashcardStore();
   const { width } = useWindowDimensions();
+  const { backgroundPlayback } = useAppTheme();
   const isNarrow = width < NARROW_CONTROLS_WIDTH;
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -59,9 +62,23 @@ export function useStudyPageController({
     setHolding,
     restartSession,
     restartFailed,
+    skipToNextCard,
+    goToPreviousCard,
     failedCount,
     clearError,
+    engine,
   } = useStudySession(activeGroup, steps, onCardReviewed);
+
+  // Tło audio: keep-awake, AppState, media session, backgroundMode
+  useBackgroundStudy({
+    engine,
+    groupName: activeGroup?.name ?? '',
+    steps,
+    dueCards,
+    currentCardIndex: sessionState.currentCardIndex,
+    isSessionFinished: sessionState.isSessionFinished,
+    backgroundPlaybackEnabled: backgroundPlayback,
+  });
 
   const startedRef = useRef<string | null>(null);
 
@@ -174,5 +191,7 @@ export function useStudyPageController({
     sessionState,
     setHolding,
     showExitConfirm,
+    skipToNextCard,
+    goToPreviousCard,
   };
 }

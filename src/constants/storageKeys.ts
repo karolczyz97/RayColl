@@ -22,6 +22,9 @@ export const STORAGE_KEYS = {
   USER_MODES: (userId: string) => `fiszki-user-modes-${userId}`,
   USER_HEATMAP: (userId: string) => `fiszki-user-heatmap-${userId}`,
 
+  // Background playback
+  BACKGROUND_PLAYBACK: 'td-background-playback',
+
   // Update notification
   LAST_SEEN_BUILD: 'td-last-seen-build',
 };

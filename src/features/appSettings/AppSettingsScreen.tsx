@@ -43,6 +43,8 @@ export function AppSettingsScreen() {
     themePref,
     ttsRate,
     useSystemColors,
+    backgroundPlayback,
+    setBackgroundPlayback,
     versionLines,
   } = useAppSettingsController();
 
@@ -134,6 +136,18 @@ export function AppSettingsScreen() {
               ]}
             />
           </SettingsTile>
+
+          {Platform.OS === 'android' && (
+            <SettingsTile
+              title={t('app_settings.background_playback')}
+              description={t('app_settings.background_playback_desc')}
+            >
+              <Switch
+                value={backgroundPlayback}
+                onValueChange={(val) => void setBackgroundPlayback(val)}
+              />
+            </SettingsTile>
+          )}
         </SettingsSection>
       </AnimatedSection>
 

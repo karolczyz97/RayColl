@@ -76,6 +76,7 @@ export const en: Record<string, string> = {
   'study.exit_confirm_btn': 'Leave',
   'study.session_ended_title': 'Session paused',
   'study.session_ended_desc': 'You left before finishing. Your progress is saved.',
+  'study.background_paused': 'Paused — open the app to continue',
 
   // Browse
   'browse.search_placeholder': 'Search flashcards...',
@@ -187,6 +188,9 @@ export const en: Record<string, string> = {
   'app_settings.dynamic_colors.title': 'Dynamic system colors',
   'app_settings.dynamic_colors.desc':
     'Extract accent and system colors directly from the device (Android 12+ / Material You).',
+  'app_settings.background_playback': 'Background Audio',
+  'app_settings.background_playback_desc':
+    'Keep learning audio active when the screen is locked or app is in the background.',
 
   // Archive
   'archive.title': 'Archived',
