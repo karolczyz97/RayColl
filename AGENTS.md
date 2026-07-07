@@ -84,7 +84,7 @@ During implementation:
 - Do not add tests for cases that cannot occur through supported app flows unless protecting against old persisted data or external input.
 
 Before final response:
-- Run the relevant verification commands: lint, typecheck, tests, or clearly explain why a command was skipped.
+- Run the full local validation suite using `npm run validate` (which runs lint, typecheck, tests, check-ui, check-assets, and a dry-run web build export), or clearly explain why a command was skipped.
 - Do a logic review of the implemented flow: walk through the main user scenario, one realistic edge case, and the relevant state/data transitions to catch bugs that typecheck and lint cannot catch.
 - Review the final diff for unrelated changes, missing/untracked required files, accidental behavior changes, and duplicated fallback logic.
 - State what was verified and call out any remaining realistic risks or partially covered areas.

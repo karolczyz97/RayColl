@@ -22,10 +22,8 @@ Before every refactor step:
 4. Use `docs/REGRESSION.md` for manual verification.
 
 - No big-bang refactors. Work in **small, committable steps**; the app must compile after each.
-- After each step run:
-  - `npm run lint`
-  - `npm run typecheck`
-  - `npm run test`
+- After each step run full local validation:
+  - `npm run validate` (runs lint, typecheck, unit tests, check-ui, check-assets, and web build export)
 - Preserve behavior unless the change is explicitly about behavior. Visual unification is intentional, not opportunistic restyling.
 - Do not delete code by guesswork. Verify with grep and typecheck. If something might be needed indirectly (Expo, web, Paper), mark it "to audit" instead of removing it blindly.
 - UI / behavior / navigation / sync changes need a manual regression checklist; pure-logic changes fully covered by unit tests do not. Passing TypeScript does not mean the feature works.
