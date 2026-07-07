@@ -27,7 +27,6 @@ export function useStudySession(
   );
 
   const { ttsRate } = useAppTheme();
-  const ttsRateRef = useSyncedRef(ttsRate);
   const onCardReviewedRef = useSyncedRef(onCardReviewed);
 
   const { runSpeechRecognition, requestSkip, guardedAwait, stopAudio, skipRef } = useStudyAudio(
@@ -70,6 +69,7 @@ export function useStudySession(
     group,
     activeSteps,
     ttsRate,
+    onCardReviewedRef,
   ]);
 
   const { handleCardPress, setHolding } = useStudyCardGestures({

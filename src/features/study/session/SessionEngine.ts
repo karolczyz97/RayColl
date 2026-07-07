@@ -9,7 +9,6 @@ import type {
   SessionAction,
   StudySessionState,
 } from './sessionTypes';
-import { NO_ANSWER_RESULT } from './sessionTypes';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from './sessionReducer';
 import { executeStudyStep } from './stepExecutor';
 import { startReviewAttempt, tryMarkCardReviewed } from './sessionReview';
@@ -65,10 +64,10 @@ export class SessionEngine {
   private holding = false;
   private lastExecutedCardIndex: number | null = null;
 
-  // Synchroniczne źródła prawdy dla runnera (mirror UI leci przez reducer).
-  private lastAnswerResult: LastAnswerResult = NO_ANSWER_RESULT;
+  // cardReviewState to runner-only pole — next_card/show_ratings/auto_rate blokują
+  // podwójną ocenę tej samej karty. NIE jest w reducerze, bo dispatch nie jest
+  // potrzebny dla logiki która działa w tej samej synchronicznej ścieżce.
   private cardReviewState: CardReviewState = 'none';
-  private revealedPages: number[] = [];
 
   // TTS — tryb tła potrzebuje statycznego dostępu przez singleton ttsService.
   private ttsRate = DEFAULT_TTS_RATE;
@@ -362,8 +361,6 @@ export class SessionEngine {
     // Konsumuj najpierw — zagnieżdżony dispatch wejdzie tu i wyjdzie od razu.
     this.dispatch({ type: 'CONSUME_PENDING_STEP_INDEX' });
     if (!card || this.aborted) return;
-    // Synchronizuj runnerowy zestaw odsłoniętych stron ze stanu (reveale z gate).
-    this.revealedPages = this.state.revealedPages;
     void this.executeStep(card, pending);
   }
 
@@ -404,11 +401,7 @@ export class SessionEngine {
 
   getActiveSteps = (): AtomicStep[] => this.activeSteps;
 
-  getLastAnswerResult = (): LastAnswerResult => this.lastAnswerResult;
-
-  setLastAnswerResult = (result: LastAnswerResult): void => {
-    this.lastAnswerResult = result;
-  };
+  getLastAnswerResult = (): LastAnswerResult => this.state.lastAnswerResult;
 
   getCardReviewState = (): CardReviewState => this.cardReviewState;
 
@@ -416,11 +409,7 @@ export class SessionEngine {
     this.cardReviewState = reviewState;
   };
 
-  getRevealedPages = (): number[] => this.revealedPages;
-
-  setRevealedPages = (pages: number[]): void => {
-    this.revealedPages = pages;
-  };
+  getRevealedPages = (): number[] => this.state.revealedPages;
 
   getLastTtsDuration = (): number => this.lastTtsDuration;
 

@@ -26,6 +26,14 @@ function makeCard(id: string, pages: string[]): Flashcard {
   return { id, pages, srsState: createNewSrsState(), contentUpdatedAt: 0, srsUpdatedAt: 0 };
 }
 
+function makeCards(count: number, pages = ['a']): Flashcard[] {
+  return Array.from({ length: count }, (_, i) => makeCard(`c${i + 1}`, pages));
+}
+
+function makeSimpleSteps(types: string[]): AtomicStep[] {
+  return types.map((type) => ({ type } as AtomicStep));
+}
+
 function makeGroup(pageCount: number, activePageCount: number, cards: Flashcard[]): FlashcardGroup {
   return {
     id: 'g1',
@@ -79,11 +87,11 @@ function makeEngine(group: FlashcardGroup, steps: AtomicStep[]): EngineHarness {
 
 describe('SessionEngine', () => {
   it('runs the step chain after start and finishes after rating every card', async () => {
-    const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
-    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
-    ]);
+    const cards = makeCards(2, ['a']);
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
 
     engine.start(cards);
     await flush();
@@ -106,11 +114,11 @@ describe('SessionEngine', () => {
   });
 
   it('rates a card at most once', async () => {
-    const cards = [makeCard('c1', ['a'])];
-    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
-    ]);
+    const cards = makeCards(1);
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
     engine.start(cards);
     await flush();
 
@@ -146,11 +154,11 @@ describe('SessionEngine', () => {
   });
 
   it('does not pause while waiting for a manual rating', async () => {
-    const cards = [makeCard('c1', ['a'])];
-    const { engine } = makeEngine(makeGroup(1, 1, cards), [
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
-    ]);
+    const cards = makeCards(1);
+    const { engine } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
     engine.start(cards);
     await flush();
     expect(engine.getState().status).toBe('revealed');
@@ -195,10 +203,10 @@ describe('SessionEngine', () => {
 
   it('restartFailed replays only failed cards', async () => {
     const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
-    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
-    ]);
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
     engine.start(cards);
     await flush();
     await engine.rate(1); // c1 failed
@@ -230,10 +238,10 @@ describe('SessionEngine', () => {
   });
 
   it('finishes immediately when started with an empty card list', async () => {
-    const { engine } = makeEngine(makeGroup(1, 1, []), [
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
-    ]);
+    const { engine } = makeEngine(
+      makeGroup(1, 1, []),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
     engine.start([]);
     await flush();
     expect(engine.getState().status).toBe('finished');
@@ -243,8 +251,7 @@ describe('SessionEngine', () => {
     const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
     const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
       { type: 'speak_page', pageIndex: 0 },
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
+      ...makeSimpleSteps(['show_all_pages', 'show_ratings']),
     ]);
     engine.start(cards);
     await flush();
@@ -263,11 +270,10 @@ describe('SessionEngine', () => {
   });
 
   it('goToPreviousCard replays current card from step 0 without re-rating', async () => {
-    const cards = [makeCard('c1', ['a'])];
+    const cards = makeCards(1);
     const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
       { type: 'speak_page', pageIndex: 0 },
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
+      ...makeSimpleSteps(['show_all_pages', 'show_ratings']),
     ]);
     engine.start(cards);
     await flush();
@@ -319,11 +325,11 @@ describe('SessionEngine', () => {
   });
 
   it('does not rate a card twice on restartFailed after backgroundMode replay', async () => {
-    const cards = [makeCard('c1', ['a'])];
-    const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
-      { type: 'show_all_pages' },
-      { type: 'show_ratings' },
-    ]);
+    const cards = makeCards(1);
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
     engine.setBackgroundMode(true);
     engine.start(cards);
     await flush();

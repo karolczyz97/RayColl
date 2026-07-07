@@ -4,13 +4,53 @@ import { playErrorSound, playSuccessSound } from '@/services/audioFeedback';
 import { playErrorHaptic, playSuccessHaptic } from '@/services/hapticFeedback';
 import type { SessionEngine } from './SessionEngine';
 import type { AnswerStatus, LastAnswerResult } from './sessionTypes';
-import { NO_ANSWER_RESULT } from './sessionTypes';
 import {
   areAllActivePagesRevealed,
   getActivePageIndexes,
   sleep,
-  uniquePageIndexes,
 } from './sessionUtils';
+
+async function executeBackgroundSubstitution(
+  card: Flashcard,
+  stepIndex: number,
+  step: AtomicStep,
+  currentGroup: FlashcardGroup,
+  run: StepRun,
+): Promise<boolean> {
+  const { engine } = run;
+  if (!engine.isBackgroundMode()) return false;
+
+  if (
+    step.type === 'wait_for_tap' ||
+    step.type === 'wait_for_tap_to_reveal' ||
+    step.type === 'wait_for_tap_to_reveal_next'
+  ) {
+    const totalTextLength = getActivePageIndexes(currentGroup).reduce(
+      (sum, pi) => sum + (card.pages[pi] || '').length,
+      0,
+    );
+    const waitMs = Math.max(1500, Math.min(totalTextLength * 60 * 2, 15000));
+    
+    if (!run.isStale()) {
+      engine.dispatch({ type: 'SET_CURRENT_STEP', stepIndex });
+      await engine.guardedAwait(sleep(waitMs));
+    }
+    
+    if (run.isStale()) return true;
+    
+    const all = getActivePageIndexes(currentGroup);
+    engine.dispatch({ type: 'REVEAL_PAGES', revealedPages: all });
+    await continueIfActive(card, stepIndex + 1, run);
+    return true;
+  }
+
+  if (step.type === 'show_ratings') {
+    engine.pause();
+    return true;
+  }
+
+  return false;
+}
 
 /**
  * Runner = głupi interpreter listy primitive steps. Nie zna trybów. Każdy krok
@@ -138,7 +178,6 @@ async function executeListenAndCheckStep(
   }
 
   // Silnik najpierw (kolejne kroki czytają warunek synchronicznie), potem mirror UI.
-  engine.setLastAnswerResult(answer);
   engine.dispatch({ type: 'SET_LAST_ANSWER_RESULT', result: answer });
 
   // STT samo: nie robi feedbacku, pauzy, odsłaniania, oceny, mark failed ani next card.
@@ -180,9 +219,7 @@ export async function executeStudyStep(
   // runnerowy zestaw odsłoniętych stron. Re-entry po gate (stepIndex != 0)
   // nie resetuje — wznowienie po gate synchronizuje strony ze świeżego stanu.
   if (stepIndex === 0) {
-    engine.setLastAnswerResult(NO_ANSWER_RESULT);
     engine.setCardReviewState('none');
-    engine.setRevealedPages([]);
   }
 
   // Koniec listy / brak grupy / abort => STOP. Bez fallbacku SHOW_RATINGS —
@@ -194,37 +231,8 @@ export async function executeStudyStep(
   const step = currentSteps[stepIndex];
 
   // W tle: substytucja kroków wymagających interakcji na automatyczne
-  if (engine.isBackgroundMode()) {
-    if (
-      step.type === 'wait_for_tap' ||
-      step.type === 'wait_for_tap_to_reveal' ||
-      step.type === 'wait_for_tap_to_reveal_next'
-    ) {
-      // Dynamiczna pauza zależna od długości tekstu (wzór jak w dynamic_pause)
-      const totalTextLength = getActivePageIndexes(currentGroup).reduce(
-        (sum, pi) => sum + (card.pages[pi] || '').length,
-        0,
-      );
-      const waitMs = Math.max(1500, Math.min(totalTextLength * 60 * 2, 15000));
-      if (!run.isStale()) {
-        engine.dispatch({ type: 'SET_CURRENT_STEP', stepIndex });
-        await engine.guardedAwait(sleep(waitMs));
-      }
-      if (run.isStale()) return;
-      // Auto-odsłoń wszystkie aktywne strony
-      const all = getActivePageIndexes(currentGroup);
-      engine.setRevealedPages(all);
-      engine.dispatch({ type: 'REVEAL_PAGES', revealedPages: all });
-      await continueIfActive(card, stepIndex + 1, run);
-      return;
-    }
-
-    // W tle: show_ratings = auto-pauza (teoretycznie nie powinno dojść, bo
-    // isModeHandsFreeCapable filtruje tryby z show_ratings, ale defensywnie)
-    if (step.type === 'show_ratings') {
-      engine.pause();
-      return;
-    }
+  if (await executeBackgroundSubstitution(card, stepIndex, step, currentGroup, run)) {
+    return;
   }
 
   // Warunek kroku: 'correct' -> status correct; 'wrong' -> status incorrect.
@@ -241,9 +249,6 @@ export async function executeStudyStep(
 
   switch (step.type) {
     case 'show_page': {
-      engine.setRevealedPages(
-        uniquePageIndexes([...engine.getRevealedPages(), step.pageIndex]),
-      );
       engine.dispatch({ type: 'REVEAL_PAGE', stepIndex, pageIndex: step.pageIndex });
       await continueIfActive(card, stepIndex + 1, run);
       break;
@@ -251,7 +256,6 @@ export async function executeStudyStep(
 
     case 'show_all_pages': {
       const all = getActivePageIndexes(currentGroup);
-      engine.setRevealedPages(all);
       engine.dispatch({ type: 'REVEAL_PAGES', revealedPages: all });
       await continueIfActive(card, stepIndex + 1, run);
       break;

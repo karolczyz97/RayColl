@@ -5,7 +5,7 @@ import type { AtomicStep, Flashcard } from '@/types/models';
 import type { SessionEngine } from '@/features/study/session/SessionEngine';
 import { isModeHandsFreeCapable } from '@/features/study/session/sessionBackground';
 import { audioSessionManager } from '@/services/mediaSession';
-import { useI18n } from '@/i18n/context';
+import { useI18n } from '@/i18n';
 
 interface UseBackgroundStudyParams {
   engine: SessionEngine;
@@ -72,7 +72,7 @@ export function useBackgroundStudy({
         void audioSessionManager.deactivate();
       }
     };
-  }, [engine, groupName, shouldUseBackground]);
+  }, [t, groupName, shouldUseBackground, engine]);
 
   // Zwolnij FGS gdy sesja się kończy (wysłuchano wszystkie karty)
   useEffect(() => {

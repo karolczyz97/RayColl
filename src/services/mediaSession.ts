@@ -10,12 +10,28 @@ interface NowPlayingMetadata {
   album: string;
 }
 
+type TrackPlayerType = typeof import('react-native-track-player').default;
+
 class AudioSessionManager {
   private engine: SessionEngine | null = null;
   private state: PlaybackState = 'stopped';
   private initialized = false;
   private groupName = '';
   private pausedTitle = '';
+
+  private get isActive(): boolean {
+    return !!this.engine && this.engine.isBackgroundMode();
+  }
+
+  private async withTrackPlayer(action: (tp: TrackPlayerType) => Promise<void> | void): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+      const tp = require('react-native-track-player').default;
+      await action(tp);
+    } catch {
+      // Silently ignore on no-op platforms
+    }
+  }
 
   async activate(engine: SessionEngine, groupName: string, pausedTitle: string): Promise<void> {
     if (Platform.OS !== 'android') return;
@@ -42,30 +58,23 @@ class AudioSessionManager {
     this.engine = null;
 
     if (this.initialized) {
-      try {
-        const TrackPlayer = require('react-native-track-player').default;
-        await TrackPlayer.reset();
-      } catch {
-        // TrackPlayer not available (iOS/Web mock)
-      }
+      await this.withTrackPlayer(async (tp) => {
+        await tp.reset();
+      });
       this.state = 'stopped';
     }
   }
 
   updateNowPlaying(cardFront: string, currentIndex: number, total: number): void {
-    if (Platform.OS !== 'android' || !this.initialized) return;
-
-    try {
-      const TrackPlayer = require('react-native-track-player').default;
+    if (!this.initialized) return;
+    void this.withTrackPlayer(async (tp) => {
       const metadata: NowPlayingMetadata = {
         title: cardFront || '—',
         artist: this.groupName,
         album: `${currentIndex + 1}/${total}`,
       };
-      TrackPlayer.updateNowPlayingMetadata(metadata);
-    } catch {
-      // Silently ignore on no-op platforms
-    }
+      await tp.updateNowPlayingMetadata(metadata);
+    });
   }
 
   getCurrentEngine(): SessionEngine | null {
@@ -76,63 +85,51 @@ class AudioSessionManager {
 
   handleRemotePlay(): void {
     this.state = 'playing';
-    if (this.engine && this.engine.isBackgroundMode()) {
+    if (this.isActive && this.engine) {
       this.engine.resume();
-      try {
-        const TrackPlayer = require('react-native-track-player').default;
-        void TrackPlayer.play();
-      } catch {}
+      void this.withTrackPlayer(async (tp) => {
+        await tp.play();
+      });
     }
   }
 
   handleRemotePause(): void {
     this.state = 'paused';
-    if (this.engine && this.engine.isBackgroundMode()) {
+    if (this.isActive && this.engine) {
       this.engine.pause();
-      try {
-        const TrackPlayer = require('react-native-track-player').default;
-        void TrackPlayer.pause();
-      } catch {}
+      void this.withTrackPlayer(async (tp) => {
+        await tp.pause();
+      });
     }
   }
 
   handleRemoteNext(): void {
-    if (this.engine && this.engine.isBackgroundMode()) {
-      this.engine.skipToNextCard();
+    if (this.isActive) {
+      this.engine?.skipToNextCard();
     }
   }
 
   handleRemotePrevious(): void {
-    if (this.engine && this.engine.isBackgroundMode()) {
-      this.engine.goToPreviousCard();
+    if (this.isActive) {
+      this.engine?.goToPreviousCard();
     }
   }
 
   handleRemoteStop(): void {
     this.state = 'stopped';
-    if (this.engine && this.engine.isBackgroundMode()) {
-      this.engine.pause();
+    if (this.isActive) {
+      this.engine?.pause();
     }
     void this.deactivate();
   }
 
   handleRemoteDuck(paused: boolean, permanent: boolean): void {
-    if (!this.engine || !this.engine.isBackgroundMode()) return;
-    if (permanent) {
-      this.engine.pause();
-      try {
-        const TrackPlayer = require('react-native-track-player').default;
-        void TrackPlayer.pause();
-      } catch {}
-      this.state = 'paused';
-      return;
-    }
-    if (paused) {
-      this.engine.pause();
-      try {
-        const TrackPlayer = require('react-native-track-player').default;
-        void TrackPlayer.pause();
-      } catch {}
+    if (!this.isActive) return;
+    if (permanent || paused) {
+      this.engine?.pause();
+      void this.withTrackPlayer(async (tp) => {
+        await tp.pause();
+      });
       this.state = 'paused';
     } else {
       this.handleRemotePlay();
@@ -142,78 +139,74 @@ class AudioSessionManager {
   // ---- Private ----
 
   private async setupTrackPlayer(): Promise<void> {
-    const TrackPlayer = require('react-native-track-player').default;
-    const { Capability } = require('react-native-track-player');
+    await this.withTrackPlayer(async (tp) => {
+      const { Capability } = require('react-native-track-player');
+      
+      await tp.setupPlayer({
+        waitForBuffer: false,
+      });
 
-    await TrackPlayer.setupPlayer({
-      waitForBuffer: false,
-    });
-
-    await TrackPlayer.updateOptions({
-      capabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-        Capability.Stop,
-      ],
-      compactCapabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-      ],
-      notificationCapabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-        Capability.Stop,
-      ],
+      await tp.updateOptions({
+        capabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.SkipToNext,
+          Capability.SkipToPrevious,
+          Capability.Stop,
+        ],
+        compactCapabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.SkipToNext,
+          Capability.SkipToPrevious,
+        ],
+        notificationCapabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.SkipToNext,
+          Capability.SkipToPrevious,
+          Capability.Stop,
+        ],
+      });
     });
   }
 
   private async startSilentPlayback(): Promise<void> {
     if (this.state === 'playing') return;
 
-    const TrackPlayer = require('react-native-track-player').default;
-    const { RepeatMode } = require('react-native-track-player');
-
-    await TrackPlayer.reset();
-
-    // WAV noise at -60dB, generated at build time
     const noiseAsset = require('../../assets/noise-60db.wav');
 
-    await TrackPlayer.add([
-      {
-        id: 'silent-noise',
-        url: noiseAsset,
-        title: ' ',
-        artist: this.groupName,
-        album: '',
-        duration: 0,
-      },
-    ]);
-
-    await TrackPlayer.setRepeatMode(RepeatMode.Track);
-    await TrackPlayer.play();
+    await this.withTrackPlayer(async (tp) => {
+      const { RepeatMode } = require('react-native-track-player');
+      
+      await tp.reset();
+      await tp.add([
+        {
+          id: 'silent-noise',
+          url: noiseAsset,
+          title: ' ',
+          artist: this.groupName,
+          album: '',
+          duration: 0,
+        },
+      ]);
+      await tp.setRepeatMode(RepeatMode.Track);
+      await tp.play();
+    });
     this.state = 'playing';
   }
 
   private setPausedState(): void {
-    if (Platform.OS !== 'android' || !this.initialized) return;
-    try {
-      const TrackPlayer = require('react-native-track-player').default;
-      TrackPlayer.updateNowPlayingMetadata({
+    if (!this.initialized) return;
+    void this.withTrackPlayer(async (tp) => {
+      await tp.updateNowPlayingMetadata({
         title: this.pausedTitle,
         artist: this.groupName,
         album: '',
       });
-      void TrackPlayer.pause();
+      await tp.pause();
       this.state = 'paused';
-    } catch {
-      // no-op on unsupported platforms
-    }
+    });
   }
 }
 
@@ -231,24 +224,16 @@ export async function playbackService(): Promise<void> {
     const TrackPlayer = require('react-native-track-player').default;
     const { Event } = require('react-native-track-player');
 
-    TrackPlayer.addEventListener(Event.RemotePlay, () => {
-      audioSessionManager.handleRemotePlay();
-    });
+    const handlers: Record<string, () => void> = {
+      [Event.RemotePlay]: () => audioSessionManager.handleRemotePlay(),
+      [Event.RemotePause]: () => audioSessionManager.handleRemotePause(),
+      [Event.RemoteNext]: () => audioSessionManager.handleRemoteNext(),
+      [Event.RemotePrevious]: () => audioSessionManager.handleRemotePrevious(),
+      [Event.RemoteStop]: () => audioSessionManager.handleRemoteStop(),
+    };
 
-    TrackPlayer.addEventListener(Event.RemotePause, () => {
-      audioSessionManager.handleRemotePause();
-    });
-
-    TrackPlayer.addEventListener(Event.RemoteNext, () => {
-      audioSessionManager.handleRemoteNext();
-    });
-
-    TrackPlayer.addEventListener(Event.RemotePrevious, () => {
-      audioSessionManager.handleRemotePrevious();
-    });
-
-    TrackPlayer.addEventListener(Event.RemoteStop, () => {
-      audioSessionManager.handleRemoteStop();
+    Object.entries(handlers).forEach(([event, handler]) => {
+      TrackPlayer.addEventListener(event, handler);
     });
 
     TrackPlayer.addEventListener(Event.RemoteDuck, (data: { paused: boolean; permanent: boolean }) => {

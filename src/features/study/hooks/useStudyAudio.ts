@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react';
-import type { MutableRefObject } from 'react';
 import type { SessionAction } from '@/features/study/session/sessionTypes';
 import { ttsService } from '@/services/ttsService';
 import { getSttService } from '@/services/sttService';
