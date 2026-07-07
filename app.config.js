@@ -20,7 +20,9 @@ module.exports = {
       package: "com.raycoll.app",
       permissions: [
         "RECORD_AUDIO",
-        "INTERNET"
+        "INTERNET",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",

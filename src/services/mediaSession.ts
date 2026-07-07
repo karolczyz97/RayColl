@@ -31,6 +31,8 @@ class AudioSessionManager {
       this.initialized = true;
     }
 
+    if (this.engine !== engine) return;
+
     await this.startSilentPlayback();
   }
 
@@ -39,13 +41,15 @@ class AudioSessionManager {
     this.engine?.setOnBackgroundPause(null);
     this.engine = null;
 
-    try {
-      const TrackPlayer = require('react-native-track-player').default;
-      await TrackPlayer.reset();
-    } catch {
-      // TrackPlayer not available (iOS/Web mock)
+    if (this.initialized) {
+      try {
+        const TrackPlayer = require('react-native-track-player').default;
+        await TrackPlayer.reset();
+      } catch {
+        // TrackPlayer not available (iOS/Web mock)
+      }
+      this.state = 'stopped';
     }
-    this.state = 'stopped';
   }
 
   updateNowPlaying(cardFront: string, currentIndex: number, total: number): void {
@@ -74,6 +78,10 @@ class AudioSessionManager {
     this.state = 'playing';
     if (this.engine && this.engine.isBackgroundMode()) {
       this.engine.resume();
+      try {
+        const TrackPlayer = require('react-native-track-player').default;
+        void TrackPlayer.play();
+      } catch {}
     }
   }
 
@@ -81,6 +89,10 @@ class AudioSessionManager {
     this.state = 'paused';
     if (this.engine && this.engine.isBackgroundMode()) {
       this.engine.pause();
+      try {
+        const TrackPlayer = require('react-native-track-player').default;
+        void TrackPlayer.pause();
+      } catch {}
     }
   }
 
@@ -107,13 +119,23 @@ class AudioSessionManager {
   handleRemoteDuck(paused: boolean, permanent: boolean): void {
     if (!this.engine || !this.engine.isBackgroundMode()) return;
     if (permanent) {
-      // Audio focus bezpowrotnie utracony (np. odłączenie słuchawek, inna apka
-      // przejęła na stałe) — zatrzymaj sesję i zwolnij FGS.
-      this.engine.end();
+      this.engine.pause();
+      try {
+        const TrackPlayer = require('react-native-track-player').default;
+        void TrackPlayer.pause();
+      } catch {}
+      this.state = 'paused';
       return;
     }
     if (paused) {
       this.engine.pause();
+      try {
+        const TrackPlayer = require('react-native-track-player').default;
+        void TrackPlayer.pause();
+      } catch {}
+      this.state = 'paused';
+    } else {
+      this.handleRemotePlay();
     }
   }
 
@@ -160,7 +182,7 @@ class AudioSessionManager {
     await TrackPlayer.reset();
 
     // WAV noise at -60dB, generated at build time
-    const noiseAsset = require('@/assets/noise-60db.wav');
+    const noiseAsset = require('../../assets/noise-60db.wav');
 
     await TrackPlayer.add([
       {
@@ -187,6 +209,8 @@ class AudioSessionManager {
         artist: this.groupName,
         album: '',
       });
+      void TrackPlayer.pause();
+      this.state = 'paused';
     } catch {
       // no-op on unsupported platforms
     }

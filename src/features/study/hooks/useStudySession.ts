@@ -72,8 +72,8 @@ export function useStudySession(
   // Cleanup: Zawsze zatrzymuj silnik przy odmontowaniu widoku
   useEffect(() => {
     return () => {
-      engine.markUnmounted();
       engine.stop();
+      engine.markUnmounted();
     };
   }, [engine]);
 

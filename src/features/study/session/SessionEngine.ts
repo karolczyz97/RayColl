@@ -332,8 +332,11 @@ export class SessionEngine {
   // ------------------------------------------------------------ runner
 
   private async waitUntilReleased(): Promise<void> {
-    while (this.holding && !this.aborted) {
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50; // 50 * 100ms = 5 sekund max
+    while (this.holding && !this.aborted && attempts < MAX_ATTEMPTS) {
       await sleep(WAIT_RELEASE_POLL_MS);
+      attempts += 1;
     }
   }
 

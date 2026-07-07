@@ -1,6 +1,7 @@
-Allow changing step type when editing study mode steps
+Poprawki stabilności dla odtwarzania w tle
 
-- Enabled changing the step type during study mode step editing
-- Automatically resets other parameters to defaults (preserving page number) when switching types
-- Restores original parameters if user switches back to the initial step type
-- Added test coverage in AddStepDialog tests for step type transitions
+- Naprawiono crash aplikacji na systemie Android 14+ przy włączaniu odtwarzania w tle
+- Zabezpieczono przed drenowaniem baterii i odtwarzaniem niewidzialnego szumu po wyjściu
+- Naprawiono wstrzymywanie nauki z ekranu blokady
+- Usprawniono zatrzymywanie głosu lektora po powrocie do głównego menu
+- Zabezpieczono silnik przed rzadkimi problemami z zawieszaniem się sesji
