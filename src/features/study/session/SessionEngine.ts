@@ -1,13 +1,40 @@
-import type { SessionAction, StudySessionState } from './sessionTypes';
+import type { MutableRefObject } from 'react';
+import type { AtomicStep, Flashcard, FlashcardGroup } from '@/types/models';
+import type { SpeechRecognitionOutcome, StudySkipState } from '@/features/study/hooks/useStudyAudio';
+import { playRatingHaptic } from '@/services/hapticFeedback';
+import type {
+  CardReviewState,
+  LastAnswerResult,
+  SessionAction,
+  StudySessionState,
+} from './sessionTypes';
+import { NO_ANSWER_RESULT } from './sessionTypes';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from './sessionReducer';
+import { executeStudyStep } from './stepExecutor';
+import { startReviewAttempt, tryMarkCardReviewed } from './sessionReview';
+import { sleep } from './sessionUtils';
+
+const WAIT_RELEASE_POLL_MS = 100;
+
+/** Zależności audio/callbacki wstrzykiwane przez hooka (silnik nie zna hooków). */
+export interface SessionEngineDeps {
+  playTts: (text: string, lang: string) => Promise<void>;
+  runSpeechRecognition: (lang: string, timeoutMs: number) => Promise<SpeechRecognitionOutcome>;
+  guardedAwait: <T>(promise: Promise<T>) => Promise<T | undefined>;
+  stopAudio: () => void;
+  skip: StudySkipState;
+  getLastTtsDuration: () => number;
+  onCardReviewed: (groupId: string, cardId: string, rating: number) => void;
+}
 
 /**
- * Silnik sesji nauki poza Reactem — właściciel stanu sesji.
+ * Silnik sesji nauki poza Reactem — jedyne źródło prawdy stanu sesji.
  *
  * `dispatch` wykonuje czysty `sessionReducer` SYNCHRONICZNIE, więc każdy odczyt
- * `getState()` w trakcie asynchronicznego łańcucha kroków jest świeży (koniec
- * z problemem "reducer state jest stale w obrębie łańcucha"). UI subskrybuje
- * przez `subscribe`/`getVersion` (useSyncExternalStore w useStudySession).
+ * stanu w trakcie asynchronicznego łańcucha kroków jest świeży — dawne
+ * ref-mirrory (lastAnswerResult, revealedPages, epoch, pause, failed...) są
+ * zwykłymi polami silnika. UI subskrybuje przez `subscribe`/`getVersion`
+ * (useSyncExternalStore w useStudySession).
  */
 export class SessionEngine {
   private state: StudySessionState = INITIAL_STUDY_SESSION_STATE;
@@ -15,11 +42,40 @@ export class SessionEngine {
   private listeners = new Set<() => void>();
   private unmounted = false;
 
+  private deps: SessionEngineDeps | null = null;
+
+  // Dane wejściowe pchane przez hooka przy każdym renderze.
+  private group: FlashcardGroup | null = null;
+  private activeSteps: AtomicStep[] = [];
+
+  // Stan przebiegu sesji (dawne refy useStudySession).
+  private dueCards: Flashcard[] = [];
+  private allCards: Flashcard[] = [];
+  private failedCards: Flashcard[] = [];
+  private reviewedAttemptKeys = new Set<string>();
+  private sessionAttempt = 0;
+  // Generation counter for step chains; łańcuch łapie epokę na starcie, mismatch
+  // znaczy że został wyprzedzony i musi umrzeć bez efektów ubocznych.
+  private runEpoch = 0;
+  private aborted = false;
+  private paused = false;
+  private holding = false;
+  private lastExecutedCardIndex: number | null = null;
+
+  // Synchroniczne źródła prawdy dla runnera (mirror UI leci przez reducer).
+  private lastAnswerResult: LastAnswerResult = NO_ANSWER_RESULT;
+  private cardReviewState: CardReviewState = 'none';
+  private revealedPages: number[] = [];
+
+  // ---------------------------------------------------------------- UI store
+
   getState = (): StudySessionState => this.state;
 
-  // Monotoniczny licznik zmian — snapshot dla useSyncExternalStore. Rośnie też
-  // przy zmianach pól poza reducerem (dueCards/failedCards), stąd notifyExternal.
   getVersion = (): number => this.version;
+
+  getDueCards = (): Flashcard[] => this.dueCards;
+
+  getFailedCount = (): number => this.failedCards.length;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -36,6 +92,9 @@ export class SessionEngine {
     if (next === this.state) return;
     this.state = next;
     this.bumpAndNotify();
+    // Dawne efekty hooka: wznowienie po gate i auto-start karty od kroku 0.
+    this.handlePendingStep();
+    this.maybeAutoRunCard();
   };
 
   /** Po odmontowaniu hooka silnik ignoruje dispatch (dawne dispatchIfMounted). */
@@ -43,15 +102,290 @@ export class SessionEngine {
     this.unmounted = true;
   };
 
-  protected isUnmounted(): boolean {
-    return this.unmounted;
-  }
-
-  /** Notyfikacja dla zmian pól silnika spoza reducera (np. failedCards). */
-  protected bumpAndNotify(): void {
+  private bumpAndNotify(): void {
     this.version += 1;
     for (const listener of [...this.listeners]) {
       listener();
     }
+  }
+
+  // ------------------------------------------------------------ konfiguracja
+
+  /** Wywoływane przy każdym renderze hooka — idempotentne przypisania pól. */
+  configure(deps: SessionEngineDeps): void {
+    this.deps = deps;
+  }
+
+  setGroup(group: FlashcardGroup | null): void {
+    this.group = group;
+  }
+
+  setActiveSteps(steps: AtomicStep[]): void {
+    this.activeSteps = steps;
+  }
+
+  getGroup = (): FlashcardGroup | null => this.group;
+
+  setHolding = (holding: boolean): void => {
+    this.holding = holding;
+  };
+
+  getSkip = (): StudySkipState | null => this.deps?.skip ?? null;
+
+  // ------------------------------------------------------------ cykl sesji
+
+  start = (cards: Flashcard[]): void => {
+    this.aborted = false;
+    this.paused = false;
+    this.runEpoch += 1;
+    this.lastExecutedCardIndex = null;
+    this.allCards = cards;
+    this.failedCards = [];
+    this.sessionAttempt = startReviewAttempt(this.reviewedAttemptKeys, this.sessionAttempt);
+    this.dueCards = cards;
+    this.bumpAndNotify();
+    this.dispatch({ type: 'START_SESSION' });
+  };
+
+  restart = (): void => {
+    this.start(this.getFreshCards(this.allCards));
+  };
+
+  restartFailed = (): void => {
+    if (this.failedCards.length > 0) {
+      this.start(this.getFreshCards(this.failedCards));
+    }
+  };
+
+  /** Zatrzymaj przebieg (wyjście z ekranu): zabij łańcuch i audio. */
+  stop = (): void => {
+    this.aborted = true;
+    this.deps?.stopAudio();
+  };
+
+  /** Zakończ sesję wcześniej: podsumowanie renderuje się w miejscu. */
+  end = (): void => {
+    this.paused = false;
+    this.stop();
+    this.dispatch({ type: 'FINISH_SESSION' });
+  };
+
+  /**
+   * Zamrożenie przebiegu na czas modala (dialog wyjścia): zabij łańcuch w locie
+   * i audio. No-op gdy nic nie działa w tle (czekamy na tap / ocenę / koniec).
+   */
+  pause = (): void => {
+    const current = this.state;
+    if (
+      current.status === 'finished' ||
+      current.status === 'revealed' ||
+      current.interactionGate.kind !== 'none'
+    ) {
+      return;
+    }
+    this.paused = true;
+    this.runEpoch += 1;
+    this.aborted = true;
+    this.deps?.stopAudio();
+  };
+
+  /**
+   * Wznowienie po pauzie = powtórka bieżącej karty od pierwszego kroku —
+   * TTS/STT nie da się wznowić w połowie wypowiedzi, uczciwy jest czysty replay.
+   */
+  resume = (): void => {
+    if (!this.paused) return;
+    this.paused = false;
+    this.aborted = false;
+    this.runEpoch += 1;
+    const cardIndex = this.state.currentCardIndex;
+    const card = this.dueCards[cardIndex];
+    // Blokada auto-runa PRZED dispatchem — replay odpalamy jawnie niżej.
+    this.lastExecutedCardIndex = cardIndex;
+    this.dispatch({ type: 'ADVANCE_CARD', nextCardIndex: cardIndex });
+    if (!card) return;
+    setTimeout(() => {
+      if (!this.aborted) {
+        void this.executeStep(card, 0);
+      }
+    }, 0);
+  };
+
+  // ------------------------------------------------------------ ocena kart
+
+  rate = async (rating: number): Promise<void> => {
+    if (this.cardReviewState !== 'none') return;
+    const index = this.state.currentCardIndex;
+    if (index >= this.dueCards.length || !this.group) return;
+    const card = this.dueCards[index];
+    if (!card) return;
+    playRatingHaptic(rating);
+    if (rating === 1) {
+      this.markCardFailed(card);
+    }
+    this.processCardReview(card, rating);
+    this.cardReviewState = 'manuallyRated';
+    await this.advanceToNextCard();
+  };
+
+  private markCardFailed = (card: Flashcard): void => {
+    if (this.failedCards.find((item) => item.id === card.id)) return;
+    this.failedCards.push(card);
+    this.bumpAndNotify();
+  };
+
+  private processCardReview = (card: Flashcard, rating: number): void => {
+    if (!this.group || !this.deps) return;
+    if (tryMarkCardReviewed(this.reviewedAttemptKeys, this.sessionAttempt, card.id)) {
+      this.deps.onCardReviewed(this.group.id, card.id, rating);
+    }
+  };
+
+  private getFreshCards(cards: Flashcard[]): Flashcard[] {
+    if (!this.group) return cards;
+    const cardsById = new Map(this.group.cards.map((card) => [card.id, card]));
+    return cards.map((card) => cardsById.get(card.id) ?? card);
+  }
+
+  // ------------------------------------------------------------ runner
+
+  private async waitUntilReleased(): Promise<void> {
+    while (this.holding) {
+      await sleep(WAIT_RELEASE_POLL_MS);
+    }
+  }
+
+  private advanceToNextCard = async (): Promise<void> => {
+    await this.waitUntilReleased();
+    const nextIndex = this.state.currentCardIndex + 1;
+    if (nextIndex >= this.dueCards.length) {
+      this.dispatch({ type: 'FINISH_SESSION' });
+    } else {
+      this.dispatch({ type: 'ADVANCE_CARD', nextCardIndex: nextIndex });
+    }
+  };
+
+  /**
+   * Po domknięciu tap-gate gesty ustawiają pendingStepIndexToRun. Wznawiamy
+   * runner od wskazanego kroku TEJ SAMEJ karty — auto-run startuje kartę tylko
+   * od kroku 0 i blokuje ponowne odpalenie przez lastExecutedCardIndex.
+   */
+  private handlePendingStep(): void {
+    const pending = this.state.pendingStepIndexToRun;
+    if (pending === null) return;
+    const card = this.dueCards[this.state.currentCardIndex];
+    // Konsumuj najpierw — zagnieżdżony dispatch wejdzie tu i wyjdzie od razu.
+    this.dispatch({ type: 'CONSUME_PENDING_STEP_INDEX' });
+    if (!card || this.aborted) return;
+    // Synchronizuj runnerowy zestaw odsłoniętych stron ze stanu (reveale z gate).
+    this.revealedPages = this.state.revealedPages;
+    void this.executeStep(card, pending);
+  }
+
+  /** Auto-start bieżącej karty od kroku 0 (dawny efekt auto-run hooka). */
+  private maybeAutoRunCard(): void {
+    const state = this.state;
+    if (this.dueCards.length === 0 || state.status === 'finished') {
+      this.lastExecutedCardIndex = null;
+      return;
+    }
+    // Nie startuj karty od 0, gdy: pokazujemy ratingi, czekamy w tap-gate, albo
+    // mamy zaplanowane wznowienie kroku (pendingStepIndexToRun) tej karty.
+    if (state.status === 'revealed') return;
+    if (state.interactionGate.kind !== 'none') return;
+    if (state.pendingStepIndexToRun !== null) return;
+    const card = this.dueCards[state.currentCardIndex];
+    if (!card) return;
+    if (this.lastExecutedCardIndex === state.currentCardIndex) return;
+
+    this.lastExecutedCardIndex = state.currentCardIndex;
+    setTimeout(() => {
+      if (!this.aborted && !this.unmounted && this.state.status !== 'finished') {
+        void this.executeStep(card, 0);
+      }
+    }, 0);
+  }
+
+  executeStep = async (card: Flashcard, stepIndex: number): Promise<void> => {
+    const deps = this.deps;
+    if (!deps) return;
+    await executeStudyStep(card, stepIndex, {
+      abortRef: this.fieldRef(
+        () => this.aborted,
+        (value) => {
+          this.aborted = value;
+        },
+      ),
+      runEpochRef: this.fieldRef(
+        () => this.runEpoch,
+        (value) => {
+          this.runEpoch = value;
+        },
+      ),
+      lastAnswerResultRef: this.fieldRef(
+        () => this.lastAnswerResult,
+        (value) => {
+          this.lastAnswerResult = value;
+        },
+      ),
+      currentCardReviewStateRef: this.fieldRef(
+        () => this.cardReviewState,
+        (value) => {
+          this.cardReviewState = value;
+        },
+      ),
+      revealedPagesRef: this.fieldRef(
+        () => this.revealedPages,
+        (value) => {
+          this.revealedPages = value;
+        },
+      ),
+      activeStepsRef: this.fieldRef(
+        () => this.activeSteps,
+        (value) => {
+          this.activeSteps = value;
+        },
+      ),
+      groupRef: this.fieldRef(
+        () => this.group,
+        (value) => {
+          this.group = value;
+        },
+      ),
+      stateRef: this.fieldRef(
+        () => this.state,
+        () => {},
+      ),
+      skipRef: this.fieldRef(
+        () => deps.skip,
+        () => {},
+      ),
+      lastTtsDurationRef: this.fieldRef(
+        () => deps.getLastTtsDuration(),
+        () => {},
+      ),
+      dispatchIfMounted: this.dispatch,
+      guardedAwait: deps.guardedAwait,
+      playTts: deps.playTts,
+      runSpeechRecognition: deps.runSpeechRecognition,
+      processCardReview: this.processCardReview,
+      advanceToNextCard: this.advanceToNextCard,
+      markCardFailed: this.markCardFailed,
+      executeNext: this.executeStep,
+    });
+  };
+
+  // Most kompatybilności do czasu przepięcia stepExecutor bezpośrednio na
+  // silnik: MutableRefObject<T> to strukturalnie { current: T }, więc pola
+  // silnika udajemy accessorami.
+  private fieldRef<T>(get: () => T, set: (value: T) => void): MutableRefObject<T> {
+    return {
+      get current() {
+        return get();
+      },
+      set current(value: T) {
+        set(value);
+      },
+    } as MutableRefObject<T>;
   }
 }

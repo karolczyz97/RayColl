@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import type { FlashcardGroup } from '@/types/models';
 import type { StudySkipState } from '@/features/study/hooks/useStudyAudio';
+import type { SessionEngine } from '@/features/study/session/SessionEngine';
 import {
   areAllActivePagesRevealed,
   getNextHiddenPageIndex,
   PEEK_HOLD_THRESHOLD_MS,
   uniquePageIndexes,
 } from '@/features/study/session/sessionUtils';
-import type {
-  SessionAction,
-  StudySessionState,
-} from '@/features/study/session/sessionTypes';
 import {
   playCardPeekHaptic,
   playSelectionHaptic,
@@ -19,12 +15,9 @@ import {
 } from '@/services/hapticFeedback';
 
 interface UseStudyCardGesturesParams {
-  groupRef: MutableRefObject<FlashcardGroup | null>;
-  stateRef: MutableRefObject<StudySessionState>;
-  holdingRef: MutableRefObject<boolean>;
+  engine: SessionEngine;
   skipRef: MutableRefObject<StudySkipState>;
   requestSkip: () => void;
-  dispatchIfMounted: (action: SessionAction) => void;
 }
 
 interface GestureState {
@@ -35,12 +28,9 @@ interface GestureState {
 }
 
 export function useStudyCardGestures({
-  groupRef,
-  stateRef,
-  holdingRef,
+  engine,
   skipRef,
   requestSkip,
-  dispatchIfMounted,
 }: UseStudyCardGesturesParams) {
   const gestureRef = useRef<GestureState>({
     pressTime: 0,
@@ -66,8 +56,8 @@ export function useStudyCardGestures({
       gesture.blockPress = false;
       return;
     }
-    const currentGroup = groupRef.current;
-    const currentState = stateRef.current;
+    const currentGroup = engine.getGroup();
+    const currentState = engine.getState();
     if (!currentGroup) return;
 
     // 2. Karta oceniana / sesja zakończona — tap nic nie robi.
@@ -77,7 +67,7 @@ export function useStudyCardGestures({
     //    Ten sam tap nie odsłania strony ani nie pokazuje ratingów.
     if (skipRef.current.armed) {
       playStudyActionHaptic();
-      dispatchIfMounted({ type: 'PEEK_CLEAR' });
+      engine.dispatch({ type: 'PEEK_CLEAR' });
       requestSkip();
       return;
     }
@@ -86,11 +76,11 @@ export function useStudyCardGestures({
     if (currentState.interactionGate.kind === 'tap_to_reveal') {
       const continueStepIndex = currentState.interactionGate.continueStepIndex;
       const completeGate = () => {
-        dispatchIfMounted({ type: 'COMPLETE_INTERACTION_GATE' });
+        engine.dispatch({ type: 'COMPLETE_INTERACTION_GATE' });
         // Wznowienie runnera planuje pendingStepIndexToRun — NIE SHOW_RATINGS.
         // Ratingi pokaże dopiero krok show_ratings, jeśli jest następny.
         if (continueStepIndex !== null) {
-          dispatchIfMounted({ type: 'SET_PENDING_STEP_INDEX', stepIndex: continueStepIndex });
+          engine.dispatch({ type: 'SET_PENDING_STEP_INDEX', stepIndex: continueStepIndex });
         }
       };
 
@@ -113,7 +103,7 @@ export function useStudyCardGestures({
         nextHiddenPageIndex,
       ]);
       playSelectionHaptic();
-      dispatchIfMounted({ type: 'REVEAL_NEXT_PAGE_IN_GATE', pageIndex: nextHiddenPageIndex });
+      engine.dispatch({ type: 'REVEAL_NEXT_PAGE_IN_GATE', pageIndex: nextHiddenPageIndex });
       // Ostatni tap domyka gate (po odsłonięciu ostatniej ukrytej strony).
       if (
         currentState.interactionGate.revealMode === 'single' ||
@@ -125,14 +115,14 @@ export function useStudyCardGestures({
     }
 
     // 5. W innym przypadku tap nic nie robi.
-  }, [dispatchIfMounted, groupRef, requestSkip, skipRef, stateRef]);
+  }, [engine, requestSkip, skipRef]);
 
   const setHolding = useCallback(
     (holding: boolean) => {
-      holdingRef.current = holding;
+      engine.setHolding(holding);
       const gesture = gestureRef.current;
-      const currentGroup = groupRef.current;
-      const currentState = stateRef.current;
+      const currentGroup = engine.getGroup();
+      const currentState = engine.getState();
 
       if (holding) {
         clearPeekTimer();
@@ -151,7 +141,7 @@ export function useStudyCardGestures({
               gesture.hasPeeked = true;
               playCardPeekHaptic();
               // Peek NIGDY nie zmienia revealedPages — tylko podgląd jednej strony.
-              dispatchIfMounted({ type: 'PEEK_SET', pageIndex: nextHidden });
+              engine.dispatch({ type: 'PEEK_SET', pageIndex: nextHidden });
             }, PEEK_HOLD_THRESHOLD_MS);
           }
         }
@@ -164,13 +154,13 @@ export function useStudyCardGestures({
         } else {
           gesture.blockPress = true;
           if (gesture.hasPeeked) {
-            dispatchIfMounted({ type: 'PEEK_CLEAR' });
+            engine.dispatch({ type: 'PEEK_CLEAR' });
           }
         }
         gesture.hasPeeked = false;
       }
     },
-    [clearPeekTimer, dispatchIfMounted, groupRef, holdingRef, stateRef],
+    [clearPeekTimer, engine],
   );
 
   return {
