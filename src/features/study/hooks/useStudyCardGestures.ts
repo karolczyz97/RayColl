@@ -60,10 +60,18 @@ export function useStudyCardGestures({
     const currentState = engine.getState();
     if (!currentGroup) return;
 
-    // 2. Karta oceniana / sesja zakończona — tap nic nie robi.
+    // 2. Sesja wstrzymana zdalnie (pauza z notyfikacji/słuchawki) — tap wznawia.
+    //    Pauza dialogu wyjścia tu nie wpada: dialog zasłania kartę.
+    if (engine.isPaused()) {
+      playStudyActionHaptic();
+      engine.resume();
+      return;
+    }
+
+    // 3. Karta oceniana / sesja zakończona — tap nic nie robi.
     if (currentState.status === 'revealed' || currentState.status === 'finished') return;
 
-    // 3. Aktywny krok (TTS/STT/wait) uzbroił skip — tap TYLKO przerywa ten krok.
+    // 4. Aktywny krok (TTS/STT/wait) uzbroił skip — tap TYLKO przerywa ten krok.
     //    Ten sam tap nie odsłania strony ani nie pokazuje ratingów.
     if (skipRef.current.armed) {
       playStudyActionHaptic();
@@ -72,7 +80,7 @@ export function useStudyCardGestures({
       return;
     }
 
-    // 4. Tap-gate: każdy tap odsłania dokładnie jedną kolejną aktywną ukrytą stronę.
+    // 5. Tap-gate: każdy tap odsłania dokładnie jedną kolejną aktywną ukrytą stronę.
     if (currentState.interactionGate.kind === 'tap_to_reveal') {
       const continueStepIndex = currentState.interactionGate.continueStepIndex;
       const completeGate = () => {
@@ -114,7 +122,7 @@ export function useStudyCardGestures({
       return;
     }
 
-    // 5. W innym przypadku tap nic nie robi.
+    // 6. W innym przypadku tap nic nie robi.
   }, [engine, requestSkip, skipRef]);
 
   const setHolding = useCallback(

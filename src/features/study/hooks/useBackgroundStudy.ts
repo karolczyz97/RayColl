@@ -99,9 +99,20 @@ export function useBackgroundStudy({
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (appStateRef.current.match(/active/) && nextState.match(/inactive|background/)) {
+        // Zejście w tło w trakcie trzymania karty: "puszczono" może nigdy nie
+        // przyjść pod lockiem — zwolnij hold, żeby advance nie wisiał w tle.
+        engine.setHolding(false);
         if (!shouldUseBackground) {
           // Niekompatybilny tryb: pauza + stopAudio (zabij STT)
           engine.pause();
+        }
+      }
+      if (nextState === 'active' && shouldUseBackground && !isSessionFinished) {
+        // Powrót do aplikacji po "Stop" z notyfikacji: media sesja umarła, ale
+        // sesja nauki żyje — reaktywuj, żeby kolejne zablokowanie miało FGS.
+        if (audioSessionManager.getCurrentEngine() !== engine) {
+          backgroundActivatedRef.current = true;
+          void audioSessionManager.activate(engine, groupName, t('study.background_paused'));
         }
       }
       appStateRef.current = nextState;
@@ -111,5 +122,5 @@ export function useBackgroundStudy({
     return () => {
       subscription.remove();
     };
-  }, [engine, shouldUseBackground]);
+  }, [engine, shouldUseBackground, isSessionFinished, groupName, t]);
 }

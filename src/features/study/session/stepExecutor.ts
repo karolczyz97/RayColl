@@ -7,6 +7,7 @@ import type { AnswerStatus, LastAnswerResult } from './sessionTypes';
 import {
   areAllActivePagesRevealed,
   getActivePageIndexes,
+  getNextHiddenPageIndex,
   sleep,
 } from './sessionUtils';
 
@@ -30,22 +31,39 @@ async function executeBackgroundSubstitution(
       0,
     );
     const waitMs = Math.max(1500, Math.min(totalTextLength * 60 * 2, 15000));
-    
+
     if (!run.isStale()) {
       engine.dispatch({ type: 'SET_CURRENT_STEP', stepIndex });
       await engine.guardedAwait(sleep(waitMs));
     }
-    
+
     if (run.isStale()) return true;
-    
-    const all = getActivePageIndexes(currentGroup);
-    engine.dispatch({ type: 'REVEAL_PAGES', revealedPages: all });
+
+    // Parytet z zachowaniem tapów na ekranie: _next odsłania JEDNĄ kolejną
+    // stronę, _reveal wszystkie pozostałe, goły wait_for_tap nic nie odsłania.
+    if (step.type === 'wait_for_tap_to_reveal_next') {
+      const nextHidden = getNextHiddenPageIndex(currentGroup, engine.getRevealedPages());
+      if (nextHidden !== null) {
+        engine.dispatch({ type: 'REVEAL_NEXT_PAGE_IN_GATE', pageIndex: nextHidden });
+      }
+    } else if (step.type === 'wait_for_tap_to_reveal') {
+      engine.dispatch({ type: 'REVEAL_PAGES', revealedPages: getActivePageIndexes(currentGroup) });
+    }
     await continueIfActive(card, stepIndex + 1, run);
     return true;
   }
 
   if (step.type === 'show_ratings') {
-    engine.pause();
+    if (engine.getCardReviewState() === 'none') {
+      // Najpierw SHOW_RATINGS, potem pauza: stan 'revealed' kieruje pause() w
+      // gałąź tła (onBackgroundPause → notyfikacja "otwórz aplikację"), a po
+      // odblokowaniu user widzi normalne przyciski oceny; rate() zdejmie pauzę.
+      engine.dispatch({ type: 'SHOW_RATINGS' });
+      engine.pause();
+    } else {
+      // Karta już oceniona — parytet z foreground: no-op, idź dalej.
+      await continueIfActive(card, stepIndex + 1, run);
+    }
     return true;
   }
 

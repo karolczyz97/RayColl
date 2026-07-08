@@ -203,6 +203,7 @@ export class SessionEngine {
       this.runEpoch += 1;
       this.aborted = false;
       this.paused = false;
+      this.holding = false;
       // Inny index niż lastExecutedCardIndex — maybeAutoRunCard startuje kartę sam.
       this.dispatch({ type: 'ADVANCE_CARD', nextCardIndex: cardIndex - 1 });
       return;
@@ -216,14 +217,13 @@ export class SessionEngine {
     const card = this.dueCards[cardIndex];
     if (!card) return;
     this.deps?.stopAudio();
-    this.aborted = true;
     this.runEpoch += 1;
-    // Zerowanie aborted przed dispatchem, żeby setTimeout i maybeAutoRunCard mogły działać.
     this.aborted = false;
     this.paused = false;
+    this.holding = false;
     // Blokada auto-runa PRZED dispatchem — replay odpalamy jawnie niżej.
     this.lastExecutedCardIndex = cardIndex;
-    // ADVANCE_CARD na ten sam index resetuje stan karty bez oceny SRS.
+    // ADVANCE_CARD resetuje stan karty; na ten sam index = restart bez oceny SRS.
     this.dispatch({ type: 'ADVANCE_CARD', nextCardIndex: cardIndex });
     setTimeout(() => {
       if (!this.aborted && !this.unmounted) {
@@ -263,8 +263,11 @@ export class SessionEngine {
   /** Zatrzymaj przebieg (wyjście z ekranu): zabij łańcuch i audio. */
   stop = (): void => {
     this.aborted = true;
+    this.holding = false;
     this.deps?.stopAudio();
   };
+
+  isPaused = (): boolean => this.paused;
 
   /** Zakończ sesję wcześniej: podsumowanie renderuje się w miejscu. */
   end = (): void => {
@@ -282,6 +285,10 @@ export class SessionEngine {
    */
   pause = (): void => {
     const current = this.state;
+    // Zawsze zwalniaj hold — nawet gdy pauza jest no-opem. Zablokowanie ekranu
+    // w trakcie trzymania karty może nigdy nie dostarczyć "puszczono", a wiszący
+    // hold zawiesiłby advanceToNextCard na zawsze.
+    this.holding = false;
     if (current.status === 'finished') return;
 
     // W tle: revealed i gate to stany wymagające ręcznej interakcji — auto-pauza
@@ -346,6 +353,13 @@ export class SessionEngine {
     }
     this.processCardReview(card, rating);
     this.cardReviewState = 'manuallyRated';
+    // Ocena po auto-pauzie (tło zatrzymało się na ratingu): odblokuj przebieg,
+    // inaczej aborted=true wiecznie blokowałby auto-run następnej karty.
+    if (this.paused) {
+      this.paused = false;
+      this.aborted = false;
+      this.runEpoch += 1;
+    }
     await this.advanceToNextCard();
   };
 
@@ -382,12 +396,12 @@ export class SessionEngine {
 
   // ------------------------------------------------------------ runner
 
+  // Bez limitu czasu: trzymanie karty wstrzymuje przejście tak długo, jak user
+  // trzyma. Wiszący hold po zablokowaniu ekranu rozwiązują pause()/stop()/
+  // goToPreviousCard() oraz AppState w useBackgroundStudy (holding = false).
   private async waitUntilReleased(): Promise<void> {
-    let attempts = 0;
-    const MAX_ATTEMPTS = 50; // 50 * 100ms = 5 sekund max
-    while (this.holding && !this.aborted && attempts < MAX_ATTEMPTS) {
+    while (this.holding && !this.aborted) {
       await sleep(WAIT_RELEASE_POLL_MS);
-      attempts += 1;
     }
   }
 
@@ -441,6 +455,7 @@ export class SessionEngine {
   }
 
   executeStep = async (card: Flashcard, stepIndex: number): Promise<void> => {
+    // Krok 0 = start (lub replay) karty — punkt odniesienia dla goToPreviousCard.
     if (stepIndex === 0) {
       this.currentCardStartedAt = Date.now();
     }

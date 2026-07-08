@@ -390,7 +390,30 @@ describe('SessionEngine', () => {
     expect(reviews).toEqual([['g1', 'c1', 3]]);
   });
 
-  it('backgroundMode substitutes wait_for_tap with auto-reveal', async () => {
+  it('holding a card blocks advance indefinitely; pause releases a stuck hold', async () => {
+    const cards = makeCards(2);
+    const { engine } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
+    engine.start(cards);
+    await flush();
+
+    engine.setHolding(true);
+    const ratePromise = engine.rate(3);
+    await flush(250);
+    // Trzymanie karty wstrzymuje przejście (bez żadnego limitu czasu).
+    expect(engine.getState().currentCardIndex).toBe(0);
+
+    // pause() zwalnia hold nawet gdy sama pauza jest no-opem (status revealed) —
+    // odpowiednik zablokowania ekranu w trakcie trzymania.
+    engine.pause();
+    await ratePromise;
+    await flush();
+    expect(engine.getState().currentCardIndex).toBe(1);
+  });
+
+  it('backgroundMode substitutes wait_for_tap with a pause and continues', async () => {
     const cards = [makeCard('c1', ['front'])];
     const { engine } = makeEngine(makeGroup(1, 1, cards), [
       { type: 'speak_page', pageIndex: 0 },
@@ -399,11 +422,50 @@ describe('SessionEngine', () => {
     ]);
     engine.setBackgroundMode(true);
     engine.start(cards);
-    // W tle speak_page → wait_for_tap (substytucja: pauza 1.5s + auto-reveal) → show_all_pages
+    // W tle speak_page → wait_for_tap (substytucja: pauza 1.5s, BEZ odsłaniania)
+    // → show_all_pages odsłania strony.
     await flush(1600);
 
-    // Wszystkie strony odsłonięte po substytucji
     expect(engine.getState().revealedPages).toEqual([0]);
+  });
+
+  it('backgroundMode: wait_for_tap_to_reveal_next reveals exactly one page per step', async () => {
+    const cards = [makeCard('c1', ['a', 'b', 'c'])];
+    const { engine } = makeEngine(makeGroup(3, 3, cards), [
+      { type: 'show_page', pageIndex: 0 },
+      { type: 'wait_for_tap_to_reveal_next' },
+    ]);
+    engine.setBackgroundMode(true);
+    engine.start(cards);
+    await flush(1700);
+
+    // Parytet z tapem na ekranie: jedna kolejna strona, nie wszystkie.
+    expect(engine.getState().revealedPages).toEqual([0, 1]);
+  });
+
+  it('backgroundMode: show_ratings pauses with notification callback and manual rate resumes', async () => {
+    const cards = makeCards(2);
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
+    const onBackgroundPause = jest.fn();
+    engine.setBackgroundMode(true);
+    engine.setOnBackgroundPause(onBackgroundPause);
+    engine.start(cards);
+    await flush();
+
+    // Substytucja: ratingi widoczne, sesja auto-spauzowana, notyfikacja zmieniona.
+    expect(engine.getState().status).toBe('revealed');
+    expect(engine.isPaused()).toBe(true);
+    expect(onBackgroundPause).toHaveBeenCalledTimes(1);
+
+    // Ocena ręczna po odblokowaniu telefonu zdejmuje pauzę i przechodzi dalej.
+    await engine.rate(3);
+    await flush();
+    expect(engine.getState().currentCardIndex).toBe(1);
+    expect(engine.getState().status).toBe('revealed');
+    expect(reviews).toEqual([['g1', 'c1', 3]]);
   });
 
   it('backgroundMode: wait_for_tap_to_reveal auto-reveals and rates', async () => {
