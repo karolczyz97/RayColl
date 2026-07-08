@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { Flashcard, FlashcardGroup, StudyMode, StoreData } from '@/types/models';
+import type { Flashcard, FlashcardGroup, SrsState, StudyMode, StoreData } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
 import type { CardOrder } from '@/constants/cardOrder';
 import type { ImportDeckPayload, ImportDeckResult } from '@/import/importDeck';
@@ -25,6 +25,7 @@ import {
   deleteFlashcardAction,
   recordActivityAction,
   reviewCardAction,
+  reviewCardAgainAction,
   updateFlashcardAction,
 } from './actions/cardActions';
 import {
@@ -349,6 +350,17 @@ export function useStoreActionsCore({
     [commitGroupsAndHeatmap, groupsRef, heatmapRef],
   );
 
+  const reviewFlashcardAgain = useCallback(
+    (groupId: string, cardId: string, rating: number, baseSrsState: SrsState) => {
+      // Nadpisanie oceny w tej samej sesji: SRS od stanu bazowego, heatmap bez zmian.
+      commitGroups(
+        reviewCardAgainAction(groupsRef.current, groupId, cardId, rating, baseSrsState),
+        { cloudMode: 'study' },
+      );
+    },
+    [commitGroups, groupsRef],
+  );
+
   const addFlashcardsBulk = useCallback(
     (groupId: string, cards: Flashcard[]) => {
       commitGroups(addFlashcardsBulkAction(groupsRef.current, groupId, cards));
@@ -480,6 +492,7 @@ export function useStoreActionsCore({
       updateFlashcard,
       deleteFlashcard,
       reviewFlashcard,
+      reviewFlashcardAgain,
       addFlashcardsBulk,
       addStudyMode,
       updateStudyMode,
@@ -508,6 +521,7 @@ export function useStoreActionsCore({
       updateFlashcard,
       deleteFlashcard,
       reviewFlashcard,
+      reviewFlashcardAgain,
       addFlashcardsBulk,
       addStudyMode,
       updateStudyMode,

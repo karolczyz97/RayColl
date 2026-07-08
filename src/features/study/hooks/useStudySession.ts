@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import type { FlashcardGroup, Flashcard, AtomicStep } from '@/types/models';
+import type { FlashcardGroup, Flashcard, AtomicStep, SrsState } from '@/types/models';
 import { useAppTheme } from '@/contexts/UserPreferencesContext';
 import { SessionEngine } from '@/features/study/session/SessionEngine';
 import { buildSessionViewModel } from '@/features/study/session/sessionViewModel';
@@ -15,7 +15,12 @@ import { useStudyCardGestures } from '@/features/study/hooks/useStudyCardGesture
 export function useStudySession(
   group: FlashcardGroup | null,
   steps: AtomicStep[],
-  onCardReviewed: (groupId: string, cardId: string, rating: number) => void,
+  onCardReviewed: (
+    groupId: string,
+    cardId: string,
+    rating: number,
+    replaceFromBase?: SrsState,
+  ) => void,
 ) {
   const [engine] = useState(() => new SessionEngine());
   const state = useSyncExternalStore(engine.subscribe, engine.getState, engine.getState);
@@ -53,8 +58,10 @@ export function useStudySession(
         guardedAwait,
         stopAudio,
         skip: skipRef.current,
-        onCardReviewed: (groupId: string, cardId: string, rating: number) =>
-          onCardReviewedRef.current(groupId, cardId, rating),
+        onCardReviewed: (groupId, cardId, rating, replaceFromBase) =>
+          replaceFromBase
+            ? onCardReviewedRef.current(groupId, cardId, rating, replaceFromBase)
+            : onCardReviewedRef.current(groupId, cardId, rating),
       },
       ttsRate,
     );

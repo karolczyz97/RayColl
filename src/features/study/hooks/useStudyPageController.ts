@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
+import type { SrsState } from '@/types/models';
 import { useLocalSearchParams } from 'expo-router';
 import { navigateUp } from '@/utils/navigation';
 import { useFlashcardStore } from '@/store/FlashcardStoreContext';
@@ -32,6 +33,7 @@ export function useStudyPageController({
     studyModes,
     isLoading,
     reviewFlashcard,
+    reviewFlashcardAgain,
     getDueCards,
     flushPersistence,
   } = store;
@@ -43,10 +45,16 @@ export function useStudyPageController({
   const steps = useMemo(() => expandModeSteps(mode?.steps ?? []), [mode]);
 
   const onCardReviewed = useCallback(
-    (activeGroupId: string, cardId: string, rating: number) => {
+    (activeGroupId: string, cardId: string, rating: number, replaceFromBase?: SrsState) => {
+      // replaceFromBase = ponowna ocena tej samej karty w tej sesji (cofnięcie):
+      // najnowsza ocena nadpisuje poprzednią zamiast nakładać się na nią.
+      if (replaceFromBase) {
+        reviewFlashcardAgain(activeGroupId, cardId, rating, replaceFromBase);
+        return;
+      }
       reviewFlashcard(activeGroupId, cardId, rating);
     },
-    [reviewFlashcard],
+    [reviewFlashcard, reviewFlashcardAgain],
   );
 
   const {

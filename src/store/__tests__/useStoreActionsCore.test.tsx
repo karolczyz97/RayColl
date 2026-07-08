@@ -171,6 +171,31 @@ describe('useStoreActionsCore persistence behavior', () => {
     expect(nextHeatmap['2026-06-05']).toBe(1);
   });
 
+  it('re-reviews a flashcard from the base SRS state without bumping the heatmap', () => {
+    const { actions, mocks, refs } = renderStoreActions();
+    const storedCard = refs.groupsRef.current[0].cards[0];
+    const baseSrsState = storedCard.srsState;
+
+    act(() => {
+      actions.reviewFlashcard('group-1', storedCard.id, 1);
+    });
+    const afterFirst = refs.groupsRef.current[0].cards[0];
+    expect(refs.heatmapRef.current['2026-06-05']).toBe(1);
+
+    act(() => {
+      actions.reviewFlashcardAgain('group-1', storedCard.id, 3, baseSrsState);
+    });
+
+    // SRS przeliczony od stanu bazowego (nadpisanie), nie od stanu po pierwszej ocenie.
+    const afterSecond = refs.groupsRef.current[0].cards[0];
+    expect(afterSecond.srsState.repetitions).toBe(baseSrsState.repetitions + 1);
+    expect(afterSecond.srsState).not.toEqual(afterFirst.srsState);
+    // Heatmapa bez drugiego zliczenia; commit tylko grup, w trybie study.
+    expect(refs.heatmapRef.current['2026-06-05']).toBe(1);
+    expect(mocks.commitGroupsAndHeatmap).toHaveBeenCalledTimes(1);
+    expect(mocks.persistCurrentSnapshot).toHaveBeenLastCalledWith({ cloudMode: 'study' });
+  });
+
   it('records activity through the standard heatmap commit', () => {
     const { actions, mocks } = renderStoreActions();
 

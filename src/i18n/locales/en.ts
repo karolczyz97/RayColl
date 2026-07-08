@@ -69,6 +69,8 @@ export const en: Record<string, string> = {
   'study.back_to_panel': 'Back to dashboard',
   'study.recognized': 'Recognized:',
   'study.tap_to_reveal': 'Tap to reveal',
+  'study.prev_card': 'Previous card',
+  'study.next_card': 'Next card',
   'study.error.stt': 'Speech recognition failed. Check microphone access.',
   'study.error.tts': 'Audio playback failed.',
   'study.exit_confirm_title': 'Leave study mode?',

@@ -70,6 +70,8 @@ export const de: Record<string, string> = {
   'study.back_to_panel': 'Zurück zum Dashboard',
   'study.recognized': 'Erkannt:',
   'study.tap_to_reveal': 'Tippen zum Aufdecken',
+  'study.prev_card': 'Vorherige Karte',
+  'study.next_card': 'Nächste Karte',
   'study.error.stt': 'Spracherkennung fehlgeschlagen. Mikrofonzugriff prüfen.',
   'study.error.tts': 'Audiowiedergabe fehlgeschlagen.',
   'study.exit_confirm_title': 'Lernmodus verlassen?',

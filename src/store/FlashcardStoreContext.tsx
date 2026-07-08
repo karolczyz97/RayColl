@@ -163,6 +163,7 @@ export function FlashcardStoreProvider({ children }: { children: React.ReactNode
       updateFlashcard: actions.updateFlashcard,
       deleteFlashcard: actions.deleteFlashcard,
       reviewFlashcard: actions.reviewFlashcard,
+      reviewFlashcardAgain: actions.reviewFlashcardAgain,
       addStudyMode: actions.addStudyMode,
       updateStudyMode: actions.updateStudyMode,
       deleteStudyMode: actions.deleteStudyMode,

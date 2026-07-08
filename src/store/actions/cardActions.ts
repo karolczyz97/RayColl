@@ -1,4 +1,4 @@
-import { FlashcardGroup, Flashcard } from '@/types/models';
+import { FlashcardGroup, Flashcard, SrsState } from '@/types/models';
 import { createNewSrsState, calculateFsrs } from '@/srs/srsEngine';
 import { uid } from '@/utils/id';
 import { getLocalDateString } from '@/utils/date';
@@ -93,6 +93,36 @@ export function reviewCardAction(
   const nextGroups = reviewFlashcardAction(groups, groupId, cardId, rating);
   const { nextHeatmap, todayKey } = recordActivityAction(heatmap);
   return { nextGroups, nextHeatmap, todayKey };
+}
+
+/**
+ * Replacement review ("newest rating wins"): when a card gets re-rated within the
+ * same session attempt (user navigated back to it), the new rating must *replace*
+ * the earlier one, not stack on top of it. SRS is recomputed from `baseSrsState` —
+ * the card's state from before the first rating (session snapshot) — and today's
+ * activity heatmap is NOT bumped again (the first review already counted).
+ * Like `reviewCardAction`, only `srsState`/`srsUpdatedAt` change on the stored card.
+ */
+export function reviewCardAgainAction(
+  groups: FlashcardGroup[],
+  groupId: string,
+  cardId: string,
+  rating: number,
+  baseSrsState: SrsState,
+): FlashcardGroup[] {
+  const now = Date.now();
+  return groups.map((g) =>
+    g.id === groupId
+      ? {
+          ...g,
+          cards: g.cards.map((c) =>
+            c.id === cardId
+              ? { ...c, srsState: calculateFsrs(baseSrsState, rating), srsUpdatedAt: now }
+              : c,
+          ),
+        }
+      : g,
+  );
 }
 
 export function deleteFlashcardAction(

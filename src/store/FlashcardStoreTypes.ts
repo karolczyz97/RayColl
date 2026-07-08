@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import type { Flashcard, FlashcardGroup, StudyMode } from '@/types/models';
+import type { Flashcard, FlashcardGroup, SrsState, StudyMode } from '@/types/models';
 import type { CardFilter } from '@/constants/cardFilters';
 import type { CardOrder } from '@/constants/cardOrder';
 import type { ImportDeckPayload, ImportDeckResult } from '@/import/importDeck';
@@ -45,6 +45,12 @@ export interface FlashcardStore {
   updateFlashcard: (groupId: string, card: Flashcard) => void;
   deleteFlashcard: (groupId: string, cardId: string) => void;
   reviewFlashcard: (groupId: string, cardId: string, rating: number) => void;
+  reviewFlashcardAgain: (
+    groupId: string,
+    cardId: string,
+    rating: number,
+    baseSrsState: SrsState,
+  ) => void;
   addStudyMode: (mode: StudyMode) => void;
   updateStudyMode: (mode: StudyMode) => void;
   deleteStudyMode: (modeId: string) => void;

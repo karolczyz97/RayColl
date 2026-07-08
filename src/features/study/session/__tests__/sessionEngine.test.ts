@@ -58,6 +58,8 @@ function flush(ms = 0): Promise<void> {
 interface EngineHarness {
   engine: SessionEngine;
   reviews: [string, string, number][];
+  // Ponowne oceny tej samej karty w tej samej próbie (replaceFromBase obecne).
+  reReviews: [string, string, number][];
   stopAudio: jest.Mock;
   skip: StudySkipState;
 }
@@ -65,6 +67,7 @@ interface EngineHarness {
 function makeEngine(group: FlashcardGroup, steps: AtomicStep[]): EngineHarness {
   const engine = new SessionEngine();
   const reviews: [string, string, number][] = [];
+  const reReviews: [string, string, number][] = [];
   const skip: StudySkipState = { requested: false, armed: false, signalResolve: () => {} };
   const stopAudio = jest.fn();
   engine.configure(
@@ -74,15 +77,19 @@ function makeEngine(group: FlashcardGroup, steps: AtomicStep[]): EngineHarness {
         (await promise.catch(() => undefined)) as T | undefined,
       stopAudio,
       skip,
-      onCardReviewed: (groupId, cardId, rating) => {
-        reviews.push([groupId, cardId, rating]);
+      onCardReviewed: (groupId, cardId, rating, replaceFromBase) => {
+        if (replaceFromBase) {
+          reReviews.push([groupId, cardId, rating]);
+        } else {
+          reviews.push([groupId, cardId, rating]);
+        }
       },
     },
     1.0,
   );
   engine.setGroup(group);
   engine.setActiveSteps(steps);
-  return { engine, reviews, stopAudio, skip };
+  return { engine, reviews, reReviews, stopAudio, skip };
 }
 
 describe('SessionEngine', () => {
@@ -269,7 +276,7 @@ describe('SessionEngine', () => {
     );
   });
 
-  it('goToPreviousCard replays current card from step 0 without re-rating', async () => {
+  it('goToPreviousCard on the first card replays it from step 0 without re-rating', async () => {
     const cards = makeCards(1);
     const { engine, reviews } = makeEngine(makeGroup(1, 1, cards), [
       { type: 'speak_page', pageIndex: 0 },
@@ -279,7 +286,7 @@ describe('SessionEngine', () => {
     await flush();
     expect(engine.getState().status).toBe('revealed');
 
-    // goToPreviousCard restartuje tę samą kartę od kroku 0
+    // Brak poprzedniej karty (index 0) — "poprzednia" restartuje bieżącą od kroku 0
     engine.goToPreviousCard();
     await flush();
 
@@ -288,6 +295,99 @@ describe('SessionEngine', () => {
     expect(engine.getState().currentCardIndex).toBe(0);
     // Nadal zero wpisów SRS — restart nie wywołał oceny
     expect(reviews).toEqual([]);
+  });
+
+  it('goToPreviousCard right after a card starts goes back to the previous card', async () => {
+    const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
+    engine.start(cards);
+    await flush();
+    await engine.rate(3);
+    await flush();
+    // Jesteśmy na c2, tuż po jej starcie (w oknie "cofnij do poprzedniej")
+    expect(engine.getState().currentCardIndex).toBe(1);
+
+    engine.goToPreviousCard();
+    await flush();
+
+    // Cofnięci do c1, karta odtwarza się od kroku 0; samo cofnięcie nie ocenia
+    expect(engine.getState().currentCardIndex).toBe(0);
+    expect(engine.getState().status).toBe('revealed');
+    expect(reviews).toEqual([['g1', 'c1', 3]]);
+  });
+
+  it('goToPreviousCard after the window replays the current card instead of going back', async () => {
+    const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
+    const { engine } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
+    engine.start(cards);
+    await flush();
+    await engine.rate(3);
+    await flush();
+    expect(engine.getState().currentCardIndex).toBe(1);
+
+    // Po upływie okna (jak w odtwarzaczu muzyki) "poprzednia" = restart bieżącej
+    const realNow = Date.now();
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(realNow + 10_000);
+    engine.goToPreviousCard();
+    nowSpy.mockRestore();
+    await flush();
+
+    expect(engine.getState().currentCardIndex).toBe(1);
+    expect(engine.getState().status).toBe('revealed');
+  });
+
+  it('re-rating a card after going back replaces the rating (newest wins)', async () => {
+    const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
+    const { engine, reviews, reReviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
+    engine.start(cards);
+    await flush();
+    await engine.rate(1); // c1 oceniona jako "again" → failed
+    await flush();
+    expect(engine.getFailedCount()).toBe(1);
+
+    // Cofnięcie do c1 tuż po starcie c2 i ponowna ocena na 3
+    engine.goToPreviousCard();
+    await flush();
+    expect(engine.getState().currentCardIndex).toBe(0);
+    await engine.rate(3);
+    await flush();
+
+    // Pierwsza ocena poszła normalną ścieżką, druga jako nadpisanie od stanu bazowego
+    expect(reviews).toEqual([['g1', 'c1', 1]]);
+    expect(reReviews).toEqual([['g1', 'c1', 3]]);
+    // Najnowsza ocena liczy się też dla listy failed
+    expect(engine.getFailedCount()).toBe(0);
+    // Sesja wróciła na c2
+    expect(engine.getState().currentCardIndex).toBe(1);
+  });
+
+  it('replayCurrentCard restarts the current card without touching the index', async () => {
+    const cards = [makeCard('c1', ['a']), makeCard('c2', ['b'])];
+    const { engine, reviews } = makeEngine(
+      makeGroup(1, 1, cards),
+      makeSimpleSteps(['show_all_pages', 'show_ratings']),
+    );
+    engine.start(cards);
+    await flush();
+    await engine.rate(3);
+    await flush();
+    expect(engine.getState().currentCardIndex).toBe(1);
+
+    engine.replayCurrentCard();
+    await flush();
+
+    expect(engine.getState().currentCardIndex).toBe(1);
+    expect(engine.getState().status).toBe('revealed');
+    expect(reviews).toEqual([['g1', 'c1', 3]]);
   });
 
   it('backgroundMode substitutes wait_for_tap with auto-reveal', async () => {

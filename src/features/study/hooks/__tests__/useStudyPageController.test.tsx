@@ -72,6 +72,7 @@ jest.mock('@/store/FlashcardStoreContext', () => ({
     studyModes: [{ id: 'm1', steps: [] }],
     isLoading: false,
     reviewFlashcard: jest.fn(),
+    reviewFlashcardAgain: jest.fn(),
     getDueCards: mockGetDueCards,
     flushPersistence: mockFlushPersistence,
   }),

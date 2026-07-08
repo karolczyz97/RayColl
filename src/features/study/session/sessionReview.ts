@@ -10,6 +10,14 @@ export function startReviewAttempt(
   return currentAttempt + 1;
 }
 
+export function hasCardBeenReviewed(
+  reviewedAttemptKeys: Set<string>,
+  sessionAttempt: number,
+  cardId: string,
+): boolean {
+  return reviewedAttemptKeys.has(getReviewAttemptKey(sessionAttempt, cardId));
+}
+
 export function tryMarkCardReviewed(
   reviewedAttemptKeys: Set<string>,
   sessionAttempt: number,

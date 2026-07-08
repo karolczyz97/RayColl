@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Text, useTheme } from 'react-native-paper';
+import { Button, IconButton, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useI18n } from '@/i18n';
 import { AppIcon } from '@/components/AppIcon';
@@ -26,6 +26,8 @@ interface StudyControlsProps {
   sttSuccessThreshold: number | null;
   answerStatus: AnswerStatus;
   onRate: (rating: number) => void;
+  onPreviousCard: () => void;
+  onNextCard: () => void;
 }
 
 const STT_RESULT_HIDE_MS = 4000;
@@ -63,6 +65,8 @@ export function StudyControls({
   sttSuccessThreshold,
   answerStatus,
   onRate,
+  onPreviousCard,
+  onNextCard,
 }: StudyControlsProps) {
   const theme = useTheme();
   const { t } = useI18n();
@@ -228,6 +232,23 @@ export function StudyControls({
           })}
         </Animated.View>
       ) : null}
+
+      <View style={styles.cardNavRow} pointerEvents="box-none">
+        <IconButton
+          icon="skip-previous"
+          mode="contained-tonal"
+          size={TOKENS.iconSize.md}
+          onPress={onPreviousCard}
+          accessibilityLabel={t('study.prev_card')}
+        />
+        <IconButton
+          icon="skip-next"
+          mode="contained-tonal"
+          size={TOKENS.iconSize.md}
+          onPress={onNextCard}
+          accessibilityLabel={t('study.next_card')}
+        />
+      </View>
     </View>
   );
 }
@@ -244,6 +265,12 @@ const styles = StyleSheet.create({
   ratingButtonsRow: {
     flexDirection: 'row',
     gap: TOKENS.spacing.sm,
+    width: '100%',
+    maxWidth: TOKENS.layout.studyCardMaxWidth,
+  },
+  cardNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     width: '100%',
     maxWidth: TOKENS.layout.studyCardMaxWidth,
   },

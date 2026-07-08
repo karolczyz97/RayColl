@@ -1,4 +1,4 @@
-import type { AtomicStep, Flashcard, FlashcardGroup } from '@/types/models';
+import type { AtomicStep, Flashcard, FlashcardGroup, SrsState } from '@/types/models';
 import type { SpeechRecognitionOutcome, StudySkipState } from '@/features/study/hooks/useStudyAudio';
 import { playRatingHaptic } from '@/services/hapticFeedback';
 import { ttsService } from '@/services/ttsService';
@@ -11,11 +11,14 @@ import type {
 } from './sessionTypes';
 import { INITIAL_STUDY_SESSION_STATE, sessionReducer } from './sessionReducer';
 import { executeStudyStep } from './stepExecutor';
-import { startReviewAttempt, tryMarkCardReviewed } from './sessionReview';
+import { hasCardBeenReviewed, startReviewAttempt, tryMarkCardReviewed } from './sessionReview';
 import { sleep } from './sessionUtils';
 
 const WAIT_RELEASE_POLL_MS = 100;
 const DEFAULT_TTS_RATE = 1.0;
+// Semantyka "poprzednia" jak w odtwarzaczach muzyki: wciśnięcie tuż po starcie
+// karty cofa do poprzedniej, później restartuje bieżącą od początku.
+const PREVIOUS_GOES_BACK_WINDOW_MS = 3000;
 
 /** Zależności audio/callbacki wstrzykiwane przez hooka (silnik nie zna hooków). */
 export interface SessionEngineDeps {
@@ -23,7 +26,17 @@ export interface SessionEngineDeps {
   guardedAwait: <T>(promise: Promise<T>) => Promise<T | undefined>;
   stopAudio: () => void;
   skip: StudySkipState;
-  onCardReviewed: (groupId: string, cardId: string, rating: number) => void;
+  /**
+   * Zapis oceny. `replaceFromBase` obecne = ponowna ocena tej samej karty w tej
+   * próbie sesji: liczy się najnowsza ocena, SRS przeliczany od podanego stanu
+   * bazowego (sprzed pierwszej oceny), bez ponownego zliczenia aktywności.
+   */
+  onCardReviewed: (
+    groupId: string,
+    cardId: string,
+    rating: number,
+    replaceFromBase?: SrsState,
+  ) => void;
 }
 
 /**
@@ -63,6 +76,8 @@ export class SessionEngine {
   private paused = false;
   private holding = false;
   private lastExecutedCardIndex: number | null = null;
+  // Moment startu bieżącej karty (krok 0) — próg decyzji "poprzednia vs restart".
+  private currentCardStartedAt = 0;
 
   // cardReviewState to runner-only pole — next_card/show_ratings/auto_rate blokują
   // podwójną ocenę tej samej karty. NIE jest w reducerze, bo dispatch nie jest
@@ -173,10 +188,30 @@ export class SessionEngine {
   };
 
   /**
-   * Restart bieżącej karty od kroku 0 BEZ ponownego zapisu SRS.
-   * Używane dla przycisku "poprzednia" w tle — nie rusza historii ocen.
+   * Przycisk "poprzednia" — semantyka jak w odtwarzaczach muzyki: tuż po starcie
+   * karty (okno PREVIOUS_GOES_BACK_WINDOW_MS) cofa do poprzedniej karty, później
+   * restartuje bieżącą od kroku 0. Samo cofnięcie/restart nie zapisuje SRS.
    */
   goToPreviousCard = (): void => {
+    if (this.state.status === 'finished') return;
+    const cardIndex = this.state.currentCardIndex;
+    const withinWindow =
+      Date.now() - this.currentCardStartedAt <= PREVIOUS_GOES_BACK_WINDOW_MS;
+    if (withinWindow && cardIndex > 0) {
+      this.deps?.stopAudio();
+      this.aborted = true;
+      this.runEpoch += 1;
+      this.aborted = false;
+      this.paused = false;
+      // Inny index niż lastExecutedCardIndex — maybeAutoRunCard startuje kartę sam.
+      this.dispatch({ type: 'ADVANCE_CARD', nextCardIndex: cardIndex - 1 });
+      return;
+    }
+    this.replayCurrentCard();
+  };
+
+  /** Restart bieżącej karty od kroku 0 BEZ ponownego zapisu SRS. */
+  replayCurrentCard = (): void => {
     const cardIndex = this.state.currentCardIndex;
     const card = this.dueCards[cardIndex];
     if (!card) return;
@@ -301,6 +336,11 @@ export class SessionEngine {
     const card = this.dueCards[index];
     if (!card) return;
     playRatingHaptic(rating);
+    // Ponowna ocena po cofnięciu: liczy się najnowsza, więc członkostwo na liście
+    // failed też ustawiamy od nowa (rating 1 zaraz niżej doda kartę z powrotem).
+    if (hasCardBeenReviewed(this.reviewedAttemptKeys, this.sessionAttempt, card.id)) {
+      this.unmarkCardFailed(card);
+    }
     if (rating === 1) {
       this.markCardFailed(card);
     }
@@ -315,11 +355,23 @@ export class SessionEngine {
     this.bumpAndNotify();
   };
 
+  unmarkCardFailed = (card: Flashcard): void => {
+    const next = this.failedCards.filter((item) => item.id !== card.id);
+    if (next.length === this.failedCards.length) return;
+    this.failedCards = next;
+    this.bumpAndNotify();
+  };
+
   processCardReview = (card: Flashcard, rating: number): void => {
     if (!this.group || !this.deps) return;
     if (tryMarkCardReviewed(this.reviewedAttemptKeys, this.sessionAttempt, card.id)) {
       this.deps.onCardReviewed(this.group.id, card.id, rating);
+      return;
     }
+    // Karta oceniona ponownie w tej samej próbie (cofnięcie): najnowsza ocena
+    // nadpisuje poprzednią. `card.srsState` to snapshot sesji sprzed pierwszej
+    // oceny — dueCards nie są odświeżane po zapisie do store'u.
+    this.deps.onCardReviewed(this.group.id, card.id, rating, card.srsState);
   };
 
   private getFreshCards(cards: Flashcard[]): Flashcard[] {
@@ -389,6 +441,9 @@ export class SessionEngine {
   }
 
   executeStep = async (card: Flashcard, stepIndex: number): Promise<void> => {
+    if (stepIndex === 0) {
+      this.currentCardStartedAt = Date.now();
+    }
     await executeStudyStep(card, stepIndex, this);
   };
 

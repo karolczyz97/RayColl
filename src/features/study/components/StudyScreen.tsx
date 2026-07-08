@@ -48,6 +48,8 @@ interface StudyScreenProps {
   };
   setHolding: (holding: boolean) => void;
   showExitConfirm: boolean;
+  skipToNextCard: () => void;
+  goToPreviousCard: () => void;
 }
 
 export function StudyScreen({
@@ -69,6 +71,8 @@ export function StudyScreen({
   sessionState,
   setHolding,
   showExitConfirm,
+  skipToNextCard,
+  goToPreviousCard,
 }: StudyScreenProps) {
   const theme = useTheme();
   const { t } = useI18n();
@@ -138,6 +142,8 @@ export function StudyScreen({
               sttSuccessThreshold={sessionState.sttSuccessThreshold}
               answerStatus={sessionState.answerStatus}
               onRate={handleRating}
+              onPreviousCard={goToPreviousCard}
+              onNextCard={skipToNextCard}
             />
           </>
         )}

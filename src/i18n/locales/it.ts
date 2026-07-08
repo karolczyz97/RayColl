@@ -69,6 +69,8 @@ export const it: Record<string, string> = {
   'study.back_to_panel': 'Torna al pannello',
   'study.recognized': 'Riconosciuto:',
   'study.tap_to_reveal': 'Tocca per rivelare',
+  'study.prev_card': 'Scheda precedente',
+  'study.next_card': 'Scheda successiva',
   'study.error.stt': "Riconoscimento vocale non riuscito. Controlla l'accesso al microfono.",
   'study.error.tts': 'Riproduzione audio non riuscita.',
   'study.exit_confirm_title': 'Uscire dalla modalità studio?',

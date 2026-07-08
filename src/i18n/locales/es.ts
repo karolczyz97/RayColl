@@ -69,6 +69,8 @@ export const es: Record<string, string> = {
   'study.back_to_panel': 'Volver al panel',
   'study.recognized': 'Reconocido:',
   'study.tap_to_reveal': 'Toca para revelar',
+  'study.prev_card': 'Tarjeta anterior',
+  'study.next_card': 'Tarjeta siguiente',
   'study.error.stt': 'Error de reconocimiento de voz. Verifica el acceso al micrófono.',
   'study.error.tts': 'Error al reproducir el audio.',
   'study.exit_confirm_title': '¿Salir del modo estudio?',

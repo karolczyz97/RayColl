@@ -70,6 +70,8 @@ export const pl: Record<string, string> = {
   'study.back_to_panel': 'Powrót do panelu',
   'study.recognized': 'Rozpoznano:',
   'study.tap_to_reveal': 'Dotknij, aby odkryć',
+  'study.prev_card': 'Poprzednia karta',
+  'study.next_card': 'Następna karta',
   'study.error.stt': 'Rozpoznawanie mowy nie powiodło się. Sprawdź dostęp do mikrofonu.',
   'study.error.tts': 'Nie udało się odtworzyć dźwięku.',
   'study.exit_confirm_title': 'Opuścić tryb nauki?',
