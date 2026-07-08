@@ -39,9 +39,14 @@ export function useBackgroundStudy({
 }: UseBackgroundStudyParams): void {
   const handsFreeCapable = isModeHandsFreeCapable(steps);
   const shouldUseBackground = backgroundPlaybackEnabled && handsFreeCapable;
-  const appStateRef = useRef(AppState.currentState);
+  // currentState potrafi być null/undefined tuż po starcie procesu.
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState ?? 'active');
   const backgroundActivatedRef = useRef(false);
   const { t } = useI18n();
+  // Zależność efektów od STRINGA, nie od funkcji t — niestabilne t między
+  // renderami restartowałoby media sesję (deactivate+activate = miganie
+  // notyfikacji i restart cichego playbacku).
+  const pausedTitle = t('study.background_paused');
 
   // useKeepAwake: ekran nie wygasza się w trakcie sesji
   useEffect(() => {
@@ -63,7 +68,7 @@ export function useBackgroundStudy({
   useEffect(() => {
     if (shouldUseBackground && !backgroundActivatedRef.current) {
       backgroundActivatedRef.current = true;
-      void audioSessionManager.activate(engine, groupName, t('study.background_paused'));
+      void audioSessionManager.activate(engine, groupName, pausedTitle);
     }
 
     return () => {
@@ -72,7 +77,7 @@ export function useBackgroundStudy({
         void audioSessionManager.deactivate();
       }
     };
-  }, [t, groupName, shouldUseBackground, engine]);
+  }, [pausedTitle, groupName, shouldUseBackground, engine]);
 
   // Zwolnij FGS gdy sesja się kończy (wysłuchano wszystkie karty)
   useEffect(() => {
@@ -98,7 +103,11 @@ export function useBackgroundStudy({
   // AppState listener
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
-      if (appStateRef.current.match(/active/) && nextState.match(/inactive|background/)) {
+      // "Wejście w tło" = poprzedni stan NIE był już tłem (start bywa 'unknown';
+      // iOS raportuje inactive→background jako dwa zdarzenia — reaguj raz).
+      const wasBackground =
+        appStateRef.current === 'inactive' || appStateRef.current === 'background';
+      if (!wasBackground && (nextState === 'inactive' || nextState === 'background')) {
         // Zejście w tło w trakcie trzymania karty: "puszczono" może nigdy nie
         // przyjść pod lockiem — zwolnij hold, żeby advance nie wisiał w tle.
         engine.setHolding(false);
@@ -112,7 +121,7 @@ export function useBackgroundStudy({
         // sesja nauki żyje — reaktywuj, żeby kolejne zablokowanie miało FGS.
         if (audioSessionManager.getCurrentEngine() !== engine) {
           backgroundActivatedRef.current = true;
-          void audioSessionManager.activate(engine, groupName, t('study.background_paused'));
+          void audioSessionManager.activate(engine, groupName, pausedTitle);
         }
       }
       appStateRef.current = nextState;
@@ -122,5 +131,5 @@ export function useBackgroundStudy({
     return () => {
       subscription.remove();
     };
-  }, [engine, shouldUseBackground, isSessionFinished, groupName, t]);
+  }, [engine, shouldUseBackground, isSessionFinished, groupName, pausedTitle]);
 }

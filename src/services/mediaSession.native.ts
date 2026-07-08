@@ -143,13 +143,18 @@ class AudioSessionManager {
 
   private async setupTrackPlayer(): Promise<void> {
     await this.withTrackPlayer(async (tp) => {
-      const { Capability } = require('react-native-track-player');
-      
+      const { Capability, AppKilledPlaybackBehavior } = require('react-native-track-player');
+
       await tp.setupPlayer({
         waitForBuffer: false,
       });
 
       await tp.updateOptions({
+        android: {
+          // Ubicie aplikacji (swipe z recents) zabija silnik sesji razem z JS —
+          // notyfikacja bez silnika sterowałaby niczym, więc znika razem z FGS.
+          appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+        },
         capabilities: [
           Capability.Play,
           Capability.Pause,
