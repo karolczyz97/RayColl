@@ -66,6 +66,7 @@
     "lint": "expo lint --no-cache",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "postinstall": "node scripts/patch-track-player.mjs",
     "check-assets": "node scripts/check-assets.mjs",
     "check-ui": "node scripts/check-ui-constraints.mjs",
     "build:web": "expo export --platform web",
