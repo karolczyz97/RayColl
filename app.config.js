@@ -1,5 +1,3 @@
-const abiFilter = process.env.ABI_FILTER;
-
 module.exports = {
   expo: {
     name: "RayColl",
@@ -63,10 +61,7 @@ module.exports = {
           "ios": {
             "deploymentTarget": "16.4"
           },
-          "android": {
-            // android:enableOnBackInvokedCallback is set by android.predictiveBackGestureEnabled (app.config.js:31)
-            ...(abiFilter ? { buildArchs: [abiFilter] } : {})
-          }
+          "android": {}
         }
       ]
     ],
