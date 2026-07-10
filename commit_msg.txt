@@ -1,7 +1,0 @@
-Poprawki stabilności dla odtwarzania w tle
-
-- Naprawiono crash aplikacji na systemie Android 14+ przy włączaniu odtwarzania w tle
-- Zabezpieczono przed drenowaniem baterii i odtwarzaniem niewidzialnego szumu po wyjściu
-- Naprawiono wstrzymywanie nauki z ekranu blokady
-- Usprawniono zatrzymywanie głosu lektora po powrocie do głównego menu
-- Zabezpieczono silnik przed rzadkimi problemami z zawieszaniem się sesji

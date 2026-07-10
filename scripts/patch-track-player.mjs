@@ -3,6 +3,14 @@
 //    (Bundle?) wymaga null-safe wywołania (MusicModule.kt, 2 miejsca).
 // 2) HeadlessJsTaskService.onBind ma teraz sygnaturę (Intent): IBinder? —
 //    stara (Intent?) przestała nadpisywać metodę bazową (MusicService.kt).
+// 3) Crash przy każdym starcie appki: metody @ReactMethod zdefiniowane jako
+//    `fun x(...) = scope.launch { ... }` mają wywnioskowany typ zwracany Job
+//    (nie Unit). Bridgeless interop na RN 0.85 wymaga returnType == void dla
+//    metod asynchronicznych i rzuca TurboModuleInteropUtils$ParsingException
+//    przy starcie modułu — cała appka pada. Fix przeniesiony z upstreamowej
+//    wersji 5.0.0-alpha0 (helper `launchInScope`, ten sam komentarz w ich
+//    źródle: "Bridgeless interop layer tries to pass the `Job` from
+//    `scope.launch` to the JS side which causes an exception").
 // Uruchamiane z postinstall; idempotentne. Do usunięcia, gdy RNTP wyda
 // wersję kompatybilną z RN 0.85.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -29,6 +37,30 @@ const patches = [
             )`,
         to: `            else musicService.tracks[musicService.getCurrentTrackIndex()].originalItem
                 ?.let { Arguments.fromBundle(it) }`,
+      },
+      {
+        from: 'scope.launch {',
+        to: 'launchInScope {',
+      },
+      {
+        from: 'return@launch',
+        to: 'return@launchInScope',
+      },
+      {
+        from: `        callback.resolve(Arguments.fromBundle(musicService.getPlayerStateBundle(musicService.state)))
+    }
+}`,
+        to: `        callback.resolve(Arguments.fromBundle(musicService.getPlayerStateBundle(musicService.state)))
+    }
+
+    // Bridgeless interop layer tries to pass the \`Job\` from \`scope.launch\` to the JS side
+    // which causes an exception. We can work around this using a wrapper.
+    private fun launchInScope(block: suspend () -> Unit) {
+        scope.launch {
+            block()
+        }
+    }
+}`,
       },
     ],
   },
