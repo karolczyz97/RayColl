@@ -1,5 +1,7 @@
-# Artefakty lokalnych buildow gradle w node_modules zmieniaja hash fingerprinta
-# (runtime version mismatch na EAS po kazdym lokalnym assembleRelease).
-# EAS i lokalny CLI licza fingerprint z tym samym ignore — hashe sie zgadzaja.
+# Lokalny build gradle (AGP 8) wycina in-place atrybut `package=` z manifestu
+# masked-view w node_modules; EAS liczy fingerprint z czystego npm install.
+# Bez ignore kazdy lokalny build psuje potem buildy EAS (runtime version mismatch).
+node_modules/@react-native-masked-view/masked-view/android/src/main/AndroidManifest.xml
+# Defensywnie: artefakty buildow gradle w node_modules (zwykle i tak pomijane).
 node_modules/**/android/build/**
 node_modules/**/android/.cxx/**
