@@ -11,6 +11,13 @@
 //    wersji 5.0.0-alpha0 (helper `launchInScope`, ten sam komentarz w ich
 //    źródle: "Bridgeless interop layer tries to pass the `Job` from
 //    `scope.launch` to the JS side which causes an exception").
+// 4) Crash przy emisji eventów (np. tuż po logowaniu, gdy startuje kolejka
+//    audio): MusicService.emit/emitList woła `reactNativeHost.reactInstanceManager`,
+//    ale MainApplication (New Architecture, bridgeless) eksponuje tylko
+//    `reactHost` — domyślne `getReactNativeHost()` celowo rzuca
+//    "You should not use ReactNativeHost directly in the New Architecture".
+//    Czytamy kontekst przez `reactHost.currentReactContext` zamiast legacy
+//    ścieżki (MusicService.kt).
 // Uruchamiane z postinstall; idempotentne. Do usunięcia, gdy RNTP wyda
 // wersję kompatybilną z RN 0.85.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -70,6 +77,40 @@ const patches = [
       {
         from: 'override fun onBind(intent: Intent?): IBinder {',
         to: 'override fun onBind(intent: Intent): IBinder {',
+      },
+      {
+        from: 'import com.facebook.react.HeadlessJsTaskService',
+        to: 'import com.facebook.react.HeadlessJsTaskService\nimport com.facebook.react.ReactApplication',
+      },
+      {
+        from: `    @MainThread
+    private fun emit(event: String, data: Bundle? = null) {
+        reactNativeHost.reactInstanceManager.currentReactContext
+            ?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            ?.emit(event, data?.let { Arguments.fromBundle(it) })
+    }`,
+        to: `    // New Architecture (bridgeless): MainApplication only exposes \`reactHost\`, and the
+    // default ReactApplication.getReactNativeHost() throws "You should not use
+    // ReactNativeHost directly in the New Architecture" — RNTP still calls that legacy
+    // path here, crashing the app on every headless event emission. Read the context
+    // off reactHost instead.
+    private fun currentReactContext() =
+        (application as? ReactApplication)?.reactHost?.currentReactContext
+
+    @MainThread
+    private fun emit(event: String, data: Bundle? = null) {
+        currentReactContext()
+            ?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            ?.emit(event, data?.let { Arguments.fromBundle(it) })
+    }`,
+      },
+      {
+        from: `        reactNativeHost.reactInstanceManager.currentReactContext
+            ?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            ?.emit(event, payload)`,
+        to: `        currentReactContext()
+            ?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            ?.emit(event, payload)`,
       },
     ],
   },
