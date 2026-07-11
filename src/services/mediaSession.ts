@@ -2,7 +2,7 @@ import type { SessionEngine } from '@/features/study/session/SessionEngine';
 
 /**
  * Wariant web: brak tła audio i sesji medialnej — pełny no-op o tym samym
- * interfejsie co mediaSession.native.ts. Dzięki temu react-native-track-player
+ * interfejsie co mediaSession.native.ts. Dzięki temu @rntp/player
  * (i jego peer shaka-player) w ogóle nie trafiają do bundla webowego.
  */
 class AudioSessionManager {
@@ -23,4 +23,6 @@ class AudioSessionManager {
 
 export const audioSessionManager = new AudioSessionManager();
 
-export async function playbackService(): Promise<void> {}
+export type PlaybackEvent = { type: string; playing?: boolean };
+
+export function handlePlaybackEvent(_event: PlaybackEvent): void {}

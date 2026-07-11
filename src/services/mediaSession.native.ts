@@ -1,17 +1,15 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { Platform } from 'react-native';
+import { Event, PlayerCommand, RepeatMode } from '@rntp/player';
 import type { SessionEngine } from '@/features/study/session/SessionEngine';
 import { getErrorMessage } from '@/utils/errors';
 
 type PlaybackState = 'playing' | 'paused' | 'stopped';
 
-interface NowPlayingMetadata {
-  title: string;
-  artist: string;
-  album: string;
-}
+type TrackPlayerType = typeof import('@rntp/player').default;
 
-type TrackPlayerType = typeof import('react-native-track-player').default;
+/** Zdarzenie playbacku (foreground listener lub background handler Androida). */
+export type PlaybackEvent = { type: string; playing?: boolean };
 
 class AudioSessionManager {
   private engine: SessionEngine | null = null;
@@ -27,7 +25,7 @@ class AudioSessionManager {
   private async withTrackPlayer(action: (tp: TrackPlayerType) => Promise<void> | void): Promise<void> {
     if (Platform.OS !== 'android') return;
     try {
-      const tp = require('react-native-track-player').default;
+      const tp = require('@rntp/player').default;
       await action(tp);
     } catch (err) {
       // Nie wywalaj sesji nauki przez błąd warstwy medialnej, ale zostaw ślad —
@@ -61,8 +59,9 @@ class AudioSessionManager {
     this.engine = null;
 
     if (this.initialized) {
-      await this.withTrackPlayer(async (tp) => {
-        await tp.reset();
+      await this.withTrackPlayer((tp) => {
+        tp.stop();
+        tp.clear();
       });
       this.state = 'stopped';
     }
@@ -70,13 +69,12 @@ class AudioSessionManager {
 
   updateNowPlaying(cardFront: string, currentIndex: number, total: number): void {
     if (!this.initialized) return;
-    void this.withTrackPlayer(async (tp) => {
-      const metadata: NowPlayingMetadata = {
+    void this.withTrackPlayer((tp) => {
+      tp.updateMetadata(0, {
         title: cardFront || '—',
         artist: this.groupName,
-        album: `${currentIndex + 1}/${total}`,
-      };
-      await tp.updateNowPlayingMetadata(metadata);
+        albumTitle: `${currentIndex + 1}/${total}`,
+      });
     });
   }
 
@@ -84,14 +82,14 @@ class AudioSessionManager {
     return this.engine;
   }
 
-  // ---- Called by Headless JS PlaybackService ----
+  // ---- Called by playback event routing (foreground listeners / background handler) ----
 
   handleRemotePlay(): void {
     this.state = 'playing';
     if (this.isActive && this.engine) {
       this.engine.resume();
-      void this.withTrackPlayer(async (tp) => {
-        await tp.play();
+      void this.withTrackPlayer((tp) => {
+        tp.play();
       });
     }
   }
@@ -100,8 +98,8 @@ class AudioSessionManager {
     this.state = 'paused';
     if (this.isActive && this.engine) {
       this.engine.pause();
-      void this.withTrackPlayer(async (tp) => {
-        await tp.pause();
+      void this.withTrackPlayer((tp) => {
+        tp.pause();
       });
     }
   }
@@ -126,55 +124,42 @@ class AudioSessionManager {
     void this.deactivate();
   }
 
-  handleRemoteDuck(paused: boolean, permanent: boolean): void {
+  // Media3 zarządza audio focus natywnie (brak zdarzenia RemoteDuck z v4):
+  // systemowa pauza/wznowienie (połączenie, inna appka) przychodzi jako zmiana
+  // isPlaying — dosynchronizuj silnik sesji z faktycznym stanem playera.
+  handleIsPlayingChanged(playing: boolean): void {
     if (!this.isActive) return;
-    if (permanent || paused) {
+    if (!playing && this.state === 'playing') {
       this.engine?.pause();
-      void this.withTrackPlayer(async (tp) => {
-        await tp.pause();
-      });
       this.state = 'paused';
-    } else {
-      this.handleRemotePlay();
+    } else if (playing && this.state === 'paused') {
+      this.engine?.resume();
+      this.state = 'playing';
     }
   }
 
   // ---- Private ----
 
   private async setupTrackPlayer(): Promise<void> {
-    await this.withTrackPlayer(async (tp) => {
-      const { Capability, AppKilledPlaybackBehavior } = require('react-native-track-player');
-
-      await tp.setupPlayer({
-        waitForBuffer: false,
-      });
-
-      await tp.updateOptions({
+    await this.withTrackPlayer((tp) => {
+      tp.setupPlayer({
         android: {
           // Ubicie aplikacji (swipe z recents) zabija silnik sesji razem z JS —
           // notyfikacja bez silnika sterowałaby niczym, więc znika razem z FGS.
-          appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+          taskRemovedBehavior: 'stop',
         },
+      });
+
+      tp.setCommands({
         capabilities: [
-          Capability.Play,
-          Capability.Pause,
-          Capability.SkipToNext,
-          Capability.SkipToPrevious,
-          Capability.Stop,
+          PlayerCommand.PlayPause,
+          PlayerCommand.Next,
+          PlayerCommand.Previous,
+          PlayerCommand.Stop,
         ],
-        compactCapabilities: [
-          Capability.Play,
-          Capability.Pause,
-          Capability.SkipToNext,
-          Capability.SkipToPrevious,
-        ],
-        notificationCapabilities: [
-          Capability.Play,
-          Capability.Pause,
-          Capability.SkipToNext,
-          Capability.SkipToPrevious,
-          Capability.Stop,
-        ],
+        // Przyciski notyfikacji sterują sesją nauki (fiszki), nie kolejką
+        // playera — wszystkie komendy mają trafiać do JS zamiast do media3.
+        handling: 'js',
       });
     });
   }
@@ -184,35 +169,30 @@ class AudioSessionManager {
 
     const noiseAsset = require('../../assets/noise-60db.wav');
 
-    await this.withTrackPlayer(async (tp) => {
-      const { RepeatMode } = require('react-native-track-player');
-      
-      await tp.reset();
-      await tp.add([
+    await this.withTrackPlayer((tp) => {
+      tp.setMediaItems([
         {
-          id: 'silent-noise',
+          mediaId: 'silent-noise',
           url: noiseAsset,
           title: ' ',
           artist: this.groupName,
-          album: '',
-          duration: 0,
         },
       ]);
-      await tp.setRepeatMode(RepeatMode.Track);
-      await tp.play();
+      tp.setRepeatMode(RepeatMode.One);
+      tp.play();
     });
     this.state = 'playing';
   }
 
   private setPausedState(): void {
     if (!this.initialized) return;
-    void this.withTrackPlayer(async (tp) => {
-      await tp.updateNowPlayingMetadata({
+    void this.withTrackPlayer((tp) => {
+      tp.updateMetadata(0, {
         title: this.pausedTitle,
         artist: this.groupName,
-        album: '',
+        albumTitle: '',
       });
-      await tp.pause();
+      tp.pause();
       this.state = 'paused';
     });
   }
@@ -221,33 +201,32 @@ class AudioSessionManager {
 export const audioSessionManager = new AudioSessionManager();
 
 /**
- * Headless JS playback service — registered via TrackPlayer.registerPlaybackService()
- * in the app entry (index.js). Runs in a headless JS context when the app is
- * backgrounded, receiving remote events from lock screen / bluetooth controls.
+ * Routing zdarzeń playbacku do menedżera sesji. Wołane z dwóch źródeł
+ * (rejestrowanych w registerPlaybackService.native.ts):
+ * - foreground: addEventListener,
+ * - background (Android): registerBackgroundEventHandler (headless JS).
  */
-export async function playbackService(): Promise<void> {
-  if (Platform.OS !== 'android') return;
-
-  try {
-    const TrackPlayer = require('react-native-track-player').default;
-    const { Event } = require('react-native-track-player');
-
-    const handlers: Record<string, () => void> = {
-      [Event.RemotePlay]: () => audioSessionManager.handleRemotePlay(),
-      [Event.RemotePause]: () => audioSessionManager.handleRemotePause(),
-      [Event.RemoteNext]: () => audioSessionManager.handleRemoteNext(),
-      [Event.RemotePrevious]: () => audioSessionManager.handleRemotePrevious(),
-      [Event.RemoteStop]: () => audioSessionManager.handleRemoteStop(),
-    };
-
-    Object.entries(handlers).forEach(([event, handler]) => {
-      TrackPlayer.addEventListener(event, handler);
-    });
-
-    TrackPlayer.addEventListener(Event.RemoteDuck, (data: { paused: boolean; permanent: boolean }) => {
-      audioSessionManager.handleRemoteDuck(data.paused, data.permanent);
-    });
-  } catch {
-    // TrackPlayer not available on this platform — silently no-op.
+export function handlePlaybackEvent(event: PlaybackEvent): void {
+  switch (event.type) {
+    case Event.RemotePlay:
+      audioSessionManager.handleRemotePlay();
+      break;
+    case Event.RemotePause:
+      audioSessionManager.handleRemotePause();
+      break;
+    case Event.RemoteNext:
+      audioSessionManager.handleRemoteNext();
+      break;
+    case Event.RemotePrevious:
+      audioSessionManager.handleRemotePrevious();
+      break;
+    case Event.RemoteStop:
+      audioSessionManager.handleRemoteStop();
+      break;
+    case Event.IsPlayingChanged:
+      audioSessionManager.handleIsPlayingChanged(event.playing === true);
+      break;
+    default:
+      break;
   }
 }
