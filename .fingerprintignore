@@ -1,0 +1,5 @@
+# Artefakty lokalnych buildow gradle w node_modules zmieniaja hash fingerprinta
+# (runtime version mismatch na EAS po kazdym lokalnym assembleRelease).
+# EAS i lokalny CLI licza fingerprint z tym samym ignore — hashe sie zgadzaja.
+node_modules/**/android/build/**
+node_modules/**/android/.cxx/**
