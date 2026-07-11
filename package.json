@@ -8,29 +8,29 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@rntp/player": "5.6.0",
-    "expo": "~56.0.11",
+    "expo": "~56.0.15",
     "expo-application": "~56.0.3",
     "expo-asset": "~56.0.16",
     "expo-audio": "~56.0.12",
-    "expo-auth-session": "~56.0.14",
-    "expo-build-properties": "~56.0.18",
+    "expo-auth-session": "~56.0.15",
+    "expo-build-properties": "~56.0.22",
     "expo-constants": "~56.0.15",
     "expo-crypto": "~56.0.3",
-    "expo-dev-client": "~56.0.20",
+    "expo-dev-client": "~56.0.22",
     "expo-document-picker": "^56.0.4",
     "expo-file-system": "~56.0.7",
     "expo-font": "~56.0.5",
     "expo-haptics": "~56.0.3",
-    "expo-linking": "~56.0.14",
-    "expo-router": "~56.2.10",
+    "expo-linking": "~56.0.15",
+    "expo-router": "~56.2.14",
     "expo-secure-store": "~56.0.4",
-    "expo-sharing": "~56.0.17",
+    "expo-sharing": "~56.0.21",
     "expo-speech": "~56.0.3",
     "expo-speech-recognition": "^56.0.1",
-    "expo-splash-screen": "~56.0.10",
+    "expo-splash-screen": "~56.0.12",
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
-    "expo-updates": "~56.0.19",
+    "expo-updates": "~56.0.21",
     "expo-web-browser": "~56.0.5",
     "firebase": "^12.13.0",
     "react": "19.2.3",
@@ -70,6 +70,16 @@
     "check-ui": "node scripts/check-ui-constraints.mjs",
     "build:web": "expo export --platform web",
     "validate": "npm run lint && npm run typecheck && npm run test && npm run check-ui && npm run check-assets && npm run build:web"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "@pchmn/expo-material3-theme",
+          "@rntp/player"
+        ]
+      }
+    }
   },
   "private": true
 }

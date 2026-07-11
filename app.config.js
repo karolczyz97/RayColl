@@ -61,7 +61,13 @@ module.exports = {
           "ios": {
             "deploymentTarget": "16.4"
           },
-          "android": {}
+          // ABI_FILTER=arm64-v8a przed `expo prebuild` = build tylko pod Pixela
+          // (pełna lista ABI wywala reanimated/ninja na Windows). Bez env —
+          // domyślne wszystkie ABI. Na EAS profile *-pixel i tak nadpisują to
+          // przez ORG_GRADLE_PROJECT_reactNativeArchitectures.
+          "android": process.env.ABI_FILTER
+            ? { reactNativeArchitectures: process.env.ABI_FILTER.split(",") }
+            : {}
         }
       ]
     ],
