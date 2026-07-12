@@ -1,0 +1,49 @@
+# Porównanie i Analiza Konkluzji Migracji (Claude vs DeepSeek vs Gemini)
+
+Niniejszy dokument przedstawia meta-analizę, czyli porównanie trzech zestawów konkluzji opracowanych przez poszczególnych agentów (Claude, DeepSeek, Gemini). Celem jest wypracowanie optymalnego podejścia i weryfikacja poprawności inżynieryjnej założeń.
+
+---
+
+## 1. Różnice w priorytetach i perspektywach agentów
+
+Każdy z agentów oceniał plany z innej perspektywy, co przełożyło się na unikalne mocne i słabe strony w ich konkluzjach:
+
+*   **Perspektywa Claude'a (Wierność i Spójność Danych)**:
+    *   *Priorytet*: Stuprocentowa kompatybilność wsteczna i wierność logice biznesowej.
+    *   *Kluczowe odkrycie*: Zidentyfikował **błąd krytyczny w planie DeepSeeka** dotyczący złego zmapowania ścieżek Firestore (karty jako `/users/{uid}/cards/{id}` zamiast podkolekcji `/users/{uid}/decks/{id}/cards/{id}`). Taki błąd w kodzie subagenta doprowadziłby do utraty synchronizacji i uszkodzenia bazy danych w chmurze.
+    *   *Krytyka Gemini*: Słusznie zarzucił Gemini zbyt duże rozmycie zakresu (Gold-Plating: shared elements, tablety, skróty w v1) kosztem wierności portu starej logiki (pominięcie logiki walidacji backupu i szczegółów edytora trybów).
+
+*   **Perspektywa DeepSeeka (Czystość Teoretyczna i Architektura)**:
+    *   *Priorytet*: Estetyka kodu, struktura i optymalny podział pracy (10-11 tasków).
+    *   *Kluczowe odkrycie*: Zaproponował spójną architekturę `domain/operation/` jako czystych transformatorów stanu (state transformers) zamiast upychania logiki modyfikacji bezpośrednio w repozytoriach.
+    *   *Krytyka Claude'a*: Wykazał, że 20 tasków u Claude'a to zbyt duże rozdrobnienie, generujące narzut orkiestracyjny na linii Użytkownik-Architekt.
+
+*   **Perspektywa Gemini (Natywna Integracja i Odporność Androida)**:
+    *   *Priorytet*: Wykorzystanie natywnego ekosystemu Androida do rozwiązywania problemów ze stabilnością w tle.
+    *   *Kluczowe odkrycie*: Wskazanie, że synchronizacja oparta o zwykłe Coroutines/Flows w tle (Claude/DeepSeek) nie przeżyje systemowego ubijania procesów (Doze Mode). Jedynym stabilnym rozwiązaniem dla offline-first sync jest systemowy `WorkManager`.
+    *   *Krytyka rywali*: Wykazał brak obsługi systemowej głośności (`STREAM_MUSIC`), Audio Focus i interlocku TTS/STT u rywali, co doprowadziłoby do sprzężeń (aplikacja słyszałaby i oceniała swój własny TTS).
+
+---
+
+## 2. Kluczowe punkty sporne i ich rozwiązanie
+
+### A. WorkManager vs Await z Rollbackiem
+*   *Problem*: Claude słusznie zauważył, że niektóre operacje w starej aplikacji (np. importowanie talii lub usunięcie grupy) wymagają blokującego (awaitowanego) zapisu w chmurze z możliwością wycofania lokalnej transakcji w przypadku błędu sieci. WorkManager z natury jest asynchroniczny i "odłożony w czasie" (fire-and-forget).
+*   *Rozwiązanie*: W ostatecznym planie zastosowano architekturę hybrydową. Transakcje lokalne w Room db gwarantują natychmiastową spójność w UI. Domyślne zmiany (np. nauka, edycja karty) są synchronizowane asynchronicznie przez `WorkManager`. Natomiast operacje krytyczne (jak import/migracja) posiadają ścieżkę synchroniczną w repozytorium (bezpośrednie zapytanie Firestore) z transakcyjnym wycofaniem (rollback) w bazie Room w przypadku niepowodzenia sieciowego.
+
+### B. Separacja gość vs zalogowany (Namespace)
+*   *Konsensus*: Wszyscy agenci zgodzili się, że propozycja Claude'a polegająca na dodaniu kolumny `namespace` w Room (pusta dla gościa, `uid` dla zalogowanego) deklasuje inne podejścia. Pozwala ona na przechowywanie wszystkich danych w jednej bazie SQLite i realizuje migrację za pomocą jednej, atomowej transakcji `UPDATE`.
+
+### C. Podział na zadania (Workflow)
+*   *Konsensus*: 20 zadań Claude'a to zbyt duże rozdrobnienie, a 10 DeepSeeka ma zbyt duże, ryzykowne "bloki" (T10 łączący Auth, Sync, TTS, STT, Purge, Backup i Haptic). Ostateczny plan Gemini (12 zadań) dzieli projekt na zbalansowane, testowalne logicznie moduły.
+
+---
+
+## 3. Ostateczna Synteza (Rekomendacja)
+
+Ostateczny plan wdrożenia zaimplementowany w `implementation_plan.md` to poprawna fuzja, która:
+1.  **Eliminuje błąd krytyczny DeepSeeka** (przywraca poprawną strukturę podkolekcji Firestore v2).
+2.  **Redukuje Gold-Plating Gemini** (shared elements i tablety przesunięte na koniec jako elementy T12 "Polish", a priorytetem jest wierność logiczna).
+3.  **Wdraża innowacje natywne Gemini** (WorkManager, Media3, Credential Manager, STREAM_MUSIC, Audio Focus i interlock TTS/STT).
+4.  **Wdraża innowacje architektoniczne Claude'a** (kolumna `namespace` w Room, `StudySessionHolder` jako singleton sesji).
+5.  **Stosuje optymalny podział na 12 zbalansowanych zadań**.

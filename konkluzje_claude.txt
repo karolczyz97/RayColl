@@ -1,0 +1,91 @@
+# Konkluzje z porównania planów (claude / deepseek / gemini)
+Autor: Claude (Fable 5) — uwaga: plan_claude.txt jest mojego autorstwa, więc ocena opiera się
+na weryfikowalnych faktach (cytaty linii, porównanie z kodem starej appki w ../TensorDeck),
+nie na wrażeniu.
+
+## Werdykt
+
+Jako plan do wykonania: **claude > deepseek > gemini**.
+Jako źródło pomysłów czysto natywnych (audio): **gemini najlepszy**.
+Rekomendacja: wykonywać plan claude jako bazę + scalić 4-5 konkretów z pozostałych dwóch.
+
+## Konsensus wszystkich trzech planów (wysoka pewność kierunku)
+
+Czysty Kotlin w domain/ z SessionEngine jako maszyną stanów portowaną 1:1 z testami;
+Room z osobnymi tabelami (nie JSON blob) + TypeConvertery na kroki; Hilt; single-activity
+Compose + Navigation-Compose; sync Firestore przez diff po cache'owanym snapshocie.
+Trzy niezależne podejścia zbiegły się do tego samego fundamentu.
+
+## Ocena po kryteriach briefu
+
+| Kryterium | claude | deepseek | gemini |
+|---|---|---|---|
+| Wierność zachowaniu/danym starej appki | wysoka | średnia | niska |
+| Bezpieczeństwo schematu Firestore | poprawny | BŁĘDNY | kierunek ok, mało szczegółów |
+| Małe, samodzielne taski (wymóg usera) | 20 małych | 10, w tym 2 molochy | 11, kilka bardzo dużych |
+| Kompletność mapowania starej logiki | pełna | szczegółowa (do funkcji) | ~połowa modułów pominięta |
+| Pomysły czysto natywne | średnio | mało | najwięcej i dobre |
+| Decyzje produktowe | pyta usera | tnie po cichu | przeprojektowuje po cichu |
+
+## DeepSeek — mocny szkielet, jeden błąd krytyczny
+
++ Mapowanie do poziomu nazw funkcji; konwencja Result<T> + UiState; graf zależności tasków
+  z równoległością; checklista zawartości promptu subagenta (sekcja F.1) — do przejęcia.
+- BŁĄD KRYTYCZNY (sekcja F.3): ścieżki Firestore `users/{uid}/cards/{id}` oraz
+  `users/{uid}/modes/{id}`. Rzeczywisty schemat v2 (firestorePersistence.ts):
+  karty = PODKOLEKCJA talii `users/{uid}/decks/{deckId}/cards/{cardId}`,
+  tryby = `users/{uid}/studyModes/{modeId}`. Subagent kopiujący F.3 rozjechałby dane
+  między starą i nową apką (złamanie twardego wymogu briefu). Plan sam sobie przeczy
+  (A.6 deklaruje "1:1 z firestoreSchema.ts").
+- Wycina z v1 tło audio (media session) i całe i18n (sekcja G) — tło audio było wprost
+  w briefie; apka ma 5 języków UI z polskim głównym. Decyzje produktowe podjęte za usera.
+- Granulacja w najgorszym miejscu: T8 = Dashboard + Browse + Study + CAŁY SessionEngine;
+  T10 = auth + sync + TTS + STT + backup + purge + polish.
+- Brak: dialogu migracji gość→konto, separacji przestrzeni danych gość/user, polityki
+  flushy do chmury (debounce 1200 ms / próg 10 ocen / immediate dla krytycznych) — kolejkę
+  uznał za "zbędną", a zbędna jest tylko lokalnie.
+- "Predictive back działa z automatu, nic nie trzeba robić" — nieścisłe (flaga w manifeście,
+  interakcja z dialogami wyjścia).
+
+## Gemini — najciekawsze pomysły, najsłabsza wierność
+
++ Do przejęcia: jawny Audio Focus (pauza przy telefonie/innym audio), interlock TTS<->STT,
+  głośność na STREAM_MUSIC, sprawdzanie pakietów głosowych TTS z intentem do ustawień,
+  EXTRA_PREFER_OFFLINE dla STT, kryteria weryfikacji per task.
+- Po cichu przeprojektowuje produkt: brak ekranów Stats i Archive w drzewie (wchłonięte
+  w Dashboard), edytor trybów zredukowany do "prostego edytora kolejności" (rzeczywisty ma
+  dialogi parametrów, kroki compound z gałęziami, walidację, szablony, reset), wymyślony
+  ekran "auth/ Logowanie/Rejestracja" (stara apka: tylko Google sign-in w ustawieniach).
+- Mapowanie pokrywa ~połowę logiki: brak store/actions/*, selektorów, walidacji backupu,
+  logiki edytora kroków (stepRegistry/compoundSteps/validateModeSteps), substytucji tła,
+  seedów, i18n. Normalizacja zmapowana jako "lub pomocnicze funkcje w repozytorium" —
+  niezrozumienie jej roli. Drzewo niespójne z tabelą (mapowanie kieruje do domain/study/,
+  którego nie ma w drzewie).
+- Gold-plating w v1: Paging 3, Encrypted DataStore (Firebase sam trzyma sesję; brak
+  sekretów do szyfrowania), App Shortcuts, Android Auto, shared elements, landscape 50/50,
+  split-pane — ryzyko dla parytetu zachowań bez potrzeby.
+- WorkManager jako kolejka syncu: nie zauważa konfliktu z semantyką starej appki —
+  importDeck/deleteGroup wymagają AWAITOWANEGO zapisu z rollbackiem (REFACTOR_RISKS.md #3),
+  WorkManager jest fire-and-forget. Brak polityki debounce/próg-10.
+
+## Claude — słabości (dla uczciwości porównania)
+
+- Brak jawnego Audio Focus / interlocku TTS-STT / weryfikacji pakietów głosowych (Gemini
+  ma rację — do wchłonięcia).
+- 20 tasków = więcej rund orkiestracji (świadomy koszt, zgodny z zasadą "stop po tasku").
+- Brak konwencji Result/UiState i checklisty promptu subagenta (DeepSeek ma lepiej).
+- Brak sekcji "co celowo pominięto w v1" (transparentność jak u DeepSeek — do dodania).
+Przewaga planu bierze się z tego, że powstał po przeczytaniu całego kodu starej appki
+(poprawne ścieżki Firestore, polityka flushy, migracja, namespace'y, kompatybilność
+backupu) — pozostałe wyglądają na pisane głównie z briefu.
+
+## Plan scalenia (propozycja finalna)
+
+1. Z Gemini -> T10/T19: Audio Focus, interlock TTS<->STT, STREAM_MUSIC, check pakietu
+   głosowego TTS + intent do ustawień, EXTRA_PREFER_OFFLINE.
+2. Z DeepSeek -> proces: checklista promptu subagenta; konwencja Result/UiState w UI.
+3. Z DeepSeek -> dokument: sekcja "co celowo pominięto w v1" (web, OTA, rail/tablety —
+   do potwierdzenia przez usera).
+4. Odrzucone świadomie: WorkManager w v1 (konflikt z await+rollback), Paging 3,
+   Encrypted DataStore, App Shortcuts, rejestracja kont, wchłonięcie Stats/Archive
+   w Dashboard.

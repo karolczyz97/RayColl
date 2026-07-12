@@ -1,0 +1,157 @@
+# Ostateczny Super-Plan Migracji RayColl (Fuzja Gemini + Claude)
+
+Ten dokument to ostateczne źródło prawdy dla natywnej aplikacji RayColl na Androida. Łączy on zaawansowane systemowe optymalizacje Androida (WorkManager, Media3, Paging 3, Keystore, Credential Manager) z eleganckim podziałem logicznym i koncepcją współdzielenia bazy danych (kolumna `namespace`) z planu Claude'a.
+
+---
+
+## 1. Kluczowe Założenia Architektoniczne (Fuzja)
+
+1.  **Room Database z kolumną `namespace`**:
+    *   Wszystkie tabele w Room (`decks`, `cards`, `study_modes`, `activity_heatmap`) posiadają kolumnę `namespace`:
+        *   `''` (pusty string) = dane profilu gościa (Guest).
+        *   `{uid}` (identyfikator Firebase) = dane zalogowanego użytkownika.
+    *   Dzięki temu dane gościa i użytkownika współistnieją w jednej bazie danych SQLite. Wylogowanie to powrót do filtracji po `namespace = ''`. Migracja danych gościa na konto to prosta transakcja SQL: `UPDATE decks SET namespace = :uid WHERE namespace = ''` (wraz z kaskadową aktualizacją powiązanych tabel).
+2.  **StudySessionHolder (Singleton) & Media3 Service**:
+    *   Silnik sesji (`SessionEngine`) i jego interpreter kroków (`StepExecutor`) są czystymi klasami domenowymi (bez zależności od Androida).
+    *   W warstwie danych/odtwarzania tworzymy singleton `StudySessionHolder`, który przechowuje i kontroluje aktywną instancję silnika sesji nauki.
+    *   `StudyAudioService` (dziedziczący po Media3 `MediaSessionService`) oraz `StudyViewModel` wpinają się do tego samego `StudySessionHolder`. Gwarantuje to, że stan nauki nie ulegnie przerwaniu przy zmianie rotacji ekranu, odmontowaniu widoku Compose czy przejściu do odtwarzania w tle z powiadomieniem systemowym na lockscreenie.
+3.  **Odporność na brak sieci (WorkManager)**:
+    *   Zamiast schedulera w pamięci, który gubi zadania po zamknięciu aplikacji, operacje zapisu w chmurze (Firestore) są delegowane do systemowego `WorkManager` za pomocą `FirestoreSyncWorker`.
+    *   Każdy zapis w Room oznacza rekord flagą `dirty` lub bezpośrednio kolejkuje zadanie synchronizacji z regułą wykładniczego czasu oczekiwania (Exponential Backoff) i ograniczeniem połączenia sieciowego.
+4.  **Zabezpieczenie Audio Focus & Interlock**:
+    *   System audio poprawnie zarządza Audio Focus. Wycisza/pauzuje odtwarzanie przy połączeniach telefonicznych lub nawigacji.
+    *   TTS i STT posiadają blokadę (Interlock) – mikrofon nie nasłuchuje w trakcie mówienia lektora, zapobiegając sprzężeniom i samo-ocenianiu aplikacji.
+    *   W przypadku awarii STT (brak sieci, brak uprawnień), silnik płynnie przełącza się w awaryjny tryb manualnego oceniania.
+5.  **Jetpack Paging 3**:
+    *   Ekran szczegółów talii pobiera fiszki z Room stronicowo, zapobiegając lagom (jank) przy tysiącach kart w bazie.
+6.  **Google Credential Manager & Encrypted DataStore**:
+    *   Logowanie jednym kliknięciem (One Tap) i Passkeys przez Credential Manager. Szyfrowanie konfiguracji konta i tokenów Keystore'em w DataStore.
+
+---
+
+## 2. Projekt Drzewa Katalogów
+
+```
+com.raycoll/
+├── data/                                 # WARSTWA DANYCH (Room, Firestore, Preferencje)
+│   ├── local/
+│   │   ├── db/
+│   │   │   ├── AppDatabase.kt            # Room Database
+│   │   │   ├── converters/               # TypeConverters (np. String list <-> JSON)
+│   │   │   ├── dao/                      # Room DAOs (DeckDao, CardDao, StudyModeDao, ActivityDao)
+│   │   │   └── entities/                 # Encje Room z kolumną 'namespace'
+│   │   └── preferences/                  # Encrypted DataStore (ustawienia, ttsRate, tokeny)
+│   ├── remote/
+│   │   ├── auth/                         # Credential Manager + Firebase Auth
+│   │   └── firestore/                    # Firestore Schema DTOs i translatory v2
+│   ├── repository/                       # Repozytoria (Room + Firestore Sync)
+│   │   ├── AuthRepositoryImpl.kt
+│   │   ├── FlashcardRepositoryImpl.kt
+│   │   └── StudyModeRepositoryImpl.kt
+│   └── sync/                             # WorkManager Sync Engine
+│       ├── FirestoreSyncWorker.kt        # Worker do trwałych zapisów offline w chmurze
+│       └── SyncManager.kt                # Koordynator wywołań WorkManagera z ekspozycją stanu w UI
+│
+├── domain/                               # WARSTWA DOMENOWA (Czysty Kotlin - brak zależności od Android/Firebase)
+│   ├── model/                            # Modele domenowe (Deck, Card, SrsState, StudyMode, ActivityHeatmap)
+│   ├── repository/                       # Interfejsy repozytoriów
+│   ├── srs/                              # Algorytmy FSRS
+│   │   └── SrsEngine.kt                  # Algorytm FSRS v4.5, Levenshtein, wordSimilarity, mapMatchToRating
+│   ├── import/                           # Logika importu z CSV
+│   │   ├── CsvParser.kt                  # Parser CSV (BOM, quotes, custom separator)
+│   │   ├── HeaderDetector.kt             # Heurystyki nagłówka i wykrywanie liczby stron
+│   │   ├── LanguageDetector.kt           # Detekcja języków z nagłówka
+│   │   ├── SeparatorDetector.kt          # Wykrywanie separatora CSV
+│   │   └── ImportValidator.kt            # Walidacja danych wejściowych importu
+│   └── usecase/                          # Use Cases / Interakcje biznesowe
+│       ├── BootstrapAppUseCase.kt        # Sekwencja startowa (Auth, Local + Cloud merge)
+│       ├── MergeUserDataUseCase.kt       # Algorytm mergowania lokalnych i zdalnych danych (merge.ts)
+│       ├── ImportDeckUseCase.kt          # Walidacja + parsowanie + zapis do repozytorium
+│       └── MigrateGuestDataUseCase.kt    # Przeniesienie danych gościa ('') na konto (uid) w Room
+│
+├── ui/                                   # WARSTWA UI (Jetpack Compose MD3E)
+│   ├── theme/                            # MD3E Theme, Palette, Typography, Shapes
+│   ├── components/                       # Współdzielone Expressive Components
+│   ├── navigation/                       # Navigation-Compose (Predictive Back + Shared Elements)
+│   └── screens/                          # Ekrany (Compose View + ViewModel)
+│       ├── dashboard/                    # Lista talii z heatmapą aktywności
+│       ├── deckdetail/                   # Zarządzanie talią, lista kart z Paging 3, wyszukiwarka
+│       ├── cardedit/                     # Dodawanie/edycja karty
+│       ├── study/                        # Ekran nauki (wizualizacja kroków, animacja STT)
+│       ├── settings/                     # Ustawienia, backup, edytor trybów nauki
+│       └── auth/                         # Logowanie Firebase (Credential Manager UI)
+│
+└── service/                              # USŁUGI SYSTEMOWE ANDROIDA (Odtwarzanie w tle)
+    └── audio/
+        ├── StudySessionHolder.kt         # Singleton przechowujący aktywny silnik sesji nauki
+        ├── StudyAudioService.kt          # MediaSessionService trzymający silnik sesji nauki
+        ├── MediaSessionHelper.kt         # Konfiguracja MediaSession Media3
+        ├── AudioFocusHelper.kt           # Obsługa Audio Focus (ducking, pause, resume)
+        ├── TtsManager.kt                 # Systemowy Text-To-Speech wrapper (sprawdzanie pakietów)
+        └── SttManager.kt                 # Systemowy SpeechRecognizer (nasłuchiwanie, interlock z TTS)
+```
+
+---
+
+## 3. Lista 12 Zbalansowanych Zadań dla Subagentów
+
+Oto optymalny harmonogram wdrożenia aplikacji. Zadania domenowe są realizowane na początku jako czysty Kotlin (nie wymagają emulatora, są natychmiast testowane w JUnit). Zapis zmian w Room, Firestore i integracja UI następuje w kolejnych krokach.
+
+### KROK 1: Podstawa danych i silniki logiczne (Czysty Kotlin / JVM)
+
+#### [ ] Task 1: Konfiguracja Gradle (MD3E + Room) i szkielet nawigacji
+- **Opis**: Skonfigurowanie w `build.gradle.kts` zależności: Compose Material 3 (Expressive), Room, Dagger Hilt, WorkManager, Jetpack Media3 oraz Crypto. Stworzenie klasy `RayCollApp` i konfiguracja `Navigation-Compose` z pustymi trasami (typacja z kotlinx.serialization) i obsługą Predictive Back.
+- **Weryfikacja**: Kompilacja projektu i uruchomienie pustej aplikacji na emulatorze.
+
+#### [ ] Task 2: Modele Domenowe i Silnik SRS
+- **Opis**: Przeniesienie struktur z `types/models.ts` do Kotlinowych klas w `domain/model/`. Konwersja `srsEngine.ts` na `domain/srs/SrsEngine.kt` (algorytm FSRS v4.5, Levenshtein, wordSimilarity, mapMatchToRating, getCardCategory). Dodanie testów jednostkowych JUnit odwzorowujących `srsEngine.test.ts`.
+- **Weryfikacja**: Uruchomienie testów JUnit na JVM (`./gradlew test`) — wszystkie testy zielone.
+
+#### [ ] Task 3: Normalizacja danych i walidacja backupu
+- **Opis**: Przeniesienie logiki z `storeDataNormalization.ts` i `backupValidation.ts` do `domain/normalizer/StoreNormalizer.kt` i `BackupValidator.kt`. Obsługa dopełniania stron (`padPageMetadata`), clampowania stron i weryfikacji formatu JSON. Napisanie testów JUnit.
+- **Weryfikacja**: Przejście testów jednostkowych na JVM.
+
+#### [ ] Task 4: Merge Logic i Reguły Migracji
+- **Opis**: Portowanie logiki łączenia danych offline/online z `store/selectors/merge.ts` do `domain/merge/MergeEngine.kt` (reguła ożywiania usuniętych kart, nie-regresja SRS na podstawie liczby powtórzeń). Przeniesienie logiki warunków migracji (`shouldTriggerMigration`). Dodanie testów JUnit.
+- **Weryfikacja**: Przejście testów jednostkowych `MergeEngineTest` i `MigrationRulesTest`.
+
+#### [ ] Task 5: Złożone Kroki Trybów Nauki (Compound Steps)
+- **Opis**: Konwersja logiki rozwinięć kroków złożonych (`compoundSteps.ts`, `stepRegistry.ts`, `validateModeSteps.ts`) do `domain/session/CompoundExpander.kt` i `StepRegistry.kt`. Dodanie testów JUnit.
+- **Weryfikacja**: Przejście testów jednostkowych dla parsera kroków złożonych.
+
+#### [ ] Task 6: Silnik Sesji Nauki (SessionEngine)
+- **Opis**: Portowanie `SessionEngine.ts` i `stepExecutor.ts` do `domain/session/SessionEngine.kt` i `StepExecutor.kt`. Użycie Kotlin `CoroutineScope` do zarządzania asynchroniczną pętlą kroków i `StateFlow<StudySessionState>` do dystrybucji stanu. Implementacja awaryjnego fallbacku na sterowanie manualne przy błędach STT. Zależności TTS/STT wstrzykiwane jako interfejsy.
+- **Weryfikacja**: Testy jednostkowe JUnit symulujące przebiegi sesji (pauza, wznowienie, skip, fallback).
+
+#### [ ] Task 7: Parser i Walidator CSV
+- **Opis**: Portowanie parsera CSV, detektorów separatora, języka kolumn i walidatora importu talii z `src/import/` do `domain/import/`. Dodanie testów JUnit.
+- **Weryfikacja**: Przejście testów parsera i detektorów CSV.
+
+### KROK 2: Baza danych Room, Firebase i Repozytoria
+
+#### [ ] Task 8: Room Database i Repozytoria Lokalne (z obsługą namespace)
+- **Opis**: Stworzenie encji Room (`DeckEntity`, `CardEntity`, `StudyModeEntity`, `ActivityDayEntity`) z kolumną `namespace` ('' = gość, uid = zalogowany) oraz relacją `@Relation` w `DeckWithCards`. Implementacja interfejsów DAO i `MigrateGuestDataUseCase.kt` realizującego migrację danych w ramach jednej transakcji. Implementacja `FlashcardRepositoryImpl` i `StudyModeRepositoryImpl` (z zapisem lokalnym i seedowaniem przy pustej bazie).
+- **Weryfikacja**: Instrumentowane testy integracyjne Room na emulatorze (Robolectric / AndroidJUnit4).
+
+#### [ ] Task 9: Firebase Auth (Credential Manager) i DTOs
+- **Opis**: Konfiguracja Firebase SDK. Stworzenie klas DTO w `remote/firestore/FirestoreSchema.kt` (mapowania DTO 1:1 ze starego schematu v2). Implementacja logowania w `AuthRepository` z użyciem nowego standardu **Google Credential Manager API** (One Tap, Passkeys).
+- **Weryfikacja**: Poprawna kompilacja i pomyślne testy logowania na emulatorze.
+
+#### [ ] Task 10: Gwarantowana Synchronizacja offline-first (WorkManager)
+- **Opis**: Implementacja `FirestoreSyncWorker.kt` (Worker do WorkManagera) realizującego trwałą synchronizację danych z Firestore w tle z Exponential Backoff. Stworzenie `SyncManager.kt` koordynującego wywołania WorkManagera i wystawiającego stan synchronizacji do UI.
+- **Weryfikacja**: Testy integracyjne synchronizacji (symulacja braku sieci, kolejkowanie zmian w bazie Room i automatyczne wypychanie po przywróceniu sieci).
+
+### KROK 3: Odtwarzanie w tle i UI Compose
+
+#### [ ] Task 11: Media3 Audio Service, TTS i STT w tle
+- **Opis**: Utworzenie singletona `StudySessionHolder.kt`. Implementacja `StudyAudioService.kt` na bazie `MediaSessionService` (Media3). Integracja z natywnym `TextToSpeech` (sprawdzanie pakietów językowych offline) i `SpeechRecognizer` (nasłuchiwanie, interlock z TTS). Obsługa Audio Focus (ducking, pause, resume) oraz powiązanie z systemowym strumieniem `STREAM_MUSIC`. Integracja z przyciskami słuchawek.
+- **Weryfikacja**: Działanie lektora TTS w tle przy zablokowanym ekranie i poprawne reagowanie na systemowe przyciski słuchawek.
+
+#### [ ] Task 12: Warstwa UI w Jetpack Compose z MD3 Expressive
+- **Opis**: Wdrożenie stylizacji MD3E (fonty Outfit/Inter, zaokrąglone kształty, dynamiczne motywy). Implementacja ekranów z adaptacyjnymi layoutami (dwukolumnowy split-pane na tabletach, landscape na ekranie nauki) i Shared Element Transitions:
+    *   `DashboardScreen` (lista talii, heatmapa, status sync z WorkManager)
+    *   `DeckDetailScreen` (lista kart oparta o Jetpack Paging 3, wyszukiwarka)
+    *   `CardEditScreen` (dynamiczne pola edycji)
+    *   `StudyScreen` (gesty tap/hold/peek na fiszce, animacje fali STT, kontrolki ocen)
+    *   `SettingsScreen` (backup JSON z rollbackiem, edytor trybów, import pliku CSV z systemowego pickera).
+- **Weryfikacja**: Przejście manualnej checklisty UX (gesty, płynne przewijanie list, importy CSV, backupy, logowanie i synchronizacja).

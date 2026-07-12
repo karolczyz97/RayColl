@@ -1,0 +1,131 @@
+﻿================================================================================
+KONKLUZJE: Porownanie 3 planow RayColl Android
+================================================================================
+Autor: deepseek-v4-pro (architekt)
+Data: 2026-07-11
+Plany porownane: plan_gemini.txt | plan_claude.txt | plan_deepseek.txt
+
+================================================================================
+ZADEN POJEDYNCZY PLAN NIE JEST KOMPLETNY
+================================================================================
+
+Kazdy z trzech planow ma jedna rzecz zrobiona znaczaco lepiej niz pozostale.
+Idealny plan to fuza najlepszych elementow.
+
+================================================================================
+POROWNANIE KLUCZOWYCH WYMIAROW
+================================================================================
+
+1. Precyzja mapowania stare<->nowe (czy subagent wie co portowac)
+   >>> WYGRYWA: Claude (tabela pokrywa doslownie kazdy stary plik, 60+ wpisow)
+   DeepSeek: dobra (pelne mapowanie, ale mniej szczegolowe niz Claude)
+   Gemini: brak tabeli mapowania - to najwieksza wada, subagent nie ma punktu zaczepienia
+
+2. Kompatybilnosc danych (Firestore schema v2, backup JSON)
+   >>> WYGRYWA: Claude (dokladnie udokumentowane sciezki kolekcji, format backupu, timestampy)
+   DeepSeek: dobra (Firestore v2 jwnie, ale mniej szczegolow)
+   Gemini: pominiety calkowicie - ryzyko rozjechania danych
+
+3. Architektura (czystosc warstw, odpowiedzialnosci)
+   >>> WYGRYWA: DeepSeek (domain/data/ui, operation/ jako pure transformers, study w domain)
+   Claude: bardzo dobra, ale przeeksponowana (20 taskow, za duzo klas w data/sync/)
+   Gemini: przekombinowana (osobny service/, brak niektorych kluczowych modulow)
+
+4. Liczba taskow (user chce ~10)
+   >>> WYGRYWA: DeepSeek (10 taskow) i Gemini (11 taskow)
+   Claude: 20 taskow - za duzo, trzeba kompresowac
+
+5. Android-specific features (WorkManager, Media3, Credential Manager)
+   >>> WYGRYWA: Gemini (WorkManager, Media3, Credential Manager, EncryptedDataStore, App Shortcuts)
+   Claude: dobre (Credential Manager, Media3)
+   DeepSeek: podstawowe - brak WorkManagera (sync przez coroutine debounce nie przezyla ubicia procesu)
+
+6. Kluczowe koncepty architektoniczne
+   >>> WYGRYWA: Claude (namespace w Room, playback/ warstwa, Clock injection)
+   DeepSeek: brak namespace (guest vs konto nierozroznialne), brak playback/, brak Clock
+   Gemini: brak namespace, brak Clock
+
+================================================================================
+CO KTO ROBI NAJLEPIEJ - PODSUMOWANIE
+================================================================================
+
+| Co                                  | Kto robi najlepiej |
+|-------------------------------------|-------------------|
+| Precyzja mapowania stare->nowe      | Claude            |
+| Data compatibility (Firestore, JSON)| Claude            |
+| Namespace w Room (guest/konto)      | Claude            |
+| Warstwa playback/ osobno            | Claude            |
+| Clock injection (testowalny czas)   | Claude            |
+| Kamienie milowe                     | Claude            |
+| Czystosc architektury              | DeepSeek          |
+| domain/operation/ (pure transformers)| DeepSeek         |
+| domain/study/ dla silnika sesji     | DeepSeek + Claude |
+| Liczba taskow ~10                   | DeepSeek          |
+| WorkManager do syncu               | Gemini            |
+| Media3 do audio w tle              | Gemini            |
+| Credential Manager do auth         | Gemini            |
+| Landscape mode, App Shortcuts      | Gemini            |
+
+================================================================================
+NAJWIĘKSZE WADY KAZDEGO PLANU
+================================================================================
+
+Gemini:
+  - BRAK TABELI MAPOWANIA (to dyskwalifikuje plan jako samodzielny)
+  - "21 ulepszen" to czesciowo marketing (uzywanie standardowych API to nie ulepszenie)
+  - Firestore schema compatibility pominiety
+  - Task T5 za duzy (merge + WorkManager + 3 repos)
+  - Brak selector/, normalizer/, operation/ - kluczowe moduly pominiete
+
+Claude:
+  - 20 taskow (user chce ~10)
+  - domain/seed/ nie powinno byc w domain
+  - Brak domain/operation/ - logika akcji w repo zamiast czystych funkcji
+  - SessionEngine zawiera StepRegistry, CompoundExpander, ModeTemplates
+    (to nie sa rzeczy silnika sesji, to konfiguracja trybow)
+  - Troche over-engineered (SyncScheduler, SyncEngine, BootstrapLoader,
+    MigrationController - niektore mozna polaczyc)
+
+DeepSeek:
+  - T10 ZA DUZY (Firebase Auth + FirestoreSchema + SyncService + TTS + STT
+    + archive purge + backup + haptic + testy = 3-4 taski w jednym)
+  - Brak namespace w Room (guest vs konto - kluczowe dla migracji)
+  - Brak playback/ warstwy (TTS/STT wsciśnięte w StudySessionEngine)
+  - Brak WorkManagera (sync przez coroutine debounce nie przezyla ubicia procesu)
+  - Brak Clock injection (testy FSRS/merge straca kontrole nad czasem)
+
+================================================================================
+REKOMENDACJA: PLAN SCALONY
+================================================================================
+
+Wziac szkielet architektury i ~10 taskow z DeepSeek, uzupelnic o:
+
+OD CLAUDE:
+  1. Kolumna `namespace` w Room ('' = gosc, uid = konto) - obsluga guest/konto
+  2. Warstwa `playback/` oddzielona od UI (StudySessionHolder singleton)
+  3. `Clock` injection dla testowalnego czasu
+  4. Precyzyjna dokumentacja sciezek Firestore
+  5. Kamienie milowe ("po T8 apka do nauki lokalnie")
+
+OD GEMINI:
+  6. WorkManager do syncu Firestore (trwaly, exponential backoff)
+  7. Credential Manager do auth (bezpieczniejszy niz stary Google Sign-In)
+  8. Media3 do audio w tle (najnowszy standard)
+  9. Landscape mode dla study screen (nice-to-have, moze byc w polish tasku)
+
+STRUKTURA TASKOW (11, podzielony T10 DeepSeeka na 2):
+  T1: Projekt + domain models + utils
+  T2: SRS engine + testy
+  T3: Normalizer + Merge + testy
+  T4: Selectors + Import parsing + testy
+  T5: Operations (pure state transformers) + testy
+  T6: Room database + Repository + Seed + DI (z namespace)
+  T7: Navigation + Theme + Shared UI
+  T8: Core screens (Dashboard, Browse, Study) + StudySessionEngine
+  T9: Secondary screens (Import, Settings, Archive, Stats, AppSettings)
+  T10: Playback (TTS, STT, Media3, audio feedback, haptic)
+  T11: Firebase Auth + Firestore schema v2 + WorkManager Sync + Polish
+
+================================================================================
+KONIEC KONKLUZJI
+================================================================================
