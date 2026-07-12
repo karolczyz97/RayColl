@@ -30,6 +30,8 @@ import com.raycoll.app.domain.seed.SeedData
 import com.raycoll.app.domain.normalize.normalizeStoreData
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.map
 
 @Singleton
@@ -40,6 +42,11 @@ class DeckRepository @Inject constructor(
 ) {
     private val deckDao = db.deckDao()
     private val activityDao = db.activityDao()
+
+    // Sygnal kazdej lokalnej mutacji danych — nasluchuje go SyncLifecycle (debounced push do chmury).
+    private val _mutations = MutableSharedFlow<Unit>(extraBufferCapacity = 64)
+    val mutations: SharedFlow<Unit> = _mutations
+    private fun notifyMutation() { _mutations.tryEmit(Unit) }
 
     fun activeDecks() = deckDao.activeDecks(namespaceManager.current()).map { entities ->
         entities.map { Mappers.entityToDeck(it, deckDao.getCards(namespaceManager.current(), it.id)) }
@@ -64,6 +71,7 @@ class DeckRepository @Inject constructor(
         val (groups, newId) = addGroup(emptyList(), name, languages, pageNames, now)
         val deck = groups.last()
         deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
+        notifyMutation()
         return newId
     }
 
@@ -74,6 +82,7 @@ class DeckRepository @Inject constructor(
         val deck = groups.last()
         deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
         deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, newId) })
+        notifyMutation()
         return newId
     }
 
@@ -83,21 +92,25 @@ class DeckRepository @Inject constructor(
         val updated = updateGroup(listOf(deck), deck, now)[0]
         deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
         for (card in updated.cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, updated.id))
+        notifyMutation()
     }
 
     suspend fun deleteDeck(deckId: String) {
         val ns = namespaceManager.current()
         deckDao.softDeleteDeck(ns, deckId, clock.now())
+        notifyMutation()
     }
 
     suspend fun archiveDeck(deckId: String) {
         val ns = namespaceManager.current()
         deckDao.archiveDeck(ns, deckId, clock.now())
+        notifyMutation()
     }
 
     suspend fun restoreDeck(deckId: String) {
         val ns = namespaceManager.current()
         deckDao.restoreDeck(ns, deckId, clock.now())
+        notifyMutation()
     }
 
     suspend fun addCard(deckId: String, pages: List<String>): String {
@@ -107,6 +120,7 @@ class DeckRepository @Inject constructor(
         val (_, cardId) = addCard(listOf(deck), deckId, pages, now)
         val card = Flashcard(id = cardId, pages = pages, srsState = SrsState(), contentUpdatedAt = now)
         deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+        notifyMutation()
         return cardId
     }
 
@@ -114,11 +128,13 @@ class DeckRepository @Inject constructor(
         val ns = namespaceManager.current()
         val now = clock.now()
         deckDao.insertCard(Mappers.cardToEntity(card.copy(contentUpdatedAt = now), ns, deckId))
+        notifyMutation()
     }
 
     suspend fun deleteCard(deckId: String, cardId: String) {
         val ns = namespaceManager.current()
         deckDao.softDeleteCard(ns, cardId, clock.now())
+        notifyMutation()
     }
 
     suspend fun reviewCard(deckId: String, cardId: String, rating: Int) {
@@ -130,6 +146,7 @@ class DeckRepository @Inject constructor(
         deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
         val dayKey = LocalDates.dayKey(now)
         activityDao.incrementActivity(ns, dayKey)
+        notifyMutation()
     }
 
     suspend fun reviewCardAgain(deckId: String, cardId: String, rating: Int, baseState: SrsState) {
@@ -139,6 +156,7 @@ class DeckRepository @Inject constructor(
         val updated = reviewCardAgain(listOf(deck), deckId, cardId, rating, baseState, now)
         val card = updated[0].cards.find { it.id == cardId } ?: return
         deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+        notifyMutation()
     }
 
     suspend fun setVisiblePageCount(deckId: String, count: Int) {
@@ -146,6 +164,7 @@ class DeckRepository @Inject constructor(
         val deck = getDeck(deckId) ?: return
         val updated = setVisiblePageCount(listOf(deck), deckId, count, clock.now())
         deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
+        notifyMutation()
     }
 
     suspend fun setStudyFilter(deckId: String, filter: String) {
@@ -153,6 +172,7 @@ class DeckRepository @Inject constructor(
         val deck = getDeck(deckId) ?: return
         val updated = setStudyFilter(listOf(deck), deckId, filter, clock.now())
         deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
+        notifyMutation()
     }
 
     suspend fun setCardOrder(deckId: String, order: String) {
@@ -160,6 +180,7 @@ class DeckRepository @Inject constructor(
         val deck = getDeck(deckId) ?: return
         val updated = setCardOrder(listOf(deck), deckId, order, clock.now())
         deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
+        notifyMutation()
     }
 
     suspend fun setActiveStudyMode(deckId: String, modeId: String) {
@@ -167,6 +188,7 @@ class DeckRepository @Inject constructor(
         val deck = getDeck(deckId) ?: return
         val updated = setActiveStudyMode(listOf(deck), deckId, modeId, clock.now())
         deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
+        notifyMutation()
     }
 
     suspend fun movePage(deckId: String, from: Int, to: Int) {
@@ -175,6 +197,7 @@ class DeckRepository @Inject constructor(
         val updated = movePage(listOf(deck), deckId, from, to, clock.now())
         deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
         for (card in updated[0].cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+        notifyMutation()
     }
 
     suspend fun purgeExpiredArchives(): Boolean {
@@ -188,6 +211,7 @@ class DeckRepository @Inject constructor(
             for (deck in updated) {
                 if (deck.deletedAt != null) deckDao.softDeleteDeck(ns, deck.id, deck.deletedAt)
             }
+            notifyMutation()
         }
         return changed
     }
@@ -227,5 +251,6 @@ class DeckRepository @Inject constructor(
         for ((dayKey, count) in normalized.activityHeatmap) {
             activityDao.upsertActivity(Mappers.activityToEntity(dayKey, count, ns))
         }
+        notifyMutation()
     }
 }

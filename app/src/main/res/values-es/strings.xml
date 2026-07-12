@@ -315,5 +315,10 @@
         <item quantity="many">%1$d tarjetas</item>
         <item quantity="other">%1$d tarjetas</item>
     </plurals>
+    <string name="app_settings_section_account">Cuenta y sincronización</string>
+    <string name="auth_sign_in_google">Iniciar sesión con Google</string>
+    <string name="auth_signed_in_as">Sesión iniciada como %1$s</string>
+    <string name="auth_sign_out">Cerrar sesión</string>
+    <string name="auth_sync_now">Sincronizar ahora</string>
 </resources>
 

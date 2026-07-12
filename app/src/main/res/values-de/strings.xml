@@ -315,5 +315,10 @@
         <item quantity="many">%1$d Karten</item>
         <item quantity="other">%1$d Karten</item>
     </plurals>
+    <string name="app_settings_section_account">Konto &amp; Synchronisierung</string>
+    <string name="auth_sign_in_google">Mit Google anmelden</string>
+    <string name="auth_signed_in_as">Angemeldet als %1$s</string>
+    <string name="auth_sign_out">Abmelden</string>
+    <string name="auth_sync_now">Jetzt synchronisieren</string>
 </resources>
 

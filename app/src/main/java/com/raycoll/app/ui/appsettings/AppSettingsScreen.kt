@@ -40,6 +40,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.data.local.prefs.UserPreferences
+import com.raycoll.app.data.sync.MigrationController
+import com.raycoll.app.data.sync.SyncStatus
+import com.raycoll.app.ui.components.MigrationDialog
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -47,11 +50,19 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hiltViewModel()) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle(UserPreferences())
+    val accountState by viewModel.accountState.collectAsStateWithLifecycle()
+    val migrationRequired by viewModel.migrationRequired.collectAsStateWithLifecycle()
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHost = remember { SnackbarHostState() }
     var showResetDialog by remember { mutableStateOf(false) }
     var importError by remember { mutableStateOf(false) }
     var importSuccess by remember { mutableStateOf(false) }
+    var authErrorRes by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(authErrorRes) {
+        authErrorRes?.let { snackbarHost.showSnackbar(context.getString(it)); authErrorRes = null }
+    }
 
     val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"))
     val exportFilename = "raycoll-backup-$timestamp.json"
@@ -83,6 +94,26 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
         snackbarHost = { SnackbarHost(snackbarHost) }
     ) { padding ->
         Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(stringResource(R.string.app_settings_section_account), style = MaterialTheme.typography.titleMedium)
+            if (accountState.signedIn) {
+                Text(stringResource(R.string.auth_signed_in_as, accountState.email))
+                when (syncStatus) {
+                    SyncStatus.SAVING -> Text(stringResource(R.string.sync_status_saving), style = MaterialTheme.typography.bodySmall)
+                    SyncStatus.SYNCING -> Text(stringResource(R.string.sync_status_syncing), style = MaterialTheme.typography.bodySmall)
+                    SyncStatus.ERROR -> Text(stringResource(R.string.sync_status_offline), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    SyncStatus.IDLE -> Unit
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { viewModel.syncNow() }) { Text(stringResource(R.string.auth_sync_now)) }
+                    TextButton(onClick = { viewModel.signOut(context) }) { Text(stringResource(R.string.auth_sign_out)) }
+                }
+            } else {
+                Text(stringResource(R.string.auth_local), style = MaterialTheme.typography.bodySmall)
+                Button(onClick = {
+                    viewModel.signIn(context) { messageRes -> authErrorRes = messageRes }
+                }) { Text(stringResource(R.string.auth_sign_in_google)) }
+            }
+
             Text(stringResource(R.string.app_settings_section_appearance), style = MaterialTheme.typography.titleMedium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.app_settings_dynamic_colors_title))
@@ -116,6 +147,14 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
                 Text(stringResource(R.string.btn_delete))
             }
         }
+    }
+
+    if (migrationRequired) {
+        MigrationDialog(
+            onMigrate = { viewModel.resolveMigration(MigrationController.MigrationOption.MIGRATE) },
+            onFresh = { viewModel.resolveMigration(MigrationController.MigrationOption.FRESH) },
+            onCancel = { viewModel.resolveMigration(MigrationController.MigrationOption.CANCEL) },
+        )
     }
 
     if (showResetDialog) {
