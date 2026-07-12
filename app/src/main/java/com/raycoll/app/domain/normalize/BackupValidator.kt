@@ -13,6 +13,33 @@ import com.raycoll.app.domain.model.StoreData
 
 class BackupValidationException(message: String) : Exception(message)
 
+/**
+ * Walidacja surowego tekstu backupu: parse JSON → czyste struktury (Map/List/String/Number/Boolean)
+ * → validateBackupData. Błąd parsowania = błąd walidacji (import odrzucony, stan nietknięty).
+ */
+fun validateBackupJson(jsonText: String) {
+    val element = try {
+        kotlinx.serialization.json.Json.parseToJsonElement(jsonText)
+    } catch (e: Exception) {
+        throw BackupValidationException("Backup data is not a valid JSON object.")
+    }
+    validateBackupData(jsonElementToPlain(element))
+}
+
+internal fun jsonElementToPlain(element: kotlinx.serialization.json.JsonElement): Any? = when (element) {
+    is kotlinx.serialization.json.JsonNull -> null
+    is kotlinx.serialization.json.JsonPrimitive -> when {
+        element.isString -> element.content
+        element.content == "true" -> true
+        element.content == "false" -> false
+        element.content.toLongOrNull() != null -> element.content.toLong()
+        element.content.toDoubleOrNull() != null -> element.content.toDouble()
+        else -> element.content
+    }
+    is kotlinx.serialization.json.JsonArray -> element.map { jsonElementToPlain(it) }
+    is kotlinx.serialization.json.JsonObject -> element.mapValues { jsonElementToPlain(it.value) }
+}
+
 private fun assertNumber(value: Any?, message: String) {
     if (value !is Number || !value.toDouble().isFinite()) throw BackupValidationException(message)
 }

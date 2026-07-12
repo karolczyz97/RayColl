@@ -5,20 +5,20 @@ import androidx.lifecycle.viewModelScope
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
-import com.raycoll.app.data.repository.NamespaceManager
 import com.raycoll.app.data.repository.StudyModeRepository
-import com.raycoll.app.domain.session.BackgroundSubstitution
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
-import com.raycoll.app.domain.model.SrsState
-import com.raycoll.app.domain.session.SessionEngine
-import com.raycoll.app.domain.session.SessionStatus
-import com.raycoll.app.domain.session.SessionState
+import com.raycoll.app.domain.model.ListenAndCheckStep
 import com.raycoll.app.domain.selectors.getDueCards
+import com.raycoll.app.domain.session.BackgroundSubstitution
+import com.raycoll.app.domain.session.SessionEngine
+import com.raycoll.app.domain.session.SessionState
+import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.domain.steps.CompoundExpander
 import com.raycoll.app.playback.SessionDepsAdapter
 import com.raycoll.app.playback.StudySessionHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +32,7 @@ data class StudyUiState(
     val currentCard: Flashcard? = null,
     val currentIndex: Int = 0,
     val totalCards: Int = 0,
+    val sessionCards: List<Flashcard> = emptyList(),
     val revealedPages: List<Int> = listOf(0),
     val peekedPage: Int? = null,
     val showRatings: Boolean = false,
@@ -46,6 +47,8 @@ data class StudyUiState(
     val deckName: String = "",
     val failedCount: Int = 0,
     val backgroundEligible: Boolean = false,
+    val needsMicPermission: Boolean = false,
+    val loaded: Boolean = false,
 )
 
 @HiltViewModel
@@ -63,10 +66,13 @@ class StudyViewModel @Inject constructor(
 
     private var engine: SessionEngine? = null
     private var deck: FlashcardGroup? = null
+    private var deckId: String = ""
     private var ttsRate: Float = 1.0f
-    private var startedAt: Long = 0
     private var backgroundEligible = false
     private var pausedByLifecycle = false
+    private var endedEarlyFlag = false
+    private var needsMic = false
+    private var stateJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -77,6 +83,7 @@ class StudyViewModel @Inject constructor(
     }
 
     fun loadDeck(deckId: String) {
+        this.deckId = deckId
         viewModelScope.launch {
             val group = deckRepository.getDeck(deckId) ?: return@launch
             deck = group
@@ -86,26 +93,27 @@ class StudyViewModel @Inject constructor(
                 totalCards = due.size,
                 deckName = group.name,
                 currentCard = due.firstOrNull(),
+                loaded = true,
             )
-            if (due.isEmpty()) {
-                _uiState.value = _uiState.value.copy(finished = false)
-                return@launch
-            }
+            if (due.isEmpty()) return@launch
             startSession(due, group)
         }
     }
 
     private suspend fun startSession(cards: List<Flashcard>, group: FlashcardGroup) {
         engine?.stop()
+        endedEarlyFlag = false
         // aktywny tryb z bazy (własne i edytowane wbudowane); fallback: seed classic
         val steps = modeRepository.getModes()
             .find { it.id == group.activeModeId && it.deletedAt == null }
             ?.steps
             ?: com.raycoll.app.domain.srs.createSeedModes().find { it.id == "classic" }?.steps
             ?: emptyList()
+        val expanded = CompoundExpander.expandModeSteps(steps)
+        needsMic = expanded.any { it is ListenAndCheckStep }
         val prefs = prefsRepository.preferences.first()
         backgroundEligible = prefs.backgroundPlayback &&
-            BackgroundSubstitution.isModeHandsFreeCapable(CompoundExpander.expandModeSteps(steps))
+            BackgroundSubstitution.isModeHandsFreeCapable(expanded)
         val eng = SessionEngine(
             group = group,
             steps = steps,
@@ -116,9 +124,9 @@ class StudyViewModel @Inject constructor(
         )
         sessionHolder.create(eng, group.id, group.name)
         engine = eng
-        startedAt = clock.now()
 
-        viewModelScope.launch {
+        stateJob?.cancel()
+        stateJob = viewModelScope.launch {
             eng.state.collectLatest { state ->
                 _uiState.value = mapEngineState(state, group.name)
             }
@@ -133,11 +141,12 @@ class StudyViewModel @Inject constructor(
             currentCard = card,
             currentIndex = state.currentCardIndex,
             totalCards = state.cards.size,
+            sessionCards = state.cards,
             revealedPages = state.revealedPages,
             peekedPage = state.peekedPageIndex,
             showRatings = state.status == SessionStatus.REVEALED,
             finished = state.status == SessionStatus.FINISHED,
-            endedEarly = state.status == SessionStatus.FINISHED && clock.now() - startedAt < Long.MAX_VALUE,
+            endedEarly = state.status == SessionStatus.FINISHED && endedEarlyFlag,
             errorMsg = state.errorMsg,
             partialSttText = state.lastAnswerResult.text,
             matchPercent = state.lastAnswerResult.percent,
@@ -147,6 +156,8 @@ class StudyViewModel @Inject constructor(
             deckName = deckName,
             failedCount = state.failedCardIds.size,
             backgroundEligible = backgroundEligible,
+            needsMicPermission = needsMic,
+            loaded = true,
         )
     }
 
@@ -187,19 +198,52 @@ class StudyViewModel @Inject constructor(
         engine?.handleCardPress()
     }
 
-    fun setHolding(value: Boolean) {
-        engine?.setHolding(value)
+    fun pressDown() {
+        engine?.pressDown()
     }
 
-    fun pause() {
-        engine?.pause()
+    fun pressUp() {
+        engine?.pressUp()
     }
 
-    fun resume() {
-        engine?.resume()
+    fun clearError() {
+        engine?.clearError()
     }
 
-    fun endSession() {
+    /** "Od nowa": świeże wersje wszystkich kart sesji z repozytorium. */
+    fun restartSession() {
+        val eng = engine ?: return
+        val ids = eng.state.value.cards.map { it.id }
+        viewModelScope.launch {
+            endedEarlyFlag = false
+            eng.restart(freshCardsByIds(ids))
+        }
+    }
+
+    /** "Powtórz oblane": świeże wersje kart z listy failed. */
+    fun restartFailed() {
+        val eng = engine ?: return
+        val failedIds = eng.state.value.let { s -> s.cards.map { it.id }.filter { it in s.failedCardIds } }
+        viewModelScope.launch {
+            endedEarlyFlag = false
+            eng.restartFailed(freshCardsByIds(failedIds))
+        }
+    }
+
+    private suspend fun freshCardsByIds(ids: List<String>): List<Flashcard> {
+        val fresh = deckRepository.getDeck(deckId) ?: return emptyList()
+        val byId = fresh.cards.associateBy { it.id }
+        return ids.mapNotNull { byId[it] }
+    }
+
+    /** Potwierdzenie dialogu przerwania: sesja kończy się podsumowaniem endedEarly. */
+    fun endSessionEarly() {
+        endedEarlyFlag = true
+        engine?.end()
+    }
+
+    /** Wyjście z ekranu — zwolnienie sesji i serwisu. */
+    fun exitSession() {
         engine?.end()
         sessionHolder.release()
         engine = null

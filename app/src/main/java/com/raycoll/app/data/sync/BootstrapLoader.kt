@@ -35,9 +35,11 @@ class BootstrapLoader @Inject constructor(
                     BootstrapResult.Merged(merged)
                 } else {
                     // Cloud returned null = new account with no cloud data
-                    val guestData = StoreData() // Would check guest namespace
-                    if (shouldTriggerMigration(false, getGuestHasData(localData.groups, localData.activityHeatmap, localData.studyModes))) {
-                        BootstrapResult.MigrationRequired(localData)
+                    val guestData = deckRepository.getSnapshotFor("")
+                    val hasUserLocalCache = localData.groups.isNotEmpty() || localData.studyModes.isNotEmpty()
+                    val guestHasData = getGuestHasData(guestData.groups, guestData.activityHeatmap, guestData.studyModes)
+                    if (shouldTriggerMigration(hasUserLocalCache, guestHasData)) {
+                        BootstrapResult.MigrationRequired(guestData)
                     } else {
                         deckRepository.seedIfEmpty()
                         BootstrapResult.LocalOnly

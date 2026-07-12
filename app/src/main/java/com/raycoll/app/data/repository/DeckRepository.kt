@@ -53,6 +53,9 @@ class DeckRepository @Inject constructor(
     fun cardsForDeck(deckId: String) = deckDao.cardsForDeck(namespaceManager.current(), deckId).map { entities ->
         entities.map { Mappers.entityToCard(it) }
     }
+    fun activityHeatmapFlow() = activityDao.heatmap(namespaceManager.current()).map { entities ->
+        entities.associate { Mappers.entityToActivity(it) }
+    }
 
     suspend fun getDeck(deckId: String): FlashcardGroup? {
         val ns = namespaceManager.current()
@@ -224,8 +227,9 @@ class DeckRepository @Inject constructor(
         }
     }
 
-    suspend fun getSnapshot(): StoreData {
-        val ns = namespaceManager.current()
+    suspend fun getSnapshot(): StoreData = getSnapshotFor(namespaceManager.current())
+
+    suspend fun getSnapshotFor(ns: String): StoreData {
         val decks = deckDao.allDecks(ns)
         val groups = decks.map { Mappers.entityToDeck(it, deckDao.getCards(ns, it.id)) }
         val modes = db.studyModeDao().allModes(ns).map { Mappers.entityToMode(it) }

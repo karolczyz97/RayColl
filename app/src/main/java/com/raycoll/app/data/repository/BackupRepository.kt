@@ -3,7 +3,7 @@ package com.raycoll.app.data.repository
 import com.raycoll.app.data.local.db.RayCollDatabase
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.normalize.normalizeStoreData
-import com.raycoll.app.domain.normalize.validateBackupData
+import com.raycoll.app.domain.normalize.validateBackupJson
 import com.raycoll.app.domain.seed.SeedData
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -22,8 +22,9 @@ class BackupRepository @Inject constructor(
     }
 
     suspend fun importJson(jsonText: String) {
+        // walidacja PRZED dekodowaniem i zapisem — błędny plik zostawia stan nietknięty
+        validateBackupJson(jsonText)
         val snapshot = json.decodeFromString<StoreData>(jsonText)
-        validateBackupData(json.decodeFromString<Map<String, Any?>>(jsonText))
         val normalized = normalizeStoreData(snapshot)
         deckRepository.replaceAll(normalized)
     }

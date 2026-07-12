@@ -6,7 +6,7 @@ import com.raycoll.app.domain.srs.getCardCategory
 
 data class BrowseFilterResult(val cards: List<Flashcard>, val counts: CardStats)
 
-fun browseFilter(cards: List<Flashcard>, search: String, category: SrsCardCategory?, now: Long): BrowseFilterResult {
+fun browseFilter(cards: List<Flashcard>, search: String, category: SrsCardCategory?, now: Long, activePageCount: Int = Int.MAX_VALUE): BrowseFilterResult {
     val liveCards = filterLiveCards(cards)
     val searchLower = search.trim().lowercase()
     val filtered = if (searchLower.isEmpty()) {
@@ -14,7 +14,7 @@ fun browseFilter(cards: List<Flashcard>, search: String, category: SrsCardCatego
     } else {
         liveCards.filter { card ->
             (category == null || getCardCategory(card.srsState) == category) &&
-            card.pages.any { it.lowercase().contains(searchLower) }
+                card.pages.take(activePageCount).any { it.lowercase().contains(searchLower) }
         }
     }
     return BrowseFilterResult(cards = filtered, counts = computeCardStats(liveCards))

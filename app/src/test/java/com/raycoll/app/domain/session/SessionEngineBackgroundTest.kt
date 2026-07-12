@@ -24,8 +24,8 @@ private class FakeClock(var now: Long = 0L) : Clock {
 
 private class FakeDeps : SessionDeps {
     val reviewed = mutableListOf<Pair<String, Int>>()
-    override suspend fun speak(text: String, lang: String, rate: Float) {}
-    override suspend fun listen(lang: String, timeoutMs: Long): ListenResult =
+    override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult = SpeakResult.SUCCESS
+    override suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult =
         ListenResult("", ListenStatus.SKIPPED)
     override fun feedbackSuccess() {}
     override fun feedbackError() {}

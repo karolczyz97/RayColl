@@ -346,5 +346,18 @@
     <string name="mode_list_delete_desc">Dieser eigene Lernmodus wird dauerhaft gelöscht.</string>
     <string name="mode_list_reset_title">Standard wiederherstellen?</string>
     <string name="mode_list_reset_desc">Schritte und Name dieses integrierten Modus werden zurückgesetzt.</string>
+    <string name="study_missing_voice_title">TTS-Stimme fehlt</string>
+    <string name="study_missing_voice_desc">Für diese Sprache ist keine Sprachausgabe-Stimme installiert. Installiere Sprachdaten in den Systemeinstellungen.</string>
+    <string name="study_missing_voice_btn">TTS-Einstellungen öffnen</string>
+    <string name="study_answer_correct">Richtig!</string>
+    <string name="study_answer_incorrect">Falsch</string>
+    <string name="study_answer_skipped">Übersprungen</string>
+    <string name="study_answer_error">Erkennungsfehler</string>
+    <string name="study_finished_stats">Karten: %1$d • Nicht bestanden: %2$d</string>
+    <string name="settings_delete_error">Deck konnte nicht gelöscht werden. Versuche es erneut.</string>
+    <string name="lang_system">System</string>
+    <string name="app_settings_factory_reset">Werksdaten wiederherstellen</string>
+    <string name="app_settings_factory_reset_desc">Alle Decks, Fortschritte und Modi werden durch die Standard-Beispieldaten ersetzt. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="app_settings_version">Version %1$s</string>
 </resources>
 

@@ -75,5 +75,6 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
     is SessionAction.ConsumePendingStepIndex -> state.copy(pendingStepIndexToRun = null)
     is SessionAction.SetCards -> state.copy(cards = action.cards)
     is SessionAction.AddFailedCard -> state.copy(failedCardIds = state.failedCardIds + action.cardId)
+    is SessionAction.RemoveFailedCard -> state.copy(failedCardIds = state.failedCardIds - action.cardId)
     is SessionAction.SetCardReviewed -> state.copy(cardReviewed = true)
 }

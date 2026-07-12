@@ -346,5 +346,18 @@
     <string name="mode_list_delete_desc">Este modo de estudio personalizado se eliminará permanentemente.</string>
     <string name="mode_list_reset_title">¿Restaurar predeterminados?</string>
     <string name="mode_list_reset_desc">Los pasos y el nombre de este modo integrado volverán al original.</string>
+    <string name="study_missing_voice_title">Falta la voz TTS</string>
+    <string name="study_missing_voice_desc">No hay ninguna voz de síntesis instalada para este idioma. Instala los datos de voz en los ajustes del sistema.</string>
+    <string name="study_missing_voice_btn">Abrir ajustes de TTS</string>
+    <string name="study_answer_correct">¡Correcto!</string>
+    <string name="study_answer_incorrect">Incorrecto</string>
+    <string name="study_answer_skipped">Omitido</string>
+    <string name="study_answer_error">Error de reconocimiento</string>
+    <string name="study_finished_stats">Tarjetas: %1$d • Falladas: %2$d</string>
+    <string name="settings_delete_error">No se pudo eliminar el mazo. Inténtalo de nuevo.</string>
+    <string name="lang_system">Sistema</string>
+    <string name="app_settings_factory_reset">Restaurar datos de fábrica</string>
+    <string name="app_settings_factory_reset_desc">Todos los mazos, el progreso y los modos se sustituirán por los datos de ejemplo predeterminados. Esto no se puede deshacer.</string>
+    <string name="app_settings_version">Versión %1$s</string>
 </resources>
 

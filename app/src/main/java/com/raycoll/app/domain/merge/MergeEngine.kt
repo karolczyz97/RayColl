@@ -73,7 +73,7 @@ fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<F
             srsState = if (srsSide == "local") l.srsState else c.srsState,
             contentUpdatedAt = contentSide.contentUpdatedAt,
             srsUpdatedAt = if (srsSide == "local") l.srsUpdatedAt else c.srsUpdatedAt,
-            deletedAt = if (deletedAt > 0) deletedAt else null,
+            deletedAt = null, // edycja nowsza niż kasowanie = ożywienie (isAlive)
         ))
     }
     return merged
@@ -105,7 +105,7 @@ fun mergeGroups(localGroups: List<FlashcardGroup>, cloudGroups: List<FlashcardGr
         merged.add(winner.copy(
             cards = mergeCards(l.cards, c.cards),
             updatedAt = latestEdit,
-            deletedAt = if (deletedAt > 0) deletedAt else null,
+            deletedAt = null, // edycja nowsza niż kasowanie = ożywienie (isAlive)
         ))
     }
     return merged
@@ -140,7 +140,7 @@ fun mergeStudyModes(localModes: List<StudyMode>, cloudModes: List<StudyMode>): L
         }
 
         val winner = if (l.updatedAt > c.updatedAt) l else c
-        merged.add(winner.copy(updatedAt = latestEdit, deletedAt = if (deletedAt > 0) deletedAt else null))
+        merged.add(winner.copy(updatedAt = latestEdit, deletedAt = null))
     }
     return merged
 }

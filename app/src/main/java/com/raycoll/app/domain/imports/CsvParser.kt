@@ -70,7 +70,7 @@ fun parseCsv(text: String, sepKey: String, pageCount: Int): List<List<String>> {
 
 fun detectSeparator(text: String): String {
     val normalized = normalizeCsvText(text)
-    var bestKey = ImportConstants.SEPARATOR_DEFAULT
+    var bestKey = "semicolon"
     var bestScore = 0.0
 
     for ((key, sep) in SEPARATORS) {
@@ -85,5 +85,5 @@ fun detectSeparator(text: String): String {
         val score = totalCount * (consistentLines.toDouble() / rows.size)
         if (score > bestScore) { bestScore = score; bestKey = key }
     }
-    return if (bestScore > 0) bestKey else ImportConstants.SEPARATOR_DEFAULT
+    return if (bestScore > 0) bestKey else "semicolon"
 }

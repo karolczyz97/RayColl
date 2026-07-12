@@ -27,15 +27,23 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class StudySessionService : MediaSessionService() {
     @Inject lateinit var sessionHolder: StudySessionHolder
+    @Inject lateinit var audioFocusManager: AudioFocusManager
 
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var stateJob: Job? = null
+    private var engineJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
         val context = this
+
+        // audio focus loss (telefon/inna apka audio) → pauza sesji
+        audioFocusManager.requestFocus {
+            sessionHolder.get()?.pause()
+            player?.pause()
+        }
 
         val exoPlayer = ExoPlayer.Builder(context).build()
         exoPlayer.apply {
@@ -96,6 +104,13 @@ class StudySessionService : MediaSessionService() {
             .build()
 
         observeEngineState()
+
+        // błąd TTS w tle → auto-pauza silnika + notyfikacja "wstrzymane"
+        engineJob = scope.launch {
+            sessionHolder.engineFlow.collect { engine ->
+                engine?.onBackgroundAutoPause = { player?.pause() }
+            }
+        }
     }
 
     private fun silentItem(metadata: MediaMetadata?): MediaItem {
@@ -147,6 +162,9 @@ class StudySessionService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        audioFocusManager.abandonFocus()
+        sessionHolder.get()?.onBackgroundAutoPause = null
+        engineJob?.cancel()
         stateJob?.cancel()
         mediaSession?.release()
         mediaSession = null

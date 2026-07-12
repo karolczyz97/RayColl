@@ -63,5 +63,6 @@ sealed interface SessionAction {
     data object ConsumePendingStepIndex : SessionAction
     data class SetCards(val cards: List<Flashcard>) : SessionAction
     data class AddFailedCard(val cardId: String) : SessionAction
+    data class RemoveFailedCard(val cardId: String) : SessionAction
     data object SetCardReviewed : SessionAction
 }

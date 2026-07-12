@@ -346,5 +346,18 @@
     <string name="mode_list_delete_desc">Questa modalità di studio personalizzata sarà eliminata definitivamente.</string>
     <string name="mode_list_reset_title">Ripristinare i predefiniti?</string>
     <string name="mode_list_reset_desc">I passaggi e il nome di questa modalità integrata torneranno all’originale.</string>
+    <string name="study_missing_voice_title">Voce TTS mancante</string>
+    <string name="study_missing_voice_desc">Nessuna voce di sintesi vocale installata per questa lingua. Installa i dati vocali nelle impostazioni di sistema.</string>
+    <string name="study_missing_voice_btn">Apri impostazioni TTS</string>
+    <string name="study_answer_correct">Corretto!</string>
+    <string name="study_answer_incorrect">Sbagliato</string>
+    <string name="study_answer_skipped">Saltato</string>
+    <string name="study_answer_error">Errore di riconoscimento</string>
+    <string name="study_finished_stats">Carte: %1$d • Non superate: %2$d</string>
+    <string name="settings_delete_error">Impossibile eliminare il mazzo. Riprova.</string>
+    <string name="lang_system">Sistema</string>
+    <string name="app_settings_factory_reset">Ripristina dati di fabbrica</string>
+    <string name="app_settings_factory_reset_desc">Tutti i mazzi, i progressi e le modalità verranno sostituiti con i dati di esempio predefiniti. Questa operazione non può essere annullata.</string>
+    <string name="app_settings_version">Versione %1$s</string>
 </resources>
 

@@ -78,6 +78,7 @@ class AppSettingsViewModel @Inject constructor(
     }
 
     fun setTheme(value: String) { viewModelScope.launch { prefsRepository.setThemePref(value) } }
+    fun setUiLanguage(value: String) { viewModelScope.launch { prefsRepository.setUiLanguage(value) } }
     fun setSystemColors(value: Boolean) { viewModelScope.launch { prefsRepository.setUseSystemColors(value) } }
     fun setTtsRate(value: Float) { viewModelScope.launch { prefsRepository.setTtsRate(value) } }
     fun setBackgroundPlayback(value: Boolean) { viewModelScope.launch { prefsRepository.setBackgroundPlayback(value) } }

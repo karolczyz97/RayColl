@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -115,9 +117,12 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
             }
 
             Text(stringResource(R.string.app_settings_section_appearance), style = MaterialTheme.typography.titleMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.app_settings_dynamic_colors_title))
-                Switch(checked = prefs.useSystemColors, onCheckedChange = { viewModel.setSystemColors(it) })
+            // Material You dostępne od Androida 12
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.app_settings_dynamic_colors_title))
+                    Switch(checked = prefs.useSystemColors, onCheckedChange = { viewModel.setSystemColors(it) })
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.app_settings_theme))
@@ -131,6 +136,30 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
             }
 
             Text(stringResource(R.string.app_settings_section_language_speech), style = MaterialTheme.typography.titleMedium)
+            // Język UI: 5 opcji + systemowy; zmiana natychmiastowa (per-app locale), persystowana przez appcompat
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(stringResource(R.string.app_settings_lang))
+                var langMenu by remember { mutableStateOf(false) }
+                val currentTag = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags()
+                TextButton(onClick = { langMenu = true }) {
+                    Text(languageLabel(currentTag))
+                }
+                DropdownMenu(expanded = langMenu, onDismissRequest = { langMenu = false }) {
+                    listOf("", "pl", "en", "de", "es", "it").forEach { tag ->
+                        DropdownMenuItem(
+                            text = { Text(languageLabel(tag)) },
+                            onClick = {
+                                langMenu = false
+                                viewModel.setUiLanguage(tag)
+                                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                    if (tag.isEmpty()) androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                                    else androidx.core.os.LocaleListCompat.forLanguageTags(tag)
+                                )
+                            },
+                        )
+                    }
+                }
+            }
             Text(stringResource(R.string.app_settings_tts_rate))
             Slider(value = prefs.ttsRate, onValueChange = { viewModel.setTtsRate(it) }, valueRange = 0.5f..2.0f, steps = 14)
 
@@ -144,8 +173,18 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
             Button(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "text/csv")) }) { Text(stringResource(R.string.app_settings_import_file_btn)) }
 
             Button(onClick = { showResetDialog = true }, colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                Text(stringResource(R.string.btn_delete))
+                Text(stringResource(R.string.app_settings_factory_reset))
             }
+
+            // Wersja aplikacji
+            val versionName = remember {
+                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+            }
+            Text(
+                stringResource(R.string.app_settings_version, versionName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
         }
     }
 
@@ -160,10 +199,20 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text(stringResource(R.string.dialog_delete_permanent_title)) },
-            text = { Text(stringResource(R.string.dialog_delete_desc)) },
+            title = { Text(stringResource(R.string.app_settings_factory_reset)) },
+            text = { Text(stringResource(R.string.app_settings_factory_reset_desc)) },
             confirmButton = { TextButton(onClick = { showResetDialog = false; viewModel.factoryReset() }) { Text(stringResource(R.string.btn_delete)) } },
             dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.btn_cancel)) } },
         )
     }
+}
+
+@Composable
+private fun languageLabel(tag: String): String = when (tag.substringBefore('-').lowercase()) {
+    "pl" -> stringResource(R.string.lang_pl_PL)
+    "en" -> stringResource(R.string.lang_en_US)
+    "de" -> stringResource(R.string.lang_de_DE)
+    "es" -> stringResource(R.string.lang_es_ES)
+    "it" -> stringResource(R.string.lang_it_IT)
+    else -> stringResource(R.string.lang_system)
 }

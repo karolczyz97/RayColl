@@ -36,25 +36,30 @@ fun detectFirstRowHeader(rows: List<List<String>>): Boolean {
 }
 
 object LanguageDetector {
-    private val exactTokens = mapOf(
-        "en" to listOf("english", "angielski", "en", "en-us", "en-gb"),
-        "pl" to listOf("polish", "polski", "pl", "pl-pl"),
-        "es" to listOf("spanish", "hiszpański", "es", "es-es"),
-        "de" to listOf("german", "niemiecki", "de", "de-de"),
-        "fr" to listOf("french", "francuski", "fr", "fr-fr"),
-        "it" to listOf("italian", "włoski", "it", "it-it"),
+    // tokeny porównywane PO normalizacji (lowercase, bez diakrytyków), per słowo nagłówka
+    private data class LangTokens(val tag: String, val exact: Set<String>, val prefixes: Set<String>)
+
+    private val LANGS = listOf(
+        LangTokens("en-US", setOf("word", "phrase", "english", "translation", "example", "front", "back", "meaning", "definition", "en", "en-us", "en-gb"), setOf("angiel")),
+        LangTokens("pl-PL", setOf("slowo", "polish", "polski", "pl", "pl-pl", "tlumaczenie", "przyklad"), setOf("polsk", "fraz")),
+        LangTokens("es-ES", setOf("palabra", "es", "es-es", "spanish", "espanol", "traduccion", "ejemplo"), setOf("hiszpan")),
+        LangTokens("de-DE", setOf("wort", "deutsch", "de", "de-de", "ubersetzung", "beispiel"), setOf("niemiec")),
+        LangTokens("fr-FR", setOf("french", "francais", "fr", "fr-fr"), setOf("franc")),
+        LangTokens("it-IT", setOf("italiano", "italian", "it", "it-it"), setOf("wlos")),
     )
 
     fun detectLanguage(cell: String): String {
-        val normalized = cell.lowercase().trim()
-        for ((code, tokens) in exactTokens) {
-            if (tokens.any { it == normalized }) return "$code-${code.uppercase()}"
-        }
-        for ((code, tokens) in exactTokens) {
-            if (tokens.any { normalized.startsWith(it) }) return "$code-${code.uppercase()}"
+        val normalized = HeaderDetector.normalizeHeaderToken(cell)
+        if (normalized.isEmpty()) return "en-US"
+        val words = normalized.split(Regex("\\s+"))
+        for (lang in LANGS) {
+            if (words.any { w -> lang.exact.contains(w) || lang.prefixes.any { p -> w.startsWith(p) } }) return lang.tag
         }
         return "en-US"
     }
+
+    /** Alias zgodny z nazwą ze starej apki (languageDetection.ts). */
+    fun detectLangFromHeader(header: String): String = detectLanguage(header)
 }
 
 class ImportPayload(

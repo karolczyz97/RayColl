@@ -346,5 +346,18 @@
     <string name="mode_list_delete_desc">Ten własny tryb nauki zostanie trwale usunięty.</string>
     <string name="mode_list_reset_title">Przywrócić domyślne?</string>
     <string name="mode_list_reset_desc">Kroki i nazwa tego wbudowanego trybu wrócą do oryginału.</string>
+    <string name="study_missing_voice_title">Brak głosu TTS</string>
+    <string name="study_missing_voice_desc">Nie zainstalowano głosu syntezatora mowy dla tego języka. Zainstaluj dane głosowe w ustawieniach systemu.</string>
+    <string name="study_missing_voice_btn">Otwórz ustawienia TTS</string>
+    <string name="study_answer_correct">Dobrze!</string>
+    <string name="study_answer_incorrect">Źle</string>
+    <string name="study_answer_skipped">Pominięto</string>
+    <string name="study_answer_error">Błąd rozpoznawania</string>
+    <string name="study_finished_stats">Karty: %1$d • Oblane: %2$d</string>
+    <string name="settings_delete_error">Nie udało się usunąć talii. Spróbuj ponownie.</string>
+    <string name="lang_system">Systemowy</string>
+    <string name="app_settings_factory_reset">Przywróć dane fabryczne</string>
+    <string name="app_settings_factory_reset_desc">Wszystkie talie, postępy i tryby zostaną zastąpione domyślnymi danymi przykładowymi. Tego nie można cofnąć.</string>
+    <string name="app_settings_version">Wersja %1$s</string>
 </resources>
 

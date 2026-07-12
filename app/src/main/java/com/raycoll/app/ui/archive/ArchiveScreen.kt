@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
+import com.raycoll.app.domain.selectors.archiveCountdown
 import com.raycoll.app.ui.components.EmptyState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,11 +36,29 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
         if (decks.isEmpty()) {
             EmptyState(stringResource(R.string.archive_empty), Modifier.padding(padding))
         } else {
+            val now = System.currentTimeMillis()
+            // sort: najnowiej zarchiwizowana pierwsza
+            val sorted = decks.sortedByDescending { it.archivedAt ?: 0 }
             LazyColumn(Modifier.padding(padding).padding(16.dp)) {
-                items(decks, key = { it.id }) { deck ->
+                items(sorted, key = { it.id }) { deck ->
                     Card(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         Column(Modifier.padding(16.dp)) {
                             Text(deck.name, style = MaterialTheme.typography.titleMedium)
+                            val cardCount = deck.cards.count { it.deletedAt == null }
+                            Text(
+                                androidx.compose.ui.res.pluralStringResource(R.plurals.cards_count, cardCount, cardCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            val daysLeft = archiveCountdown(deck, now)
+                            Text(
+                                when {
+                                    daysLeft <= 0 -> stringResource(R.string.archive_auto_delete_today)
+                                    daysLeft == 1 -> stringResource(R.string.archive_auto_delete_tomorrow)
+                                    else -> stringResource(R.string.archive_auto_delete_in, daysLeft)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                             TextButton(onClick = { viewModel.restore(deck.id) }) { Text(stringResource(R.string.btn_restore)) }
                         }
                     }
