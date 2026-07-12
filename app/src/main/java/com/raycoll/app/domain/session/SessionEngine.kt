@@ -28,6 +28,8 @@ class SessionEngine(
     private var cardJobs = mutableMapOf<Int, Job>()
     private var lastExecutedCardIndex = -1
     private var holding = MutableStateFlow(false)
+    private val inBackground = MutableStateFlow(false)
+    private var cardStartedAt: Long = 0L
 
     init {
         expandedSteps = CompoundExpander.expandModeSteps(steps).filter { step ->
@@ -51,8 +53,10 @@ class SessionEngine(
     private fun runCurrentCard() {
         val cardIndex = _state.value.currentCardIndex
         if (cardIndex < 0 || cardIndex >= _state.value.cards.size) return
-        if (cardIndex == lastExecutedCardIndex) return
+        // ta sama karta może być wznowiona tylko gdy czeka pending step (np. po gate)
+        if (cardIndex == lastExecutedCardIndex && _state.value.pendingStepIndexToRun == null) return
         lastExecutedCardIndex = cardIndex
+        cardStartedAt = clock.now()
 
         cardJobs[cardIndex]?.cancel()
         cardJobs[cardIndex] = scope.launch {
@@ -67,6 +71,10 @@ class SessionEngine(
                     continue
                 }
                 val step = expandedSteps[stepIndex]
+                if (inBackground.value && substituteInBackground(step, card)) {
+                    stepIndex++
+                    continue
+                }
                 val executor = StepExecutor(deps, _state, group, ttsRate)
                 executor.executeStep(step, card, stepIndex)
                 if (_state.value.status == SessionStatus.REVEALED) return@launch
@@ -106,12 +114,51 @@ class SessionEngine(
     }
 
     fun goToPreviousCard() {
-        val cardStart = _state.value.currentCardIndex
-        val now = clock.now()
-        scope.launch {
-            advanceToNextCard()
+        val s = _state.value
+        cardJobs[s.currentCardIndex]?.cancel()
+        // <=3 s od startu karty: cofnij do poprzedniej; później: restart bieżącej od kroku 0
+        val targetIndex = if (clock.now() - cardStartedAt <= 3000 && s.currentCardIndex > 0) {
+            s.currentCardIndex - 1
+        } else {
+            s.currentCardIndex
+        }
+        _state.value = sessionReducer(_state.value, SessionAction.AdvanceCard(targetIndex))
+        lastExecutedCardIndex = -1
+        runCurrentCard()
+    }
+
+    /**
+     * Substytucje kroków interaktywnych w tle (sekcja 6.6 planu).
+     * Zwraca true gdy krok został obsłużony zastępczo.
+     */
+    private suspend fun substituteInBackground(step: ModeStep, card: Flashcard): Boolean {
+        val activePages = card.pages.take(group.activePageCount)
+        return when (step) {
+            is com.raycoll.app.domain.model.WaitForTapStep -> {
+                kotlinx.coroutines.delay(BackgroundSubstitution.calculateBgWaitMs(activePages))
+                true
+            }
+            is com.raycoll.app.domain.model.WaitForTapToRevealNextStep -> {
+                kotlinx.coroutines.delay(BackgroundSubstitution.calculateBgWaitMs(activePages))
+                val hidden = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
+                hidden.firstOrNull()?.let {
+                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(it))
+                }
+                true
+            }
+            is com.raycoll.app.domain.model.WaitForTapToRevealStep -> {
+                kotlinx.coroutines.delay(BackgroundSubstitution.calculateBgWaitMs(activePages))
+                val hidden = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
+                hidden.forEach {
+                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(it))
+                }
+                true
+            }
+            else -> false
         }
     }
+
+    fun setBackground(value: Boolean) { inBackground.value = value }
 
     fun handleCardPress() {
         val s = _state.value
@@ -177,6 +224,8 @@ class SessionEngine(
     }
 
     fun resume() {
+        // bieżąca karta wciąż leci → nic nie rób (idempotentne, wołane też przez autostart playera)
+        if (cardJobs[_state.value.currentCardIndex]?.isActive == true) return
         lastExecutedCardIndex = -1
         runCurrentCard()
     }

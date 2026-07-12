@@ -63,6 +63,31 @@ fun StudyScreen(deckId: String, onExit: () -> Unit, viewModel: StudyViewModel = 
 
     LaunchedEffect(deckId) { viewModel.loadDeck(deckId) }
 
+    // Nauka w tle: przy zejściu w tło uruchom serwis medialny (tryb hands-free + pref ON),
+    // w innym wypadku zwykła pauza; powrót na pierwszy plan wyłącza tryb tła
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    val current = viewModel.uiState.value
+                    viewModel.onAppBackground()
+                    if (current.backgroundEligible && !current.finished) {
+                        androidx.core.content.ContextCompat.startForegroundService(
+                            context,
+                            android.content.Intent(context, com.raycoll.app.playback.StudySessionService::class.java),
+                        )
+                    }
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_START -> viewModel.onAppForeground()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Keep screen on during active session
     LaunchedEffect(state.status) {
         if (state.status != SessionStatus.FINISHED) {
