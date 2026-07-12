@@ -1,19 +1,20 @@
 package com.raycoll.app.domain.session
 
-import com.raycoll.app.domain.model.*
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.StudyConstants
+import com.raycoll.app.domain.model.Flashcard
 
 object BackgroundSubstitution {
-    fun isModeHandsFreeCapable(steps: List<AtomicStep>): Boolean =
-        steps.isNotEmpty() && steps.none { it is ShowRatings || it is ListenAndCheck }
 
-    fun substitute(steps: List<AtomicStep>, totalLen: Int): List<AtomicStep> =
-        steps.map { step ->
-            when (step) {
-                is WaitForTap -> Wait(ms = kotlin.math.min(15000L, kotlin.math.max(1500L, (totalLen * 120L).coerceIn(1500L, 15000L))).toInt())
-                is WaitForTapToReveal -> { val all = step.let { ShowAllPages() }; all } // reveal all compat
-                is WaitForTapToRevealNext -> ShowAllPages()
-                is ShowRatings -> ShowRatings() // auto-pause handled by caller
-                else -> step
-            }
-        }
+    fun isModeHandsFreeCapable(steps: List<ModeStep>): Boolean {
+        if (steps.isEmpty()) return false
+        return steps.none { it is com.raycoll.app.domain.model.ShowRatingsStep } &&
+               steps.none { it is com.raycoll.app.domain.model.ListenAndCheckStep }
+    }
+
+    fun calculateBgWaitMs(activePages: List<String>): Long {
+        val totalChars = activePages.sumOf { it.length }
+        return (totalChars * StudyConstants.BG_WAIT_MS_PER_CHAR).toLong()
+            .coerceIn(StudyConstants.BG_WAIT_SUBSTITUTE_MIN, StudyConstants.BG_WAIT_SUBSTITUTE_MAX)
+    }
 }

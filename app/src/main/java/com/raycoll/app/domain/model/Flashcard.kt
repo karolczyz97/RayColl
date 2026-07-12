@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 data class Flashcard(
     val id: String,
     val pages: List<String>,
-    val srsState: SrsState = SrsState(),
-    val contentUpdatedAt: Long = 0L,
-    val srsUpdatedAt: Long = 0L,
+    val srsState: SrsState,
+    val contentUpdatedAt: Long = 0,
+    val srsUpdatedAt: Long = 0,
     val deletedAt: Long? = null,
 )

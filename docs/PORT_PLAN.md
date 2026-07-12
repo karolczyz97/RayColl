@@ -1,5 +1,5 @@
 # RayColl — KOMPLETNY PLAN przepisania na natywny Android (Kotlin + Jetpack Compose)
-# Wersja 3 — FINALNA. Greenfield. Bez chmury w v1.
+# Wersja 4 — FINALNA. Greenfield. Chmura Firestore w v1 (sync + Auth), bez migracji starych użytkowników webowych.
 
 Ten dokument jest JEDYNYM źródłem prawdy dla całego projektu. Zawiera: decyzje, spec
 produktu, spec każdego ekranu, model danych, wszystkie stałe, algorytmy, architekturę,
@@ -71,27 +71,30 @@ Aplikacja jest pisana od zera i NIE MA starych użytkowników ani starych danych
 - Stare repo `../TensorDeck` służy WYŁĄCZNIE jako specyfikacja zachowania (co apka ma
   robić) i źródło testów (jak to sprawdzić). Jego struktura plików jest bez znaczenia.
 
-### D2. BEZ CHMURY W v1 — żadnego Firebase, kont, logowania, syncu
-Stara apka miała Firestore, bo była też appką WEBOWĄ i chmura była mostem web↔telefon.
-Nowa apka jest Android-only, więc:
-- ŻADNEJ zależności od Firebase (SDK, google-services.json, auth, Firestore).
-- Bezpieczeństwo danych zapewniają dwa mechanizmy:
-  a) natywny **Android Auto Backup** (system sam trzyma kopię danych apki na Dysku
-     Google użytkownika i przywraca przy reinstalacji/nowym telefonie) — konfiguracja
-     w T1, weryfikacja w T10;
-  b) ręczny **eksport/import backupu JSON** przez SAF (ekran ustawień, T9).
-- Konsekwencje kaskadowe (WAŻNE — upraszczają połowę projektu):
-  - BRAK silnika merge (scalanie lokalne↔chmura) — nie portujemy `merge.ts`.
-  - BRAK tombstonów: `deletedAt` NIE istnieje w modelu. Usunięcie karty/talii/trybu
-    = twarde DELETE z bazy (w transakcji). Purge archiwum = twarde DELETE.
-  - BRAK kolumny `namespace` (gość/konto) — jest jeden lokalny zbiór danych.
-  - BRAK kolejki/debounce zapisów do chmury, progu 10 ocen, flushy lifecycle —
-    Room zapisuje transakcyjnie i natychmiast przy każdej akcji. Kropka.
-  - BRAK sekcji "Konto" w ustawieniach, dialogów logowania, banera syncu.
-- Sync może wrócić jako Faza 2 (sekcja 14) — dlatego:
-  - ZOSTAWIAMY w modelu pola `contentUpdatedAt`, `srsUpdatedAt` (Card) i `updatedAt`
-    (Deck, StudyMode) i STEMPLUJEMY je poprawnie w operacjach (koszt ~zero, a bez nich
-    późniejszy sync nie miałby metadanych do rozstrzygania konfliktów).
+### D2. CHMURA FIRESTORE W v1 — sync + Auth + tombstony + merge
+Nowa apka jest Android-only ale zachowuje pełny sync Firestore ze starej apki (która
+była web+mobile). BRAK migracji starych użytkowników webowych — nikt nie używał poprzedniej
+wersji, więc nie importujemy danych z AsyncStorage starej apki.
+- **Firebase Android SDK** (Auth + Firestore): google-services.json dostarcza użytkownik
+  przed T10 (rejestracja apki Android w konsoli Firebase: pakiet `com.raycoll.app` + SHA-1).
+- Bezpieczeństwo danych: Android Auto Backup (system) + ręczny eksport/import JSON (SAF)
+  + sync Firestore (Google sign-in, merge never-regress).
+- **Tombstony**: pola `deletedAt` na Card/Deck/StudyMode — miękkie usuwanie + filtrowanie
+  "żywych" + reguła wskrzeszenia (edycja PO usunięciu ożywia rekord).
+- **Merge** (spec: `TensorDeck/src/store/selectors/merge.ts`): SRS never-regress (więcej
+  repetitions wygrywa; remis → nowszy srsUpdatedAt, remis → strona chmury), treść po
+  contentUpdatedAt; talie — winner po updatedAt, karty zawsze mergowane; tryby — wbudowane
+  wskrzeszane; heatmapa — max per dzień.
+- **Namespace** (''=gość, uid=konto): kolumna we wszystkich tabelach Room; przełączanie
+  przy logowaniu; logout wraca do danych gościa.
+- **Migracja gość→konto**: dialog (jak w oryginalnej apce) — "Przenieś na konto" (KOPIA,
+  dane gościa zostają), "Zacznij od nowa" (seed na koncie), anuluj (wyloguj). NIE jest to
+  migracja starych użytkowników webowych — to UX dla nowego użytkownika lokalnego.
+- Pola `contentUpdatedAt`, `srsUpdatedAt` (Card) i `updatedAt` (Deck, StudyMode) są
+  stemplowane poprawnie w operacjach (metadane do rozstrzygania konfliktów w merge).
+- Kolejka zapisów do chmury: SyncScheduler (debounce 1200 ms latest-wins single-in-flight
+  + retry; w study próg 10 ocen + flush na granicy sesji; immediate+await dla importów/
+  usunięć; flush na zejściu w tło).
 
 ### D3. Zachowanie logiki = IDENTYCZNE ze starą apką
 SRS (FSRS), dopasowanie mowy, silnik sesji nauki, normalizacja danych, import CSV,
@@ -119,10 +122,9 @@ funkcje; każdy pominięty test wymieniasz w raporcie z powodem).
   lokalna data `yyyy-MM-dd`; id = UUID v4 string (`UUID.randomUUID().toString()`).
 
 ### D6. Celowo POMINIĘTE w v1 (nie implementuj; nie dodawaj "przy okazji")
-Chmura/konta/sync (→ Faza 2, sekcja 14); warstwa web; rail/tablety/landscape;
-OTA updates; WorkManager; Paging 3; Encrypted DataStore; App Shortcuts; Android Auto;
-shared element transitions; changelog/update-notification; rejestracja kont;
-jakiekolwiek tombstony i pola `deletedAt`.
+Warstwa web; rail/tablety/landscape; OTA updates; WorkManager (sync = await+rollback);
+Paging 3; Encrypted DataStore; App Shortcuts; Android Auto; shared element transitions;
+changelog/update-notification; rejestracja kont (jest tylko Google sign-in).
 
 ---------------------------------------------------------------------------------------
 ## 2. CZYM JEST TA APLIKACJA — SPEC PRODUKTU
@@ -310,7 +312,7 @@ rozwinięte kroki aktywnego trybu, przefiltrowane z kroków wskazujących strony
 ---------------------------------------------------------------------------------------
 
 Wszystkie klasy w `domain/model`. Serializacja kotlinx.serialization. Timestampy Long
-(epoch millis). BEZ pól `deletedAt` (decyzja D2 — twarde usuwanie).
+(epoch millis). Z polami `deletedAt` (tombstony — miękkie usuwanie, D2).
 
 ### 4.1 SrsState
 | pole | typ | zakres/uwagi |
@@ -332,6 +334,7 @@ Nowa fiszka: difficulty=5.0, stability=0.0, repetitions=0, state=0, oba timestam
 | srsState | SrsState | w Room płaskie kolumny |
 | contentUpdatedAt | Long | stempel edycji treści (D2: zostaje pod Fazę 2) |
 | srsUpdatedAt | Long | stempel ostatniej oceny |
+| deletedAt | Long? | null = żywa; >0 = usunięta (tombstone) |
 
 ### 4.3 Deck
 | pole | typ | uwagi |
@@ -347,6 +350,7 @@ Nowa fiszka: difficulty=5.0, stability=0.0, repetitions=0, state=0, oba timestam
 | activePageCount | Int | 2..min(5, storedPageCount) |
 | updatedAt | Long | stemplowane przy każdej zmianie talii |
 | archivedAt | Long? | null = aktywna; >0 = w archiwum |
+| deletedAt | Long? | null = żywa; >0 = usunięta (tombstone) |
 
 ### 4.4 StudyMode
 | pole | typ | uwagi |
@@ -357,6 +361,7 @@ Nowa fiszka: difficulty=5.0, stability=0.0, repetitions=0, state=0, oba timestam
 | isBuiltIn | Boolean | true tylko z poprawnym builtInSourceId |
 | builtInSourceId | String? | 'classic' / 'listen-speak' |
 | updatedAt | Long | |
+| deletedAt | Long? | null = żywy; >0 = usunięty (tombstone) |
 
 ### 4.5 ModeStep — sealed interface (JSON: dyskryminator `type`)
 KROKI ATOMOWE (17) — parametry w nawiasach:
@@ -389,7 +394,7 @@ Backup JSON = dokładnie ta struktura (pretty print). Import backupu: parse → 
 → validate → transakcyjne zastąpienie całego stanu.
 
 ### 4.7 Niezmienniki normalizacji (DataNormalizer — wywoływana na granicach:
-import backupu, seed, odczyt uszkodzonych rekordów)
+import backupu, seed, odczyt uszkodzonych rekordów, merge)
 - `storedPageCount` = max(pageNames.size, pageLanguages.size, max stron w kartach,
   MIN_PAGE_COUNT), cap MAX_STORED_PAGE_COUNT.
 - pageNames/pageLanguages dopełniane do storedPageCount wartościami "Page N" / "en-US".
@@ -400,6 +405,7 @@ import backupu, seed, odczyt uszkodzonych rekordów)
   kroków (sekcja 6.4); `condition` spoza {correct,wrong} usuwany; compound params
   normalizowane z defaultami gałęzi; `steps` nie-lista → pusta lista.
 - isBuiltIn=true wymaga builtInSourceId ze zbioru seedów; inaczej isBuiltIn=false.
+- deletedAt: zachowywany gdy != null (tombstone).
 - heatmapa: wpisy z nie-skończoną/ujemną liczbą odrzucane.
 
 ### 4.8 Walidacja backupu (BackupValidator — twarde błędy, import odrzucony)
@@ -503,6 +509,26 @@ Kategoria karty: state 0→new; 1|3→learning; 2→ (reps>=3 ? mastered : revie
 - mapMatchToRating(percent, threshold?):
   z progiem: percent<t → 1; easyT = (t>=100 ? 100 : t + ceil((100−t)/2));
   percent>=easyT → 4; inaczej 3. Bez progu: >=85→4, >=60→3, >=40→2, inaczej 1.
+
+### 6.3a Merge (MergeEngine — port 1:1 z `TensorDeck/src/store/selectors/merge.ts`)
+`mergeUserData(local: StoreData, cloud: StoreData, now: Long): StoreData`
+- Karty: SRS never-regress (więcej repetitions wygrywa; remis → nowszy srsUpdatedAt,
+  remis → strona chmury). Treść po contentUpdatedAt (remis → strona wygrywająca SRS).
+  Tombstony: `latestDelete` = max(deletedAt lokalny, deletedAt chmura); "żywy" gdy
+  edycja PO usunięciu (wskrzeszenie czyści deletedAt — także dla rekordu obecnego
+  tylko po jednej stronie!).
+- Talie: winner po updatedAt (remis → strona z żywymi kartami); karty zawsze mergowane;
+  updatedAt wyniku = max; tombstony jak wyżej; archivedAt = max.
+- Tryby: wbudowane (builtInSourceId w seedach) wskrzeszane mimo tombstona; custom
+  mergowane jak talie (updatedAt, tombstony).
+- Heatmapa: max per dzień.
+- Wynik = merge + normalizeStoreData.
+
+### 6.3b MigrationRules (port z `useStoreBootstrap.ts`)
+- `shouldTriggerMigration(hasUserLocalCache, guestHasData)`: true gdy użytkownik ma
+  konto i gość ma dane.
+- `getGuestHasData(groups, heatmap, modes)`: true gdy groups>0 LUB heatmapa>0 LUB
+  istnieje user-authored mode (custom albo wbudowany ze zmienioną nazwą/krokami).
 
 ### 6.4 Kroki trybów — rejestr, walidacja, szablony, ekspansja compound
 REJESTR (typ → kategoria → pola z clampami):
@@ -692,8 +718,11 @@ app/src/main/java/com/raycoll/app/
 │   │                              # ModeStep (sealed), CompoundParams, enums, stałe
 │   ├── srs/                       # SrsEngine (FSRS), SpeechMatcher, CardCategory
 │   ├── normalize/                 # DataNormalizer, BackupValidator
+│   ├── merge/                     # MergeEngine, MigrationRules
 │   ├── operations/                # czyste funkcje-akcje: CardOperations,
 │   │                              # GroupOperations, StudyModeOperations
+│   │                              # (zachowuje tombstony w updateGroup;
+│   │                              # delete = miękkie (deletedAt))
 │   ├── selectors/                 # DueCards, CardStats, Streak, VisiblePages,
 │   │                              # BrowseFilter, ArchiveCountdown, SessionProgress
 │   ├── steps/                     # StepRegistry, CompoundExpander,
@@ -705,12 +734,17 @@ app/src/main/java/com/raycoll/app/
 │   │                              # LanguageDetector, ImportPayloadValidator
 │   └── seed/                      # SeedData (2 talie + 2 tryby)
 ├── data/
-│   ├── local/db/                  # RayCollDatabase, encje, DAO, konwertery JSON
+│   ├── local/db/                  # RayCollDatabase, encje (z namespace!), DAO,
+│   │                              # konwertery JSON
 │   ├── local/mappers/             # encja <-> model domenowy
 │   ├── local/prefs/               # UserPreferencesRepository (DataStore)
-│   └── repo/                      # DeckRepository, StudyModeRepository,
-│                                  # ActivityRepository, BackupRepository,
-│                                  # ArchivePurger — transakcje wołające operations
+│   ├── remote/auth/               # AuthRepository (Credential Manager + Firebase)
+│   ├── remote/firestore/          # FirestoreSchema (toMap/fromMap), FirestoreDataSource
+│   ├── repo/                      # DeckRepository, StudyModeRepository,
+│   │                              # ActivityRepository, BackupRepository,
+│   │                              # ArchivePurger, NamespaceManager
+│   └── sync/                      # SyncEngine, SyncScheduler, BootstrapLoader,
+│                                  # MigrationController, SyncStatus
 ├── playback/                      # TtsPlayer, SttRecognizer, akumulator+timery STT,
 │                                  # FeedbackSoundPlayer, Haptics, AudioFocusManager,
 │                                  # StudySessionHolder, StudySessionService (Media3),
@@ -747,10 +781,17 @@ Reguły architektury:
 | `types/models.ts` | `domain/model/*` (BEZ pól deletedAt) |
 | `srs/srsEngine.ts` | `domain/srs/*` |
 | `store/storeDataNormalization.ts` | `domain/normalize/DataNormalizer.kt` |
+| `store/selectors/merge.ts` | `domain/merge/MergeEngine.kt` |
+| `store/useStoreBootstrap.ts` (reguły migracji) | `domain/merge/MigrationRules.kt` |
 | `utils/backupValidation.ts` | `domain/normalize/BackupValidator.kt` |
-| `store/actions/{card,group,studyMode}Actions.ts` | `domain/operations/*` (delete = twarde usunięcie; bez zachowywania tombstonów w updateGroup) |
+| `store/actions/{card,group,studyMode}Actions.ts` | `domain/operations/*` (delete = miękkie usunięcie; updateGroup zachowuje tombstoned karty) |
 | `store/selectors/{cardSelectors,stats,pages}.ts` | `domain/selectors/*` |
-| `store/selectors/liveSelectors.ts` | zapytania DAO (bez deletedAt — trywialne) |
+| `store/selectors/liveSelectors.ts` | zapytania DAO (z filtrowaniem deletedAt IS NULL) |
+| `store/persistence/{firestoreSchema,firestorePersistence,firebasePersistence}.ts` | `data/remote/firestore/*` + `data/sync/SyncEngine.kt` |
+| `store/persistence/persistenceQueue.ts` | `data/sync/SyncScheduler.kt` |
+| `store/{useStoreBootstrap,useStorePersistence}.ts` | `data/sync/{BootstrapLoader,SyncScheduler}.kt` |
+| `store/useAuthActions.ts` | `data/remote/auth/AuthRepository.kt` + `data/sync/MigrationController.kt` |
+| `store/rollbackHelper.ts` | `data/repo/BackupRepository.kt` + `data/sync` (rollback importów) |
 | `features/browse/browseFilter.ts` | `domain/selectors/BrowseFilter.kt` |
 | `features/archive/archiveCountdown.ts` | `domain/selectors/ArchiveCountdown.kt` |
 | `features/study/session/sessionProgress.ts` | `domain/selectors/SessionProgress.kt` |
@@ -759,19 +800,21 @@ Reguły architektury:
 | `import/*` | `domain/imports/*` |
 | `store/seed/*` | `domain/seed/SeedData.kt` |
 | `constants/*` | stałe przy typach w `domain/model` (sekcja 5) |
-| `store/persistence/localPersistence.ts` + persistenceQueue (lokalnie) | Room — mechanizm ZNIKA (transakcje) |
-| `store/persistence/{firestoreSchema,firestorePersistence,firebasePersistence}.ts` | NIE portujemy (D2) — notatka w sekcji 14 |
-| `store/persistence/persistenceQueue.ts` (chmura) | NIE portujemy (D2) |
-| `store/selectors/merge.ts` + tombstones | NIE portujemy (D2) — semantyka spisana w sekcji 14 |
-| `store/{useStoreBootstrap,useStorePersistence,useAuthActions}.ts` | NIE portujemy (bootstrap = otwarcie Room + seed-on-empty; auth nie istnieje) |
-| `store/rollbackHelper.ts` | NIE portujemy (transakcje Room dają atomowość) |
+| `store/persistence/localPersistence.ts` + persistenceQueue (lokalnie) | Room — mechanizm ZNIKA (transakcje); kolejka zostaje TYLKO dla chmury (SyncScheduler) |
+| `store/persistence/{firestoreSchema,firestorePersistence,firebasePersistence}.ts` | `data/remote/firestore/*` + `data/sync/SyncEngine.kt` |
+| `store/persistence/persistenceQueue.ts` (chmura) | `data/sync/SyncScheduler.kt` |
+| `store/selectors/merge.ts` + tombstones | `domain/merge/MergeEngine.kt` (portujemy — D2 v4) |
+| `store/{useStoreBootstrap,useStorePersistence,useAuthActions}.ts` | `data/sync/{BootstrapLoader,SyncScheduler}.kt` + `data/remote/auth/AuthRepository.kt` |
+| `store/rollbackHelper.ts` | `data/repo/BackupRepository.kt` + `data/sync` (rollbacki importów) |
 | `store/useArchivePurger.ts` | `data/repo/ArchivePurger.kt` (twarde delete) |
 | `services/ttsService.ts` | `playback/TtsPlayer.kt` |
 | `services/stt*.ts` | `playback/SttRecognizer.kt` + czyste klasy akumulatora/timerów |
 | `services/{audioFeedback,hapticFeedback}.ts` | `playback/{FeedbackSoundPlayer,Haptics}.kt` |
 | `services/mediaSession.native.ts` + registerPlaybackService | `playback/StudySessionService.kt` (Media3) |
-| `services/{firebase,firebaseClient,googleNativeAuth,secureAuthPersistence}.ts` | NIE portujemy (D2) |
+| `services/{firebase,firebaseClient,googleNativeAuth,secureAuthPersistence}.ts` | `data/remote/auth/AuthRepository.kt` + `di/FirebaseModule.kt` |
 | `services/updateNotification.ts` | NIE portujemy (D6) |
+| `components/dialogs/MigrationDialog.tsx` | `ui/components/MigrationDialog.kt` |
+| `components/feedback/SyncStatusBanner.tsx` | `ui/components/SyncStatusBanner.kt` |
 | `contexts/UserPreferencesContext.tsx` + `storage/uiPreferences.ts` | `data/local/prefs/UserPreferencesRepository.kt` (bez railExpanded) |
 | `features/study/hooks/useStudySession.ts` | `ui/study/StudyViewModel.kt` |
 | `features/study/hooks/useStudyCardGestures.ts` | gesty w `ui/study/StudyCard.kt` + logika tap/hold w silniku |
@@ -965,45 +1008,63 @@ CardCategory}.kt`, `domain/normalize/{DataNormalizer,BackupValidator}.kt`,
 
 ---
 
-### T3 — Domain: operacje + selektory + import
+### T3 — Domain: merge + operacje + selektory + import
 
-**Cel:** czyste akcje domenowe (twarde usuwanie!), selektory, parser importu.
-**Czytaj:** sekcje 5, 6.2, 6.7; referencje: `src/store/actions/*.ts` + testy,
-`src/store/selectors/{cardSelectors,stats,pages}.ts` + testy,
-`src/features/browse/browseFilter.ts` + test, `src/features/archive/
+**Cel:** logika scalania danych, czyste akcje domenowe (z tombstonami!), selektory, parser importu.
+**Czytaj:** sekcje 5, 6.2, 6.3a, 6.3b, 6.7; referencje: `src/store/selectors/merge.ts`
++ `__tests__/{merge,tombstones,migrationLogic}.test.ts`, `src/store/useStoreBootstrap.ts`
+(linie z `shouldTriggerMigration`/`getGuestHasData`/`isUserAuthoredMode`),
+`src/store/actions/*.ts` + testy, `src/store/selectors/{cardSelectors,stats,pages}.ts`
++ testy, `src/features/browse/browseFilter.ts` + test, `src/features/archive/
 archiveCountdown.ts` + test, `src/features/study/session/sessionProgress.ts`,
 `src/import/*.ts` + `__tests__/{importParser,importDeck}.test.ts`.
 
-**Pliki:** `domain/operations/{CardOperations,GroupOperations,StudyModeOperations}.kt`,
+**Pliki:** `domain/merge/{MergeEngine,MigrationRules}.kt`,
+`domain/operations/{CardOperations,GroupOperations,StudyModeOperations}.kt`,
 `domain/selectors/*`, `domain/imports/*` + testy.
 
 **Checklista DoD:**
+- [ ] MergeEngine wg sekcji 6.3a — semantyki bez odstępstw: SRS never-regress (więcej
+      repetitions wygrywa; remis → nowszy srsUpdatedAt, remis → strona chmury);
+      content po contentUpdatedAt (remis → strona wygrywająca SRS); tombstony:
+      `latestDelete` = max, "żywy" gdy edycja PO usunięciu (wskrzeszenie czyści
+      deletedAt — także dla rekordu obecnego tylko po jednej stronie!); grupy: winner
+      po updatedAt, karty zawsze mergowane, updatedAt wyniku = max; tryby: wbudowane
+      (builtInSourceId w seedach) wskrzeszane mimo tombstona; heatmapa: max per dzień;
+      `mergeUserData` = merge + normalizeStoreData.
+- [ ] MigrationRules wg sekcji 6.3b — `shouldTriggerMigration(hasUserLocalCache,
+      guestHasData)`, `getGuestHasData` (grupy>0 LUB heatmapa>0 LUB istnieje
+      user-authored mode: custom albo wbudowany ze zmienioną nazwą/krokami — porównanie
+      kroków bez id), `isUserAuthoredMode`.
 - [ ] Operations (czyste funkcje `(stan, argumenty, now) → nowy stan`):
       addCard (nowa karta: contentUpdatedAt=now, srsUpdatedAt=0, świeży SrsState),
       updateCard (stempluje contentUpdatedAt; NIE dotyka srsState),
-      **deleteCard = twarde usunięcie z listy**, addGroup/addGroupWithCards
-      (activeModeId='classic', defaulty filtrów, activePageCount z clampem),
-      updateGroup (stempluje updatedAt; bez żadnej magii tombstonów),
-      **deleteGroup = twarde usunięcie talii**, archiveGroup (archivedAt=now,
+      **deleteCard = miękkie usunięcie (deletedAt=now)**,
+      addGroup/addGroupWithCards (activeModeId='classic', defaulty filtrów,
+      activePageCount z clampem), updateGroup (stempluje updatedAt; ZACHOWUJE
+      tombstoned karty nieobecne w edycji), **deleteGroup = miękkie usunięcie
+      (deletedAt=now, czyści archivedAt)**, archiveGroup (archivedAt=now,
       updatedAt=now), restoreGroup (archivedAt=null), purgeExpiredArchives
-      (archivedAt>0 && now−archivedAt>=14 dni → **usuń talię**; zwraca changed),
-      setVisiblePageCount (clamp 2..5 + padding metadanych; treści ukrytych stron
-      NIETKNIĘTE), setStudyFilter/setCardOrder/setActiveStudyMode (stemplują
-      updatedAt), movePage (zamiana names+langs+zawartości stron wszystkich kart),
-      reviewCard (FSRS od aktualnego stanu karty + heatmapa[dziś]+1 — ATOMOWO,
-      zwraca todayKey), reviewCardAgain (FSRS od PODANEGO bazowego SrsState,
-      heatmapa BEZ zmian), recordActivity, addStudyMode/updateStudyMode
-      (normalizacja + updatedAt=now), **deleteStudyMode = twarde usunięcie**,
+      (archivedAt>0 && deletedAt==null && now−archivedAt>=14 dni → deletedAt=now,
+      zwraca changed), setVisiblePageCount (clamp 2..5 + padding metadanych; treści
+      ukrytych stron NIETKNIĘTE), setStudyFilter/setCardOrder/setActiveStudyMode
+      (stemplują updatedAt), movePage (zamiana names+langs+zawartości stron wszystkich
+      kart), reviewCard (FSRS od aktualnego stanu karty + heatmapa[dziś]+1 — ATOMOWO,
+      zwraca todayKey), reviewCardAgain (FSRS od PODANEGO bazowego SrsState, heatmapa
+      BEZ zmian), recordActivity, addStudyMode/updateStudyMode (normalizacja +
+      updatedAt=now), **deleteStudyMode = miękkie usunięcie (deletedAt=now)**,
       resetStudyMode (wbudowany → kroki+nazwa z seeda, id zachowane).
 - [ ] Selektory wg sekcji 6.2 (filtry, kolejności z tie-breakerami, progres,
       statystyki, streak z regułą "dziś nie zeruje", widoczne strony, browse filter,
       archive countdown, session progress — kategorie ze ŚWIEŻYCH kart talii po id).
+      `selectActiveGroups`/`selectArchivedGroups` (sort po archivedAt desc; żywe karty
+      = deletedAt==null).
 - [ ] Import wg sekcji 6.7 — parser (quotes/multi-char sep/BOM/CRLF), detekcje
       z dokładnymi wagami scoringu, walidator payloadu z tymi samymi komunikatami.
-- [ ] Testy: port plików z mapy w sekcji 8 (actions — asercje tombstonów zamienione
-      na twarde usunięcie, każdą zamianę wypisz; selektory, browseFilter,
+- [ ] Testy: port CAŁYCH plików z mapy w sekcji 8 (merge, tombstones, migrationLogic,
+      actions — asercje tombstonów jako miękkie usuwanie, selektory, browseFilter,
       archiveCountdown, importParser, importDeck — w CAŁOŚCI).
-**NIE WOLNO:** żadnego IO; żadnych tombstonów; zmiany reguł tie-breaków.
+**NIE WOLNO:** żadnego IO; zmiany reguł tie-breaków w merge; używania hard delete.
 
 ---
 
@@ -1058,48 +1119,60 @@ używać czegokolwiek z Androida.
 
 ---
 
-### T5 — Data: Room + repozytoria + purger + backup
+### T5 — Data: Room + repozytoria + namespace + purger + backup
 
-**Cel:** Room jako źródło prawdy; repozytoria = operations w transakcjach.
+**Cel:** Room jako źródło prawdy; repozytoria = operations w transakcjach; namespace.
 **Czytaj:** sekcje 4, 5, 6.2; referencje: `src/store/useStoreActions.ts` (semantyka
 akcji), `src/store/useArchivePurger.ts`, `src/features/settings/deckPageReorder.ts`
-+ test, testy zachowań: `src/store/__tests__/{useStoreActionsCore,backupImport}.test.*`.
++ test, `src/constants/storageKeys.ts` (RÓWNOWAŻNIK przestrzeni: guest vs user),
+testy zachowań: `src/store/__tests__/{useStoreActionsCore,backupImport}.test.*`.
 
 **Pliki:** `data/local/db/{RayCollDatabase,DeckEntity,CardEntity,StudyModeEntity,
 ActivityDayEntity,DeckDao,CardDao,StudyModeDao,ActivityDao,Converters}.kt`,
 `data/local/mappers/*`, `data/repo/{DeckRepository,StudyModeRepository,
-ActivityRepository,BackupRepository,ArchivePurger}.kt`, `di/DatabaseModule.kt` + testy.
+ActivityRepository,BackupRepository,ArchivePurger,NamespaceManager}.kt`,
+`di/DatabaseModule.kt` + testy.
 
 **Checklista DoD:**
 - [ ] Room w version catalog + KSP. Schemat = WERSJA 1, zero klas Migration;
-      `exportSchema=true` (schemas/ w repo).
-- [ ] Encje: DeckEntity (PK id; pola sekcji 4.3 bez cards; pageNames/pageLanguages
-      jako JSON), CardEntity (PK id; FK deckId z ON DELETE CASCADE + index; pages
-      JSON; SrsState płasko), StudyModeEntity (steps JSON), ActivityDayEntity
-      (PK dayKey; count). Konwertery kotlinx.serialization — TEN SAM format co
-      backup (round-trip test).
-- [ ] DAO (Flow): activeDecks (archivedAt IS NULL, kolejność wstawienia — rowid),
-      archivedDecks (archivedAt DESC), deckWithCards, modes, heatmap; wszystkie
-      mutacje zbiorcze @Transaction.
+      `exportSchema=true` (schemas/ w repo); `fallbackToDestructiveMigration()`.
+- [ ] Encje: WSZYSTKIE z kolumną `namespace` (''=gość, uid=konto) w PRIMARY KEY
+      (namespace, id); CardEntity (PK id; FK (namespace, deckId) z ON DELETE CASCADE
+      + index; pages JSON; SrsState płasko; deletedAt nullable), DeckEntity (PK id;
+      pageNames/pageLanguages jako JSON; deletedAt/archivedAt nullable),
+      StudyModeEntity (steps JSON; deletedAt nullable), ActivityDayEntity
+      (PK (namespace, dayKey); count). Konwertery kotlinx.serialization — TEN SAM
+      format co backup (round-trip test).
+- [ ] DAO (Flow): activeDecks (deletedAt IS NULL AND archivedAt IS NULL, kolejność
+      wstawienia — rowid, filtrowane po namespace), archivedDecks (deletedAt IS NULL
+      AND archivedAt IS NOT NULL, sort archivedAt DESC), deckWithCards (żywe karty:
+      deletedAt IS NULL), modes (żywe), heatmap; wszystkie zapytania filtrowane po
+      namespace; operacje zbiorcze @Transaction.
+- [ ] NamespaceManager: aktywny namespace jako StateFlow ('' na start; uid po
+      zalogowaniu); przełączenie NIE kasuje danych drugiej przestrzeni;
+      `copyGuestToUser(uid)` = transakcyjna KOPIA (dane gościa ZOSTAJĄ);
+      `replaceNamespaceData(ns, snapshot)` transakcyjnie.
 - [ ] Repozytoria: każda metoda = domain/operations + zapis W TRANSAKCJI;
-      reviewCard/reviewCardAgain ATOMOWO karta+heatmapa; deleteDeck kaskadowo;
-      movePage transakcyjnie (wszystkie karty); resetStudyMode; seed-on-empty
-      (pierwsze otwarcie pustej bazy → seed przez normalizeStoreData);
-      getSnapshot()/replaceAll(snapshot) dla backupu/resetu.
-- [ ] BackupRepository: exportJson() = StoreSnapshot pretty print (żywe = wszystkie;
-      nie ma tombstonów); importJson(text): parse → normalize → validate →
-      transakcyjne zastąpienie CAŁEGO stanu; błąd → wyjątek z kluczem
-      `app_settings.import_error`, stan NIETKNIĘTY (transakcja). Reset fabryczny =
-      replaceAll(seed).
+      reviewCard/reviewCardAgain ATOMOWO karta+heatmapa; deleteDeck = miękkie
+      (deletedAt); updateDeck zachowuje tombstoned karty; movePage transakcyjnie
+      (wszystkie karty); resetStudyMode; seed-on-empty (pierwsze otwarcie pustego
+      namespace → seed przez normalizeStoreData); getSnapshot(ns)/replaceAll(ns,
+      snapshot) dla backupu/syncu/resetu.
+- [ ] BackupRepository: exportJson() = StoreSnapshot pretty print (żywe = deletedAt
+      IS NULL; nie ma hardcoded exclusion); importJson(text): parse → normalize →
+      validate → transakcyjne zastąpienie CAŁEGO stanu + zwrot poprzedniego snapshotu
+      (dla rollbacku cloud w T10); błąd → wyjątek z kluczem `app_settings.import_error`,
+      stan NIETKNIĘTY (transakcja). Reset fabryczny = replaceAll(seed).
 - [ ] ArchivePurger: purge(now) przy starcie + co 60 min (wpięcie w T7 przez
       ProcessLifecycle — tu sama logika + test).
 - [ ] Testy (Robolectric, in-memory): DAO round-trip (w tym JSON kroków compound!),
-      kaskada delete, atomowość reviewCard (symulowany błąd → rollback), seed-on-empty
-      (dokładnie raz), backup export→import→stan identyczny, import błędnego JSON →
-      stan nietknięty, purger 14 dni (fake Clock), movePage (port deckPageReorder.test),
-      zachowania z useStoreActionsCore.test (część store'owa).
+      namespace izolacja, kopiowanie gość→konto, kaskada delete, atomowość reviewCard
+      (symulowany błąd → rollback), seed-on-empty (dokładnie raz), backup export→
+      import→stan identyczny, import błędnego JSON → stan nietknięty, purger 14 dni
+      (fake Clock), movePage (port deckPageReorder.test), zachowania z
+      useStoreActionsCore.test (część store'owa).
 **NIE WOLNO:** zapisu poza transakcją tam, gdzie operacja jest wielotabelowa;
-zmiany nazw pól JSON ustalonych w T2; migracji Room.
+zmiany nazw pól JSON ustalonych w T2; migracji Room; kasowania danych gościa.
 
 ---
 
@@ -1271,29 +1344,86 @@ trybu; hardkodowania tokenów i języków.
 
 ---
 
-### T10 — Polish + release: regresja, Auto Backup, R8, podpis
+### T10 — Sync Firestore: schema + silnik + auth + bootstrap + migracja (+ polish)
 
-**Cel:** apka gotowa do wydania; wszystko z sekcji 12 przechodzi.
-**Czytaj:** sekcje 3 (całość), 12; referencje: `TensorDeck/docs/REGRESSION.md`
-(sekcje nie-sync/nie-web jako inspiracja).
+**Cel:** pełny sync z chmurą — parytet ze starą apką + polish release. PREREQUISITE:
+użytkownik dostarcza `google-services.json` do `app/`.
+**Czytaj:** sekcje 3 (całość), 12; referencje: `src/store/persistence/{firestoreSchema,
+firestorePersistence,firebasePersistence,persistenceQueue}.ts` + `__tests__/{firestoreSchema,
+firebasePersistence,persistenceQueue}.test.ts`, `src/store/{useStoreBootstrap,
+useStorePersistence,useAuthActions}.ts` + `__tests__/{useStoreBootstrap,useStorePersistence}.
+test.tsx`, `src/services/{firebase,firebaseClient,googleNativeAuth.native}.ts`,
+`src/components/dialogs/MigrationDialog.tsx`, `src/components/feedback/SyncStatusBanner.tsx`,
+`src/constants/app.ts` (PRÓG=10, DEBOUNCE=1200), `firestore.rules` (informacyjnie),
+`TensorDeck/docs/REGRESSION.md`.
+
+**Pliki:** `di/FirebaseModule.kt`, `data/remote/firestore/{FirestoreSchema,
+FirestoreDataSource}.kt`, `data/remote/auth/AuthRepository.kt`,
+`data/sync/{SyncEngine,SyncScheduler,BootstrapLoader,MigrationController,SyncStatus}.kt`,
+`ui/components/SyncStatusBanner.kt`, `ui/appsettings/AccountSection.kt`,
+`ui/components/MigrationDialog.kt` + testy. Dozwolone MINIMALNE podpięcia w istniejących
+plikach: `data/repo/*` (oznaczanie zapisów trybem cloud: study/debounced/immediate),
+`playback/StudySessionHolder` (subskrypcja granic sesji), `ui/appsettings` (sekcja konta
+zastępuje placeholder z T9), `AndroidManifest.xml` (Firebase).
 
 **Checklista DoD:**
-- [ ] Pełne przejście checklisty z sekcji 12 na urządzeniu/emulatorze — wynik
-      punkt po punkcie w raporcie (każdy punkt: PASS/FAIL+fix/N/A z powodem).
-- [ ] Audyt predictive back na 9 ekranach (w tym exit-confirm w Study i dialogi).
-- [ ] Weryfikacja Auto Backup: `adb shell bmgr backupnow com.raycoll.app` →
-      odinstalowanie → instalacja → dane wróciły (opisz procedurę i wynik).
-- [ ] Release build: minify+R8 z regułami dla Room/kotlinx-serialization/Media3;
-      `assembleRelease` zielony; apka z release APK uruchamia się i przechodzi
-      smoke (dashboard→study→ocena→stats).
-- [ ] Konfiguracja podpisu: signingConfig czytający keystore z properties
-      (bez sekretów w repo); instrukcja generowania keystore w README sekcja Release.
-- [ ] Ikona, splash, nazwa, wersja (versionName 1.0.0, versionCode 1) — spójne.
-- [ ] Wydajność: talia 500 kart — browse scrolluje płynnie, wejście w study < 1 s
-      (jeśli nie: napraw, opisz co).
+- [ ] FirestoreSchema: ścieżki DOKŁADNIE `users/{uid}`, `users/{uid}/decks/{deckId}`,
+      `users/{uid}/decks/{deckId}/cards/{cardId}`, `users/{uid}/studyModes/{modeId}`,
+      `users/{uid}/activity/{yyyy-MM-dd}`; serializacja/deserializacja map z polami
+      i walidacją JAK `firestoreSchema.ts` (strict: brakujące/np. nie-finite pole →
+      błąd; opcjonalne deletedAt/archivedAt tylko gdy liczba); corrupt dokument przy
+      loadzie → skip z warn, NIE wywala całości; batch write limit 400 operacji;
+      root `updatedAt` = serverTimestamp; activity doc = `{count, updatedAt}`.
+- [ ] SyncEngine: cache snapshotu chmury per uid (in-memory); pierwsza synchronizacja
+      = pełny `saveUserData` (z czyszczeniem osieroconych kart/talii/trybów/dni jak
+      stary kod); kolejne = diff per dokument (deck bez kart porównywany osobno od
+      kart!); cache aktualizowany TYLKO po pełnym sukcesie; `clearCache(uid?)` na
+      sign-out i porzucenie migracji; `loadCloudData` → normalize+validate+cache.
+- [ ] SyncScheduler — polityka 1:1: local (Room) zapisuje się zawsze natychmiast
+      (to już jest); cloud: debounced 1200 ms (latest-wins, single-in-flight, retry
+      zatrzymanego snapshotu przy kolejnym flushu); tryb study: licznik ocen, flush
+      co 10; immediate + await dla: importDeck, importState(backup), deleteDeck,
+      archive/restore, signOut; flush na ProcessLifecycle onStop ORAZ na granicy
+      sesji study (finished/exited z StudySessionHolder — regresja: sesja 12 ocen
+      = max 2 zapisy cloud: 1× po 10 ocenach + 1× na wyjściu/zakończeniu); statusy
+      idle→saving→syncing→idle / error + lastSyncError czyszczony po udanym syncu;
+      brak zalogowania → cloud no-op (local-only działa BEZ google-services —
+      inicjalizacja Firebase odporna na brak konfiga).
+- [ ] AuthRepository: Credential Manager (Google ID token) → Firebase Auth;
+      authState Flow; signOut = flush (best-effort) → wyloguj → clearCache →
+      namespace ''; błędy logowania mapowane na klucze `auth.error.*`.
+- [ ] BootstrapLoader (przy starcie i przy każdej zmianie usera): zalogowany →
+      równolegle lokalny snapshot uid-namespace + cloud load z timeoutem 8000 ms;
+      cloud OK → mergeUserData(local, cloud) → applySnapshot → push merged;
+      cloud FAIL → pokaż lokalne, ustaw lastSyncError; cloud FAIL + brak lokalnych
+      → seed TYLKO w pamięci (nie persystować! — ochrona przed duplikatami seedów);
+      cloud NULL (nowe konto) + brak lokalnych uid + gość ma dane
+      (MigrationRules) → dialog migracji.
+- [ ] MigrationController + MigrationDialog (3 opcje jak w oryginalnej apce):
+      "Przenieś na konto" = copyGuestToUser + push (dane gościa zostają lokalnie);
+      "Zacznij od nowa" = seed na koncie + push; zamknięcie/wstecz = wylogowanie +
+      powrót do gościa.
+- [ ] Rollback: importDeck i importState przy zalogowanym → await cloud write;
+      błąd → przywrócenie poprzedniego snapshotu (lokalnie transakcją) + błąd
+      w UI; talia-widmo NIE zostaje na liście.
+- [ ] UI: SyncStatusBanner (błąd syncu z retry), sekcja Konto w app settings
+      (avatar/mail, sign-in/sign-out, błędy logowania), MigrationDialog.
+- [ ] Polish: audyt predictive back na 9 ekranach, ikona statusu syncu, przejście
+      checklisty REGRESSION.md sekcje Persistence/Prompt 9/Prompt 11 — wynik w
+      raporcie punkt po punkcie.
+- [ ] Release build: minify+R8 z regułami dla Room/kotlinx-serialization/Media3/Firebase;
+      `assembleRelease` zielony; apka z release APK uruchamia się i przechodzi smoke.
+- [ ] Konfiguracja podpisu: signingConfig czytający keystore z properties (bez
+      sekretów w repo); instrukcja w README. Ikona, splash, nazwa, wersja (1.0.0 / 1).
+- [ ] Wydajność: talia 500 kart — browse scrolluje płynnie, wejście w study < 1 s.
 - [ ] Finalny grep TODO/FIXME/@Ignore po CAŁYM app/src = pusto.
+- [ ] Testy: port `firestoreSchema.test` (serializacja/deserializacja/strict),
+      `persistenceQueue.test` (latest-wins/single-in-flight/retry — na SyncScheduler),
+      `firebasePersistence.test` (diff-save na fake DataSource), bootstrap
+      (timeout/merge/migracja — fake'i + wirtualny czas), migracja (3 ścieżki).
 - [ ] README.md: jak zbudować, jak uruchomić testy, struktura projektu (1 strona).
-**NIE WOLNO:** wyłączać testów; "naprawiać" regresji przez usuwanie funkcji.
+**NIE WOLNO:** zmieniać ścieżek/pól Firestore; pisać do chmury per ocena w study;
+persystować seedów przy nieudanym cloud load; kasować danych gościa; wyłączać testów.
 
 ---------------------------------------------------------------------------------------
 ## 11. LISTA TODO — TRACKING POSTĘPU
@@ -1306,13 +1436,15 @@ Odhaczaj po zamknięciu (build+testy+raport+diff zweryfikowane przez orkiestrato
       Auto Backup rules; ikony.
 - [ ] **T2 Domain-modele** — modele+serializacja (round-trip); FSRS z testami 1:1;
       SpeechMatcher; DataNormalizer; BackupValidator; SeedData.
-- [ ] **T3 Domain-operacje** — operations (twarde delete) z testami; selektory
-      z testami; import CSV z testami.
+- [ ] **T3 Domain-merge+operacje** — MergeEngine (never-regress, tombstony);
+      operations (soft delete) z testami; MigrationRules; selektory z testami;
+      import CSV z testami.
 - [ ] **T4 SessionEngine** — rejestr/ekspansja/walidacja kroków; reducer; executor
       (17 kroków); silnik (rate/re-rate, prev/next, pauza, hold, peek, gate'y,
       substytucje tła); komplet testów sesji.
-- [ ] **T5 Room** — encje+DAO+konwertery; repozytoria transakcyjne; seed-on-empty;
-      backup export/import; purger; testy Robolectric.
+- [ ] **T5 Room** — encje+DAO+konwertery (z namespace); repozytoria transakcyjne;
+      NamespaceManager (gość↔konto, copyGuestToUser); seed-on-empty; backup
+      export/import; purger; testy Robolectric.
 - [ ] **T6 Playback** — TTS (interrupt≠error, voice check); STT (akumulator,
       timeouty, prefer-offline); interlock; audio focus; dźwięki+haptyka; holder.
 - [ ] **T7 UI-przegląd** — Dashboard; Browse; Stats; Archive; purger wpięty;
@@ -1322,8 +1454,10 @@ Odhaczaj po zamknięciu (build+testy+raport+diff zweryfikowane przez orkiestrato
       manualnego tła.
 - [ ] **T9 UI-konfiguracja** — Deck settings; edytor trybów (oba dialogi);
       Import; App settings z backupem; testy VM.
-- [ ] **T10 Release** — checklista sekcji 12 przechodzi; Auto Backup zweryfikowany;
-      release build z R8; podpis; README.
+- [ ] **T10 Sync+release** — Firestore schema + SyncEngine + SyncScheduler
+      (debounce/próg10/flush) + AuthRepository (Credential Manager) + BootstrapLoader
+      (timeout 8s/merge/migracja) + MigrationController (3 opcje) + rollbacki;
+      SyncStatusBanner; sekcja konta w ustawieniach; R8 release; podpis; README.
 
 ---------------------------------------------------------------------------------------
 ## 12. FINALNA CHECKLISTA REGRESJI MANUALNEJ (akceptacja w T10)
@@ -1434,33 +1568,12 @@ System:
     w VM (nie w item composable).
 
 ---------------------------------------------------------------------------------------
-## 14. FAZA 2 (OPCJONALNA, POZA ZAKRESEM v1): SYNC MIĘDZY URZĄDZENIAMI
+## 14. POZA ZAKRESEM v1 (nie implementować)
 ---------------------------------------------------------------------------------------
 
-Jeśli kiedyś wróci potrzeba kont/syncu — NIE zgaduj, tylko wróć do tej sekcji
-i do starego kodu. Co trzeba będzie dodać:
-
-1. **Tombstony**: pola `deletedAt` na Card/Deck/StudyMode + miękkie usuwanie +
-   filtrowanie "żywych" + reguła wskrzeszenia (edycja PO usunięciu ożywia rekord).
-2. **Merge** (spec: `TensorDeck/src/store/selectors/merge.ts` + testy merge/tombstones):
-   karty — SRS never-regress (więcej repetitions wygrywa; remis → nowszy srsUpdatedAt,
-   remis → strona chmury), treść po contentUpdatedAt; talie — winner po updatedAt,
-   karty zawsze mergowane; tryby — wbudowane wskrzeszane; heatmapa — max per dzień.
-   Pola `*UpdatedAt` już są stemplowane w v1 właśnie po to.
-3. **Izolacja kont**: kolumna `namespace` we wszystkich tabelach (''=gość, uid=konto),
-   przełączanie przy logowaniu, ciche przejęcie danych gościa przy pierwszym
-   logowaniu na świeże konto (kopia, nie move).
-4. **Backend**: Firestore (projekt już istnieje) — schema: `users/{uid}`,
-   `users/{uid}/decks/{deckId}`, `users/{uid}/decks/{deckId}/cards/{cardId}`,
-   `users/{uid}/studyModes/{modeId}`, `users/{uid}/activity/{yyyy-MM-dd}`;
-   `firestore.rules` + indeksy w starym repo. Auth: Credential Manager → Firebase.
-5. **Polityka zapisu do chmury** (spec: `useStorePersistence.ts` + `persistenceQueue.ts`
-   + testy): debounce 1200 ms latest-wins single-in-flight z retry; w study próg
-   10 ocen + flush na granicy sesji; immediate+await dla importów/usunięć (z
-   rollbackiem lokalnym przy błędzie chmury); flush na zejściu w tło; diff-save po
-   cache'owanym snapshocie chmury (spec: `firebasePersistence.ts`); bootstrap
-   z timeoutem 8 s → merge → push; seedy nie-persystowane przy niedostępnej chmurze.
-6. Poprzednia wersja tego planu (z pełnym rozpisaniem syncu na taski) jest w historii
-   gita tego pliku.
+Warstwa web; rail/tablety/landscape; OTA updates; WorkManager; Paging 3;
+Encrypted DataStore; App Shortcuts; Android Auto; shared element transitions;
+changelog/update-notification; rejestracja kont (jest tylko Google sign-in);
+własne backendy poza Firestore.
 
 --- KONIEC PLANU ---

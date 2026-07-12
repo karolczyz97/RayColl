@@ -1,27 +1,30 @@
 package com.raycoll.app.playback
 
-data class SttTranscriptAccumulator(
-    private val segments: MutableList<String> = mutableListOf(),
-    private var interim: String = "",
+data class SttTranscript(val fullText: String, val partialText: String)
+
+class SttTranscriptAccumulator {
+    private val finalSegments = StringBuilder()
+    private var partial = ""
+
+    fun addPartial(text: String) { partial = text }
+    fun addFinal(text: String) {
+        if (finalSegments.isNotEmpty()) finalSegments.append(" ")
+        finalSegments.append(text)
+        partial = ""
+    }
+    fun current(): SttTranscript = SttTranscript(fullText = finalSegments.toString().trim(), partialText = partial)
+    fun clear() { finalSegments.clear(); partial = "" }
+}
+
+class SttSessionTimers(
+    private val softTimeoutMs: Long,
+    private val hardTimeoutMs: Long,
 ) {
-    val fullText: String get() {
-        val base = segments.joinToString(" ")
-        return if (interim.isNotEmpty()) "$base $interim".trim() else base
-    }
+    private var lastResultTime: Long = 0
+    private var startTime: Long = 0
 
-    fun addFinal(segment: String) {
-        if (segment.isNotBlank()) segments.add(segment.trim())
-        interim = ""
-    }
-
-    fun addInterim(text: String) {
-        interim = text
-    }
-
-    fun clear() {
-        segments.clear()
-        interim = ""
-    }
-
-    val isEmpty: Boolean get() = segments.isEmpty() && interim.isBlank()
+    fun start(now: Long) { startTime = now; lastResultTime = now }
+    fun onResult(now: Long) { lastResultTime = now }
+    fun isSoftTimeout(now: Long): Boolean = now - lastResultTime > softTimeoutMs
+    fun isHardTimeout(now: Long): Boolean = now - startTime > hardTimeoutMs
 }

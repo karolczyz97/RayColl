@@ -1,140 +1,193 @@
 package com.raycoll.app.domain.session
 
-import com.raycoll.app.domain.model.*
-import com.raycoll.app.domain.selectors.getDueCards
-import kotlinx.coroutines.*
+import com.raycoll.app.core.Clock
+import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.StudyConstants
+import com.raycoll.app.domain.steps.CompoundExpander
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class SessionEngine(
     private val group: FlashcardGroup,
-    private val allCards: List<Flashcard>,
+    private val steps: List<ModeStep>,
     private val deps: SessionDeps,
+    private val clock: Clock,
+    private val ttsRate: Float,
     private val scope: CoroutineScope,
 ) {
-    private val _state = MutableStateFlow(StudySessionState())
-    val state: StateFlow<StudySessionState> = _state
+    private val _state = MutableStateFlow(SessionState())
+    val state = _state.asStateFlow()
 
-    private val reviewTracker = mutableSetOf<String>()
-    private var cards: List<Flashcard> = allCards
-    private var steps: List<AtomicStep> = emptyList()
-    private var baseSrsStates: Map<String, SrsState> = allCards.associate { it.id to it.srsState }
-    private var stepJob: Job? = null
-    private var lastCardAdvanceTime: Long = 0L
-    val reviews = mutableListOf<ReviewEntry>()
+    private val reviewTracker = ReviewTracker()
+    private var expandedSteps: List<ModeStep> = emptyList()
+    private var cardJobs = mutableMapOf<Int, Job>()
+    private var lastExecutedCardIndex = -1
+    private var holding = MutableStateFlow(false)
 
     init {
-        dispatch(SessionAction.SetHolding(false))
+        expandedSteps = CompoundExpander.expandModeSteps(steps).filter { step ->
+            val pageIndex = com.raycoll.app.domain.steps.StepRegistry.getStepPageIndex(step)
+            pageIndex == null || pageIndex < group.activePageCount
+        }
     }
 
-    fun start(mode: StudyMode, expandedSteps: List<AtomicStep>) {
-        this.steps = expandedSteps
-        cards = getDueCards(allCards, group.studyFilter, group.cardOrder, System.currentTimeMillis())
-        baseSrsStates = cards.associate { it.id to it.srsState }
-        reviewTracker.clear(); reviews.clear()
-        if (cards.isEmpty()) { _state.value = _state.value.copy(status = SessionStatus.Finished); return }
-        _state.value = StudySessionState()
-        lastCardAdvanceTime = System.currentTimeMillis()
-        stepJob = scope.launch { runSteps(buildContext()) }
+    fun start(cards: List<Flashcard>) {
+        reviewTracker.newAttempt()
+        _state.value = sessionReducer(_state.value, SessionAction.SetCards(cards))
+        _state.value = sessionReducer(_state.value, SessionAction.StartSession)
+        if (cards.isEmpty()) {
+            _state.value = sessionReducer(_state.value, SessionAction.FinishSession)
+            return
+        }
+        lastExecutedCardIndex = -1
+        runCurrentCard()
+    }
+
+    private fun runCurrentCard() {
+        val cardIndex = _state.value.currentCardIndex
+        if (cardIndex < 0 || cardIndex >= _state.value.cards.size) return
+        if (cardIndex == lastExecutedCardIndex) return
+        lastExecutedCardIndex = cardIndex
+
+        cardJobs[cardIndex]?.cancel()
+        cardJobs[cardIndex] = scope.launch {
+            val card = _state.value.cards[cardIndex]
+            var stepIndex = 0
+            while (stepIndex < expandedSteps.size) {
+                if (_state.value.status == SessionStatus.FINISHED) break
+                val pending = _state.value.pendingStepIndexToRun
+                if (pending != null) {
+                    _state.value = sessionReducer(_state.value, SessionAction.ConsumePendingStepIndex)
+                    stepIndex = pending
+                    continue
+                }
+                val step = expandedSteps[stepIndex]
+                val executor = StepExecutor(deps, _state, group, ttsRate)
+                executor.executeStep(step, card, stepIndex)
+                if (_state.value.status == SessionStatus.REVEALED) return@launch
+                if (_state.value.interactionGate.kind != InteractionGateKind.NONE) return@launch
+                if (step is com.raycoll.app.domain.model.NextCardStep) {
+                    while (holding.value) { kotlinx.coroutines.delay(50) }
+                    advanceToNextCard()
+                    return@launch
+                }
+                stepIndex++
+            }
+        }
+    }
+
+    fun rate(rating: Int) {
+        if (_state.value.cardReviewed) return
+        val card = _state.value.cards.getOrNull(_state.value.currentCardIndex) ?: return
+        deps.haptic(rating)
+        deps.onCardReviewed(group.id, card.id, rating, null)
+        _state.value = sessionReducer(_state.value, SessionAction.SetCardReviewed)
+        scope.launch { advanceToNextCard() }
+    }
+
+    private suspend fun advanceToNextCard() {
+        val nextIndex = _state.value.currentCardIndex + 1
+        if (nextIndex >= _state.value.cards.size) {
+            _state.value = sessionReducer(_state.value, SessionAction.FinishSession)
+            return
+        }
+        _state.value = sessionReducer(_state.value, SessionAction.AdvanceCard(nextIndex))
+        runCurrentCard()
+    }
+
+    fun skipToNextCard() {
+        cardJobs[_state.value.currentCardIndex]?.cancel()
+        scope.launch { advanceToNextCard() }
+    }
+
+    fun goToPreviousCard() {
+        val cardStart = _state.value.currentCardIndex
+        val now = clock.now()
+        scope.launch {
+            advanceToNextCard()
+        }
     }
 
     fun handleCardPress() {
         val s = _state.value
-        when {
-            s.interactionGate.kind == "tap_to_reveal" -> dispatch(SessionAction.CompleteInteractionGate)
-            s.status == SessionStatus.Speaking -> { stepJob?.cancel(); scope.launch { dispatch(SessionAction.EndSpeaking); runSteps(buildContext()) } }
-            s.status == SessionStatus.Listening -> { stepJob?.cancel(); dispatch(SessionAction.SetLastAnswerResult(LastAnswerResult(AnswerStatus.Skipped))); scope.launch { runSteps(buildContext()) } }
-        }
-    }
-
-    fun handleHoldStart() {
-        val card = cards.getOrNull(_state.value.currentCardIndex) ?: return
-        val nextHidden = (0 until group.activePageCount).firstOrNull { it !in _state.value.revealedPages }
-        if (nextHidden != null) dispatch(SessionAction.PeekSet(nextHidden))
-        dispatch(SessionAction.SetHolding(true))
-    }
-
-    fun handleHoldEnd(waitMs: Long = 0L) {
-        dispatch(SessionAction.SetHolding(false))
-        val peek = _state.value.peekedPageIndex
-        if (peek != null && waitMs < 500) dispatch(SessionAction.RevealNextPageInGate(peek))
-        dispatch(SessionAction.PeekClear)
-    }
-
-    fun rate(rating: Int) {
-        val s = _state.value
-        val card = cards.getOrNull(s.currentCardIndex) ?: return
-        deps.haptic(rating)
-
-        if (card.id in reviewTracker) {
-            val base = baseSrsStates[card.id] ?: card.srsState
-            reviews.add(ReviewEntry(group.id, card.id, rating, true, base))
-        } else {
-            reviews.add(ReviewEntry(group.id, card.id, rating, false, baseSrsStates[card.id] ?: card.srsState))
-            reviewTracker.add(card.id)
-        }
-
-        if (s.currentCardIndex + 1 >= cards.size) {
-            dispatch(SessionAction.FinishSession)
-            return
-        }
-
-        dispatch(SessionAction.AdvanceCard(s.currentCardIndex + 1))
-        lastCardAdvanceTime = System.currentTimeMillis()
-        stepJob?.cancel()
-        stepJob = scope.launch { runSteps(buildContext()) }
-    }
-
-    fun goToPreviousCard() {
-        val now = System.currentTimeMillis()
-        if (now - lastCardAdvanceTime <= 3000 && _state.value.currentCardIndex > 0) {
-            stepJob?.cancel()
-            dispatch(SessionAction.AdvanceCard(_state.value.currentCardIndex - 1))
-            stepJob = scope.launch { runSteps(buildContext()) }
-        } else {
-            stepJob?.cancel()
-            dispatch(SessionAction.AdvanceCard(_state.value.currentCardIndex))
-            _state.value = _state.value.copy(currentStepIndex = 0)
-            stepJob = scope.launch { runSteps(buildContext()) }
-        }
-    }
-
-    fun restart(newCards: List<Flashcard>) {
-        cards = newCards
-        baseSrsStates = cards.associate { it.id to it.srsState }
-        reviewTracker.clear(); reviews.clear()
-        if (cards.isEmpty()) { _state.value = _state.value.copy(status = SessionStatus.Finished); return }
-        _state.value = StudySessionState()
-        stepJob = scope.launch { runSteps(buildContext()) }
-    }
-
-    fun restartFailed() {
-        val failed = cards.filter { it.id in _state.value.failedCardIds }
-        if (failed.isEmpty()) return
-        restart(failed)
-    }
-
-    fun end() { stepJob?.cancel(); dispatch(SessionAction.FinishSession) }
-    fun stop() { stepJob?.cancel() }
-
-    fun dispatch(action: SessionAction) { _state.value = sessionReducer(_state.value, action) }
-
-    private suspend fun runSteps(ctx: SessionContext) {
-        while (_state.value.status != SessionStatus.Finished) {
-            if (_state.value.currentStepIndex >= steps.size) {
-                val next = _state.value.currentCardIndex + 1
-                if (next >= cards.size) { dispatch(SessionAction.FinishSession); break }
-                dispatch(SessionAction.AdvanceCard(next)); continue
+        when (s.status) {
+            SessionStatus.SPEAKING, SessionStatus.IDLE -> {
+                if (s.interactionGate.kind == InteractionGateKind.TAP_TO_REVEAL) {
+                    handleGateTap()
+                } else {
+                    cardJobs[s.currentCardIndex]?.cancel()
+                    scope.launch { advanceToNextCard() }
+                }
             }
-            val pending = _state.value.pendingStepIndexToRun
-            if (pending != null) { dispatch(SessionAction.ConsumePendingStepIndex); dispatch(SessionAction.SetCurrentStep(pending)) }
-            val actions = StepExecutor.executeStep(_state.value, ctx)
-            for (a in actions) {
-                if (a is SessionAction.ShowRatings) { dispatch(a); return }
-                dispatch(a)
+            SessionStatus.LISTENING -> {
+                // Skip STT -> result 'skipped'
+                _state.value = sessionReducer(_state.value, SessionAction.SetLastAnswerResult(
+                    LastAnswerResult(status = AnswerStatus.SKIPPED, text = "")
+                ))
+            }
+            SessionStatus.REVEALED, SessionStatus.FINISHED, SessionStatus.ERROR -> {}
+        }
+    }
+
+    private fun handleGateTap() {
+        val gate = _state.value.interactionGate
+        if (gate.kind != InteractionGateKind.TAP_TO_REVEAL) return
+        val hiddenPages = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
+        when (gate.revealMode) {
+            TapRevealMode.SINGLE -> {
+                if (hiddenPages.isNotEmpty()) {
+                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(hiddenPages.first()))
+                }
+                _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
+                runCurrentCard()
+            }
+            TapRevealMode.REMAINING -> {
+                if (hiddenPages.isNotEmpty()) {
+                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(hiddenPages.first()))
+                    if (hiddenPages.size <= 1) {
+                        _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
+                        runCurrentCard()
+                    }
+                } else {
+                    _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
+                    runCurrentCard()
+                }
+            }
+            TapRevealMode.NONE -> {
+                _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
+                runCurrentCard()
+            }
+            null -> {
+                _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
+                runCurrentCard()
             }
         }
     }
 
-    private fun buildContext() = SessionContext(cards, steps, group, deps, baseSrsStates)
+    fun setHolding(value: Boolean) { holding.value = value }
+
+    fun pause() {
+        holding.value = false
+        cardJobs[_state.value.currentCardIndex]?.cancel()
+    }
+
+    fun resume() {
+        lastExecutedCardIndex = -1
+        runCurrentCard()
+    }
+
+    fun stop() {
+        cardJobs.values.forEach { it.cancel() }
+        cardJobs.clear()
+        _state.value = sessionReducer(_state.value, SessionAction.FinishSession)
+    }
+
+    fun end() {
+        stop()
+    }
 }

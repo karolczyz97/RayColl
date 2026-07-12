@@ -3,20 +3,29 @@ package com.raycoll.app.ui.decksettings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.data.repository.DeckRepository
-import com.raycoll.app.domain.model.*
+import com.raycoll.app.domain.model.FlashcardGroup
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class DeckSettingsUiState(val group: FlashcardGroup? = null, val modes: List<StudyMode> = emptyList())
-
 @HiltViewModel
-class DeckSettingsViewModel @Inject constructor(private val repo: DeckRepository) : ViewModel() {
-    private val _s = MutableStateFlow(DeckSettingsUiState()); val uiState: StateFlow<DeckSettingsUiState> = _s
-    fun load(groupId: String) { viewModelScope.launch { repo.storeData.collect { _s.value = DeckSettingsUiState(it.groups.find { g -> g.id == groupId }, it.studyModes) } } }
-    fun updateGroup(g: FlashcardGroup) { viewModelScope.launch { repo.updateGroup(g) } }
-    fun setActiveMode(groupId: String, modeId: String) { val g = _s.value.group ?: return; updateGroup(g.copy(activeModeId = modeId)) }
-    fun archive(groupId: String) { viewModelScope.launch { repo.archiveGroup(groupId) } }
-    fun delete(groupId: String) { viewModelScope.launch { repo.deleteGroup(groupId) } }
+class DeckSettingsViewModel @Inject constructor(
+    private val deckRepository: DeckRepository,
+) : ViewModel() {
+    private val _deck = MutableStateFlow<FlashcardGroup?>(null)
+    val deck: StateFlow<FlashcardGroup?> = _deck
+
+    fun loadDeck(deckId: String) { viewModelScope.launch { _deck.value = deckRepository.getDeck(deckId) } }
+    fun updateName(deckId: String, name: String) { viewModelScope.launch {
+        val deck = _deck.value ?: return@launch
+        deckRepository.updateDeck(deck.copy(name = name))
+        _deck.value = deck.copy(name = name)
+    }}
+    fun setVisiblePageCount(deckId: String, count: Int) { viewModelScope.launch { deckRepository.setVisiblePageCount(deckId, count) } }
+    fun setStudyFilter(deckId: String, filter: String) { viewModelScope.launch { deckRepository.setStudyFilter(deckId, filter) } }
+    fun setCardOrder(deckId: String, order: String) { viewModelScope.launch { deckRepository.setCardOrder(deckId, order) } }
+    fun archive(deckId: String) { viewModelScope.launch { deckRepository.archiveDeck(deckId) } }
+    fun delete(deckId: String) { viewModelScope.launch { deckRepository.deleteDeck(deckId) } }
 }

@@ -1,97 +1,114 @@
 package com.raycoll.app.domain.steps
 
-import com.raycoll.app.domain.model.*
+import com.raycoll.app.domain.model.AutoRateFixedStep
+import com.raycoll.app.domain.model.AutoRateFromAnswerStep
+import com.raycoll.app.domain.model.CompoundBranch
+import com.raycoll.app.domain.model.CompoundParams
+import com.raycoll.app.domain.model.CompoundPause
+import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.DynamicPauseStep
+import com.raycoll.app.domain.model.FeedbackErrorStep
+import com.raycoll.app.domain.model.FeedbackSuccessStep
+import com.raycoll.app.domain.model.ListenAndCheckStep
+import com.raycoll.app.domain.model.MarkFailedStep
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.NextCardStep
+import com.raycoll.app.domain.model.ShowAllPagesStep
+import com.raycoll.app.domain.model.ShowPageStep
+import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakAllPagesStep
+import com.raycoll.app.domain.model.SpeakPageStep
+import com.raycoll.app.domain.model.StepCondition
+import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.domain.model.WaitForTapStep
+import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
+import com.raycoll.app.domain.model.WaitForTapToRevealStep
 
-fun expandCompound(step: CompoundStep): List<AtomicStep> = when (val p = step.params) {
-    is PresentFrontParams -> {
-        if (p.speak) listOf(ShowPage(pageIndex = p.page), SpeakPage(pageIndex = p.page))
-        else listOf(ShowPage(pageIndex = p.page))
-    }
-    is FlipRevealParams -> {
-        if (p.revealStyle == "next")
-            listOf(WaitForTapToRevealNext(), ShowRatings())
-        else listOf(WaitForTapToReveal(), ShowAllPages(), ShowRatings())
-    }
-    is ShowAllGradeParams -> listOf(ShowAllPages(), ShowRatings())
-    is SpeakPauseNextParams -> listOf(
-        SpeakPage(pageIndex = p.page),
-        DynamicPause(nextPageIndex = p.nextPage, pauseMultiplier = p.multiplier),
-        ShowPage(pageIndex = p.nextPage),
-    )
-    is AutoFlipParams -> {
-        val steps = mutableListOf<AtomicStep>(ShowPage(pageIndex = p.questionPage))
-        if (p.speakQuestion) steps.add(SpeakPage(pageIndex = p.questionPage))
-        steps.add(DynamicPause(nextPageIndex = p.questionPage, pauseMultiplier = p.multiplier))
-        steps.add(ShowAllPages())
-        if (p.speakAnswer) steps.add(SpeakPage(pageIndex = p.answerPage))
-        steps
-    }
-    is ListenGradeParams -> expandGrade(p, null)
-    is GradeAfterListenParams -> expandGrade(null, p)
-    is AutoPassNextParams -> listOf(AutoRateFixed(rating = p.rating), NextCard())
-    is FailNextParams -> listOf(MarkFailed(), AutoRateFixed(rating = 1), NextCard())
-}
+object CompoundExpander {
 
-private fun expandGrade(listen: ListenGradeParams?, gradeAfter: GradeAfterListenParams?): List<AtomicStep> {
-    val steps = mutableListOf<AtomicStep>()
-    if (listen != null) steps.add(ListenAndCheck(pageIndex = listen.answerPage, successThreshold = listen.threshold))
+    fun expandModeSteps(steps: List<ModeStep>): List<ModeStep> = steps.flatMap(::expandStep)
 
-    val (correctBranch, wrongBranch, manualFallback) = when {
-        listen != null -> Triple(listen.onCorrect, listen.onWrong, listen.manualFallback)
-        gradeAfter != null -> Triple(gradeAfter.onCorrect, gradeAfter.onWrong, gradeAfter.manualFallback)
-        else -> return steps
-    }
+    fun expandStep(step: ModeStep): List<ModeStep> = if (step is CompoundStep) expandCompound(step) else listOf(step)
 
-    steps.addAll(expandBranch(correctBranch, StepCondition.correct))
-    steps.addAll(expandBranch(wrongBranch, StepCondition.wrong))
-
-    if (manualFallback) {
-        steps.add(ShowAllPages())
-        steps.add(ShowRatings())
-    }
-    return steps
-}
-
-private fun expandBranch(branch: CompoundBranch, condition: StepCondition): List<AtomicStep> {
-    val steps = mutableListOf<AtomicStep>()
-    if (branch.feedback) steps.add(
-        if (condition == StepCondition.correct) FeedbackSuccess(condition = condition)
-        else FeedbackError(condition = condition)
-    )
-    branch.speakPage?.let { steps.add(SpeakPage(pageIndex = it, condition = condition)) }
-    branch.pause?.let { pause ->
-        when (pause.kind) {
-            "fixed" -> steps.add(Wait(ms = pause.ms, condition = condition))
-            "dynamic" -> steps.add(DynamicPause(nextPageIndex = pause.page, pauseMultiplier = pause.multiplier, condition = condition))
+    private fun expandCompound(step: CompoundStep): List<ModeStep> {
+        val params = step.params
+        return when (params) {
+            is CompoundParams.PresentFront -> buildList {
+                add(ShowPageStep(condition = step.condition, pageIndex = params.page))
+                if (params.speak) add(SpeakPageStep(condition = step.condition, pageIndex = params.page))
+            }
+            is CompoundParams.FlipReveal -> when (params.revealStyle) {
+                "all" -> listOf(
+                    WaitForTapToRevealStep(condition = step.condition),
+                    ShowAllPagesStep(condition = step.condition),
+                    ShowRatingsStep(condition = step.condition),
+                )
+                else -> listOf(
+                    WaitForTapToRevealNextStep(condition = step.condition),
+                    ShowRatingsStep(condition = step.condition),
+                )
+            }
+            is CompoundParams.ShowAllGrade -> listOf(
+                ShowAllPagesStep(condition = step.condition),
+                ShowRatingsStep(condition = step.condition),
+            )
+            is CompoundParams.SpeakPauseNext -> listOf(
+                SpeakPageStep(condition = step.condition, pageIndex = params.page),
+                DynamicPauseStep(condition = step.condition, nextPageIndex = params.nextPage, pauseMultiplier = params.multiplier),
+                ShowPageStep(condition = step.condition, pageIndex = params.nextPage),
+            )
+            is CompoundParams.AutoFlip -> buildList {
+                add(ShowPageStep(condition = step.condition, pageIndex = params.questionPage))
+                if (params.speakQuestion) add(SpeakPageStep(condition = step.condition, pageIndex = params.questionPage))
+                add(DynamicPauseStep(condition = step.condition, nextPageIndex = params.questionPage, pauseMultiplier = params.multiplier))
+                add(ShowAllPagesStep(condition = step.condition))
+                if (params.speakAnswer) add(SpeakPageStep(condition = step.condition, pageIndex = params.answerPage))
+            }
+            is CompoundParams.ListenGrade -> buildList {
+                add(ListenAndCheckStep(condition = step.condition, pageIndex = params.answerPage, successThreshold = params.threshold))
+                addAll(expandBranch(params.onCorrect, StepCondition.CORRECT))
+                addAll(expandBranch(params.onWrong, StepCondition.WRONG))
+                if (params.manualFallback) {
+                    add(ShowAllPagesStep(condition = step.condition))
+                    add(ShowRatingsStep(condition = step.condition))
+                }
+            }
+            is CompoundParams.GradeAfterListen -> buildList {
+                addAll(expandBranch(params.onCorrect, StepCondition.CORRECT))
+                addAll(expandBranch(params.onWrong, StepCondition.WRONG))
+                if (params.manualFallback) {
+                    add(ShowAllPagesStep(condition = step.condition))
+                    add(ShowRatingsStep(condition = step.condition))
+                }
+            }
+            is CompoundParams.AutoPassNext -> listOf(
+                AutoRateFixedStep(condition = step.condition, rating = params.rating),
+                NextCardStep(condition = step.condition),
+            )
+            is CompoundParams.FailNext -> listOf(
+                MarkFailedStep(condition = step.condition),
+                AutoRateFixedStep(condition = step.condition, rating = 1),
+                NextCardStep(condition = step.condition),
+            )
         }
     }
-    if (branch.revealAll) steps.add(ShowAllPages(condition = condition))
-    if (branch.markFailed) steps.add(MarkFailed(condition = condition))
-    when (branch.rate) {
-        "fromAnswer" -> steps.add(AutoRateFromAnswer(condition = condition))
-        "fixed" -> steps.add(AutoRateFixed(rating = branch.fixedRating, condition = condition))
+
+    private fun expandBranch(branch: CompoundBranch, condition: StepCondition): List<ModeStep> = buildList {
+        if (branch.feedback) {
+            add(if (condition == StepCondition.CORRECT) FeedbackSuccessStep(condition = condition) else FeedbackErrorStep(condition = condition))
+        }
+        if (branch.speakPage != null) add(SpeakPageStep(condition = condition, pageIndex = branch.speakPage))
+        when (val pause = branch.pause) {
+            is CompoundPause.Fixed -> add(WaitStep(condition = condition, ms = pause.ms))
+            is CompoundPause.Dynamic -> add(DynamicPauseStep(condition = condition, nextPageIndex = pause.page, pauseMultiplier = pause.multiplier))
+            null -> {}
+        }
+        if (branch.revealAll) add(ShowAllPagesStep(condition = condition))
+        if (branch.markFailed) add(MarkFailedStep(condition = condition))
+        when (branch.rate) {
+            "fromAnswer" -> add(AutoRateFromAnswerStep(condition = condition))
+            "fixed" -> add(AutoRateFixedStep(condition = condition, rating = branch.fixedRating))
+        }
+        if (branch.advance) add(NextCardStep(condition = condition))
     }
-    if (branch.advance) steps.add(NextCard(condition = condition))
-    return steps
 }
-
-fun expandModeSteps(steps: List<ModeStep>): List<AtomicStep> =
-    steps.flatMap { step ->
-        when (step) {
-            is AtomicStep -> listOf(step)
-            is CompoundStep -> expandCompound(step)
-            else -> emptyList()
-        }
-    }
-
-fun isAtomicStep(step: ModeStep): Boolean = step is AtomicStep
-
-fun expandWithSource(steps: List<ModeStep>): List<Pair<AtomicStep, Int>> =
-    steps.flatMapIndexed { idx, step ->
-        val expanded = when (step) {
-            is AtomicStep -> listOf(step)
-            is CompoundStep -> expandCompound(step)
-            else -> emptyList()
-        }
-        expanded.map { it to idx }
-    }

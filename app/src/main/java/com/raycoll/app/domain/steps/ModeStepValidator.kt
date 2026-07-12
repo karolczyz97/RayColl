@@ -1,39 +1,30 @@
 package com.raycoll.app.domain.steps
 
-import com.raycoll.app.domain.model.*
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.StudyMode
 
 object ModeStepValidator {
-    fun validate(steps: List<ModeStep>, pageCount: Int): List<String> {
+    fun validate(mode: StudyMode, pageCount: Int): List<String> {
         val errors = mutableListOf<String>()
-        if (steps.isEmpty()) { errors.add("Add at least one step."); return errors }
-
-        val expanded = expandModeSteps(steps)
-        val hasTerminal = expanded.any { it is ShowRatings || it is NextCard }
-        if (!hasTerminal) errors.add("No terminal step: add Show Ratings or Next Card.")
-        if (expanded.any { it is AutoRateFromAnswer } && expanded.none { it is ListenAndCheck }) {
-            errors.add("Auto-rate from answer needs an earlier Check speech (STT) step.")
+        if (mode.name.isBlank()) errors.add("Mode name is required")
+        if (mode.steps.isEmpty()) {
+            errors.add("Add at least one step")
+            return errors
         }
-
-        steps.forEachIndexed { index, step ->
-            when (step) {
-                is ShowPage -> if (step.pageIndex >= pageCount) errors.add("Step ${index + 1} uses page ${step.pageIndex + 1}, which is out of range.")
-                is SpeakPage -> if (step.pageIndex >= pageCount) errors.add("Step ${index + 1} uses page ${step.pageIndex + 1}, which is out of range.")
-                is ListenAndCheck -> if (step.pageIndex >= pageCount) errors.add("Step ${index + 1} uses page ${step.pageIndex + 1}, which is out of range.")
-                is DynamicPause -> if (step.nextPageIndex >= pageCount) errors.add("Step ${index + 1} uses page ${step.nextPageIndex + 1}, which is out of range.")
-                is CompoundStep -> validateCompound(step, pageCount, index, errors)
-                else -> {}
+        val expanded = CompoundExpander.expandModeSteps(mode.steps)
+        for ((index, step) in mode.steps.withIndex()) {
+            val pageIndex = StepRegistry.getStepPageIndex(step)
+            if (pageIndex != null && pageIndex >= pageCount) {
+                errors.add("Step ${index + 1} uses page ${pageIndex + 1}, which is out of range")
             }
         }
-        return errors
-    }
-
-    private fun validateCompound(step: CompoundStep, pageCount: Int, index: Int, errors: MutableList<String>) {
-        when (val p = step.params) {
-            is PresentFrontParams -> if (p.page >= pageCount) errors.add("Step ${index + 1} uses page ${p.page + 1}, which is out of range.")
-            is SpeakPauseNextParams -> { if (p.page >= pageCount) errors.add("Step ${index + 1} uses page ${p.page + 1} out of range."); if (p.nextPage >= pageCount) errors.add("Step ${index + 1} uses page ${p.nextPage + 1} out of range.") }
-            is AutoFlipParams -> { if (p.questionPage >= pageCount || p.answerPage >= pageCount) errors.add("Step ${index + 1}: page out of range.") }
-            is ListenGradeParams -> if (p.answerPage >= pageCount) errors.add("Step ${index + 1}: page ${p.answerPage + 1} out of range.")
-            else -> {}
+        val hasTerminal = expanded.any { it is com.raycoll.app.domain.model.ShowRatingsStep || it is com.raycoll.app.domain.model.NextCardStep }
+        if (!hasTerminal) errors.add("No terminal step: add \"Show rating buttons\" or \"Next card\"")
+        val hasAutoRate = expanded.any { it is com.raycoll.app.domain.model.AutoRateFromAnswerStep }
+        val hasStt = expanded.any { it is com.raycoll.app.domain.model.ListenAndCheckStep }
+        if (hasAutoRate && !hasStt) {
+            errors.add("\"Auto-rate from answer\" needs an earlier \"Check speech (STT)\" step")
         }
+        return errors
     }
 }

@@ -2,41 +2,40 @@ package com.raycoll.app.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.raycoll.app.core.LocalDates
 import com.raycoll.app.data.repository.DeckRepository
-import com.raycoll.app.domain.model.FlashcardGroup
-import com.raycoll.app.domain.selectors.*
+import com.raycoll.app.domain.selectors.CardStats
+import com.raycoll.app.domain.selectors.computeCardStats
+import com.raycoll.app.domain.selectors.computeStreak
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 data class StatsUiState(
-    val heatmap: Map<String, Int> = emptyMap(),
     val streak: Int = 0,
     val totalCards: Int = 0,
-    val activeDays: Int = 0,
-    val globalStats: CardStatsData = CardStatsData(),
-    val deckProgress: List<Pair<String, Int>> = emptyList(),
+    val newCount: Int = 0,
+    val learningCount: Int = 0,
+    val reviewCount: Int = 0,
+    val masteredCount: Int = 0,
 )
 
 @HiltViewModel
-class StatsViewModel @Inject constructor(private val repo: DeckRepository) : ViewModel() {
-    private val _uiState = MutableStateFlow(StatsUiState())
-    val uiState: StateFlow<StatsUiState> = _uiState
-    init {
-        viewModelScope.launch {
-            repo.storeData.collect { data ->
-                val active = selectActiveGroups(data.groups)
-                _uiState.value = StatsUiState(
-                    heatmap = data.activityHeatmap,
-                    streak = computeStreak(data.activityHeatmap, LocalDates.today()),
-                    totalCards = getTotalCardsCount(active),
-                    activeDays = getActiveDaysCount(data.activityHeatmap),
-                    globalStats = getGlobalStats(active),
-                    deckProgress = active.map { it.name to getGroupProgress(it.cards) },
-                )
-            }
-        }
-    }
+class StatsViewModel @Inject constructor(
+    deckRepository: DeckRepository,
+) : ViewModel() {
+    val stats: StateFlow<StatsUiState> = deckRepository.activeDecks().map { decks ->
+        val allCards = decks.flatMap { it.cards }
+        val cardStats = computeCardStats(allCards)
+        StatsUiState(
+            streak = computeStreak(emptyMap(), System.currentTimeMillis()),
+            totalCards = cardStats.total,
+            newCount = cardStats.newCount,
+            learningCount = cardStats.learning,
+            reviewCount = cardStats.review,
+            masteredCount = cardStats.mastered,
+        )
+    }.stateIn(viewModelScope, SharingStarted.Lazily, StatsUiState())
 }

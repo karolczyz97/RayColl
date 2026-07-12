@@ -1,107 +1,70 @@
 package com.raycoll.app.playback
 
 import android.content.Context
-import android.content.Intent
-import android.os.Bundle
+import android.content.pm.PackageManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import android.content.Intent
+import kotlinx.coroutines.CompletableDeferred
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.resume
 
-sealed interface SttResult {
-    data class Success(val text: String, val confidence: Int) : SttResult
-    data object NoSpeech : SttResult
-    data object Timeout : SttResult
-    data object Skipped : SttResult
-    data class Error(val message: String) : SttResult
+sealed class SttResult {
+    data class Success(val text: String) : SttResult()
+    data object Skipped : SttResult()
+    data class Error(val message: String) : SttResult()
+    data object PermissionDenied : SttResult()
 }
 
 @Singleton
-class SttRecognizer @Inject constructor(
-    @ApplicationContext private val context: Context,
-) {
-    private val accumulator = SttTranscriptAccumulator()
-    private val inactivityMs = 2000L
-    private val hardTimeoutMs = 15000L
+class SttRecognizer @Inject constructor(private val context: Context) {
+    suspend fun listen(lang: String, timeoutMs: Long): com.raycoll.app.domain.session.ListenResult {
+        if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return com.raycoll.app.domain.session.ListenResult("", com.raycoll.app.domain.session.ListenStatus.ERROR)
+        }
+        val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
+        val deferred = CompletableDeferred<com.raycoll.app.domain.session.ListenResult>()
+        val accumulator = StringBuilder()
+        var partial = ""
 
-    suspend fun listen(lang: String, timeoutMs: Long = hardTimeoutMs): SttResult {
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            return SttResult.Error("Speech recognition not available")
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
         }
 
-        val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        accumulator.clear()
-        var timerJob: Job? = null
-        var handled = false
-
-        return suspendCancellableCoroutine { cont ->
-            val finish: (SttResult) -> Unit = { r ->
-                if (!handled) { handled = true; cont.resume(r) }
-            }
-
-            val listener = object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {}
-                override fun onBeginningOfSpeech() {
-                    timerJob?.cancel()
+        recognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: android.os.Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {
+                val status = when (error) {
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
+                    SpeechRecognizer.ERROR_CLIENT -> com.raycoll.app.domain.session.ListenStatus.SKIPPED
+                    else -> com.raycoll.app.domain.session.ListenStatus.ERROR
                 }
-                override fun onRmsChanged(dB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {
-                    timerJob?.cancel()
-                    timerJob = kotlinx.coroutines.GlobalScope.launch {
-                        delay(inactivityMs)
-                        finish(SttResult.Timeout)
-                    }
-                }
-                override fun onError(error: Int) {
-                    val result = when (error) {
-                        SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> SttResult.NoSpeech
-                        else -> SttResult.Error("STT error: $error")
-                    }
-                    finish(result)
-                }
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) ?: emptyList()
-                    val scores = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES) ?: FloatArray(matches.size)
-                    if (matches.isNotEmpty()) {
-                        accumulator.addFinal(matches[0])
-                        finish(SttResult.Success(accumulator.fullText, (scores.getOrElse(0) { 0f } * 100).toInt()))
-                    }
-                }
-                override fun onPartialResults(partial: Bundle?) {
-                    val parts = partial?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) ?: emptyList()
-                    if (parts.isNotEmpty()) accumulator.addInterim(parts[0])
-                }
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            }
-
-            recognizer.setRecognitionListener(listener)
-
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang.replace('-', '_'))
-            intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-
-            recognizer.startListening(intent)
-
-            timerJob = kotlinx.coroutines.GlobalScope.launch {
-                delay(timeoutMs)
-                finish(SttResult.Timeout)
-            }
-
-            cont.invokeOnCancellation {
-                timerJob?.cancel()
-                recognizer.stopListening()
+                if (deferred.isActive) deferred.complete(com.raycoll.app.domain.session.ListenResult(accumulator.toString(), status))
                 recognizer.destroy()
             }
-        }
+            override fun onResults(results: android.os.Bundle?) {
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                val text = matches?.joinToString(" ") ?: ""
+                if (deferred.isActive) deferred.complete(com.raycoll.app.domain.session.ListenResult(text, com.raycoll.app.domain.session.ListenStatus.COMPLETED))
+                recognizer.destroy()
+            }
+            override fun onPartialResults(partialResults: android.os.Bundle?) {
+                val partials = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                partial = partials?.firstOrNull() ?: ""
+            }
+            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+        })
+
+        recognizer.startListening(intent)
+        return deferred.await()
     }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_seed">#5A4FCF</color>
+    <color name="srs_new_fg">#1b4fa8</color>
+    <color name="srs_new_bg">#c2d9ff</color>
+    <color name="srs_learning_fg">#8a6d00</color>
+    <color name="srs_learning_bg">#f4dd87</color>
+    <color name="srs_review_fg">#b4480f</color>
+    <color name="srs_review_bg">#ffcfa8</color>
+    <color name="srs_mastered_fg">#0c6e4c</color>
+    <color name="srs_mastered_bg">#c2f0d9</color>
+</resources>

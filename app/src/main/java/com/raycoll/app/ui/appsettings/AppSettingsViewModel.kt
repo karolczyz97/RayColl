@@ -4,36 +4,54 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
-import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.data.repository.BackupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.OutputStream
 import javax.inject.Inject
 
 @HiltViewModel
 class AppSettingsViewModel @Inject constructor(
-    private val prefs: UserPreferencesRepository,
-    private val repo: DeckRepository,
+    private val prefsRepository: UserPreferencesRepository,
+    private val backupRepository: BackupRepository,
 ) : ViewModel() {
-    val themePref = prefs.preferences.map { it.themePref }.stateIn(viewModelScope, SharingStarted.Lazily, "system")
-    val lang = prefs.preferences.map { it.uiLanguage }.stateIn(viewModelScope, SharingStarted.Lazily, "")
-    val backgroundPlayback = prefs.preferences.map { it.backgroundPlayback }.stateIn(viewModelScope, SharingStarted.Lazily, false)
+    val preferences: StateFlow<UserPreferences> = prefsRepository.preferences
+        .stateIn(viewModelScope, SharingStarted.Lazily, UserPreferences())
 
-    fun setTheme(v: String) { viewModelScope.launch { prefs.setThemePref(v) } }
-    fun setLang(v: String) { viewModelScope.launch { prefs.setUiLanguage(v) } }
-    fun setBackground(v: Boolean) { viewModelScope.launch { prefs.setBackgroundPlayback(v) } }
+    fun setTheme(value: String) { viewModelScope.launch { prefsRepository.setThemePref(value) } }
+    fun setSystemColors(value: Boolean) { viewModelScope.launch { prefsRepository.setUseSystemColors(value) } }
+    fun setTtsRate(value: Float) { viewModelScope.launch { prefsRepository.setTtsRate(value) } }
+    fun setBackgroundPlayback(value: Boolean) { viewModelScope.launch { prefsRepository.setBackgroundPlayback(value) } }
+    fun factoryReset() { viewModelScope.launch { backupRepository.factoryReset() } }
 
-    fun exportToUri(uri: Uri) {
+    fun exportBackup(context: Context, uri: Uri, onError: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val json = repo.exportJson()
-            // SAF write handled in a separate coroutine or delegated to Android content resolver
+            try {
+                val json = withContext(Dispatchers.IO) { backupRepository.exportJson() }
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                }
+                onError(false)
+            } catch (e: Exception) { onError(true) }
         }
     }
 
-    fun importFromUri(uri: Uri) {
+    fun importBackup(context: Context, uri: Uri, onSuccess: () -> Unit, onError: () -> Unit) {
         viewModelScope.launch {
-            // SAF read handled externally
+            try {
+                val json = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                } ?: throw IllegalStateException("Cannot read file")
+                withContext(Dispatchers.IO) { backupRepository.importJson(json) }
+                onSuccess()
+            } catch (e: Exception) { onError() }
         }
     }
 }

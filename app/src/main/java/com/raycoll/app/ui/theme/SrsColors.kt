@@ -1,32 +1,30 @@
 package com.raycoll.app.ui.theme
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-enum class SrsCardCategory { New, Learning, Review, Mastered }
+@Immutable
+data class SrsColors(
+    val newFg: Color,
+    val newBg: Color,
+    val learningFg: Color,
+    val learningBg: Color,
+    val reviewFg: Color,
+    val reviewBg: Color,
+    val masteredFg: Color,
+    val masteredBg: Color,
+)
 
-data class SrsStatusColors(val foreground: Color, val background: Color)
+val LightSrsColors = SrsColors(
+    newFg = SrsNewFg, newBg = SrsNewBg,
+    learningFg = SrsLearningFg, learningBg = SrsLearningBg,
+    reviewFg = SrsReviewFg, reviewBg = SrsReviewBg,
+    masteredFg = SrsMasteredFg, masteredBg = SrsMasteredBg,
+)
 
-object SrsColors {
-    fun forCategory(category: SrsCardCategory, isDark: Boolean): SrsStatusColors = when (category) {
-        SrsCardCategory.New -> if (isDark) SrsStatusColors(DarkSrsNewColor, DarkSrsNewBackground)
-            else SrsStatusColors(SrsNewColor, SrsNewBackground)
-        SrsCardCategory.Learning -> if (isDark) SrsStatusColors(DarkSrsLearningColor, DarkSrsLearningBackground)
-            else SrsStatusColors(SrsLearningColor, SrsLearningBackground)
-        SrsCardCategory.Review -> if (isDark) SrsStatusColors(DarkSrsReviewColor, DarkSrsReviewBackground)
-            else SrsStatusColors(SrsReviewColor, SrsReviewBackground)
-        SrsCardCategory.Mastered -> if (isDark) SrsStatusColors(DarkSrsMasteredColor, DarkSrsMasteredBackground)
-            else SrsStatusColors(SrsMasteredColor, SrsMasteredBackground)
-    }
-
-    val categoryOrder: List<SrsCardCategory> = listOf(
-        SrsCardCategory.New, SrsCardCategory.Learning, SrsCardCategory.Review, SrsCardCategory.Mastered
-    )
-
-    fun heatmapColor(primary: Color, count: Int): Color = when {
-        count <= 0 -> Color.LightGray
-        count <= 2 -> primary.copy(alpha = 0.25f)
-        count <= 5 -> primary.copy(alpha = 0.5f)
-        count <= 10 -> primary.copy(alpha = 0.75f)
-        else -> primary
-    }
-}
+val DarkSrsColors = SrsColors(
+    newFg = SrsNewBg, newBg = SrsNewFg,
+    learningFg = SrsLearningBg, learningBg = SrsLearningFg,
+    reviewFg = SrsReviewBg, reviewBg = SrsReviewFg,
+    masteredFg = SrsMasteredBg, masteredBg = SrsMasteredFg,
+)

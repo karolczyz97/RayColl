@@ -9,6 +9,6 @@ data class StudyMode(
     val steps: List<ModeStep> = emptyList(),
     val isBuiltIn: Boolean = false,
     val builtInSourceId: String? = null,
-    val updatedAt: Long = 0L,
+    val updatedAt: Long = 0,
     val deletedAt: Long? = null,
 )

@@ -1,14 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RayColl</string>
-
     <string name="nav_dashboard">Dashboard</string>
     <string name="route_study">Study</string>
     <string name="route_browse">Browse cards</string>
     <string name="route_deck_settings">Deck settings</string>
     <string name="route_study_mode_detail">Edit study mode</string>
-    <string name="route_dashboard">Dashboard</string>
-
     <string name="btn_cancel">Cancel</string>
     <string name="btn_save">Save</string>
     <string name="btn_add">Add</string>
@@ -27,27 +24,24 @@
     <string name="auth_error_no_token">No login token received. Please try again.</string>
     <string name="auth_error_invalid_token">Invalid login token. Please try again.</string>
     <string name="auth_error_login_failed">Login failed. Please try again.</string>
-    <string name="sync_status_saving">Saving changesâ€¦</string>
-    <string name="sync_status_syncing">Syncing changesâ€¦</string>
-    <string name="sync_status_offline">Offline mode â€” changes are saved on this device and will sync when you\'re back online.</string>
+    <string name="sync_status_saving">Saving changes...</string>
+    <string name="sync_status_syncing">Syncing changes...</string>
+    <string name="sync_status_offline">Offline mode — changes are saved on this device and will sync when you\'re back online.</string>
     <string name="dialog_delete_desc">This action cannot be undone.</string>
     <string name="dialog_delete_permanent_title">Delete permanently?</string>
-    <string name="dialog_delete_permanent_desc">Deck \"%1$s\" will be permanently deleted. This cannot be undone.</string>
+    <string name="dialog_delete_permanent_desc">Deck "%1$s" will be permanently deleted. This cannot be undone.</string>
     <string name="dialog_archive_title">Archive this deck?</string>
     <string name="dialog_archive_confirm">The deck will be moved to Archive and permanently deleted after %1$d days. You can restore it before then.</string>
-    <string name="dialog_restore_title">Restore \"%1$s\"?</string>
-    <string name="dialog_restore_desc">Deck \"%1$s\" will return to the main list.</string>
+    <string name="dialog_restore_title">Restore "%1$s"?</string>
+    <string name="dialog_restore_desc">Deck "%1$s" will return to the main list.</string>
     <string name="btn_archive">Archive</string>
     <string name="btn_restore">Restore</string>
     <string name="common_ok">OK</string>
     <string name="validation_required">This field is required.</string>
-
-    <string name="cards_count_one">%1$d card</string>
-    <string name="cards_count_other">%1$d cards</string>
+    <string name="a11y_profile_menu">Open user profile menu</string>
     <string name="dashboard_no_groups">No decks found. Click + to add one.</string>
     <string name="dashboard_name_label">Deck Name</string>
     <string name="dashboard_due_count">Due: %1$d</string>
-
     <string name="study_finished_desc">All scheduled cards for today have been reviewed.</string>
     <string name="study_no_due">No cards due for review.</string>
     <string name="study_match_percent">Match: %1$d%%</string>
@@ -59,7 +53,7 @@
     <string name="study_restart_session">Restart Session</string>
     <string name="study_restart_failed">Restart Failed Only</string>
     <string name="study_group_not_found">Deck not found</string>
-    <string name="study_bravo">Bravo!</string>
+    <string name="study_bravo">Bravo! 🎉</string>
     <string name="study_back_to_panel">Back to dashboard</string>
     <string name="study_recognized">Recognized:</string>
     <string name="study_tap_to_reveal">Tap to reveal</string>
@@ -72,33 +66,33 @@
     <string name="study_exit_confirm_btn">Leave</string>
     <string name="study_session_ended_title">Session paused</string>
     <string name="study_session_ended_desc">You left before finishing. Your progress is saved.</string>
-    <string name="study_background_paused">Paused â€” open the app to continue</string>
-
-    <string name="browse_search_placeholder">Search flashcardsâ€¦</string>
+    <string name="study_background_paused">Paused — open the app to continue</string>
+    <string name="browse_search_placeholder">Search flashcards...</string>
     <string name="browse_edit_card">Edit Flashcard</string>
     <string name="browse_no_cards">No flashcards found.</string>
     <string name="browse_min_filled_pages">Fill at least 2 pages to save this flashcard.</string>
     <string name="browse_show_hidden_pages">Show hidden pages</string>
     <string name="browse_options">More options</string>
     <string name="import_upload_file">Upload file (.csv, .txt, .md)</string>
-
     <string name="import_title">Import Flashcards</string>
     <string name="import_csv_label">Paste CSV / TSV text here</string>
     <string name="import_separator">Separator</string>
     <string name="import_preview">Preview</string>
     <string name="import_btn">Import %1$d cards</string>
-    <string name="import_name_placeholder">Paste data â€” separator and page count will be auto-detected</string>
+    <string name="import_name_placeholder">Paste data — separator and page count will be auto-detected</string>
     <string name="import_sep_tab">Tab</string>
     <string name="import_sep_semicolon">Semicolon (;)</string>
     <string name="import_sep_comma">Comma (,)</string>
     <string name="import_sep_pipe">Pipe (|)</string>
+    <string name="import_sep_current_custom">Current</string>
+    <string name="import_sep_set_custom">Set custom</string>
     <string name="import_first_row_header">First row is header</string>
     <string name="import_err_too_many_lines">Input truncated to 500 lines.</string>
     <string name="import_err_too_many_columns">Input exceeds max allowed %1$d columns.</string>
+    <string name="import_validation_source_required">Paste or upload at least one flashcard.</string>
     <string name="import_pages_count">Pages:</string>
     <string name="import_page_label">Page %1$d</string>
     <string name="import_page_hidden"> (hidden)</string>
-
     <string name="stats_title">Study Statistics</string>
     <string name="stats_decks_title">Decks</string>
     <string name="stats_cards_title">Cards</string>
@@ -115,7 +109,6 @@
     <string name="stats_day_fri">Fri</string>
     <string name="stats_day_sat">Sat</string>
     <string name="stats_day_sun">Sun</string>
-
     <string name="settings_title">Deck Settings: %1$s</string>
     <string name="settings_section_general">General</string>
     <string name="settings_section_cards">Cards</string>
@@ -129,7 +122,7 @@
     <string name="settings_card_order_sequential">In order</string>
     <string name="settings_card_order_random">Random</string>
     <string name="settings_card_order_hardest">Hardest first</string>
-    <string name="settings_mode_steps">Steps of Mode \"%1$s\"</string>
+    <string name="settings_mode_steps">Steps of Mode "%1$s"</string>
     <string name="settings_add_step_btn">Add step</string>
     <string name="settings_reset_mode_btn">Reset to default</string>
     <string name="settings_create_mode_btn">Create new mode</string>
@@ -139,9 +132,9 @@
     <string name="settings_dialog_add_step_type">Type</string>
     <string name="settings_dialog_add_step_page_idx">Page (starts at 1)</string>
     <string name="settings_dialog_add_step_time">Time (ms)</string>
-    <string name="settings_dialog_add_step_pause_multiplier">Dynamic pause (Ă—, 0â€“5)</string>
-    <string name="settings_dialog_add_step_threshold">Threshold (%)</string>
-    <string name="settings_dialog_add_step_rating">Rating (1â€“4)</string>
+    <string name="settings_dialog_add_step_pause_multiplier">Dynamic pause (×, 0–5)</string>
+    <string name="settings_dialog_add_step_threshold">Threshold (%%)</string>
+    <string name="settings_dialog_add_step_rating">Rating (1–4)</string>
     <string name="settings_dialog_add_step_condition">Condition</string>
     <string name="settings_dialog_compound_add_title">Add compound step</string>
     <string name="settings_dialog_compound_edit_title">Edit compound step</string>
@@ -153,9 +146,8 @@
     <string name="step_condition_wrong">If wrong</string>
     <string name="settings_validation_mode_steps_required">Add at least one step.</string>
     <string name="settings_validation_step_page_out_of_range">Step %1$d uses page %2$d, which is out of range.</string>
-    <string name="settings_validation_no_terminal">No terminal step: add \"Show rating buttons\" or \"Next card\".</string>
-    <string name="settings_validation_auto_rate_without_stt">\"Auto-rate from answer\" needs an earlier \"Check speech (STT)\" step.</string>
-
+    <string name="settings_validation_no_terminal">No terminal step: add "Show rating buttons" or "Next card".</string>
+    <string name="settings_validation_auto_rate_without_stt">"Auto-rate from answer" needs an earlier "Check speech (STT)" step.</string>
     <string name="app_settings_title">App Settings</string>
     <string name="app_settings_section_appearance">Appearance</string>
     <string name="app_settings_section_language_speech">Language &amp; speech</string>
@@ -176,17 +168,17 @@
     <string name="app_settings_dynamic_colors_desc">Extract accent and system colors directly from the device (Android 12+ / Material You).</string>
     <string name="app_settings_background_playback">Background Audio</string>
     <string name="app_settings_background_playback_desc">Keep learning audio active when the screen is locked or app is in the background.</string>
-
     <string name="archive_title">Archived</string>
     <string name="archive_empty">No archived decks.</string>
     <string name="archive_auto_delete_in">Deletes in %1$d days</string>
     <string name="archive_auto_delete_tomorrow">Deletes tomorrow</string>
     <string name="archive_auto_delete_today">Deletes today</string>
     <string name="archive_delete_permanently">Delete permanently</string>
-
     <string name="mode_classic_name">Classic</string>
     <string name="mode_listen_speak_name">Audio</string>
-
+    <string name="mode_m1_name">Classic (show + reply)</string>
+    <string name="mode_m2_name">Listening + speaking</string>
+    <string name="mode_m3_name">Show only</string>
     <string name="step_show_page">Show page %1$d</string>
     <string name="step_show_all_pages">Show all pages</string>
     <string name="step_wait_for_tap_to_reveal_next">Reveal next page by tapping</string>
@@ -194,7 +186,7 @@
     <string name="step_show_ratings">Show rating buttons</string>
     <string name="step_speak_page">TTS page %1$d</string>
     <string name="step_speak_all_pages">TTS all pages</string>
-    <string name="step_dynamic_pause">Dynamic pause (page %1$d, Ă—%2$d)</string>
+    <string name="step_dynamic_pause">Dynamic pause (page %1$d, ×%2$d)</string>
     <string name="step_wait">Wait %1$dms</string>
     <string name="step_listen_and_check">Check speech p. %1$d (threshold %2$d%%)</string>
     <string name="step_feedback_success">Play success feedback</string>
@@ -205,50 +197,6 @@
     <string name="step_wait_for_tap">Wait for a tap</string>
     <string name="step_next_card">Go to next card (no rating)</string>
     <string name="step_unknown">Unknown step</string>
-
-    <string name="filter_new_review">New + due for review</string>
-    <string name="filter_new">New</string>
-    <string name="filter_review">Review</string>
-    <string name="filter_all">All</string>
-
-    <string name="srs_badge_new">New</string>
-    <string name="srs_badge_learning">Learning</string>
-    <string name="srs_badge_review">Review</string>
-    <string name="srs_badge_mastered">Mastered</string>
-    <string name="srs_badge_now">Now</string>
-
-    <string name="lang_pl_PL">Polish</string>
-    <string name="lang_en_US">English</string>
-    <string name="lang_es_ES">Spanish</string>
-    <string name="lang_de_DE">German</string>
-    <string name="lang_fr_FR">French</string>
-    <string name="lang_it_IT">Italian</string>
-
-    <string name="errors_generic_title">Something went wrong</string>
-    <string name="errors_retry">Try again</string>
-
-    <string name="app_settings_study_modes">Study modes</string>
-    <string name="study_modes_title">Study modes</string>
-    <string name="study_modes_steps_count">Steps: %1$d</string>
-    <string name="study_modes_built_in">built-in</string>
-    <string name="study_modes_name_label">Mode name</string>
-    <string name="study_modes_template_title">Start from template</string>
-    <string name="study_modes_template_blank">Blank</string>
-    <string name="study_modes_template_classic">Classic</string>
-    <string name="study_modes_template_audio">Audio</string>
-    <string name="study_modes_delete_title">Delete mode</string>
-    <string name="study_modes_delete_message">Delete mode \"%1$s\"? Decks using it will fall back to the default mode.</string>
-    <string name="study_modes_unsaved_title">Unsaved changes</string>
-    <string name="study_modes_unsaved_message">Save changes before leaving?</string>
-    <string name="a11y_profile_menu">Open user profile menu</string>
-    <string name="cards_count_few">{count} cards</string>
-    <string name="cards_count_many">{count} cards</string>
-    <string name="import_sep_current_custom">Current</string>
-    <string name="import_sep_set_custom">Set custom</string>
-    <string name="import_validation_source_required">Paste or upload at least one flashcard.</string>
-    <string name="mode_m1_name">Classic (show + reply)</string>
-    <string name="mode_m2_name">Listening + speaking</string>
-    <string name="mode_m3_name">Show only</string>
     <string name="step_category_display">Display</string>
     <string name="step_category_audio">Audio</string>
     <string name="step_category_timing">Timing</string>
@@ -280,9 +228,9 @@
     <string name="compound_grade_after_listen_name">Grade after STT</string>
     <string name="compound_auto_pass_next_name">Pass and continue</string>
     <string name="compound_fail_next_name">Fail and continue</string>
-    <string name="compound_summary_page">page {page}</string>
-    <string name="compound_summary_stt">answer p. {page}, {threshold}%</string>
-    <string name="compound_summary_rating">rating {rating}</string>
+    <string name="compound_summary_page">page %1$d</string>
+    <string name="compound_summary_stt">answer p. %1$d, %2$d%%</string>
+    <string name="compound_summary_rating">rating %1$d</string>
     <string name="compound_field_page">Page</string>
     <string name="compound_field_speak">Speak</string>
     <string name="compound_field_reveal_style">Reveal style</string>
@@ -292,7 +240,7 @@
     <string name="compound_field_answer_page">Answer page</string>
     <string name="compound_field_speak_question">Speak question</string>
     <string name="compound_field_speak_answer">Speak answer</string>
-    <string name="compound_field_threshold">Threshold (%)</string>
+    <string name="compound_field_threshold">Threshold (%%)</string>
     <string name="compound_field_manual_fallback">Manual fallback</string>
     <string name="compound_field_speak_page">Page to speak</string>
     <string name="compound_field_pause">Pause</string>
@@ -315,15 +263,45 @@
     <string name="compound_rate_none">No rating</string>
     <string name="compound_reveal_all">Reveal remaining pages</string>
     <string name="compound_reveal_next">Reveal next page</string>
+    <string name="app_settings_study_modes">Study modes</string>
+    <string name="study_modes_title">Study modes</string>
+    <string name="study_modes_steps_count">Steps: %1$d</string>
+    <string name="study_modes_built_in">built-in</string>
+    <string name="study_modes_name_label">Mode name</string>
+    <string name="study_modes_template_title">Start from template</string>
+    <string name="study_modes_template_blank">Blank</string>
+    <string name="study_modes_template_classic">Classic</string>
+    <string name="study_modes_template_audio">Audio</string>
+    <string name="study_modes_delete_title">Delete mode</string>
+    <string name="study_modes_delete_message">Delete mode "%1$s"? Decks using it will fall back to the default mode.</string>
+    <string name="study_modes_unsaved_title">Unsaved changes</string>
+    <string name="study_modes_unsaved_message">Save changes before leaving?</string>
+    <string name="filter_new_review">New + due for review</string>
+    <string name="filter_new">New</string>
+    <string name="filter_review">Review</string>
+    <string name="filter_all">All</string>
+    <string name="srs_badge_new">New</string>
+    <string name="srs_badge_learning">Learning</string>
+    <string name="srs_badge_review">Review</string>
+    <string name="srs_badge_mastered">Mastered</string>
+    <string name="srs_badge_now">Now</string>
     <string name="filter_mastered">Mastered</string>
     <string name="browse_delete_card">Delete Flashcard</string>
     <string name="update_updated">App updated</string>
     <string name="update_show_changes">Show changes</string>
     <string name="update_ok">OK</string>
+    <string name="lang_pl_PL">Polish</string>
+    <string name="lang_en_US">English</string>
+    <string name="lang_es_ES">Spanish</string>
+    <string name="lang_de_DE">German</string>
+    <string name="lang_fr_FR">French</string>
+    <string name="lang_it_IT">Italian</string>
     <string name="lang_pt_PT">Portuguese</string>
     <string name="lang_ru_RU">Russian</string>
     <string name="lang_ja_JP">Japanese</string>
     <string name="lang_zh_CN">Chinese</string>
+    <string name="errors_generic_title">Something went wrong</string>
+    <string name="errors_retry">Try again</string>
     <string name="errors_dashboard_crashed">Dashboard screen crashed</string>
     <string name="errors_stats_crashed">Stats screen crashed</string>
     <string name="errors_app_settings_crashed">App settings screen crashed</string>
@@ -331,4 +309,11 @@
     <string name="errors_settings_crashed">Settings screen crashed</string>
     <string name="errors_import_crashed">Import screen crashed</string>
     <string name="errors_browse_crashed">Browse screen crashed</string>
+    <plurals name="cards_count">
+        <item quantity="one">%1$d card</item>
+        <item quantity="few">%1$d cards</item>
+        <item quantity="many">%1$d cards</item>
+        <item quantity="other">%1$d cards</item>
+    </plurals>
 </resources>
+

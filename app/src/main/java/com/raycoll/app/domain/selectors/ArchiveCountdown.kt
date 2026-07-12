@@ -1,17 +1,20 @@
 package com.raycoll.app.domain.selectors
 
+import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.domain.model.FlashcardGroup
-import kotlin.math.max
+import com.raycoll.app.domain.model.SrsConstants
+import kotlin.math.ceil
 
-fun archiveDaysLeft(group: FlashcardGroup, now: Long, retentionMs: Long = 14L * 24 * 60 * 60 * 1000): Int {
-    val archivedAt = group.archivedAt ?: return 0
-    val elapsed = now - archivedAt
-    val remaining = retentionMs - elapsed
-    return max(0, (remaining / (24 * 60 * 60 * 1000)).toInt())
+fun archiveCountdown(group: FlashcardGroup, now: Long): Int {
+    val archivedAt = group.archivedAt ?: return -1
+    val retentionMs = ArchiveConstants.RETENTION_DAYS * SrsConstants.DAY_MS
+    val deleteAt = archivedAt + retentionMs
+    val remaining = deleteAt - now
+    return if (remaining <= 0) 0 else ceil(remaining.toDouble() / SrsConstants.DAY_MS).toInt()
 }
 
-fun archiveAutoDeleteLabel(daysLeft: Int): String = when {
-    daysLeft <= 0 -> "today"
-    daysLeft == 1 -> "tomorrow"
-    else -> "${daysLeft}d"
-}
+fun selectActiveGroups(groups: List<FlashcardGroup>): List<FlashcardGroup> =
+    groups.filter { it.deletedAt == null && it.archivedAt == null }
+
+fun selectArchivedGroups(groups: List<FlashcardGroup>): List<FlashcardGroup> =
+    groups.filter { it.deletedAt == null && it.archivedAt != null }.sortedByDescending { it.archivedAt ?: 0 }

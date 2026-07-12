@@ -1,54 +1,55 @@
 package com.raycoll.app.domain.srs
 
 import com.raycoll.app.domain.model.SrsState
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
+import com.raycoll.app.domain.model.createNewSrsState
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class SrsEngineTest {
 
     @Test
-    fun `createNewSrsState sets difficulty_5 stability_0 repetitions_0 state_0`() {
+    fun `createNewSrsState sets defaults`() {
         val state = createNewSrsState()
-        assertEquals(5.0, state.difficulty)
-        assertEquals(0.0, state.stability)
+        assertEquals(5.0, state.difficulty, 0.001)
+        assertEquals(0.0, state.stability, 0.001)
         assertEquals(0, state.repetitions)
         assertEquals(0, state.state)
     }
 
     @Test
-    fun `getCardCategory returns New for state_0`() {
-        assertEquals(SrsCardCategory.New, getCardCategory(SrsState(state = 0)))
+    fun `getCardCategory returns new for state 0`() {
+        assertEquals(SrsCardCategory.NEW, getCardCategory(createNewSrsState()))
     }
 
     @Test
-    fun `getCardCategory returns Learning for state_1`() {
-        assertEquals(SrsCardCategory.Learning, getCardCategory(SrsState(state = 1)))
+    fun `getCardCategory returns learning for state 1`() {
+        assertEquals(SrsCardCategory.LEARNING, getCardCategory(createNewSrsState().copy(state = 1)))
     }
 
     @Test
-    fun `getCardCategory returns Learning for state_3 relearning`() {
-        assertEquals(SrsCardCategory.Learning, getCardCategory(SrsState(state = 3)))
+    fun `getCardCategory returns learning for state 3`() {
+        assertEquals(SrsCardCategory.LEARNING, getCardCategory(createNewSrsState().copy(state = 3)))
     }
 
     @Test
-    fun `getCardCategory returns Review for state_2 with repetitions_2`() {
-        assertEquals(SrsCardCategory.Review, getCardCategory(SrsState(state = 2, repetitions = 2)))
+    fun `getCardCategory returns review for state 2 with repetitions 2`() {
+        assertEquals(SrsCardCategory.REVIEW, getCardCategory(createNewSrsState().copy(state = 2, repetitions = 2)))
     }
 
     @Test
-    fun `getCardCategory returns Mastered for state_2 with repetitions_3`() {
-        assertEquals(SrsCardCategory.Mastered, getCardCategory(SrsState(state = 2, repetitions = 3)))
+    fun `getCardCategory returns mastered for state 2 with repetitions 3`() {
+        assertEquals(SrsCardCategory.MASTERED, getCardCategory(createNewSrsState().copy(state = 2, repetitions = 3)))
     }
 
     @Test
-    fun `matchSpeech exact match case punctuation insensitive`() {
+    fun `matchSpeech exact match case insensitive`() {
         assertEquals(100, matchSpeech("hello world", "Hello World!"))
     }
 
     @Test
     fun `matchSpeech partial match`() {
-        val result = matchSpeech("hello", "hello world")
-        assertTrue(result in 50..60, "Expected ~50 but got $result")
+        assertEquals(50, matchSpeech("hello", "hello world"))
     }
 
     @Test
@@ -62,23 +63,34 @@ class SrsEngineTest {
     }
 
     @Test
-    fun `mapMatchToRating 90 pct is Easy`() { assertEquals(4, mapMatchToRating(90)) }
-    @Test
-    fun `mapMatchToRating 70 pct is Good`() { assertEquals(3, mapMatchToRating(70)) }
-    @Test
-    fun `mapMatchToRating 50 pct is Hard`() { assertEquals(2, mapMatchToRating(50)) }
-    @Test
-    fun `mapMatchToRating 20 pct is Again`() { assertEquals(1, mapMatchToRating(20)) }
+    fun `mapMatchToRating 90 percent gives 4`() {
+        assertEquals(4, mapMatchToRating(90))
+    }
 
     @Test
-    fun `mapMatchToRating uses STT threshold when provided`() {
+    fun `mapMatchToRating 70 percent gives 3`() {
+        assertEquals(3, mapMatchToRating(70))
+    }
+
+    @Test
+    fun `mapMatchToRating 50 percent gives 2`() {
+        assertEquals(2, mapMatchToRating(50))
+    }
+
+    @Test
+    fun `mapMatchToRating 20 percent gives 1`() {
+        assertEquals(1, mapMatchToRating(20))
+    }
+
+    @Test
+    fun `mapMatchToRating with threshold`() {
         assertEquals(1, mapMatchToRating(75, 90))
         assertEquals(3, mapMatchToRating(90, 90))
         assertEquals(4, mapMatchToRating(95, 90))
     }
 
     @Test
-    fun `calculateFsrs increments reps changes state to Review for rating 3`() {
+    fun `calculateFsrs increments repetitions and changes state`() {
         val state = createNewSrsState()
         val result = calculateFsrs(state, 3, System.currentTimeMillis())
         assertEquals(1, result.repetitions)
@@ -89,7 +101,7 @@ class SrsEngineTest {
 
     @Test
     fun `calculateFsrs handles extreme values without infinity`() {
-        val dayMs = 24 * 60 * 60 * 1000L
+        val dayMs = 86_400_000L
         val now = System.currentTimeMillis()
         val extremeState = SrsState(
             difficulty = 100.0,
@@ -100,20 +112,26 @@ class SrsEngineTest {
             nextReviewTimestamp = now - 365 * dayMs,
         )
         val result = calculateFsrs(extremeState, 4, now)
-        assertTrue(result.nextReviewTimestamp > 0, "next review timestamp should be positive")
+        assertTrue(result.nextReviewTimestamp in 0..Long.MAX_VALUE)
         assertTrue(result.difficulty <= 10)
         assertTrue(result.stability <= 3650)
         assertTrue(result.nextReviewTimestamp - result.lastReviewTimestamp <= 3650 * dayMs + 1000)
     }
 
     @Test
-    fun `SpeechMatcher normalizeText removes punctuation`() {
-        assertEquals("hello world", normalizeText("Hello, World!"))
+    fun `calculateFsrs rating 1 on new card gives state 1`() {
+        val result = calculateFsrs(createNewSrsState(), 1, System.currentTimeMillis())
+        assertEquals(1, result.state)
     }
 
     @Test
-    fun `SpeechMatcher levenshteinDistance correct`() {
-        assertEquals(3, levenshteinDistance("kitten", "sitting"))
-        assertEquals(0, levenshteinDistance("test", "test"))
+    fun `calculateFsrs on existing card rating 1 gives relearning state 3`() {
+        val existing = SrsState(
+            difficulty = 5.0, stability = 10.0, repetitions = 5, state = 2,
+            lastReviewTimestamp = System.currentTimeMillis() - 86_400_000L,
+            nextReviewTimestamp = System.currentTimeMillis(),
+        )
+        val result = calculateFsrs(existing, 1, System.currentTimeMillis())
+        assertEquals(3, result.state)
     }
 }

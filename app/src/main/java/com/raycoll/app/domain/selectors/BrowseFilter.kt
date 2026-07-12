@@ -1,46 +1,21 @@
 package com.raycoll.app.domain.selectors
 
 import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.domain.srs.getCardCategory
 
-data class BrowseFilterResult(
-    val all: List<Flashcard>,
-    val new: List<Flashcard>,
-    val learning: List<Flashcard>,
-    val review: List<Flashcard>,
-    val mastered: List<Flashcard>,
-)
+data class BrowseFilterResult(val cards: List<Flashcard>, val counts: CardStats)
 
-fun categorizeForBrowse(cards: List<Flashcard>): BrowseFilterResult {
-    val live = cards.filter { it.deletedAt == null }
-    val new = mutableListOf<Flashcard>()
-    val learning = mutableListOf<Flashcard>()
-    val review = mutableListOf<Flashcard>()
-    val mastered = mutableListOf<Flashcard>()
-    for (c in live) {
-        when (getCardCategory(c.srsState)) {
-            com.raycoll.app.domain.srs.SrsCardCategory.New -> new.add(c)
-            com.raycoll.app.domain.srs.SrsCardCategory.Learning -> learning.add(c)
-            com.raycoll.app.domain.srs.SrsCardCategory.Review -> review.add(c)
-            com.raycoll.app.domain.srs.SrsCardCategory.Mastered -> mastered.add(c)
+fun browseFilter(cards: List<Flashcard>, search: String, category: SrsCardCategory?, now: Long): BrowseFilterResult {
+    val liveCards = filterLiveCards(cards)
+    val searchLower = search.trim().lowercase()
+    val filtered = if (searchLower.isEmpty()) {
+        if (category == null) liveCards else liveCards.filter { getCardCategory(it.srsState) == category }
+    } else {
+        liveCards.filter { card ->
+            (category == null || getCardCategory(card.srsState) == category) &&
+            card.pages.any { it.lowercase().contains(searchLower) }
         }
     }
-    return BrowseFilterResult(live, new, learning, review, mastered)
-}
-
-fun searchCards(cards: List<Flashcard>, query: String, group: FlashcardGroup): List<Flashcard> {
-    if (query.isBlank()) return cards.filter { it.deletedAt == null }
-    val normalizedQuery = query.lowercase().trim()
-    return cards.filter { c ->
-        c.deletedAt == null && getVisiblePagesCompat(c, group).any { page ->
-            page.lowercase().contains(normalizedQuery)
-        }
-    }
-}
-
-private fun getVisiblePagesCompat(card: Flashcard, group: FlashcardGroup): List<String> {
-    val padded = card.pages.toMutableList()
-    while (padded.size < group.activePageCount) padded.add("")
-    return padded.take(group.activePageCount)
+    return BrowseFilterResult(cards = filtered, counts = computeCardStats(liveCards))
 }

@@ -1,35 +1,23 @@
 package com.raycoll.app.domain.steps
 
-import com.raycoll.app.domain.model.*
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.ShowAllPagesStep
+import com.raycoll.app.domain.model.ShowPageStep
+import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakPageStep
+import com.raycoll.app.domain.model.WaitForTapToRevealStep
+import com.raycoll.app.domain.srs.createSeedModes
 
 object ModeTemplates {
-    data class Template(val id: String, val name: String, val steps: List<ModeStep>)
-
-    val templates: List<Template> = listOf(
-        Template("classic", "Classic", listOf(
-            ShowPage(pageIndex = 0), SpeakPage(pageIndex = 0),
-            WaitForTapToReveal(), ShowAllPages(), ShowRatings()
-        )),
-        Template("audio", "Audio", listOf(
-            ShowPage(pageIndex = 0), SpeakPage(pageIndex = 0),
-            ListenAndCheck(pageIndex = 1, successThreshold = 70),
-            FeedbackSuccess(condition = StepCondition.correct),
-            ShowAllPages(condition = StepCondition.correct),
-            AutoRateFromAnswer(condition = StepCondition.correct),
-            NextCard(condition = StepCondition.correct),
-            FeedbackError(condition = StepCondition.wrong),
-            ShowAllPages(condition = StepCondition.wrong),
-            MarkFailed(condition = StepCondition.wrong),
-            AutoRateFixed(rating = 1, condition = StepCondition.wrong),
-            NextCard(condition = StepCondition.wrong),
-            ShowAllPages(), ShowRatings()
-        )),
-        Template("show-only", "Show Only", listOf(ShowPage(0), SpeakPage(0), WaitForTapToReveal(), ShowAllPages(), ShowRatings())),
-        Template("speak-pause", "Speak + Pause", listOf(
-            ShowPage(0), SpeakPage(0), DynamicPause(nextPageIndex = 1, pauseMultiplier = 1),
-            ShowPage(1), SpeakPage(1), DynamicPause(nextPageIndex = 0, pauseMultiplier = 1), NextCard()
-        )),
+    fun classicTemplate(): List<ModeStep> = listOf(
+        ShowPageStep(pageIndex = 0),
+        SpeakPageStep(pageIndex = 0),
+        WaitForTapToRevealStep(),
+        ShowAllPagesStep(),
+        ShowRatingsStep(),
     )
 
-    fun getTemplate(id: String): Template? = templates.find { it.id == id }
+    fun audioTemplate(): List<ModeStep> = createSeedModes().find { it.id == "listen-speak" }?.steps ?: emptyList()
+
+    fun blankTemplate(): List<ModeStep> = emptyList()
 }
