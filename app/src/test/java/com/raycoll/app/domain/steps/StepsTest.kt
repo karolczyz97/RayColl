@@ -121,28 +121,28 @@ class ModeStepValidatorTest {
     fun `empty steps gives error`() {
         val mode = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "Test", steps = emptyList())
         val errors = ModeStepValidator.validate(mode, 2)
-        assertTrue(errors.any { it.contains("at least one step") })
+        assertTrue(errors.any { it is ModeIssue.NoSteps })
     }
 
     @Test
     fun `blank name gives error`() {
         val mode = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "", steps = listOf(ShowPageStep()))
         val errors = ModeStepValidator.validate(mode, 2)
-        assertTrue(errors.any { it.contains("name") })
+        assertTrue(errors.any { it is ModeIssue.NameRequired })
     }
 
     @Test
     fun `page out of range gives error`() {
         val mode = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "Test", steps = listOf(ShowPageStep(pageIndex = 5), ShowRatingsStep()))
         val errors = ModeStepValidator.validate(mode, 2)
-        assertTrue(errors.any { it.contains("out of range") })
+        assertTrue(errors.any { it is ModeIssue.PageOutOfRange })
     }
 
     @Test
     fun `no terminal step gives error`() {
         val mode = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "Test", steps = listOf(ShowPageStep()))
         val errors = ModeStepValidator.validate(mode, 2)
-        assertTrue(errors.any { it.contains("terminal") })
+        assertTrue(errors.any { it is ModeIssue.NoTerminalStep })
     }
 }
 

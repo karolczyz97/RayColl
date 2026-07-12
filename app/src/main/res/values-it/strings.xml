@@ -320,5 +320,31 @@
     <string name="auth_signed_in_as">Accesso effettuato come %1$s</string>
     <string name="auth_sign_out">Esci</string>
     <string name="auth_sync_now">Sincronizza ora</string>
+    <string name="mode_editor_new_title">Nuova modalità di studio</string>
+    <string name="mode_editor_name_label">Nome della modalità</string>
+    <string name="mode_editor_builtin_badge">Modalità integrata</string>
+    <string name="mode_editor_issues_title">Errori nella configurazione della modalità:</string>
+    <string name="mode_editor_steps_header">Passaggi della modalità (%1$d)</string>
+    <string name="mode_editor_add_step">Aggiungi passaggio</string>
+    <string name="mode_editor_move_up">Sposta su</string>
+    <string name="mode_editor_move_down">Sposta giù</string>
+    <string name="mode_editor_template_title">Scegli un modello iniziale</string>
+    <string name="mode_editor_template_classic">Classica (gira e valuta)</string>
+    <string name="mode_editor_template_audio">Audio (ascolta e parla)</string>
+    <string name="mode_editor_template_blank">Modalità vuota</string>
+    <string name="mode_issue_name_required">Il nome della modalità è obbligatorio</string>
+    <string name="mode_issue_no_steps">Aggiungi almeno un passaggio</string>
+    <string name="mode_issue_page_out_of_range">Il passaggio %1$d usa la pagina %2$d, fuori intervallo</string>
+    <string name="mode_issue_no_terminal">Manca il passaggio finale: aggiungi “Mostra pulsanti di valutazione” o “Prossima carta”</string>
+    <string name="mode_issue_auto_rate_without_stt">“Valuta dalla risposta” richiede prima “Controlla voce (STT)”</string>
+    <string name="step_category_compound">Passaggi composti</string>
+    <string name="step_compound">Composto: %1$s</string>
+    <string name="mode_list_edit">Modifica modalità</string>
+    <string name="mode_list_new">Nuova modalità di studio</string>
+    <string name="mode_list_reset">Ripristina predefiniti</string>
+    <string name="mode_list_delete_title">Eliminare la modalità?</string>
+    <string name="mode_list_delete_desc">Questa modalità di studio personalizzata sarà eliminata definitivamente.</string>
+    <string name="mode_list_reset_title">Ripristinare i predefiniti?</string>
+    <string name="mode_list_reset_desc">I passaggi e il nome di questa modalità integrata torneranno all’originale.</string>
 </resources>
 

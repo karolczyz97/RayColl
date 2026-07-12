@@ -1,6 +1,8 @@
 package com.raycoll.app.ui.decksettings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,9 +45,13 @@ import java.util.Locale
 fun DeckSettingsScreen(
     deckId: String,
     onBack: () -> Unit,
+    onEditMode: (String?) -> Unit,
     viewModel: DeckSettingsViewModel = hiltViewModel(),
 ) {
     val deck by viewModel.deck.collectAsStateWithLifecycle(null)
+    val modes by viewModel.modes.collectAsStateWithLifecycle()
+    var modeToDelete by remember { mutableStateOf<String?>(null) }
+    var modeToReset by remember { mutableStateOf<String?>(null) }
     var name by remember { mutableStateOf("") }
     var activePageCount by remember { mutableStateOf(2) }
     var studyFilter by remember { mutableStateOf("new+review") }
@@ -72,7 +81,10 @@ fun DeckSettingsScreen(
             )
         }
     ) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -112,12 +124,62 @@ fun DeckSettingsScreen(
                 }
             }
 
+            // Tryby nauki: wybór aktywnego + edycja/usuwanie/reset + nowy
+            Text(stringResource(R.string.study_modes_title), style = MaterialTheme.typography.titleMedium)
+            modes.forEach { mode ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = deck?.activeModeId == mode.id,
+                        onClick = { viewModel.setActiveMode(deckId, mode.id) },
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(mode.name)
+                        if (mode.isBuiltIn) {
+                            Text(stringResource(R.string.mode_editor_builtin_badge), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                        }
+                    }
+                    IconButton(onClick = { onEditMode(mode.id) }) {
+                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.mode_list_edit))
+                    }
+                    if (mode.isBuiltIn) {
+                        IconButton(onClick = { modeToReset = mode.id }) {
+                            Icon(Icons.Filled.Restore, contentDescription = stringResource(R.string.mode_list_reset))
+                        }
+                    } else {
+                        IconButton(onClick = { modeToDelete = mode.id }) {
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.btn_delete), tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+            TextButton(onClick = { onEditMode(null) }) { Text(stringResource(R.string.mode_list_new)) }
+
             Button(onClick = { viewModel.updateName(deckId, name) }) { Text(stringResource(R.string.btn_save)) }
             Button(onClick = { showArchiveDialog = true }) { Text(stringResource(R.string.settings_archive_btn)) }
             Button(onClick = { showDeleteDialog = true }, colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
                 Text(stringResource(R.string.btn_delete))
             }
         }
+    }
+
+    modeToDelete?.let { modeId ->
+        AlertDialog(
+            onDismissRequest = { modeToDelete = null },
+            title = { Text(stringResource(R.string.mode_list_delete_title)) },
+            text = { Text(stringResource(R.string.mode_list_delete_desc)) },
+            confirmButton = { TextButton(onClick = { viewModel.deleteMode(modeId); modeToDelete = null }) { Text(stringResource(R.string.btn_delete)) } },
+            dismissButton = { TextButton(onClick = { modeToDelete = null }) { Text(stringResource(R.string.btn_cancel)) } },
+        )
+    }
+
+    modeToReset?.let { modeId ->
+        AlertDialog(
+            onDismissRequest = { modeToReset = null },
+            title = { Text(stringResource(R.string.mode_list_reset_title)) },
+            text = { Text(stringResource(R.string.mode_list_reset_desc)) },
+            confirmButton = { TextButton(onClick = { viewModel.resetMode(modeId); modeToReset = null }) { Text(stringResource(R.string.mode_list_reset)) } },
+            dismissButton = { TextButton(onClick = { modeToReset = null }) { Text(stringResource(R.string.btn_cancel)) } },
+        )
     }
 
     if (showArchiveDialog) {

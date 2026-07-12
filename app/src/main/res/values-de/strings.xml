@@ -320,5 +320,31 @@
     <string name="auth_signed_in_as">Angemeldet als %1$s</string>
     <string name="auth_sign_out">Abmelden</string>
     <string name="auth_sync_now">Jetzt synchronisieren</string>
+    <string name="mode_editor_new_title">Neuer Lernmodus</string>
+    <string name="mode_editor_name_label">Modusname</string>
+    <string name="mode_editor_builtin_badge">Integrierter Modus</string>
+    <string name="mode_editor_issues_title">Fehler in der Moduskonfiguration:</string>
+    <string name="mode_editor_steps_header">Modusschritte (%1$d)</string>
+    <string name="mode_editor_add_step">Schritt hinzufügen</string>
+    <string name="mode_editor_move_up">Nach oben</string>
+    <string name="mode_editor_move_down">Nach unten</string>
+    <string name="mode_editor_template_title">Startvorlage wählen</string>
+    <string name="mode_editor_template_classic">Klassisch (aufdecken &amp; bewerten)</string>
+    <string name="mode_editor_template_audio">Audio (hören &amp; sprechen)</string>
+    <string name="mode_editor_template_blank">Leerer Modus</string>
+    <string name="mode_issue_name_required">Modusname ist erforderlich</string>
+    <string name="mode_issue_no_steps">Mindestens einen Schritt hinzufügen</string>
+    <string name="mode_issue_page_out_of_range">Schritt %1$d verwendet Seite %2$d außerhalb des Bereichs</string>
+    <string name="mode_issue_no_terminal">Kein Endschritt: „Bewertungstasten zeigen“ oder „Nächste Karte“ hinzufügen</string>
+    <string name="mode_issue_auto_rate_without_stt">„Automatisch aus Antwort bewerten“ braucht vorher „Sprache prüfen (STT)“</string>
+    <string name="step_category_compound">Zusammengesetzte Schritte</string>
+    <string name="step_compound">Zusammengesetzt: %1$s</string>
+    <string name="mode_list_edit">Modus bearbeiten</string>
+    <string name="mode_list_new">Neuer Lernmodus</string>
+    <string name="mode_list_reset">Standard wiederherstellen</string>
+    <string name="mode_list_delete_title">Modus löschen?</string>
+    <string name="mode_list_delete_desc">Dieser eigene Lernmodus wird dauerhaft gelöscht.</string>
+    <string name="mode_list_reset_title">Standard wiederherstellen?</string>
+    <string name="mode_list_reset_desc">Schritte und Name dieses integrierten Modus werden zurückgesetzt.</string>
 </resources>
 

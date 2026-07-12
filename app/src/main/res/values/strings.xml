@@ -320,5 +320,31 @@
     <string name="auth_signed_in_as">Signed in as %1$s</string>
     <string name="auth_sign_out">Sign out</string>
     <string name="auth_sync_now">Sync now</string>
+    <string name="mode_editor_new_title">New study mode</string>
+    <string name="mode_editor_name_label">Mode name</string>
+    <string name="mode_editor_builtin_badge">Built-in mode</string>
+    <string name="mode_editor_issues_title">Issues in mode configuration:</string>
+    <string name="mode_editor_steps_header">Mode steps (%1$d)</string>
+    <string name="mode_editor_add_step">Add step</string>
+    <string name="mode_editor_move_up">Move up</string>
+    <string name="mode_editor_move_down">Move down</string>
+    <string name="mode_editor_template_title">Choose a starting template</string>
+    <string name="mode_editor_template_classic">Classic (flip &amp; rate)</string>
+    <string name="mode_editor_template_audio">Audio (listen &amp; speak)</string>
+    <string name="mode_editor_template_blank">Empty mode</string>
+    <string name="mode_issue_name_required">Mode name is required</string>
+    <string name="mode_issue_no_steps">Add at least one step</string>
+    <string name="mode_issue_page_out_of_range">Step %1$d uses page %2$d, which is out of range</string>
+    <string name="mode_issue_no_terminal">No terminal step: add “Show rating buttons” or “Next card”</string>
+    <string name="mode_issue_auto_rate_without_stt">“Auto-rate from answer” needs an earlier “Check speech (STT)” step</string>
+    <string name="step_category_compound">Compound steps</string>
+    <string name="step_compound">Compound: %1$s</string>
+    <string name="mode_list_edit">Edit mode</string>
+    <string name="mode_list_new">New study mode</string>
+    <string name="mode_list_reset">Restore defaults</string>
+    <string name="mode_list_delete_title">Delete mode?</string>
+    <string name="mode_list_delete_desc">This custom study mode will be permanently deleted.</string>
+    <string name="mode_list_reset_title">Restore defaults?</string>
+    <string name="mode_list_reset_desc">The steps and name of this built-in mode will be restored to the original.</string>
 </resources>
 

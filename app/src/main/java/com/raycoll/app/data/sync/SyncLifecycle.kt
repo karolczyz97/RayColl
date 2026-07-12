@@ -1,6 +1,7 @@
 package com.raycoll.app.data.sync
 
 import com.raycoll.app.data.remote.auth.AuthRepository
+import com.raycoll.app.data.repository.DataMutations
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.NamespaceManager
 import com.raycoll.app.domain.model.StoreData
@@ -28,6 +29,7 @@ class SyncLifecycle @Inject constructor(
     private val bootstrapLoader: BootstrapLoader,
     private val migrationController: MigrationController,
     private val syncEngine: SyncEngine,
+    private val dataMutations: DataMutations,
 ) {
     private var scope: CoroutineScope? = null
     private var pushJob: Job? = null
@@ -42,7 +44,7 @@ class SyncLifecycle @Inject constructor(
         this.scope = scope
         scope.launch { runBootstrap() }
         scope.launch {
-            deckRepository.mutations.collect {
+            dataMutations.events.collect {
                 if (!suppressPush) schedulePush()
             }
         }

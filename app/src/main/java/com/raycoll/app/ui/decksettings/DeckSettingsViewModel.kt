@@ -3,19 +3,34 @@ package com.raycoll.app.ui.decksettings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.model.StudyMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class DeckSettingsViewModel @Inject constructor(
     private val deckRepository: DeckRepository,
+    private val modeRepository: StudyModeRepository,
 ) : ViewModel() {
     private val _deck = MutableStateFlow<FlashcardGroup?>(null)
     val deck: StateFlow<FlashcardGroup?> = _deck
+
+    val modes: StateFlow<List<StudyMode>> = modeRepository.liveModes()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun setActiveMode(deckId: String, modeId: String) { viewModelScope.launch {
+        deckRepository.setActiveStudyMode(deckId, modeId)
+        _deck.value = _deck.value?.copy(activeModeId = modeId)
+    }}
+    fun deleteMode(modeId: String) { viewModelScope.launch { modeRepository.deleteMode(modeId) } }
+    fun resetMode(modeId: String) { viewModelScope.launch { modeRepository.resetMode(modeId) } }
 
     fun loadDeck(deckId: String) { viewModelScope.launch { _deck.value = deckRepository.getDeck(deckId) } }
     fun updateName(deckId: String, name: String) { viewModelScope.launch {

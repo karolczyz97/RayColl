@@ -11,16 +11,18 @@ import com.raycoll.app.domain.operations.updateStudyMode
 import com.raycoll.app.domain.srs.createSeedModes
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class StudyModeRepository @Inject constructor(
     private val db: RayCollDatabase,
     private val clock: Clock,
     private val namespaceManager: NamespaceManager,
+    private val dataMutations: DataMutations,
 ) {
     private val modeDao = db.studyModeDao()
 
-    fun liveModes() = modeDao.liveModes(namespaceManager.current())
+    fun liveModes() = modeDao.liveModes(namespaceManager.current()).map { entities -> entities.map { Mappers.entityToMode(it) } }
 
     suspend fun getModes(): List<StudyMode> {
         val ns = namespaceManager.current()
@@ -32,6 +34,7 @@ class StudyModeRepository @Inject constructor(
         val now = clock.now()
         val (modes, id) = addStudyMode(emptyList(), name, steps, now)
         modeDao.insertMode(Mappers.modeToEntity(modes.last(), ns))
+        dataMutations.signal()
         return id
     }
 
@@ -40,11 +43,13 @@ class StudyModeRepository @Inject constructor(
         val now = clock.now()
         val updated = updateStudyMode(listOf(mode), mode, now)
         modeDao.insertMode(Mappers.modeToEntity(updated[0], ns))
+        dataMutations.signal()
     }
 
     suspend fun deleteMode(modeId: String) {
         val ns = namespaceManager.current()
         modeDao.softDeleteMode(ns, modeId, clock.now())
+        dataMutations.signal()
     }
 
     suspend fun resetMode(modeId: String) {
@@ -54,6 +59,7 @@ class StudyModeRepository @Inject constructor(
         val updated = resetStudyMode(modes, modeId, now)
         val mode = updated.find { it.id == modeId } ?: return
         modeDao.insertMode(Mappers.modeToEntity(mode, ns))
+        dataMutations.signal()
     }
 
     suspend fun seedIfEmpty() {

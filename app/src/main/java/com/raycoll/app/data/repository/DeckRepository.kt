@@ -30,8 +30,6 @@ import com.raycoll.app.domain.seed.SeedData
 import com.raycoll.app.domain.normalize.normalizeStoreData
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.map
 
 @Singleton
@@ -39,14 +37,12 @@ class DeckRepository @Inject constructor(
     private val db: RayCollDatabase,
     private val clock: Clock,
     private val namespaceManager: NamespaceManager,
+    private val dataMutations: DataMutations,
 ) {
     private val deckDao = db.deckDao()
     private val activityDao = db.activityDao()
 
-    // Sygnal kazdej lokalnej mutacji danych — nasluchuje go SyncLifecycle (debounced push do chmury).
-    private val _mutations = MutableSharedFlow<Unit>(extraBufferCapacity = 64)
-    val mutations: SharedFlow<Unit> = _mutations
-    private fun notifyMutation() { _mutations.tryEmit(Unit) }
+    private fun notifyMutation() = dataMutations.signal()
 
     fun activeDecks() = deckDao.activeDecks(namespaceManager.current()).map { entities ->
         entities.map { Mappers.entityToDeck(it, deckDao.getCards(namespaceManager.current(), it.id)) }

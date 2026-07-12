@@ -56,7 +56,11 @@ fun RayCollNavHost() {
         }
         composable<DeckSettingsRoute> { backStack ->
             val route = backStack.toRoute<DeckSettingsRoute>()
-            DeckSettingsScreen(deckId = route.deckId, onBack = { navController.popBackStack() })
+            DeckSettingsScreen(
+                deckId = route.deckId,
+                onBack = { navController.popBackStack() },
+                onEditMode = { modeId -> navController.navigate(ModeDetailRoute(modeId)) },
+            )
         }
         composable<ModeDetailRoute> { backStack ->
             val route = backStack.toRoute<ModeDetailRoute>()

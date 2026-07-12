@@ -320,5 +320,31 @@
     <string name="auth_signed_in_as">Zalogowano jako %1$s</string>
     <string name="auth_sign_out">Wyloguj się</string>
     <string name="auth_sync_now">Synchronizuj teraz</string>
+    <string name="mode_editor_new_title">Nowy tryb nauki</string>
+    <string name="mode_editor_name_label">Nazwa trybu</string>
+    <string name="mode_editor_builtin_badge">Tryb wbudowany</string>
+    <string name="mode_editor_issues_title">Błędy w konfiguracji trybu:</string>
+    <string name="mode_editor_steps_header">Kroki trybu (%1$d)</string>
+    <string name="mode_editor_add_step">Dodaj krok</string>
+    <string name="mode_editor_move_up">Przenieś wyżej</string>
+    <string name="mode_editor_move_down">Przenieś niżej</string>
+    <string name="mode_editor_template_title">Wybierz szablon startowy</string>
+    <string name="mode_editor_template_classic">Klasyczny (odkryj i oceń)</string>
+    <string name="mode_editor_template_audio">Audio (słuchaj i mów)</string>
+    <string name="mode_editor_template_blank">Pusty tryb</string>
+    <string name="mode_issue_name_required">Nazwa trybu jest wymagana</string>
+    <string name="mode_issue_no_steps">Dodaj przynajmniej jeden krok</string>
+    <string name="mode_issue_page_out_of_range">Krok %1$d używa strony %2$d, która jest poza zakresem</string>
+    <string name="mode_issue_no_terminal">Brak kroku kończącego: dodaj „Pokaż przyciski ocen” lub „Następna karta”</string>
+    <string name="mode_issue_auto_rate_without_stt">„Oceń z odpowiedzi” wymaga wcześniejszego kroku „Sprawdź mowę (STT)”</string>
+    <string name="step_category_compound">Kroki złożone</string>
+    <string name="step_compound">Złożony: %1$s</string>
+    <string name="mode_list_edit">Edytuj tryb</string>
+    <string name="mode_list_new">Nowy tryb nauki</string>
+    <string name="mode_list_reset">Przywróć domyślne</string>
+    <string name="mode_list_delete_title">Usunąć tryb?</string>
+    <string name="mode_list_delete_desc">Ten własny tryb nauki zostanie trwale usunięty.</string>
+    <string name="mode_list_reset_title">Przywrócić domyślne?</string>
+    <string name="mode_list_reset_desc">Kroki i nazwa tego wbudowanego trybu wrócą do oryginału.</string>
 </resources>
 
