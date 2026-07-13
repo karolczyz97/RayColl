@@ -10,6 +10,8 @@ import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.model.StepCondition
 import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.CompoundBranch
+import com.raycoll.app.domain.model.CompoundPause
 import com.raycoll.app.domain.srs.isBuiltInModeSourceId
 
 private val VALID_SRS_STATES = setOf(0, 1, 2, 3)
@@ -86,6 +88,28 @@ private fun clampMs(value: Long?): Long =
 private fun normalizeStepCondition(condition: StepCondition?): StepCondition? =
     if (condition == StepCondition.CORRECT || condition == StepCondition.WRONG) condition else null
 
+private fun normalizeRate(rate: String, fallback: String): String =
+    if (rate == "fromAnswer" || rate == "fixed" || rate == "none") rate else fallback
+
+private fun normalizeCompoundPause(pause: CompoundPause?): CompoundPause? = when (pause) {
+    is CompoundPause.Fixed -> pause.copy(ms = pause.ms.coerceAtLeast(0))
+    is CompoundPause.Dynamic -> pause.copy(page = normalizePageIndex(pause.page), multiplier = clampMultiplier(pause.multiplier))
+    null -> null
+}
+
+// Parytet z normalizeCompoundBranch (compoundSteps.ts): clampy pól gałęzi, żeby
+// uszkodzony/ręcznie edytowany backup nie wniósł np. speakPage<0 ani rating>4 do
+// ekspansji kroków. rate spoza {fromAnswer,fixed,none} → default gałęzi.
+private fun normalizeBranch(branch: CompoundBranch, condition: StepCondition): CompoundBranch {
+    val fallbackRate = if (condition == StepCondition.CORRECT) "fromAnswer" else "fixed"
+    return branch.copy(
+        speakPage = branch.speakPage?.let { normalizePageIndex(it) },
+        pause = normalizeCompoundPause(branch.pause),
+        rate = normalizeRate(branch.rate, fallbackRate),
+        fixedRating = clampRating(branch.fixedRating),
+    )
+}
+
 fun normalizeModeStep(step: ModeStep): ModeStep? {
     return when (step) {
         is CompoundStep -> normalizeCompoundStep(step)
@@ -148,10 +172,13 @@ private fun normalizeCompoundStep(step: CompoundStep): CompoundStep {
         is com.raycoll.app.domain.model.CompoundParams.ListenGrade -> params.copy(
             answerPage = normalizePageIndex(params.answerPage),
             threshold = clampThreshold(params.threshold),
-            onCorrect = params.onCorrect,
-            onWrong = params.onWrong,
+            onCorrect = normalizeBranch(params.onCorrect, StepCondition.CORRECT),
+            onWrong = normalizeBranch(params.onWrong, StepCondition.WRONG),
         )
-        is com.raycoll.app.domain.model.CompoundParams.GradeAfterListen -> params
+        is com.raycoll.app.domain.model.CompoundParams.GradeAfterListen -> params.copy(
+            onCorrect = normalizeBranch(params.onCorrect, StepCondition.CORRECT),
+            onWrong = normalizeBranch(params.onWrong, StepCondition.WRONG),
+        )
         is com.raycoll.app.domain.model.CompoundParams.AutoPassNext -> params.copy(rating = clampRating(params.rating))
         is com.raycoll.app.domain.model.CompoundParams.FailNext -> params
     }

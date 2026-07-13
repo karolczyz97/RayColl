@@ -92,7 +92,13 @@ class SessionEngine(
         // ta sama karta może być wznowiona tylko gdy czeka pending step (np. po gate)
         if (cardIndex == lastExecutedCardIndex && _state.value.pendingStepIndexToRun == null) return
         lastExecutedCardIndex = cardIndex
-        cardStartedAt = clock.now()
+        // Znacznik startu karty ustawiamy TYLKO przy wejściu od kroku 0 (świeży start).
+        // Wznowienie po tap-gate (pending != null) NIE resetuje go — inaczej okno
+        // "poprzednia = cofnij" liczyłoby się od tapnięcia w gate, nie od startu karty
+        // (parytet z executeStep: currentCardStartedAt tylko przy stepIndex === 0).
+        if (_state.value.pendingStepIndexToRun == null) {
+            cardStartedAt = clock.now()
+        }
 
         cardJobs[cardIndex]?.cancel()
         // LAZY: referencja musi trafić do mapy ZANIM łańcuch ruszy (immediate dispatcher

@@ -6,7 +6,9 @@ import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.createNewSrsState
 import com.raycoll.app.domain.normalize.DEFAULT_STUDY_FILTER
 import com.raycoll.app.domain.normalize.DEFAULT_CARD_ORDER
+import com.raycoll.app.core.LocalDates
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SelectorsTest {
@@ -126,5 +128,47 @@ class SelectorsTest {
     fun `archiveCountdown returns -1 for non-archived`() {
         val group = makeGroup(emptyList())
         assertEquals(-1, archiveCountdown(group, now))
+    }
+
+    @Test
+    fun `getGroupProgress rounds to nearest percent`() {
+        // 2/3 = 66.67 → 67 (round), nie 66 (trunc)
+        val cards = listOf(
+            makeCard("c1", reps = 1),
+            makeCard("c2", reps = 1),
+            makeCard("c3", reps = 0),
+        )
+        assertEquals(67, getGroupProgress(cards))
+    }
+
+    @Test
+    fun `random order can move the last card (Fisher-Yates covers every index)`() {
+        val cards = listOf(makeCard("a"), makeCard("b"))
+        // Pełny Fisher-Yates dla 2 kart MUSI potrafić wyprodukować [b, a] dla
+        // przynajmniej jednego ziarna. Zepsuta pętla (gubiąca i=n-1) zawsze zwraca [a, b].
+        val everSwapped = (0..50).any { seed ->
+            orderCards(cards, "random", kotlin.random.Random(seed)).map { it.id } == listOf("b", "a")
+        }
+        assertTrue(everSwapped)
+    }
+
+    @Test
+    fun `random order is a permutation of the input`() {
+        val cards = (1..8).map { makeCard("c$it") }
+        val shuffled = orderCards(cards, "random", kotlin.random.Random(123))
+        assertEquals(cards.map { it.id }.toSet(), shuffled.map { it.id }.toSet())
+        assertEquals(cards.size, shuffled.size)
+    }
+
+    @Test
+    fun `computeStreak uses injected now not the system clock`() {
+        // now = data z odległej przeszłości; klucze heatmapy budowane z tego samego now.
+        // Gdyby streak startował od systemowego LocalDate.now(), pętla szukałaby dzisiejszych
+        // kluczy (których w mapie nie ma) i zwróciłaby 0.
+        val fixedNow = 1_579_000_000_000L // ~2020-01-14
+        val todayKey = LocalDates.dayKey(fixedNow)
+        val yesterdayKey = LocalDates.dayKey(fixedNow - 86_400_000L)
+        val heatmap = mapOf(todayKey to 1, yesterdayKey to 1)
+        assertEquals(2, computeStreak(heatmap, fixedNow))
     }
 }

@@ -11,6 +11,7 @@ import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
@@ -238,6 +239,64 @@ class SessionEngineSemanticsTest {
         assertTrue(autoPaused)
         assertNull(eng.state.value.errorMsg)
         assertEquals(0, eng.state.value.currentCardIndex) // łańcuch zatrzymany
+    }
+
+    // --- status nie wycieka między kartami (tap-gate pozostaje klikalny) ---
+
+    @Test
+    fun `advancing to next card resets status so a silent reveal gate stays tappable`() = runTest(UnconfinedTestDispatcher()) {
+        val deps = RecordingDeps()
+        // Tryb bez speak/listen: sam show_page + bramka + oceny. Poprzednia karta kończy
+        // się na REVEALED; po przejściu status MUSI wrócić do IDLE, inaczej tap w bramkę
+        // drugiej karty byłby połykany (REVEALED → NIC) i użytkownik utknąłby.
+        val eng = engine(listOf(ShowPageStep(pageIndex = 0), WaitForTapToRevealStep(), ShowRatingsStep()), deps)
+        eng.start(listOf(card("c1"), card("c2")))
+        advanceUntilIdle()
+
+        eng.handleCardPress() // c1: domknij bramkę → oceny
+        advanceUntilIdle()
+        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        eng.rate(3) // → c2
+        advanceUntilIdle()
+
+        assertEquals(1, eng.state.value.currentCardIndex)
+        assertEquals(InteractionGateKind.TAP_TO_REVEAL, eng.state.value.interactionGate.kind)
+        assertFalse(eng.state.value.status == SessionStatus.REVEALED) // status nie wyciekł
+        eng.handleCardPress() // tap w bramkę drugiej karty MUSI zadziałać
+        advanceUntilIdle()
+        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+    }
+
+    // --- okno "poprzednia" vs restart nie resetuje się po tap-gate ---
+
+    @Test
+    fun `tap-gate resume does not reset the previous-card window`() = runTest(UnconfinedTestDispatcher()) {
+        val deps = RecordingDeps()
+        val clock = MutableClock(1_000L)
+        // Tryb z bramką tap-to-reveal (strona 1 ukryta na starcie karty).
+        val eng = engine(listOf(ShowPageStep(pageIndex = 0), WaitForTapToRevealStep(), ShowRatingsStep()), deps, clock)
+        eng.start(listOf(card("c1"), card("c2")))
+        advanceUntilIdle()
+
+        // c1: domknij bramkę i oceń → przejście do c2 (start c2 przy zegarze 1000).
+        eng.handleCardPress()
+        advanceUntilIdle()
+        eng.rate(3)
+        advanceUntilIdle()
+        assertEquals(1, eng.state.value.currentCardIndex)
+
+        // c2 stoi na bramce; domykamy ją DUŻO później (zegar 5000).
+        clock.now = 5_000L
+        eng.handleCardPress()
+        advanceUntilIdle()
+
+        // "Poprzednia" po kolejnych 500 ms: od PRAWDZIWEGO startu c2 (1000) minęło 4500 ms
+        // (> 3000) → RESTART bieżącej karty, NIE powrót do c1. Bug resetował znacznik na
+        // tapnięciu w bramkę (5000) i błędnie cofał do c1.
+        clock.now = 5_500L
+        eng.goToPreviousCard()
+        advanceUntilIdle()
+        assertEquals(1, eng.state.value.currentCardIndex)
     }
 
     @Test

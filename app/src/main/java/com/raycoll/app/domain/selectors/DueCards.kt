@@ -3,6 +3,7 @@ package com.raycoll.app.domain.selectors
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.normalize.normalizeCardOrder
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 private data class IndexedCard(val card: Flashcard, val index: Int)
@@ -24,8 +25,11 @@ fun orderCards(cards: List<Flashcard>, order: String?, random: Random = Random):
     val normalized = normalizeCardOrder(order)
     return when (normalized) {
         "random" -> {
+            // Fisher-Yates: i biegnie od ostatniego indeksu do 1 (parytet z csvParser.ts
+            // shuffleCards). Wcześniejszy `indices.reversed().drop(1)` gubił i=n-1, przez
+            // co ostatnia karta nigdy nie była tasowana i zawsze zostawała na końcu.
             val shuffled = cards.toMutableList()
-            for (i in shuffled.indices.reversed().drop(1)) {
+            for (i in shuffled.size - 1 downTo 1) {
                 val target = random.nextInt(i + 1)
                 val tmp = shuffled[i]; shuffled[i] = shuffled[target]; shuffled[target] = tmp
             }
@@ -50,5 +54,6 @@ fun getGroupProgress(cards: List<Flashcard>): Int {
     val liveCards = filterLiveCards(cards)
     if (liveCards.isEmpty()) return 0
     val learned = liveCards.count { it.srsState.repetitions >= 1 }
-    return ((learned.toDouble() / liveCards.size) * 100).toInt()
+    // round (nie trunc) — parytet z Math.round w cardSelectors.ts i spec 6.2.
+    return ((learned.toDouble() / liveCards.size) * 100).roundToInt()
 }

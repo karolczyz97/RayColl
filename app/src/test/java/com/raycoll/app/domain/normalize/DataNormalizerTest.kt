@@ -6,6 +6,10 @@ import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.CompoundParams
+import com.raycoll.app.domain.model.CompoundBranch
+import com.raycoll.app.domain.model.CompoundPause
 import com.raycoll.app.domain.model.createNewSrsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -96,6 +100,45 @@ class DataNormalizerTest {
         val (names, langs) = padPageMetadata(listOf("A"), listOf("en-US"), 3)
         assertEquals(listOf("A", "Page 2", "Page 3"), names)
         assertEquals(listOf("en-US", "en-US", "en-US"), langs)
+    }
+
+    @Test
+    fun `normalizes compound listen_grade branches (speakPage, rating, pause, rate)`() {
+        val corrupt = CompoundStep(
+            params = CompoundParams.ListenGrade(
+                answerPage = -3,
+                threshold = 250,
+                onCorrect = CompoundBranch(
+                    speakPage = -5,
+                    fixedRating = 99,
+                    rate = "bogus",
+                    pause = CompoundPause.Dynamic(page = -2, multiplier = 42.0),
+                ),
+                onWrong = CompoundBranch(
+                    speakPage = 7,
+                    fixedRating = 0,
+                    rate = "nonsense",
+                    pause = CompoundPause.Fixed(ms = -100),
+                ),
+            ),
+        )
+        val mode = StudyMode(id = "m-compound", name = "Compound", steps = listOf(corrupt))
+        val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
+        val result = normalizeStoreData(data)
+        val params = (result.studyModes[0].steps[0] as CompoundStep).params as CompoundParams.ListenGrade
+
+        assertEquals(0, params.answerPage)          // page clamp >= 0
+        assertEquals(100, params.threshold)         // 0..100
+        // correct branch
+        assertEquals(0, params.onCorrect.speakPage)         // -5 → 0
+        assertEquals(4, params.onCorrect.fixedRating)       // 99 → 4
+        assertEquals("fromAnswer", params.onCorrect.rate)   // bogus → default (correct)
+        assertEquals(0, (params.onCorrect.pause as CompoundPause.Dynamic).page)
+        assertEquals(5.0, (params.onCorrect.pause as CompoundPause.Dynamic).multiplier, 0.0)
+        // wrong branch
+        assertEquals(1, params.onWrong.fixedRating)         // 0 → 1
+        assertEquals("fixed", params.onWrong.rate)          // nonsense → default (wrong)
+        assertEquals(0L, (params.onWrong.pause as CompoundPause.Fixed).ms) // -100 → 0
     }
 
     @Test

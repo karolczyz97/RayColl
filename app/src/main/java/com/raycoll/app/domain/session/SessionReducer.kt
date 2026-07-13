@@ -15,10 +15,10 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
         failedCardIds = emptySet(),
         cardReviewed = false,
     )
-    is SessionAction.SetCurrentStep -> state.copy(currentStepIndex = action.stepIndex)
+    is SessionAction.SetCurrentStep -> state.copy(currentStepIndex = action.stepIndex, peekedPageIndex = null)
     is SessionAction.StartSpeaking -> state.copy(status = SessionStatus.SPEAKING, audioPageIndex = action.pageIndex, currentStepIndex = action.stepIndex)
     is SessionAction.EndSpeaking -> state.copy(status = SessionStatus.IDLE, audioPageIndex = null)
-    is SessionAction.StartListening -> state.copy(status = SessionStatus.LISTENING, audioPageIndex = action.pageIndex, currentStepIndex = action.stepIndex)
+    is SessionAction.StartListening -> state.copy(status = SessionStatus.LISTENING, audioPageIndex = action.pageIndex, currentStepIndex = action.stepIndex, lastAnswerResult = LastAnswerResult())
     is SessionAction.UpdatePartialStt -> {
         if (state.status != SessionStatus.LISTENING) state
         else state.copy(lastAnswerResult = state.lastAnswerResult.copy(text = action.text))
@@ -39,9 +39,15 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
         val clearedPeek = if (state.peekedPageIndex == action.pageIndex) null else state.peekedPageIndex
         state.copy(revealedPages = newRevealed, peekedPageIndex = clearedPeek)
     }
-    is SessionAction.ShowRatings -> if (state.cardReviewed) state else state.copy(status = SessionStatus.REVEALED)
-    is SessionAction.FinishSession -> state.copy(status = SessionStatus.FINISHED)
+    is SessionAction.ShowRatings -> if (state.cardReviewed) state else state.copy(status = SessionStatus.REVEALED, peekedPageIndex = null)
+    is SessionAction.FinishSession -> state.copy(
+        status = SessionStatus.FINISHED,
+        peekedPageIndex = null,
+        interactionGate = InteractionGate(),
+        pendingStepIndexToRun = null,
+    )
     is SessionAction.AdvanceCard -> state.copy(
+        status = SessionStatus.IDLE,
         currentCardIndex = action.nextCardIndex,
         currentStepIndex = 0,
         revealedPages = listOf(0),
@@ -58,6 +64,7 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
     is SessionAction.PeekSet -> state.copy(peekedPageIndex = action.pageIndex)
     is SessionAction.PeekClear -> state.copy(peekedPageIndex = null)
     is SessionAction.StartTapRevealGate -> state.copy(
+        status = SessionStatus.IDLE,
         interactionGate = InteractionGate(
             kind = InteractionGateKind.TAP_TO_REVEAL,
             revealMode = action.revealMode,

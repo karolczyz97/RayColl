@@ -35,7 +35,9 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
         }
     }
 
-    val clampedS = newS.coerceIn(SrsConstants.MIN_INTERVAL_DAYS, SrsConstants.MAX_INTERVAL_DAYS)
+    // clamp (nie coerceIn) — NaN → MIN, parytet z utils/math.ts clamp i z gałęzią
+    // difficulty niżej; coerceIn przepuściłby NaN do nextReview/serializacji.
+    val clampedS = clamp(newS, SrsConstants.MIN_INTERVAL_DAYS, SrsConstants.MAX_INTERVAL_DAYS)
     val nextReview = now + (clampedS * SrsConstants.DAY_MS).toLong()
 
     return current.copy(

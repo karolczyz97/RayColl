@@ -31,7 +31,12 @@ fun computeCardStats(cards: List<Flashcard>): CardStats {
 fun computeStreak(heatmap: Map<String, Int>, now: Long): Int {
     if (heatmap.isEmpty()) return 0
     var streak = 0
-    var date = java.time.LocalDate.now()
+    // Data startowa MUSI pochodzić z wstrzykniętego `now` (nie z systemowego
+    // LocalDate.now()), inaczej hasToday i iteracja mierzą dwie różne "dziś".
+    var date = java.time.LocalDate.ofInstant(
+        java.time.Instant.ofEpochMilli(now),
+        java.time.ZoneId.systemDefault(),
+    )
     val todayKey = LocalDates.dayKey(now)
     val hasToday = heatmap[todayKey] != null && (heatmap[todayKey] ?: 0) > 0
     if (!hasToday) {
