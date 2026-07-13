@@ -6,7 +6,14 @@ Weryfikacja **w kodzie** (bez urządzenia). Legenda:
   obrót, reinstall); weryfikacja wymaga telefonu. Wskazana ścieżka kodu, która to obsługuje.
 - **RYZYKO** — brak/wątpliwość w kodzie.
 
-Data: 2026-07-13. Suite: 195 testów jednostkowych zielone. Nie znaleziono błędów logiki podczas audytu.
+Data: 2026-07-13. Suite: 195 testów jednostkowych zielone.
+
+> **Aktualizacja 2026‑07‑14:** głębszy red‑team 1:1 vs TensorDeck (patrz
+> [`REDTEAM_AUDIT.md`](REDTEAM_AUDIT.md)) wykrył i naprawił **11 realnych błędów**,
+> których ten samo‑audyt nie złapał (m.in. tasowanie „random" gubiące ostatnią kartę,
+> wyciek statusu blokujący bramkę drugiej karty, cofanie zwiększenia liczby stron).
+> Suita po naprawach: **206 testów zielonych**. Poniższa lista pozostaje aktualna co do
+> ścieżek kodu; skreślone „nie znaleziono błędów" — patrz nowy audyt.
 
 ## Dashboard
 - OK — Lista talii + paski/liczniki: [DashboardViewModel.kt](app/src/main/java/com/raycoll/app/ui/dashboard/DashboardViewModel.kt), statystyki z [CardStats.kt](app/src/main/java/com/raycoll/app/domain/selectors/CardStats.kt). Test: `DashboardViewModelTest`.
