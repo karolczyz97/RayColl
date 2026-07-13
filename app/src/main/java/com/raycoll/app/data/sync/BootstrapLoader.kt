@@ -46,13 +46,8 @@ class BootstrapLoader @Inject constructor(
                     }
                 }
             } catch (e: TimeoutCancellationException) {
-                // Cloud timeout — show local data, set sync error
-                if (localData.groups.isEmpty() && localData.studyModes.isEmpty()) {
-                    // No local data — seed in memory only (not persisted to avoid duplicate seeds)
-                    BootstrapResult.LocalOnly
-                } else {
-                    BootstrapResult.LocalOnly
-                }
+                // Cloud timeout / błąd — pokaż dane lokalne (seed dokłada DashboardViewModel).
+                BootstrapResult.LocalOnly
             } catch (e: Exception) {
                 BootstrapResult.LocalOnly
             }

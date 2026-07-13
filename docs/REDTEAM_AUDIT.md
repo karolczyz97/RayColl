@@ -35,6 +35,44 @@ najtrudniejszych (bramka/tap‑gate) zweryfikowano, że test **pada bez** swojej
 - **`lastTtsDurationMs`** liczony per‑karta (nowy `StepExecutor` na kartę), w TS per‑sesja. Różni się tylko soft‑timeout STT w trybie „listen bez wcześniejszego speak w tej karcie" — pomijalne.
 - **`ModeStepValidator`** waliduje indeksy stron względem `MAX_PAGES=20` (tryby są niezależne od talii), nie względem `pageCount` konkretnej talii jak TS. Nie sprawdza indeksów **wewnątrz** kroków compound (runtime i tak filtruje `pageIndex >= activePageCount` przy ekspansji). Marginalne.
 
+## Drugi przebieg — skan „całej apki" pod kątem uproszczeń (2026‑07‑14)
+
+Pełny skan warstwy danych/DI/playback/UI pod kątem uproszczeń i martwego kodu. Znalazł
+**2 kolejne realne błędy** (poprawność) + sprzątanie:
+
+| Plik | Znalezisko | Skutek |
+|---|---|---|
+| `data/local/db/Daos.kt` + `DeckRepository.reviewCard` | `incrementActivity` = UPDATE count+1, ale wiersz dnia nigdy nie tworzony | **KRYTYCZNE**: pierwsza (i każda) ocena nowego dnia była no‑opem → heatmapa i streak **nigdy** by się nie zapisywały na urządzeniu. Test DAO maskował to, ręcznie tworząc wiersz. Fix: `ensureActivityRow` (INSERT OR IGNORE) |
+| `data/repository/DeckRepository.kt` | Zero transakcji w całej warstwie danych | reviewCard (karta+heatmapa), addDeckWithCards, updateDeck, movePage, purgeExpiredArchives, seedIfEmpty, replaceAll robiły po kilka zapisów bez `db.withTransaction` → kill apki w połowie = sieroty/częściowy stan (spec 13.8, T5). Owinięte transakcyjnie |
+| `DeckRepository` | 4 bliźniacze settery metadanych | Uproszczone do jednego `mutateDeckMeta` (uproszczenie, nie błąd) |
+| `di/DispatchersModule.kt` | `@IoDispatcher`/`@DefaultDispatcher`/`@MainDispatcher` + providery | Martwy kod — nic ich nie wstrzykiwało. Usunięte |
+| `data/repository/ArchivePurger.kt` | wstrzykiwany `Clock` nieużywany | Usunięty |
+| `StatsViewModelTest` | asercja `heatmap is Map<*,*>` zawsze prawdziwa | → `heatmap.isEmpty()` |
+
+Reszta (domenowa logika, ViewModele, playback‑bridge, DI, core) potwierdzona jako czysta.
+Kompilator zgłasza tylko nieszkodliwe deprecacje wstecznej kompatybilności
+(VIBRATOR_SERVICE dla API<31, coroutine `resume`, ikony kierunkowe — apka jest LTR‑only,
+a AutoMirrored nie rozwiązuje się w tym BOM). Uznane za świadomie zostawione.
+
+## Świadomie NIE ruszone: warstwa sync/Firestore (nie do zweryfikowania)
+
+Sync jest zależny od Firebase (`google-services.json` NIE ma w repo) i oznaczony N‑A —
+przepisywanie nietestowalnego kodu chmury na ślepo to duże ryzyko. Znane rozjazdy vs plan T10
+(udokumentowane, NIE naprawiane):
+
+- **SyncEngine.saveUserData**: batch bez dzielenia — Firestore limit ~500 operacji/batch;
+  talia z >~500 dokumentami (karty+talie+tryby+dni) wywali `batch.commit()`. Plan wymagał
+  chunkowania (400) i diff per‑dokument + czyszczenie osieroconych. Obecnie: pełny zapis
+  wszystkiego za każdym razem (działa dla małych zbiorów, nieoptymalne/łamie się dla dużych).
+- **Scheduler**: brak osobnego `SyncScheduler` — jest prosty debounce 1200 ms w `SyncLifecycle`.
+  Brakuje: licznika „flush co 10 ocen" w study, `immediate+await` dla importów/usunięć,
+  flush na `ProcessLifecycle onStop`, rollbacku importu przy błędzie chmury (talia‑widmo).
+  Efekt: prostszy, local‑first (Room zawsze zapisany od razu; chmura best‑effort). Funkcjonalnie
+  rozsądne dla v1 jednego urządzenia, ale nie 1:1 z polityką planu.
+
+To są rzeczy, których się „obawiam", ale których nie da się bezpiecznie naprawić bez
+konfiguracji Firebase i realnego urządzenia/emulatora.
+
 ## Dług techniczny / nietknięte (świadomie)
 
 - **Room `exportSchema`**: build ostrzega, że schemat nie jest eksportowany (brak wtyczki `androidx.room` + `schemaDirectory`). Przy greenfieldzie, `fallbackToDestructiveMigration` i schemacie v1 (zero migracji) wartość eksportu jest znikoma; dodanie wtyczki to zmiana infrastruktury build z ryzykiem — zostawione świadomie.
