@@ -38,7 +38,12 @@ class DeckSettingsViewModel @Inject constructor(
         deckRepository.updateDeck(deck.copy(name = name))
         _deck.value = deck.copy(name = name)
     }}
-    fun setVisiblePageCount(deckId: String, count: Int) { viewModelScope.launch { deckRepository.setVisiblePageCount(deckId, count) } }
+    fun setVisiblePageCount(deckId: String, count: Int) { viewModelScope.launch {
+        deckRepository.setVisiblePageCount(deckId, count)
+        // Odśwież _deck (jak movePage) — wiersze stron w UI renderują się z deck.activePageCount,
+        // więc bez tego zwiększenie liczby stron nie pokazywało nowych wierszy do konfiguracji.
+        _deck.value = deckRepository.getDeck(deckId)
+    }}
     fun setStudyFilter(deckId: String, filter: String) { viewModelScope.launch { deckRepository.setStudyFilter(deckId, filter) } }
     fun setCardOrder(deckId: String, order: String) { viewModelScope.launch { deckRepository.setCardOrder(deckId, order) } }
     fun archive(deckId: String) { viewModelScope.launch { deckRepository.archiveDeck(deckId) } }

@@ -109,6 +109,19 @@ class DeckSettingsViewModelTest {
     }
 
     @Test
+    fun `setVisiblePageCount odświeża stan z nowymi stronami`() = runTest(dispatcher) {
+        val deckId = seedDeck() // 2 strony
+        val vm = vm()
+        vm.loadDeck(deckId)
+        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
+        vm.setVisiblePageCount(deckId, 4)
+        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
+        // _deck odświeżony → UI pokaże 4 wiersze stron z dopełnioną metadaną
+        assertEquals(4, vm.deck.value?.activePageCount)
+        assertEquals(4, vm.deck.value?.pageNames?.size)
+    }
+
+    @Test
     fun `setActiveMode aktualizuje stan`() = runTest(dispatcher) {
         val deckId = seedDeck()
         val vm = vm()
