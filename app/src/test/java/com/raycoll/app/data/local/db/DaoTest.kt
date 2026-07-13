@@ -11,8 +11,13 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+// Plain Application zamiast @HiltAndroidApp RayCollApplication — inaczej Robolectric
+// bootuje graf Hilt i SyncLifecycle.start na Dispatchers.IO, którego coroutine (seedIfEmpty)
+// przeżywa db.close() i wysypuje kolejny test przez UncaughtExceptionsBeforeTest.
+@Config(application = android.app.Application::class)
 class DaoTest {
 
     private lateinit var db: RayCollDatabase

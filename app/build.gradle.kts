@@ -129,5 +129,6 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.runner)
     testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.arch.core.testing)
     testImplementation(platform(libs.compose.bom))
 }
