@@ -1,5 +1,6 @@
 package com.raycoll.app.data.repository
 
+import androidx.room.withTransaction
 import com.raycoll.app.core.Clock
 import com.raycoll.app.core.LocalDates
 import com.raycoll.app.data.local.db.RayCollDatabase
@@ -79,8 +80,10 @@ class DeckRepository @Inject constructor(
         val now = clock.now()
         val (groups, newId) = addGroupWithCards(emptyList(), name, languages, pageNames, cards, now)
         val deck = groups.last()
-        deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-        deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, newId) })
+        db.withTransaction {
+            deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
+            deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, newId) })
+        }
         notifyMutation()
         return newId
     }
@@ -89,8 +92,10 @@ class DeckRepository @Inject constructor(
         val ns = namespaceManager.current()
         val now = clock.now()
         val updated = updateGroup(listOf(deck), deck, now)[0]
-        deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
-        for (card in updated.cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, updated.id))
+        db.withTransaction {
+            deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
+            for (card in updated.cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, updated.id))
+        }
         notifyMutation()
     }
 
@@ -142,9 +147,14 @@ class DeckRepository @Inject constructor(
         val deck = getDeck(deckId) ?: return
         val updated = reviewCard(listOf(deck), deckId, cardId, rating, now)
         val card = updated[0].cards.find { it.id == cardId } ?: return
-        deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
         val dayKey = LocalDates.dayKey(now)
-        activityDao.incrementActivity(ns, dayKey)
+        // Karta + heatmapa ATOMOWO (spec T5); ensureActivityRow tworzy wiersz dnia,
+        // bo samo incrementActivity (UPDATE) gubiłoby PIERWSZą ocenę każdego dnia.
+        db.withTransaction {
+            deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+            activityDao.ensureActivityRow(ns, dayKey)
+            activityDao.incrementActivity(ns, dayKey)
+        }
         notifyMutation()
     }
 
@@ -158,44 +168,35 @@ class DeckRepository @Inject constructor(
         notifyMutation()
     }
 
-    suspend fun setVisiblePageCount(deckId: String, count: Int) {
+    /** Wspólny szablon dla setterów metadanych talii (pojedynczy zapis decka). */
+    private suspend fun mutateDeckMeta(deckId: String, op: (List<FlashcardGroup>, Long) -> List<FlashcardGroup>) {
         val ns = namespaceManager.current()
         val deck = getDeck(deckId) ?: return
-        val updated = setVisiblePageCount(listOf(deck), deckId, count, clock.now())
-        deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
+        val updated = op(listOf(deck), clock.now())[0]
+        deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
         notifyMutation()
     }
 
-    suspend fun setStudyFilter(deckId: String, filter: String) {
-        val ns = namespaceManager.current()
-        val deck = getDeck(deckId) ?: return
-        val updated = setStudyFilter(listOf(deck), deckId, filter, clock.now())
-        deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
-        notifyMutation()
-    }
+    suspend fun setVisiblePageCount(deckId: String, count: Int) =
+        mutateDeckMeta(deckId) { decks, now -> setVisiblePageCount(decks, deckId, count, now) }
 
-    suspend fun setCardOrder(deckId: String, order: String) {
-        val ns = namespaceManager.current()
-        val deck = getDeck(deckId) ?: return
-        val updated = setCardOrder(listOf(deck), deckId, order, clock.now())
-        deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
-        notifyMutation()
-    }
+    suspend fun setStudyFilter(deckId: String, filter: String) =
+        mutateDeckMeta(deckId) { decks, now -> setStudyFilter(decks, deckId, filter, now) }
 
-    suspend fun setActiveStudyMode(deckId: String, modeId: String) {
-        val ns = namespaceManager.current()
-        val deck = getDeck(deckId) ?: return
-        val updated = setActiveStudyMode(listOf(deck), deckId, modeId, clock.now())
-        deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
-        notifyMutation()
-    }
+    suspend fun setCardOrder(deckId: String, order: String) =
+        mutateDeckMeta(deckId) { decks, now -> setCardOrder(decks, deckId, order, now) }
+
+    suspend fun setActiveStudyMode(deckId: String, modeId: String) =
+        mutateDeckMeta(deckId) { decks, now -> setActiveStudyMode(decks, deckId, modeId, now) }
 
     suspend fun movePage(deckId: String, from: Int, to: Int) {
         val ns = namespaceManager.current()
         val deck = getDeck(deckId) ?: return
-        val updated = movePage(listOf(deck), deckId, from, to, clock.now())
-        deckDao.insertDeck(Mappers.deckToEntity(updated[0], ns))
-        for (card in updated[0].cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+        val updated = movePage(listOf(deck), deckId, from, to, clock.now())[0]
+        db.withTransaction {
+            deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
+            for (card in updated.cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+        }
         notifyMutation()
     }
 
@@ -207,8 +208,10 @@ class DeckRepository @Inject constructor(
         val groups = decks.map { Mappers.entityToDeck(it, deckDao.getCards(ns, it.id)) }
         val (updated, changed) = purgeExpiredArchives(groups, now, retentionMs)
         if (changed) {
-            for (deck in updated) {
-                if (deck.deletedAt != null) deckDao.softDeleteDeck(ns, deck.id, deck.deletedAt)
+            db.withTransaction {
+                for (deck in updated) {
+                    if (deck.deletedAt != null) deckDao.softDeleteDeck(ns, deck.id, deck.deletedAt)
+                }
             }
             notifyMutation()
         }
@@ -221,9 +224,11 @@ class DeckRepository @Inject constructor(
         if (existing.isNotEmpty()) return
         val seedData = SeedData.createSeedData()
         val normalized = normalizeStoreData(seedData)
-        for (deck in normalized.groups) {
-            deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-            deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
+        db.withTransaction {
+            for (deck in normalized.groups) {
+                deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
+                deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
+            }
         }
     }
 
@@ -240,16 +245,20 @@ class DeckRepository @Inject constructor(
     suspend fun replaceAll(snapshot: StoreData) {
         val ns = namespaceManager.current()
         val normalized = normalizeStoreData(snapshot)
-        deckDao.deleteAllDecks(ns)
-        db.studyModeDao().deleteAllModes(ns)
-        activityDao.deleteAllActivity(ns)
-        for (deck in normalized.groups) {
-            deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-            deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
-        }
-        db.studyModeDao().insertModes(normalized.studyModes.map { Mappers.modeToEntity(it, ns) })
-        for ((dayKey, count) in normalized.activityHeatmap) {
-            activityDao.upsertActivity(Mappers.activityToEntity(dayKey, count, ns))
+        // Całe zastąpienie stanu ATOMOWO — kill apki w połowie importu/resetu nie
+        // może zostawić częściowo podmienionego (skasowanego, ale nie wstawionego) stanu.
+        db.withTransaction {
+            deckDao.deleteAllDecks(ns)
+            db.studyModeDao().deleteAllModes(ns)
+            activityDao.deleteAllActivity(ns)
+            for (deck in normalized.groups) {
+                deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
+                deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
+            }
+            db.studyModeDao().insertModes(normalized.studyModes.map { Mappers.modeToEntity(it, ns) })
+            for ((dayKey, count) in normalized.activityHeatmap) {
+                activityDao.upsertActivity(Mappers.activityToEntity(dayKey, count, ns))
+            }
         }
         notifyMutation()
     }

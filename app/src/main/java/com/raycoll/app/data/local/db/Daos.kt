@@ -94,6 +94,11 @@ interface ActivityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertActivity(day: ActivityDayEntity)
 
+    // Utwórz wiersz dnia z licznikiem 0, jeśli jeszcze nie istnieje. INSERT OR IGNORE
+    // działa na każdej wersji SQLite (minSdk 26) — w przeciwieństwie do UPSERT (3.24+).
+    @Query("INSERT OR IGNORE INTO activity_days (namespace, dayKey, count) VALUES (:ns, :dayKey, 0)")
+    suspend fun ensureActivityRow(ns: String, dayKey: String)
+
     @Query("UPDATE activity_days SET count = count + 1 WHERE namespace = :ns AND dayKey = :dayKey")
     suspend fun incrementActivity(ns: String, dayKey: String)
 
