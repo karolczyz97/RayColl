@@ -7,6 +7,7 @@ import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.NextCardStep
 import com.raycoll.app.domain.session.BackgroundSubstitution
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -143,6 +144,23 @@ class ModeStepValidatorTest {
         val mode = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "Test", steps = listOf(ShowPageStep()))
         val errors = ModeStepValidator.validate(mode, 2)
         assertTrue(errors.any { it is ModeIssue.NoTerminalStep })
+    }
+
+    @Test
+    fun `no-terminal is a non-blocking warning`() {
+        // Tryb bez terminala: ostrzeżenie POKAZANE, ale NIE blokuje zapisu (parytet z TS).
+        val mode = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "Test", steps = listOf(ShowPageStep()))
+        val issues = ModeStepValidator.validate(mode, 2)
+        assertTrue(issues.any { it is ModeIssue.NoTerminalStep })
+        assertFalse(issues.any { it.blocking })
+    }
+
+    @Test
+    fun `page out of range is blocking, name and steps too`() {
+        val outOfRange = com.raycoll.app.domain.model.StudyMode(id = "m1", name = "Test", steps = listOf(ShowPageStep(pageIndex = 5), ShowRatingsStep()))
+        assertTrue(ModeStepValidator.validate(outOfRange, 2).any { it.blocking })
+        val noName = com.raycoll.app.domain.model.StudyMode(id = "m2", name = "", steps = listOf(ShowPageStep(), ShowRatingsStep()))
+        assertTrue(ModeStepValidator.validate(noName, 2).any { it.blocking })
     }
 }
 

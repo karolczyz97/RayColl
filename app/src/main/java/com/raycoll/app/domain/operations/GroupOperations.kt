@@ -70,8 +70,10 @@ fun setVisiblePageCount(groups: List<FlashcardGroup>, groupId: String, count: In
         if (g.id != groupId) g
         else {
             val clamped = PageLimits.clampActivePageCount(count, PageLimits.MAX_VISIBLE_PAGE_COUNT)
-            val storedPageCount = maxOf(g.pageNames.size, g.pageLanguages.size, g.cards.maxOfOrNull { it.pages.size } ?: 0, PageLimits.MIN_PAGE_COUNT)
-            val (names, langs) = padPageMetadata(g.pageNames, g.pageLanguages, storedPageCount)
+            // Dopełnij do NOWEJ liczby aktywnych stron (parytet z setVisiblePageCountAction).
+            // Dopełnianie do bieżącego storedPageCount nie rozszerzało metadanych przy
+            // zwiększaniu (np. 2→4), więc normalizeGroup cofał activePageCount z powrotem.
+            val (names, langs) = padPageMetadata(g.pageNames, g.pageLanguages, clamped)
             g.copy(activePageCount = clamped, pageNames = names, pageLanguages = langs, updatedAt = now)
         }
     }

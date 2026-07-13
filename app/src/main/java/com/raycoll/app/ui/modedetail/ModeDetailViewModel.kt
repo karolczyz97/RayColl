@@ -29,7 +29,9 @@ data class ModeDetailUiState(
     val isBuiltIn: Boolean = false,
     val issues: List<ModeIssue> = emptyList(),
 ) {
-    val saveEnabled: Boolean get() = loaded && issues.isEmpty()
+    // Tylko problemy blokujące (name/steps/page-out-of-range) wyłączają zapis —
+    // NoTerminalStep/AutoRateWithoutStt to ostrzeżenia (parytet z validateModeSteps.ts).
+    val saveEnabled: Boolean get() = loaded && issues.none { it.blocking }
 }
 
 @HiltViewModel

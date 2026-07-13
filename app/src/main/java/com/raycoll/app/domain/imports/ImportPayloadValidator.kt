@@ -3,37 +3,8 @@ package com.raycoll.app.domain.imports
 import com.raycoll.app.domain.model.ImportConstants
 import com.raycoll.app.domain.model.PageLimits
 
-fun detectPageCount(rows: List<List<String>>, skipFirstRow: Boolean): Int {
-    val dataRows = if (skipFirstRow && rows.isNotEmpty()) rows.drop(1) else rows
-    val max = dataRows.maxOfOrNull { it.size } ?: 0
-    return maxOf(max, PageLimits.MIN_PAGE_COUNT)
-}
-
-fun detectFirstRowHeader(rows: List<List<String>>): Boolean {
-    if (rows.isEmpty()) return false
-    val first = rows[0]
-    if (first.all { it.isBlank() }) return false
-
-    val headerKeywords = setOf("word", "phrase", "translation", "tłumaczenie", "słowo", "palabra",
-        "wort", "parola", "english", "polish", "german", "spanish", "italian", "front", "back",
-        "przód", "tył", "question", "answer", "pytanie", "odpowiedź")
-
-    var score = 0.0
-    val matchingFields = first.count { cell ->
-        val normalized = cell.lowercase().trim()
-        headerKeywords.any { keyword -> normalized.contains(keyword) }
-    }
-    score += if (matchingFields >= 2) 0.65 else if (matchingFields == 1) 0.45 else 0.0
-    val shortLabels = first.count { cell -> cell.length <= 24 && cell.split(" ").size <= 3 }
-    if (shortLabels == first.size) score += 0.15
-    if (rows.size > 1) {
-        val secondCols = rows[1].size
-        if (kotlin.math.abs(secondCols - first.size) <= 1) score += 0.1
-    }
-    val dataLike = first.count { cell -> cell.length > 50 || cell.split(" ").size >= 5 || cell.any { it.isDigit() } }
-    score -= minOf(dataLike * 0.15, 0.35)
-    return score >= ImportConstants.HEADER_CONFIDENCE_MIN
-}
+// Detekcja separatora/nagłówka/liczby stron mieszka w HeaderDetector.kt (port 1:1
+// z headerDetection.ts). Ten plik trzyma tylko wykrywanie języka i walidację payloadu.
 
 object LanguageDetector {
     // tokeny porównywane PO normalizacji (lowercase, bez diakrytyków), per słowo nagłówka

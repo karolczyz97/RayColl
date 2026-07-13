@@ -5,6 +5,7 @@ import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.createNewSrsState
 import com.raycoll.app.domain.normalize.DEFAULT_STUDY_FILTER
 import com.raycoll.app.domain.normalize.DEFAULT_CARD_ORDER
+import com.raycoll.app.domain.normalize.normalizeGroup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -123,6 +124,17 @@ class OperationsTest {
         val group = makeGroup().copy(pageNames = listOf("A", "B", "C", "D", "E", "F"))
         val result = setVisiblePageCount(listOf(group), "g1", 10, now)
         assertEquals(5, result[0].activePageCount)
+    }
+
+    @Test
+    fun `setVisiblePageCount increasing beyond stored pads metadata so it survives normalization`() {
+        val group = makeGroup() // 2 strony
+        val increased = setVisiblePageCount(listOf(group), "g1", 4, now)[0]
+        assertEquals(4, increased.activePageCount)
+        assertEquals(4, increased.pageNames.size)      // dopełnione do 4
+        assertEquals(4, increased.pageLanguages.size)
+        // normalizacja NIE cofa zwiększenia do 2 (storedPageCount urósł wraz z metadanymi)
+        assertEquals(4, normalizeGroup(increased).activePageCount)
     }
 
     @Test

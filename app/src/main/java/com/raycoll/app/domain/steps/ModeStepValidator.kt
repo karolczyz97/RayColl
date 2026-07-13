@@ -6,13 +6,19 @@ import com.raycoll.app.domain.model.NextCardStep
 import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.StudyMode
 
-/** Strukturalne problemy walidacji — UI mapuje je na zlokalizowane komunikaty. */
+/**
+ * Strukturalne problemy walidacji — UI mapuje je na zlokalizowane komunikaty.
+ * `blocking` = odpowiednik severity 'error' z validateModeSteps.ts: tylko blokujące
+ * problemy wyłączają zapis; NoTerminalStep/AutoRateWithoutStt to ostrzeżenia (pokazywane,
+ * ale NIE blokujące — parytet z hasBlockingStepIssue).
+ */
 sealed interface ModeIssue {
-    data object NameRequired : ModeIssue
-    data object NoSteps : ModeIssue
-    data class PageOutOfRange(val stepNumber: Int, val pageNumber: Int) : ModeIssue
-    data object NoTerminalStep : ModeIssue
-    data object AutoRateWithoutStt : ModeIssue
+    val blocking: Boolean
+    data object NameRequired : ModeIssue { override val blocking = true }
+    data object NoSteps : ModeIssue { override val blocking = true }
+    data class PageOutOfRange(val stepNumber: Int, val pageNumber: Int) : ModeIssue { override val blocking = true }
+    data object NoTerminalStep : ModeIssue { override val blocking = false }
+    data object AutoRateWithoutStt : ModeIssue { override val blocking = false }
 }
 
 object ModeStepValidator {
