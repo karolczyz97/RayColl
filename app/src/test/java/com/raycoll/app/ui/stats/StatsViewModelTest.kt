@@ -113,7 +113,8 @@ class StatsViewModelTest {
         )
         val vm = vm()
         advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertTrue(vm.stats.first().heatmap is Map<*, *>)
+        // świeża talia bez ocen → heatmapa pusta (wcześniej asercja `is Map<*,*>` była zawsze prawdą)
+        assertTrue(vm.stats.first().heatmap.isEmpty())
     }
 
     @Test
