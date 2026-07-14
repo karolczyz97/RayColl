@@ -2,6 +2,7 @@ package com.raycoll.app.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.raycoll.app.core.Clock
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.domain.selectors.computeCardStats
@@ -33,6 +34,7 @@ data class StatsUiState(
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     deckRepository: DeckRepository,
+    clock: Clock,
 ) : ViewModel() {
     val stats: StateFlow<StatsUiState> = combine(
         deckRepository.activeDecks(),
@@ -41,7 +43,9 @@ class StatsViewModel @Inject constructor(
         val allCards = decks.flatMap { it.cards }
         val cardStats = computeCardStats(allCards)
         StatsUiState(
-            streak = computeStreak(heatmap, System.currentTimeMillis()),
+            // czas zawsze przez Clock (reguła projektu; System.currentTimeMillis
+            // psuł testowalność streaka)
+            streak = computeStreak(heatmap, clock.now()),
             heatmap = heatmap,
             totalCards = cardStats.total,
             newCount = cardStats.newCount,

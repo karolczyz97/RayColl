@@ -173,9 +173,8 @@ private fun EditCardDialog(
     onSave: (Flashcard) -> Unit,
 ) {
     // edytujemy tylko WIDOCZNE strony; ukryte pozostają nietknięte przy zapisie
-    val visibleCount = minOf(activePageCount, maxOf(card.pages.size, activePageCount))
     val pages = remember {
-        mutableStateListOf(*List(visibleCount) { card.pages.getOrElse(it) { "" } }.toTypedArray())
+        mutableStateListOf(*List(activePageCount) { card.pages.getOrElse(it) { "" } }.toTypedArray())
     }
     AlertDialog(
         onDismissRequest = onDismiss,

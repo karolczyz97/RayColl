@@ -33,10 +33,12 @@ class StatsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repos: com.raycoll.app.ui.TestRepos
 
+    private val clock = com.raycoll.app.ui.FakeClock()
+
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
-        repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), com.raycoll.app.ui.FakeClock())
+        repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), clock)
     }
 
     @After
@@ -45,7 +47,7 @@ class StatsViewModelTest {
         repos.db.close()
     }
 
-    private fun vm() = StatsViewModel(repos.deckRepository)
+    private fun vm() = StatsViewModel(repos.deckRepository, clock)
 
     @Test
     fun `pusty stan przy braku talii`() = runTest(dispatcher) {
@@ -122,5 +124,17 @@ class StatsViewModelTest {
         val vm = vm()
         advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
         assertEquals(0, vm.stats.first().streak)
+    }
+
+    @Test
+    fun `streak liczony od wstrzykniętego zegara, nie czasu systemowego`() = runTest(dispatcher) {
+        // regresja: VM używał System.currentTimeMillis() zamiast Clock
+        val today = com.raycoll.app.core.LocalDates.dayKey(clock.current)
+        val yesterday = com.raycoll.app.core.LocalDates.dayKey(clock.current - 86_400_000L)
+        repos.db.activityDao().upsertActivity(com.raycoll.app.data.local.db.ActivityDayEntity(today, "", 2))
+        repos.db.activityDao().upsertActivity(com.raycoll.app.data.local.db.ActivityDayEntity(yesterday, "", 1))
+        val vm = vm()
+        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
+        assertEquals(2, vm.stats.first { it.heatmap.isNotEmpty() }.streak)
     }
 }

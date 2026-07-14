@@ -43,8 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.sync.MigrationController
-import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.ui.components.MigrationDialog
+import com.raycoll.app.ui.components.SyncStatusBanner
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -99,12 +99,8 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
             Text(stringResource(R.string.app_settings_section_account), style = MaterialTheme.typography.titleMedium)
             if (accountState.signedIn) {
                 Text(stringResource(R.string.auth_signed_in_as, accountState.email))
-                when (syncStatus) {
-                    SyncStatus.SAVING -> Text(stringResource(R.string.sync_status_saving), style = MaterialTheme.typography.bodySmall)
-                    SyncStatus.SYNCING -> Text(stringResource(R.string.sync_status_syncing), style = MaterialTheme.typography.bodySmall)
-                    SyncStatus.ERROR -> Text(stringResource(R.string.sync_status_offline), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    SyncStatus.IDLE -> Unit
-                }
+                // banner statusu z przyciskiem Ponów przy błędzie (spec T10)
+                SyncStatusBanner(status = syncStatus, onRetry = { viewModel.syncNow() })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { viewModel.syncNow() }) { Text(stringResource(R.string.auth_sync_now)) }
                     TextButton(onClick = { viewModel.signOut(context) }) { Text(stringResource(R.string.auth_sign_out)) }
