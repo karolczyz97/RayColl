@@ -1,17 +1,15 @@
 package com.raycoll.app.domain.session
 
 class ReviewTracker {
-    private val reviewedKeys = mutableSetOf<String>()
-    private var attemptNumber = 0
+    private val reviewedCardIds = mutableSetOf<String>()
 
     fun newAttempt() {
-        attemptNumber++
-        reviewedKeys.clear()
+        reviewedCardIds.clear()
     }
 
-    fun isReviewed(cardId: String): Boolean = reviewedKeys.contains("$attemptNumber:$cardId")
+    fun isReviewed(cardId: String): Boolean = cardId in reviewedCardIds
 
     fun markReviewed(cardId: String) {
-        reviewedKeys.add("$attemptNumber:$cardId")
+        reviewedCardIds.add(cardId)
     }
 }

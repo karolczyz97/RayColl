@@ -38,9 +38,14 @@ object ModeStepValidator {
         }
         val hasTerminal = expanded.any { it is ShowRatingsStep || it is NextCardStep }
         if (!hasTerminal) issues.add(ModeIssue.NoTerminalStep)
-        val hasAutoRate = expanded.any { it is AutoRateFromAnswerStep }
-        val hasStt = expanded.any { it is ListenAndCheckStep }
-        if (hasAutoRate && !hasStt) issues.add(ModeIssue.AutoRateWithoutStt)
+        // auto_rate_from_answer czyta wynik ostatniego listen_and_check — ostrzegaj,
+        // gdy występuje PRZED pierwszym STT (parytet z validateModeSteps.ts, który
+        // porównuje pozycje, nie samą obecność).
+        val firstListenIndex = expanded.indexOfFirst { it is ListenAndCheckStep }
+        val orphanAutoRate = expanded.withIndex().any { (index, step) ->
+            step is AutoRateFromAnswerStep && (firstListenIndex == -1 || index < firstListenIndex)
+        }
+        if (orphanAutoRate) issues.add(ModeIssue.AutoRateWithoutStt)
         return issues
     }
 }

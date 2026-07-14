@@ -43,13 +43,15 @@ enum class StepCondition {
 @Serializable
 @JsonClassDiscriminator("kind")
 sealed interface CompoundParams {
-    @Serializable @SerialName("present_front") data class PresentFront(val page: Int = 0, val speak: Boolean = false) : CompoundParams
+    // Defaulty = defaultCompoundParams/normalizeCompoundParams z compoundSteps.ts —
+    // działają i przy dodawaniu kroku w edytorze, i przy dekodowaniu backupu bez pola.
+    @Serializable @SerialName("present_front") data class PresentFront(val page: Int = 0, val speak: Boolean = true) : CompoundParams
     @Serializable @SerialName("flip_reveal") data class FlipReveal(val revealStyle: String = "all") : CompoundParams
     @Serializable @SerialName("show_all_grade") data class ShowAllGrade(val dummy: Int = 0) : CompoundParams
-    @Serializable @SerialName("speak_pause_next") data class SpeakPauseNext(val page: Int = 0, val nextPage: Int = 0, val multiplier: Double = 1.0) : CompoundParams
-    @Serializable @SerialName("auto_flip") data class AutoFlip(val questionPage: Int = 0, val answerPage: Int = 1, val multiplier: Double = 1.0, val speakQuestion: Boolean = false, val speakAnswer: Boolean = false) : CompoundParams
-    @Serializable @SerialName("listen_grade") data class ListenGrade(val answerPage: Int = 1, val threshold: Int = 70, val onCorrect: CompoundBranch = CompoundBranch(), val onWrong: CompoundBranch = CompoundBranch(rate = "fixed", fixedRating = 1, markFailed = true), val manualFallback: Boolean = false) : CompoundParams
-    @Serializable @SerialName("grade_after_listen") data class GradeAfterListen(val onCorrect: CompoundBranch = CompoundBranch(), val onWrong: CompoundBranch = CompoundBranch(rate = "fixed", fixedRating = 1, markFailed = true), val manualFallback: Boolean = false) : CompoundParams
+    @Serializable @SerialName("speak_pause_next") data class SpeakPauseNext(val page: Int = 0, val nextPage: Int = 1, val multiplier: Double = 1.0) : CompoundParams
+    @Serializable @SerialName("auto_flip") data class AutoFlip(val questionPage: Int = 0, val answerPage: Int = 1, val multiplier: Double = 1.0, val speakQuestion: Boolean = true, val speakAnswer: Boolean = false) : CompoundParams
+    @Serializable @SerialName("listen_grade") data class ListenGrade(val answerPage: Int = 1, val threshold: Int = 70, val onCorrect: CompoundBranch = CompoundBranch(), val onWrong: CompoundBranch = CompoundBranch(rate = "fixed", fixedRating = 1, markFailed = true), val manualFallback: Boolean = true) : CompoundParams
+    @Serializable @SerialName("grade_after_listen") data class GradeAfterListen(val onCorrect: CompoundBranch = CompoundBranch(), val onWrong: CompoundBranch = CompoundBranch(rate = "fixed", fixedRating = 1, markFailed = true), val manualFallback: Boolean = true) : CompoundParams
     @Serializable @SerialName("auto_pass_next") data class AutoPassNext(val rating: Int = 3) : CompoundParams
     @Serializable @SerialName("fail_next") data class FailNext(val dummy: Int = 0) : CompoundParams
 }

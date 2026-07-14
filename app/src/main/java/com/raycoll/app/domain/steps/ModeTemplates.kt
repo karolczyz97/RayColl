@@ -1,23 +1,22 @@
 package com.raycoll.app.domain.steps
 
+import com.raycoll.app.domain.model.CompoundParams
+import com.raycoll.app.domain.model.CompoundStep
 import com.raycoll.app.domain.model.ModeStep
-import com.raycoll.app.domain.model.ShowAllPagesStep
-import com.raycoll.app.domain.model.ShowPageStep
-import com.raycoll.app.domain.model.ShowRatingsStep
-import com.raycoll.app.domain.model.SpeakPageStep
-import com.raycoll.app.domain.model.WaitForTapToRevealStep
-import com.raycoll.app.domain.srs.createSeedModes
 
+// Szablony budują kroki compound (edytowalne bloki z parametrami), nie surowe
+// listy atomowe — parytet z createModeFromTemplate w modeTemplates.ts.
+// Runtime po ekspansji jest identyczny z krokami trybów seedowych.
 object ModeTemplates {
     fun classicTemplate(): List<ModeStep> = listOf(
-        ShowPageStep(pageIndex = 0),
-        SpeakPageStep(pageIndex = 0),
-        WaitForTapToRevealStep(),
-        ShowAllPagesStep(),
-        ShowRatingsStep(),
+        CompoundStep(params = CompoundParams.PresentFront()),
+        CompoundStep(params = CompoundParams.FlipReveal()),
     )
 
-    fun audioTemplate(): List<ModeStep> = createSeedModes().find { it.id == "listen-speak" }?.steps ?: emptyList()
+    fun audioTemplate(): List<ModeStep> = listOf(
+        CompoundStep(params = CompoundParams.PresentFront()),
+        CompoundStep(params = CompoundParams.ListenGrade()),
+    )
 
     fun blankTemplate(): List<ModeStep> = emptyList()
 }

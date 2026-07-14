@@ -30,65 +30,70 @@ object CompoundExpander {
 
     fun expandStep(step: ModeStep): List<ModeStep> = if (step is CompoundStep) expandCompound(step) else listOf(step)
 
+    // Warunek na samym kroku compound NIE jest propagowany na kroki po ekspansji
+    // (parytet z expandCompound w compoundSteps.ts). Propagacja rodzica na krok
+    // listen_and_check + gałęzie correct/wrong tworzyła pułapkę: pominięty warunkiem
+    // listen zostawiał stary lastAnswerResult, od którego odpalały się gałęzie.
     private fun expandCompound(step: CompoundStep): List<ModeStep> {
         val params = step.params
         return when (params) {
             is CompoundParams.PresentFront -> buildList {
-                add(ShowPageStep(condition = step.condition, pageIndex = params.page))
-                if (params.speak) add(SpeakPageStep(condition = step.condition, pageIndex = params.page))
+                add(ShowPageStep(pageIndex = params.page))
+                if (params.speak) add(SpeakPageStep(pageIndex = params.page))
             }
             is CompoundParams.FlipReveal -> when (params.revealStyle) {
-                "all" -> listOf(
-                    WaitForTapToRevealStep(condition = step.condition),
-                    ShowAllPagesStep(condition = step.condition),
-                    ShowRatingsStep(condition = step.condition),
+                // fallback na "all" dla nieznanych wartości — jak normalizeCompoundParams
+                "next" -> listOf(
+                    WaitForTapToRevealNextStep(),
+                    ShowRatingsStep(),
                 )
                 else -> listOf(
-                    WaitForTapToRevealNextStep(condition = step.condition),
-                    ShowRatingsStep(condition = step.condition),
+                    WaitForTapToRevealStep(),
+                    ShowAllPagesStep(),
+                    ShowRatingsStep(),
                 )
             }
             is CompoundParams.ShowAllGrade -> listOf(
-                ShowAllPagesStep(condition = step.condition),
-                ShowRatingsStep(condition = step.condition),
+                ShowAllPagesStep(),
+                ShowRatingsStep(),
             )
             is CompoundParams.SpeakPauseNext -> listOf(
-                SpeakPageStep(condition = step.condition, pageIndex = params.page),
-                DynamicPauseStep(condition = step.condition, nextPageIndex = params.nextPage, pauseMultiplier = params.multiplier),
-                ShowPageStep(condition = step.condition, pageIndex = params.nextPage),
+                SpeakPageStep(pageIndex = params.page),
+                DynamicPauseStep(nextPageIndex = params.nextPage, pauseMultiplier = params.multiplier),
+                ShowPageStep(pageIndex = params.nextPage),
             )
             is CompoundParams.AutoFlip -> buildList {
-                add(ShowPageStep(condition = step.condition, pageIndex = params.questionPage))
-                if (params.speakQuestion) add(SpeakPageStep(condition = step.condition, pageIndex = params.questionPage))
-                add(DynamicPauseStep(condition = step.condition, nextPageIndex = params.questionPage, pauseMultiplier = params.multiplier))
-                add(ShowAllPagesStep(condition = step.condition))
-                if (params.speakAnswer) add(SpeakPageStep(condition = step.condition, pageIndex = params.answerPage))
+                add(ShowPageStep(pageIndex = params.questionPage))
+                if (params.speakQuestion) add(SpeakPageStep(pageIndex = params.questionPage))
+                add(DynamicPauseStep(nextPageIndex = params.questionPage, pauseMultiplier = params.multiplier))
+                add(ShowAllPagesStep())
+                if (params.speakAnswer) add(SpeakPageStep(pageIndex = params.answerPage))
             }
             is CompoundParams.ListenGrade -> buildList {
-                add(ListenAndCheckStep(condition = step.condition, pageIndex = params.answerPage, successThreshold = params.threshold))
+                add(ListenAndCheckStep(pageIndex = params.answerPage, successThreshold = params.threshold))
                 addAll(expandBranch(params.onCorrect, StepCondition.CORRECT))
                 addAll(expandBranch(params.onWrong, StepCondition.WRONG))
                 if (params.manualFallback) {
-                    add(ShowAllPagesStep(condition = step.condition))
-                    add(ShowRatingsStep(condition = step.condition))
+                    add(ShowAllPagesStep())
+                    add(ShowRatingsStep())
                 }
             }
             is CompoundParams.GradeAfterListen -> buildList {
                 addAll(expandBranch(params.onCorrect, StepCondition.CORRECT))
                 addAll(expandBranch(params.onWrong, StepCondition.WRONG))
                 if (params.manualFallback) {
-                    add(ShowAllPagesStep(condition = step.condition))
-                    add(ShowRatingsStep(condition = step.condition))
+                    add(ShowAllPagesStep())
+                    add(ShowRatingsStep())
                 }
             }
             is CompoundParams.AutoPassNext -> listOf(
-                AutoRateFixedStep(condition = step.condition, rating = params.rating),
-                NextCardStep(condition = step.condition),
+                AutoRateFixedStep(rating = params.rating),
+                NextCardStep(),
             )
             is CompoundParams.FailNext -> listOf(
-                MarkFailedStep(condition = step.condition),
-                AutoRateFixedStep(condition = step.condition, rating = 1),
-                NextCardStep(condition = step.condition),
+                MarkFailedStep(),
+                AutoRateFixedStep(rating = 1),
+                NextCardStep(),
             )
         }
     }

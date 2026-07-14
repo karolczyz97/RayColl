@@ -54,7 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.AutoRateFixedStep
 import com.raycoll.app.domain.model.AutoRateFromAnswerStep
-import com.raycoll.app.domain.model.CompoundBranch
 import com.raycoll.app.domain.model.CompoundParams
 import com.raycoll.app.domain.model.CompoundStep
 import com.raycoll.app.domain.model.DynamicPauseStep
@@ -290,7 +289,9 @@ private fun StepCard(
                 }
             }
 
-            ConditionSelector(step = step, onUpdate = onUpdate)
+            // Kroki compound nie mają warunku (parytet z CompoundStepDialog.tsx);
+            // ekspansja i tak by go zignorowała.
+            if (step !is CompoundStep) ConditionSelector(step = step, onUpdate = onUpdate)
             StepParamsEditor(step = step, onUpdate = onUpdate)
         }
     }
@@ -331,7 +332,7 @@ private fun withCondition(step: ModeStep, condition: StepCondition?): ModeStep =
     is MarkFailedStep -> step.copy(condition = condition)
     is WaitForTapStep -> step.copy(condition = condition)
     is NextCardStep -> step.copy(condition = condition)
-    is CompoundStep -> step.copy(condition = condition)
+    is CompoundStep -> step // warunek niedostępny dla compound (selektor ukryty)
 }
 
 @Composable
@@ -464,7 +465,7 @@ private fun stepCatalog(): List<StepCategory> = listOf(
         StepChoice(R.string.compound_speak_pause_next_name) { CompoundStep(params = CompoundParams.SpeakPauseNext()) },
         StepChoice(R.string.compound_auto_flip_name) { CompoundStep(params = CompoundParams.AutoFlip()) },
         StepChoice(R.string.compound_listen_grade_name) { CompoundStep(params = CompoundParams.ListenGrade()) },
-        StepChoice(R.string.compound_grade_after_listen_name) { CompoundStep(params = CompoundParams.GradeAfterListen(onWrong = CompoundBranch(rate = "fixed", fixedRating = 1, markFailed = true))) },
+        StepChoice(R.string.compound_grade_after_listen_name) { CompoundStep(params = CompoundParams.GradeAfterListen()) },
         StepChoice(R.string.compound_auto_pass_next_name) { CompoundStep(params = CompoundParams.AutoPassNext()) },
         StepChoice(R.string.compound_fail_next_name) { CompoundStep(params = CompoundParams.FailNext()) },
     )),

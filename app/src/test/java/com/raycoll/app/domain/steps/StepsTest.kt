@@ -68,6 +68,49 @@ class CompoundExpanderTest {
     }
 
     @Test
+    fun `compound defaults match TS defaultCompoundParams`() {
+        // Regresja: defaulty data class = defaultCompoundParams z compoundSteps.ts.
+        // Wcześniej speak/speakQuestion/manualFallback=false i nextPage=0 dawały
+        // w edytorze inne kroki niż oryginał (m.in. "mów pauza następna" odsłaniał
+        // stronę 0, która i tak jest już widoczna).
+        assertTrue(CompoundParams.PresentFront().speak)
+        assertEquals(1, CompoundParams.SpeakPauseNext().nextPage)
+        assertTrue(CompoundParams.AutoFlip().speakQuestion)
+        assertFalse(CompoundParams.AutoFlip().speakAnswer)
+        assertTrue(CompoundParams.ListenGrade().manualFallback)
+        assertTrue(CompoundParams.GradeAfterListen().manualFallback)
+        assertEquals("fixed", CompoundParams.ListenGrade().onWrong.rate)
+        assertEquals(1, CompoundParams.ListenGrade().onWrong.fixedRating)
+        assertTrue(CompoundParams.ListenGrade().onWrong.markFailed)
+    }
+
+    @Test
+    fun `flip_reveal unknown style falls back to all variant`() {
+        // Parytet z normalizeCompoundParams: wszystko poza "next" traktowane jak "all".
+        val expanded = CompoundExpander.expandStep(
+            CompoundStep(params = CompoundParams.FlipReveal(revealStyle = "garbage"))
+        )
+        assertEquals(3, expanded.size)
+        assertTrue(expanded[0] is com.raycoll.app.domain.model.WaitForTapToRevealStep)
+    }
+
+    @Test
+    fun `compound condition is not propagated to expanded steps`() {
+        // Parytet z expandCompound (compoundSteps.ts): warunek na kroku compound jest
+        // ignorowany; tylko gałęzie listen/grade niosą warunki correct/wrong.
+        val expanded = CompoundExpander.expandStep(
+            CompoundStep(
+                condition = com.raycoll.app.domain.model.StepCondition.WRONG,
+                params = CompoundParams.ListenGrade(),
+            )
+        )
+        val listen = expanded.filterIsInstance<com.raycoll.app.domain.model.ListenAndCheckStep>().single()
+        assertEquals(null, listen.condition)
+        val fallbackRatings = expanded.filterIsInstance<ShowRatingsStep>()
+        assertTrue(fallbackRatings.all { it.condition == null })
+    }
+
+    @Test
     fun `listen_grade expands with branches and manual fallback`() {
         val step = CompoundStep(params = CompoundParams.ListenGrade(
             answerPage = 1, threshold = 70,
@@ -153,6 +196,56 @@ class ModeStepValidatorTest {
         val issues = ModeStepValidator.validate(mode, 2)
         assertTrue(issues.any { it is ModeIssue.NoTerminalStep })
         assertFalse(issues.any { it.blocking })
+    }
+
+    @Test
+    fun `auto_rate warning only when before first listen`() {
+        // Parytet z validateModeSteps.ts: ostrzega o auto_rate_from_answer tylko gdy
+        // stoi PRZED pierwszym listen_and_check (lub gdy STT w ogóle brak).
+        val listenThenRate = com.raycoll.app.domain.model.StudyMode(
+            id = "m1", name = "Test",
+            steps = listOf(
+                com.raycoll.app.domain.model.ListenAndCheckStep(pageIndex = 1),
+                com.raycoll.app.domain.model.AutoRateFromAnswerStep(),
+                NextCardStep(),
+            ),
+        )
+        assertFalse(ModeStepValidator.validate(listenThenRate, 2).any { it is ModeIssue.AutoRateWithoutStt })
+
+        val rateBeforeListen = com.raycoll.app.domain.model.StudyMode(
+            id = "m2", name = "Test",
+            steps = listOf(
+                com.raycoll.app.domain.model.AutoRateFromAnswerStep(),
+                com.raycoll.app.domain.model.ListenAndCheckStep(pageIndex = 1),
+                NextCardStep(),
+            ),
+        )
+        assertTrue(ModeStepValidator.validate(rateBeforeListen, 2).any { it is ModeIssue.AutoRateWithoutStt })
+
+        val rateWithoutListen = com.raycoll.app.domain.model.StudyMode(
+            id = "m3", name = "Test",
+            steps = listOf(com.raycoll.app.domain.model.AutoRateFromAnswerStep(), NextCardStep()),
+        )
+        assertTrue(ModeStepValidator.validate(rateWithoutListen, 2).any { it is ModeIssue.AutoRateWithoutStt })
+    }
+
+    @Test
+    fun `templates build compound steps like TS createModeFromTemplate`() {
+        val classic = ModeTemplates.classicTemplate()
+        assertEquals(2, classic.size)
+        assertTrue((classic[0] as CompoundStep).params is CompoundParams.PresentFront)
+        assertTrue((classic[1] as CompoundStep).params is CompoundParams.FlipReveal)
+
+        val audio = ModeTemplates.audioTemplate()
+        assertEquals(2, audio.size)
+        assertTrue((audio[0] as CompoundStep).params is CompoundParams.PresentFront)
+        assertTrue((audio[1] as CompoundStep).params is CompoundParams.ListenGrade)
+
+        // Ekspansja szablonu audio = kroki seedowego trybu "listen-speak"
+        // (szablon i seed muszą się zachowywać identycznie w runtime).
+        val expandedAudio = CompoundExpander.expandModeSteps(audio)
+        val seedAudio = com.raycoll.app.domain.srs.createSeedModes().first { it.id == "listen-speak" }.steps
+        assertEquals(seedAudio, expandedAudio)
     }
 
     @Test
