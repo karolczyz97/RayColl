@@ -1,5 +1,6 @@
 package com.raycoll.app.data.repository
 
+import androidx.room.withTransaction
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.local.db.RayCollDatabase
 import com.raycoll.app.data.local.mappers.Mappers
@@ -64,9 +65,11 @@ class StudyModeRepository @Inject constructor(
 
     suspend fun seedIfEmpty() {
         val ns = namespaceManager.current()
-        val existing = modeDao.allModes(ns)
-        if (existing.isNotEmpty()) return
-        val seeds = createSeedModes()
-        modeDao.insertModes(seeds.map { Mappers.modeToEntity(it, ns) })
+        // check + insert w JEDNEJ transakcji — patrz DeckRepository.seedIfEmpty
+        db.withTransaction {
+            if (modeDao.allModes(ns).isEmpty()) {
+                modeDao.insertModes(createSeedModes().map { Mappers.modeToEntity(it, ns) })
+            }
+        }
     }
 }

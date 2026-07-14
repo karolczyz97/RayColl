@@ -119,10 +119,9 @@ class DeckRepository @Inject constructor(
 
     suspend fun addCard(deckId: String, pages: List<String>): String {
         val ns = namespaceManager.current()
-        val now = clock.now()
         val deck = getDeck(deckId) ?: throw IllegalStateException("Deck not found")
-        val (_, cardId) = addCard(listOf(deck), deckId, pages, now)
-        val card = Flashcard(id = cardId, pages = pages, srsState = SrsState(), contentUpdatedAt = now)
+        val (groups, cardId) = addCard(listOf(deck), deckId, pages, clock.now())
+        val card = groups[0].cards.last()
         deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
         notifyMutation()
         return cardId
@@ -208,9 +207,14 @@ class DeckRepository @Inject constructor(
         val groups = decks.map { Mappers.entityToDeck(it, deckDao.getCards(ns, it.id)) }
         val (updated, changed) = purgeExpiredArchives(groups, now, retentionMs)
         if (changed) {
+            // zapisz tylko talie faktycznie skasowane w TYM przebiegu (wcześniej
+            // przepisywało też wszystkie stare tombstony przy każdym purge)
+            val previouslyDeleted = groups.filter { it.deletedAt != null }.map { it.id }.toSet()
             db.withTransaction {
                 for (deck in updated) {
-                    if (deck.deletedAt != null) deckDao.softDeleteDeck(ns, deck.id, deck.deletedAt)
+                    if (deck.deletedAt != null && deck.id !in previouslyDeleted) {
+                        deckDao.softDeleteDeck(ns, deck.id, deck.deletedAt)
+                    }
                 }
             }
             notifyMutation()
@@ -220,11 +224,11 @@ class DeckRepository @Inject constructor(
 
     suspend fun seedIfEmpty() {
         val ns = namespaceManager.current()
-        val existing = deckDao.allDecks(ns)
-        if (existing.isNotEmpty()) return
-        val seedData = SeedData.createSeedData()
-        val normalized = normalizeStoreData(seedData)
+        // check + insert w JEDNEJ transakcji — seedIfEmpty woła równolegle
+        // DashboardViewModel i bootstrap; wyścig check-then-insert podwajał seedy.
         db.withTransaction {
+            if (deckDao.allDecks(ns).isNotEmpty()) return@withTransaction
+            val normalized = normalizeStoreData(SeedData.createSeedData())
             for (deck in normalized.groups) {
                 deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
                 deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
