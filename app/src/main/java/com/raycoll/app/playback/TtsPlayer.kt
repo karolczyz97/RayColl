@@ -31,19 +31,28 @@ class TtsPlayer @Inject constructor(private val context: Context) {
         if (!initialized.await()) return TtsResult.Error("TTS init failed")
         val tts = this.tts ?: return TtsResult.Error("TTS not available")
         val locale = Locale.forLanguageTag(lang)
-        if (tts.isLanguageAvailable(locale) == TextToSpeech.LANG_NOT_SUPPORTED) {
+        val availability = tts.isLanguageAvailable(locale)
+        // brak głosu = język niewspierany LUB dane głosu niepobrane — oba przypadki
+        // prowadzą do dialogu z ACTION_INSTALL_TTS_DATA
+        if (availability == TextToSpeech.LANG_NOT_SUPPORTED || availability == TextToSpeech.LANG_MISSING_DATA) {
             return TtsResult.MissingVoice(lang)
         }
         tts.language = locale
         tts.setSpeechRate(rate.coerceIn(0.5f, 2.0f))
         return suspendCancellableCoroutine { cont ->
-            val utteranceId = System.currentTimeMillis().toString()
+            val expectedId = "raycoll-" + System.nanoTime()
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                // filtr po id — spóźniony callback poprzedniej (przerwanej) wypowiedzi
+                // nie może przedwcześnie zakończyć bieżącej
                 override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) { if (cont.isActive) cont.resume(TtsResult.Success) }
-                override fun onError(utteranceId: String?) { if (cont.isActive) cont.resume(TtsResult.Error("TTS error")) }
+                override fun onDone(utteranceId: String?) {
+                    if (utteranceId == expectedId && cont.isActive) cont.resume(TtsResult.Success)
+                }
+                override fun onError(utteranceId: String?) {
+                    if (utteranceId == expectedId && cont.isActive) cont.resume(TtsResult.Error("TTS error"))
+                }
             })
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, expectedId)
             cont.invokeOnCancellation { tts.stop(); tts.setOnUtteranceProgressListener(null) }
         }
     }

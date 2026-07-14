@@ -51,10 +51,12 @@ class SttRecognizer @Inject constructor(private val context: Context) {
                             override fun onBufferReceived(buffer: ByteArray?) {}
                             override fun onEndOfSpeech() {}
                             override fun onError(error: Int) {
+                                // combined() — nie gub partiali, których recognizer nie zdążył
+                                // sfinalizować (parytet z getText() w TS)
                                 val result = when (error) {
                                     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
-                                        ListenResult(accumulator.current().fullText, ListenStatus.COMPLETED)
-                                    else -> ListenResult(accumulator.current().fullText, ListenStatus.ERROR)
+                                        ListenResult(accumulator.combined(), ListenStatus.COMPLETED)
+                                    else -> ListenResult(accumulator.combined(), ListenStatus.ERROR)
                                 }
                                 recognizer.destroy()
                                 if (cont.isActive) cont.resume(result) {}
@@ -72,8 +74,7 @@ class SttRecognizer @Inject constructor(private val context: Context) {
                                 val text = partials?.firstOrNull() ?: return
                                 if (text.isNotBlank()) {
                                     accumulator.addPartial(text)
-                                    val current = accumulator.current()
-                                    onPartial(listOf(current.fullText, current.partialText).filter { it.isNotBlank() }.joinToString(" "))
+                                    onPartial(accumulator.combined())
                                 }
                             }
                             override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
@@ -87,9 +88,7 @@ class SttRecognizer @Inject constructor(private val context: Context) {
                 }
             } catch (e: TimeoutCancellationException) {
                 // twardy timeout: oddaj to, co usłyszano do tej pory
-                val current = accumulator.current()
-                val text = listOf(current.fullText, current.partialText).filter { it.isNotBlank() }.joinToString(" ")
-                ListenResult(text, ListenStatus.COMPLETED)
+                ListenResult(accumulator.combined(), ListenStatus.COMPLETED)
             }
         }
     }

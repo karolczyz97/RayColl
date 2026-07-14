@@ -13,11 +13,5 @@ import javax.inject.Singleton
 object FirebaseModule {
     @Provides
     @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore {
-        return try {
-            FirebaseFirestore.getInstance()
-        } catch (_: Exception) {
-            FirebaseFirestore.getInstance()
-        }
-    }
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 }

@@ -17,7 +17,7 @@ class SessionDepsAdapter @Inject constructor(
     private val sttRecognizer: SttRecognizer,
     private val hapticPlayer: HapticAndSoundPlayer,
     private val deckRepository: DeckRepository,
-    private val appScope: CoroutineScope,
+    @com.raycoll.app.di.ApplicationScope private val appScope: CoroutineScope,
 ) : SessionDeps {
 
     private var isSpeaking = CompletableDeferred<Boolean>().apply { complete(true) }

@@ -13,6 +13,13 @@ class SttTranscriptAccumulator {
         partial = ""
     }
     fun current(): SttTranscript = SttTranscript(fullText = finalSegments.toString().trim(), partialText = partial)
+
+    /** Finalne segmenty + bieżący partial — parytet z getText() w sttTranscriptAccumulator.ts. */
+    fun combined(): String {
+        val c = current()
+        return listOf(c.fullText, c.partialText).filter { it.isNotBlank() }.joinToString(" ")
+    }
+
     fun clear() { finalSegments.clear(); partial = "" }
 }
 
