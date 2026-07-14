@@ -46,7 +46,7 @@ class DashboardViewModelTest {
         repos.db.close()
     }
 
-    private fun vm() = DashboardViewModel(repos.deckRepository, repos.studyModeRepository).also {
+    private fun vm() = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, repos.namespaceManager).also {
         // init { viewModelScope.launch { seedIfEmpty } } — VM odpala to na Main dispatcherze
     }
 

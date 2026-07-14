@@ -43,7 +43,7 @@ class DeckRepository @Inject constructor(
     private val deckDao = db.deckDao()
     private val activityDao = db.activityDao()
 
-    private fun notifyMutation() = dataMutations.signal()
+    private fun notifyMutation(mode: CloudWriteMode = CloudWriteMode.DEBOUNCED) = dataMutations.signal(mode)
 
     fun activeDecks() = deckDao.activeDecks(namespaceManager.current()).map { entities ->
         entities.map { Mappers.entityToDeck(it, deckDao.getCards(namespaceManager.current(), it.id)) }
@@ -84,7 +84,8 @@ class DeckRepository @Inject constructor(
             deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
             deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, newId) })
         }
-        notifyMutation()
+        // import talii = zapis krytyczny (polityka T10: immediate)
+        notifyMutation(CloudWriteMode.IMMEDIATE)
         return newId
     }
 
@@ -102,19 +103,19 @@ class DeckRepository @Inject constructor(
     suspend fun deleteDeck(deckId: String) {
         val ns = namespaceManager.current()
         deckDao.softDeleteDeck(ns, deckId, clock.now())
-        notifyMutation()
+        notifyMutation(CloudWriteMode.IMMEDIATE)
     }
 
     suspend fun archiveDeck(deckId: String) {
         val ns = namespaceManager.current()
         deckDao.archiveDeck(ns, deckId, clock.now())
-        notifyMutation()
+        notifyMutation(CloudWriteMode.IMMEDIATE)
     }
 
     suspend fun restoreDeck(deckId: String) {
         val ns = namespaceManager.current()
         deckDao.restoreDeck(ns, deckId, clock.now())
-        notifyMutation()
+        notifyMutation(CloudWriteMode.IMMEDIATE)
     }
 
     suspend fun addCard(deckId: String, pages: List<String>): String {
@@ -154,7 +155,7 @@ class DeckRepository @Inject constructor(
             activityDao.ensureActivityRow(ns, dayKey)
             activityDao.incrementActivity(ns, dayKey)
         }
-        notifyMutation()
+        notifyMutation(CloudWriteMode.STUDY)
     }
 
     suspend fun reviewCardAgain(deckId: String, cardId: String, rating: Int, baseState: SrsState) {
@@ -164,7 +165,7 @@ class DeckRepository @Inject constructor(
         val updated = reviewCardAgain(listOf(deck), deckId, cardId, rating, baseState, now)
         val card = updated[0].cards.find { it.id == cardId } ?: return
         deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
-        notifyMutation()
+        notifyMutation(CloudWriteMode.STUDY)
     }
 
     /** Wspólny szablon dla setterów metadanych talii (pojedynczy zapis decka). */
@@ -264,6 +265,7 @@ class DeckRepository @Inject constructor(
                 activityDao.upsertActivity(Mappers.activityToEntity(dayKey, count, ns))
             }
         }
-        notifyMutation()
+        // import backupu / reset / migracja = zapis krytyczny (immediate)
+        notifyMutation(CloudWriteMode.IMMEDIATE)
     }
 }

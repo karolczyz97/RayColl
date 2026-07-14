@@ -3,6 +3,7 @@ package com.raycoll.app.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.data.repository.NamespaceManager
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StudyMode
@@ -18,6 +19,7 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val deckRepository: DeckRepository,
     private val studyModeRepository: StudyModeRepository,
+    private val namespaceManager: NamespaceManager,
 ) : ViewModel() {
 
     val decks: StateFlow<List<FlashcardGroup>> = deckRepository.activeDecks()
@@ -28,8 +30,13 @@ class DashboardViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            deckRepository.seedIfEmpty()
-            studyModeRepository.seedIfEmpty()
+            // Seed tylko dla gościa. Namespace zalogowanego użytkownika seeduje
+            // wyłącznie bootstrap PO potwierdzeniu, że chmura jest pusta — seed
+            // przy nieudanym loadzie chmury robiłby później duplikaty w merge.
+            if (namespaceManager.current().isEmpty()) {
+                deckRepository.seedIfEmpty()
+                studyModeRepository.seedIfEmpty()
+            }
         }
     }
 

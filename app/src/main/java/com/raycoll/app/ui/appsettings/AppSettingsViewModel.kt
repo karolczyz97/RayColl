@@ -63,6 +63,9 @@ class AppSettingsViewModel @Inject constructor(
 
     fun signOut(activityContext: Context) {
         viewModelScope.launch {
+            // best-effort flush zaległych zmian PRZED wylogowaniem (polityka T10);
+            // błąd chmury nie blokuje wylogowania
+            syncLifecycle.flushBeforeSignOut()
             authRepository.signOut(activityContext)
             syncLifecycle.onSignedOut()
             syncLifecycle.runBootstrap()

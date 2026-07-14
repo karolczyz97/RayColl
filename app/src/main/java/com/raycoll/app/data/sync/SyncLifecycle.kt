@@ -1,24 +1,31 @@
 package com.raycoll.app.data.sync
 
 import com.raycoll.app.data.remote.auth.AuthRepository
+import com.raycoll.app.data.repository.CloudWriteMode
 import com.raycoll.app.data.repository.DataMutations
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.NamespaceManager
 import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.domain.model.StudyConstants
+import com.raycoll.app.domain.session.SessionStatus
+import com.raycoll.app.playback.StudySessionHolder
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Spina cykl życia synchronizacji: bootstrap przy starcie apki i po zalogowaniu,
- * dialog migracji danych gościa, oraz debounced push lokalnych mutacji do Firestore.
+ * dialog migracji danych gościa, oraz wypychanie lokalnych mutacji do Firestore
+ * wg polityki SyncScheduler (debounce 1200 ms / próg 10 ocen study / immediate).
+ * Dodatkowo flush na granicy sesji nauki i przy przejściu apki w tło.
  * Startowany raz z RayCollApplication.
  */
 @Singleton
@@ -30,9 +37,10 @@ class SyncLifecycle @Inject constructor(
     private val migrationController: MigrationController,
     private val syncEngine: SyncEngine,
     private val dataMutations: DataMutations,
+    private val studySessionHolder: StudySessionHolder,
 ) {
     private var scope: CoroutineScope? = null
-    private var pushJob: Job? = null
+    private var scheduler: SyncScheduler? = null
     private var suppressPush = false
 
     private val _migrationRequired = MutableStateFlow(false)
@@ -40,13 +48,40 @@ class SyncLifecycle @Inject constructor(
 
     val syncStatus: StateFlow<SyncStatus> get() = syncEngine.status
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun start(scope: CoroutineScope) {
         this.scope = scope
+        val sched = SyncScheduler(scope, push = ::push)
+        scheduler = sched
+
         scope.launch { runBootstrap() }
+
         scope.launch {
-            dataMutations.events.collect {
-                if (!suppressPush) schedulePush()
+            dataMutations.events.collect { mode ->
+                if (suppressPush || !authRepository.isSignedIn()) return@collect
+                when (mode) {
+                    CloudWriteMode.DEBOUNCED -> sched.enqueueDebounced()
+                    CloudWriteMode.STUDY -> sched.enqueueStudy()
+                    CloudWriteMode.IMMEDIATE -> sched.enqueueImmediate()
+                }
             }
+        }
+
+        // granica sesji study: koniec sesji (FINISHED) lub zwolnienie silnika
+        // (wyjście z ekranu) domyka zaległe oceny — sesja 12 ocen = max 2 zapisy
+        scope.launch {
+            studySessionHolder.engineFlow
+                .flatMapLatest { engine ->
+                    engine?.state?.map { it.status == SessionStatus.FINISHED } ?: emptyFlow()
+                }
+                .distinctUntilChanged()
+                .collect { finished -> if (finished) flushIfSignedIn() }
+        }
+        scope.launch {
+            studySessionHolder.engineFlow
+                .map { it != null }
+                .distinctUntilChanged()
+                .collect { active -> if (!active) flushIfSignedIn() }
         }
     }
 
@@ -66,7 +101,7 @@ class SyncLifecycle @Inject constructor(
             suppressPush = false
         }
         // po bootstrapie wyślij stan lokalny (obejmuje wynik merge)
-        if (authRepository.isSignedIn()) schedulePush()
+        if (authRepository.isSignedIn()) scheduler?.enqueueImmediate()
     }
 
     suspend fun resolveMigration(option: MigrationController.MigrationOption) {
@@ -77,37 +112,47 @@ class SyncLifecycle @Inject constructor(
             suppressPush = false
         }
         _migrationRequired.value = false
-        if (option != MigrationController.MigrationOption.CANCEL && authRepository.isSignedIn()) {
+        if (option == MigrationController.MigrationOption.CANCEL) {
+            onSignedOut()
+        } else if (authRepository.isSignedIn()) {
             pushNow()
         }
     }
 
     fun onSignedOut() {
-        pushJob?.cancel()
+        scheduler?.cancel()
         syncEngine.clearCache()
         namespaceManager.resetToGuest()
         _migrationRequired.value = false
     }
 
-    fun schedulePush() {
-        val s = scope ?: return
-        if (!authRepository.isSignedIn()) return
-        pushJob?.cancel()
-        pushJob = s.launch {
-            delay(StudyConstants.PERSISTENCE_DEBOUNCE_MS)
-            push()
+    /** Best-effort flush przed wylogowaniem — błąd chmury nie blokuje wylogowania. */
+    suspend fun flushBeforeSignOut() {
+        if (authRepository.isSignedIn()) {
+            scheduler?.enqueueImmediate()
+            scheduler?.flush()
         }
     }
 
-    suspend fun pushNow() {
-        pushJob?.cancel()
-        push()
+    /** Flush przy przejściu apki w tło (ProcessLifecycle ON_STOP). */
+    fun flushOnBackground() {
+        val s = scope ?: return
+        s.launch { flushIfSignedIn() }
     }
 
-    private suspend fun push() {
+    suspend fun pushNow() {
+        scheduler?.enqueueImmediate()
+        scheduler?.flush()
+    }
+
+    private suspend fun flushIfSignedIn() {
+        if (authRepository.isSignedIn()) scheduler?.flush()
+    }
+
+    private suspend fun push(): Boolean {
         val uid = authRepository.currentUid()
-        if (uid.isEmpty()) return
+        if (uid.isEmpty()) return true
         val snapshot: StoreData = deckRepository.getSnapshot()
-        syncEngine.saveUserData(uid, snapshot)
+        return syncEngine.saveUserData(uid, snapshot)
     }
 }

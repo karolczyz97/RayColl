@@ -3,10 +3,11 @@ package com.raycoll.app.data.sync
 import com.raycoll.app.data.remote.auth.AuthRepository
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.NamespaceManager
+import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.merge.getGuestHasData
 import com.raycoll.app.domain.merge.shouldTriggerMigration
 import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.domain.seed.SeedData
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
@@ -16,6 +17,7 @@ import javax.inject.Singleton
 class BootstrapLoader @Inject constructor(
     private val authRepository: AuthRepository,
     private val deckRepository: DeckRepository,
+    private val studyModeRepository: StudyModeRepository,
     private val namespaceManager: NamespaceManager,
     private val syncEngine: SyncEngine,
 ) {
@@ -23,7 +25,7 @@ class BootstrapLoader @Inject constructor(
         val uid = authRepository.currentUid()
         return if (uid.isEmpty()) {
             namespaceManager.resetToGuest()
-            deckRepository.seedIfEmpty()
+            seedIfEmpty()
             BootstrapResult.LocalOnly
         } else {
             namespaceManager.setNamespace(uid)
@@ -33,25 +35,36 @@ class BootstrapLoader @Inject constructor(
                 if (cloudData != null) {
                     val merged = syncEngine.bootstrap(localData, cloudData)
                     BootstrapResult.Merged(merged)
+                } else if (syncEngine.lastSyncError() != null) {
+                    // Load się nie powiódł (błąd sieci/uprawnień) — NIE seedować:
+                    // chmura może mieć dane, seed zrobiłby później duplikaty w merge.
+                    BootstrapResult.LocalOnly
                 } else {
-                    // Cloud returned null = new account with no cloud data
+                    // Cloud zwrócił null bez błędu = potwierdzone świeże konto
                     val guestData = deckRepository.getSnapshotFor("")
                     val hasUserLocalCache = localData.groups.isNotEmpty() || localData.studyModes.isNotEmpty()
                     val guestHasData = getGuestHasData(guestData.groups, guestData.activityHeatmap, guestData.studyModes)
                     if (shouldTriggerMigration(hasUserLocalCache, guestHasData)) {
                         BootstrapResult.MigrationRequired(guestData)
                     } else {
-                        deckRepository.seedIfEmpty()
+                        seedIfEmpty()
                         BootstrapResult.LocalOnly
                     }
                 }
             } catch (e: TimeoutCancellationException) {
-                // Cloud timeout / błąd — pokaż dane lokalne (seed dokłada DashboardViewModel).
+                // Timeout chmury — pokaż lokalne, bez seedowania (jak wyżej).
                 BootstrapResult.LocalOnly
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 BootstrapResult.LocalOnly
             }
         }
+    }
+
+    private suspend fun seedIfEmpty() {
+        deckRepository.seedIfEmpty()
+        studyModeRepository.seedIfEmpty()
     }
 }
 

@@ -1,6 +1,9 @@
 package com.raycoll.app
 
 import android.app.Application
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.raycoll.app.data.remote.FirebaseConfig
 import com.raycoll.app.data.repository.ArchivePurger
 import com.raycoll.app.data.sync.SyncLifecycle
@@ -26,6 +29,12 @@ class RayCollApplication : Application() {
         FirebaseConfig.ensureInitialized(this)
         super.onCreate()
         syncLifecycle.start(appScope)
+        // apka schodzi w tło → best-effort flush zaległych zmian do chmury (T10)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) syncLifecycle.flushOnBackground()
+            }
+        )
         // purge archiwum: przy starcie apki i co godzinę
         appScope.launch {
             while (true) {

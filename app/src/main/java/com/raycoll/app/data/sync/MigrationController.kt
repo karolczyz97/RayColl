@@ -17,8 +17,11 @@ class MigrationController @Inject constructor(
     suspend fun executeMigration(option: MigrationOption) {
         when (option) {
             MigrationOption.MIGRATE -> {
-                // Copy guest data to account namespace
-                val guestData = deckRepository.getSnapshot()
+                // Namespace jest już przełączony na uid (bootstrap zrobił to przed
+                // dialogiem), więc dane gościa czytamy JAWNIE z namespace "" —
+                // getSnapshot() zwróciłby pusty snapshot świeżego konta.
+                // Kopiujemy (dane gościa zostają lokalnie nietknięte — plan T10).
+                val guestData = deckRepository.getSnapshotFor("")
                 namespaceManager.setNamespace(authRepository.currentUid())
                 deckRepository.replaceAll(guestData)
             }
