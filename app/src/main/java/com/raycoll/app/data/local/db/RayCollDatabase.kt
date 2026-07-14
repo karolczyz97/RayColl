@@ -5,10 +5,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import android.content.Context
 
+// exportSchema=false świadomie: schemat v1, zero migracji (fallbackToDestructiveMigration),
+// brak wtyczki androidx.room z schemaDirectory — eksport nic tu nie daje, a warning myli.
 @Database(
     entities = [DeckEntity::class, CardEntity::class, StudyModeEntity::class, ActivityDayEntity::class],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 abstract class RayCollDatabase : RoomDatabase() {
     abstract fun deckDao(): DeckDao

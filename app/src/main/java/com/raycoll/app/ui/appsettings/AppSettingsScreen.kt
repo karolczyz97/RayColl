@@ -159,9 +159,16 @@ fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hilt
             Text(stringResource(R.string.app_settings_tts_rate))
             Slider(value = prefs.ttsRate, onValueChange = { viewModel.setTtsRate(it) }, valueRange = 0.5f..2.0f, steps = 14)
 
+            val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.app_settings_background_playback))
-                Switch(checked = prefs.backgroundPlayback, onCheckedChange = { viewModel.setBackgroundPlayback(it) })
+                Switch(checked = prefs.backgroundPlayback, onCheckedChange = { enabled ->
+                    viewModel.setBackgroundPlayback(enabled)
+                    // API 33+: bez POST_NOTIFICATIONS notyfikacja odtwarzacza w tle się nie pokaże
+                    if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
+                        notifLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                })
             }
 
             Text(stringResource(R.string.app_settings_export_import), style = MaterialTheme.typography.titleMedium)
