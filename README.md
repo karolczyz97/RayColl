@@ -121,5 +121,8 @@ Pełny opis: [`docs/PORT_PLAN.md`](docs/PORT_PLAN.md) sekcja 7.
 ## Status
 
 **v1 kompletne.** Cała logika (T1–T10 planu) i audyt UX zrealizowane. Chmura
-(Firestore + Auth) w zakresie v1. Znany dług: `AppSettingsViewModel` bez testu
-jednostkowego (zależy od Firebase-coupled `AuthRepository`/`SyncLifecycle`).
+(Firestore + Auth) w zakresie v1: schemat dokumentów 1:1 z aplikacją webową
+(TensorDeck), zapis diffowy z chunkowaniem batchy, polityka schedulera
+(debounce 1200 ms / flush co 10 ocen w nauce / immediate dla operacji
+krytycznych / flush przy zejściu w tło). Historia audytów i znany dług:
+[`docs/REDTEAM_AUDIT.md`](docs/REDTEAM_AUDIT.md).

@@ -54,27 +54,69 @@ Kompilator zgłasza tylko nieszkodliwe deprecacje wstecznej kompatybilności
 (VIBRATOR_SERVICE dla API<31, coroutine `resume`, ikony kierunkowe — apka jest LTR‑only,
 a AutoMirrored nie rozwiązuje się w tym BOM). Uznane za świadomie zostawione.
 
-## Świadomie NIE ruszone: warstwa sync/Firestore (nie do zweryfikowania)
+## Trzeci przebieg — pełny skan każdego pliku + domknięcie sync T10 (2026-07-14)
 
-Sync jest zależny od Firebase (`google-services.json` NIE ma w repo) i oznaczony N‑A —
-przepisywanie nietestowalnego kodu chmury na ślepo to duże ryzyko. Znane rozjazdy vs plan T10
-(udokumentowane, NIE naprawiane):
+Kolejny adwersaryjny pass po CAŁEJ apce (każdy plik main + porównania z TS).
+Znalazł i naprawił kolejne realne błędy oraz domknął największy dług — warstwę
+sync wg spec T10. Suita po naprawach: **242 testy zielone**, debug + release (R8) zielone.
 
-- **SyncEngine.saveUserData**: batch bez dzielenia — Firestore limit ~500 operacji/batch;
-  talia z >~500 dokumentami (karty+talie+tryby+dni) wywali `batch.commit()`. Plan wymagał
-  chunkowania (400) i diff per‑dokument + czyszczenie osieroconych. Obecnie: pełny zapis
-  wszystkiego za każdym razem (działa dla małych zbiorów, nieoptymalne/łamie się dla dużych).
-- **Scheduler**: brak osobnego `SyncScheduler` — jest prosty debounce 1200 ms w `SyncLifecycle`.
-  Brakuje: licznika „flush co 10 ocen" w study, `immediate+await` dla importów/usunięć,
-  flush na `ProcessLifecycle onStop`, rollbacku importu przy błędzie chmury (talia‑widmo).
-  Efekt: prostszy, local‑first (Room zawsze zapisany od razu; chmura best‑effort). Funkcjonalnie
-  rozsądne dla v1 jednego urządzenia, ale nie 1:1 z polityką planu.
+### Naprawione błędy (poprawność)
 
-To są rzeczy, których się „obawiam", ale których nie da się bezpiecznie naprawić bez
-konfiguracji Firebase i realnego urządzenia/emulatora.
+| # | Plik | Błąd | Skutek dla użytkownika |
+|---|---|---|---|
+| 1 | `MainActivity.kt` | `RayCollTheme` wołane z DEFAULTAMI — prefs motywu/dynamic colors nigdy nie trafiały do theme | Przełącznik motywu (jasny/ciemny/system) i Material You w ustawieniach **nie robiły nic** |
+| 2 | `MigrationController.kt` | MIGRATE robił `getSnapshot()` PO przełączeniu namespace na uid → kopiował pusty snapshot | „Przenieś na konto" **przenosiło nic** — świeże konto zostawało puste |
+| 3 | `HapticAndSoundPlayer.kt` | `loadSounds()` nie było wołane nigdzie (id=0) | Dźwięki feedback_success/feedback_error **nigdy nie grały**; do tego TS gra też haptykę przy feedbacku — dodana |
+| 4 | `data/remote/firestore/FirestoreSchema.kt` | Format dokumentów niezgodny z TS: karta z płaskimi polami SRS (TS: zagnieżdżony `srsState`), tryb ze `stepsJson` stringiem (TS: strukturalne `steps`) | Web/Expo i Android **nie czytałyby nawzajem swoich danych** z tego samego konta Firestore |
+| 5 | `SyncEngine.kt` | Jeden batch bez chunkowania (limit Firestore 500 op) | Talia >~500 dokumentów = **sync trwale zepsuty** (commit zawsze odrzucany) |
+| 6 | `SyncEngine.kt` | Zero czyszczenia osieroconych dokumentów | Po factory-reset/imporcie backupu stare talie **wracały z chmury** przy następnym bootstrapie |
+| 7 | `ModeStep.kt` | Defaulty CompoundParams ≠ TS (`speak/speakQuestion/manualFallback=false`, `nextPage=0`) | „Dodaj krok" w edytorze tworzył kroki inne niż oryginał (np. speak_pause_next odsłaniał stronę 0, która już jest widoczna) |
+| 8 | `CompoundExpander.kt` | Warunek z kroku compound propagowany na listen+gałęzie (TS: ignorowany) + odwrócony fallback flip_reveal | Pominięty warunkiem listen zostawiał stary wynik → gałęzie correct/wrong **oceniały od nieaktualnej odpowiedzi** |
+| 9 | `BootstrapLoader.kt` + `DashboardViewModel.kt` | Bootstrap nie seedował trybów nauki; Dashboard seedował też namespace zalogowanego przy błędzie chmury | Świeże konto bez trybów do restartu apki; seed przy niedostępnej chmurze → **duplikaty seedów** po merge |
+| 10 | `DeckRepository/StudyModeRepository.seedIfEmpty` | check-then-insert bez transakcji, wołane równolegle | Wyścig przy starcie mógł **podwoić talie seedowe** |
+| 11 | `StatsViewModel.kt` | `System.currentTimeMillis()` zamiast `Clock` | Łamanie reguły projektu (ta sama klasa co #3 z drugiego passu); nietestowalny streak |
+| 12 | `SttRecognizer.kt` | Ścieżka NO_MATCH zwracała tylko finalne segmenty (bez partiali) | Rozpoznane, ale niesfinalizowane słowa **gubione** przy braku końcowego wyniku (TS: getText() = finals+interim) |
+| 13 | `TtsPlayer.kt` | Brak filtra utteranceId + LANG_MISSING_DATA traktowane jak dostępny głos | Spóźniony callback przerwanej wypowiedzi mógł przedwcześnie zakończyć następną; brak dialogu instalacji głosu przy niepobranych danych |
+| 14 | `AppSettingsScreen.kt` | Brak prośby o POST_NOTIFICATIONS | Notyfikacja nauki w tle **nie pokazywała się** na Androidzie 13+ |
+
+### Domknięty dług T10 (wcześniej „świadomie nie ruszone")
+
+- **SyncScheduler** (nowy, testowany na wirtualnym czasie): debounce 1200 ms
+  latest-wins, licznik ocen study z flushem co 10, immediate dla importu/
+  usunięcia/archiwizacji/restore, single-in-flight + retry nieudanego pusha.
+- **SyncLifecycle**: flush na granicy sesji study (FINISHED/wyjście z ekranu),
+  flush na ProcessLifecycle ON_STOP, best-effort flush przed wylogowaniem.
+- **SyncEngine**: diff per dokument względem cache'u chmury (cache tylko po
+  pełnym sukcesie), pełny zapis z czyszczeniem osieroconych, chunkowanie 400,
+  corrupt dokument pomijany per-doc z warningiem (jak firestorePersistence.ts).
+- **DataMutations**: sygnały z trybem cloud (debounced/study/immediate).
+- **SyncStatusBanner** podpięty w ustawieniach (był napisany, nieużywany).
+- Testy: `FirestoreSchemaTest` (round-trip + strict), `SyncDiffTest`,
+  `SyncSchedulerTest`.
+
+### Nadal świadomie pominięte
+
+- **Rollback importu przy błędzie chmury** (plan T10): import/usunięcie sygnalizuje
+  immediate push, ale wywołujący nie czeka na wynik chmury i nie przywraca
+  poprzedniego snapshotu. Local-first: Room zawsze spójny; przy błędzie chmury
+  scheduler ponawia. Talia-widmo w chmurze nie powstaje (diff dopisze/skasuje
+  przy następnym udanym pushu).
+- **Seed „tylko w pamięci" przy błędzie chmury** (plan T10): zamiast tego w ogóle
+  nie seedujemy przy nieudanym loadzie (pusty dashboard + banner błędu) — Room-first
+  nie ma warstwy pamięciowej, a to bezpieczniejsze niż persystowanie seedów.
+- Warstwy wymagające urządzenia (TTS/STT/Media3/focus/notyfikacje, realny
+  Firestore) — zweryfikowane statycznie 1:1 z TS, nie na sprzęcie.
+
+## ~~Świadomie NIE ruszone: warstwa sync/Firestore~~ (NIEAKTUALNE — naprawione w trzecim przebiegu)
+
+> Rozjazdy opisane w tej sekcji (batch bez chunkowania, brak SyncSchedulera,
+> brak flushy) zostały **naprawione** w trzecim przebiegu — patrz sekcja wyżej.
+> Warstwa Firestore pozostaje niezweryfikowana na realnym urządzeniu/emulatorze
+> (brak `google-services.json` w repo), ale logika (schemat, diff, scheduler)
+> jest pokryta testami jednostkowymi.
 
 ## Dług techniczny / nietknięte (świadomie)
 
-- **Room `exportSchema`**: build ostrzega, że schemat nie jest eksportowany (brak wtyczki `androidx.room` + `schemaDirectory`). Przy greenfieldzie, `fallbackToDestructiveMigration` i schemacie v1 (zero migracji) wartość eksportu jest znikoma; dodanie wtyczki to zmiana infrastruktury build z ryzykiem — zostawione świadomie.
-- **`AppSettingsViewModel`** bez testu VM — zależy od Firebase‑coupled `AuthRepository`/`SyncLifecycle`/`MigrationController`; logika backupu pokryta przez `BackupRepository`/DAO. Dług testowy, nie funkcjonalny (jak w README).
-- **Warstwy N‑A** (playback TTS/STT/Media3, sync Firestore, nawigacja/predictive back, Auto Backup) wymagają urządzenia — poza zakresem audytu kodowego.
+- **`AppSettingsViewModel`, `SyncLifecycle`, `BootstrapLoader`** bez testów VM/integracyjnych — zależą od Firebase‑coupled `AuthRepository`; logika wyekstrahowana do testowanych modułów (`SyncScheduler`, `SyncDiff`, `FirestoreSchema`, `BackupRepository`). Dług testowy, nie funkcjonalny.
+- **Rollback importu przy błędzie chmury** — patrz „Nadal świadomie pominięte" wyżej.
+- **Warstwy N‑A** (playback TTS/STT/Media3, realny Firestore, nawigacja/predictive back, Auto Backup) wymagają urządzenia — poza zakresem audytu kodowego.
