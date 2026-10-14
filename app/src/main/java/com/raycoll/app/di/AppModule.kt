@@ -1,5 +1,6 @@
 package com.raycoll.app.di
 
+import android.util.Log
 import com.raycoll.app.core.Clock
 import com.raycoll.app.core.SystemClock
 import dagger.Module
@@ -9,6 +10,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +31,11 @@ object AppModule {
     @Provides
     @Singleton
     @ApplicationScope
-    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    fun provideApplicationScope(): CoroutineScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            // nieobsłużony wyjątek pracy w tle (bootstrap, sync) nie zabija procesu, a przy starcie powtarzałby się w pętli
+            CoroutineExceptionHandler { _, e -> Log.e("AppScope", "Unhandled background failure", e) }
+    )
 
     @Provides
     @DefaultDispatcher

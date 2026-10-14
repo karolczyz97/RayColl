@@ -272,6 +272,24 @@ class DeckRepositoryTest {
     }
 
     @Test
+    fun `page name is trimmed like the deck name`() = runTest(dispatcher) {
+        val id = seedDeckWithCard()
+        repos.deckRepository.setPageName(id, 0, "  Pytanie  ")
+        assertEquals(listOf("Pytanie", "Back"), repos.deckRepository.getDeck(id)!!.pageNames)
+    }
+
+    @Test
+    fun `page edits outside the page range change nothing`() = runTest(dispatcher) {
+        val id = seedDeckWithCard()
+        val before = repos.deckRepository.getDeck(id)!!
+        clock.advance(5_000)
+        repos.deckRepository.setPageName(id, 7, "Ghost")
+        repos.deckRepository.setPageName(id, -1, "Ghost")
+        repos.deckRepository.setPageLanguage(id, 7, "de-DE")
+        assertEquals(before, repos.deckRepository.getDeck(id))
+    }
+
+    @Test
     fun `rerating uses the original SRS without counting another daily review`() = runTest(dispatcher) {
         val id = seedDeckWithCard()
         val original = repos.deckRepository.getDeck(id)!!.cards.single()

@@ -2,9 +2,11 @@ package com.raycoll.app.data.local.prefs
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -12,12 +14,20 @@ import com.raycoll.app.domain.model.KeyedEnum
 import com.raycoll.app.domain.model.TtsRate
 import com.raycoll.app.domain.model.keyedEnumOrNull
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "raycoll_settings")
+// uszkodzony plik ustawień = domyślne ustawienia, a nie wyjątek na każdym odczycie
+internal val settingsCorruptionHandler = ReplaceFileCorruptionHandler<Preferences> { emptyPreferences() }
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "raycoll_settings",
+    corruptionHandler = settingsCorruptionHandler
+)
 
 enum class ThemePref(override val key: String) : KeyedEnum {
     SYSTEM("system"),
@@ -38,7 +48,10 @@ data class UserPreferences(
 )
 
 @Singleton
-class UserPreferencesRepository @Inject constructor(@ApplicationContext private val context: Context) {
+class UserPreferencesRepository internal constructor(private val dataStore: DataStore<Preferences>) {
+
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context.dataStore)
 
     private object Keys {
         val THEME = stringPreferencesKey("theme_pref")
@@ -49,7 +62,9 @@ class UserPreferencesRepository @Inject constructor(@ApplicationContext private 
 
     private val defaults = UserPreferences()
 
-    val preferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
+    val preferences: Flow<UserPreferences> = dataStore.data.catch {
+        if (it is IOException) emit(emptyPreferences()) else throw it
+    }.map { prefs ->
         UserPreferences(
             theme = ThemePref.fromKey(prefs[Keys.THEME]),
             useSystemColors = prefs[Keys.SYSTEM_COLORS] ?: defaults.useSystemColors,
@@ -67,6 +82,6 @@ class UserPreferencesRepository @Inject constructor(@ApplicationContext private 
     suspend fun setBackgroundPlayback(value: Boolean) = set(Keys.BACKGROUND_PLAYBACK, value)
 
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit { it[key] = value }
+        dataStore.edit { it[key] = value }
     }
 }

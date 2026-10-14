@@ -23,6 +23,8 @@ enum class CloudWriteMode {
 class DataMutations @Inject constructor() {
     // kanał bez limitu: żaden sygnał nie ginie, nawet gdy synchronizacja jeszcze nie słucha
     private val channel = Channel<CloudWriteMode>(Channel.UNLIMITED)
+
+    /** Jeden odbiorca (synchronizacja): drugi kolektor dostawałby co drugi sygnał. */
     val events: Flow<CloudWriteMode> = channel.receiveAsFlow()
 
     fun signal(mode: CloudWriteMode) {

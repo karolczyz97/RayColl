@@ -2,11 +2,14 @@ package com.raycoll.app.data.repository
 
 import android.net.Uri
 import com.raycoll.app.data.files.DocumentFiles
+import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.normalize.BackupValidationException
 import com.raycoll.app.domain.normalize.validateBackupJson
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
@@ -25,7 +28,8 @@ enum class BackupResult {
 @Singleton
 class BackupRepository @Inject constructor(
     private val localStore: LocalStore,
-    private val documentFiles: DocumentFiles
+    private val documentFiles: DocumentFiles,
+    @DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) {
     private val json = Json {
         prettyPrint = true
@@ -34,7 +38,8 @@ class BackupRepository @Inject constructor(
     }
 
     suspend fun exportTo(uri: Uri): BackupResult {
-        val text = json.encodeToString(StoreData.serializer(), localStore.snapshot())
+        val snapshot = localStore.snapshot()
+        val text = withContext(dispatcher) { json.encodeToString(StoreData.serializer(), snapshot) }
         return if (documentFiles.writeText(uri, text)) BackupResult.SUCCESS else BackupResult.FILE_ERROR
     }
 
@@ -42,8 +47,10 @@ class BackupRepository @Inject constructor(
     suspend fun importFrom(uri: Uri): BackupResult {
         val text = documentFiles.readText(uri) ?: return BackupResult.FILE_ERROR
         val data = try {
-            validateBackupJson(text)
-            json.decodeFromString(StoreData.serializer(), text)
+            withContext(dispatcher) {
+                validateBackupJson(text)
+                json.decodeFromString(StoreData.serializer(), text)
+            }
         } catch (_: BackupValidationException) {
             return BackupResult.INVALID_BACKUP
         } catch (_: SerializationException) {
