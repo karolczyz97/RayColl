@@ -9,14 +9,29 @@ plugins {
     alias(libs.plugins.room)
 }
 
-// klucz Firebase spoza repozytorium: local.properties (lokalnie) albo zmienna środowiskowa (CI / GitHub Secrets)
-val firebaseApiKey: String = Properties()
-    .apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
-    .getProperty("firebase.apiKey")
-    ?: System.getenv("FIREBASE_API_KEY")
-    ?: throw GradleException(
-        "Brak klucza Firebase: dodaj firebase.apiKey=... do local.properties albo ustaw FIREBASE_API_KEY"
-    )
+// klucz Firebase spoza repozytorium: local.properties (lokalnie) albo zmienna środowiskowa (CI / GitHub Secrets);
+// bez klucza działa debug, testy i lint — wymaga go dopiero build release (requireFirebaseApiKey)
+val firebaseApiKey: String = (
+    Properties()
+        .apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
+        .getProperty("firebase.apiKey")
+        ?.takeIf { it.isNotBlank() }
+        ?: System.getenv("FIREBASE_API_KEY")
+    ).orEmpty()
+
+val requireFirebaseApiKey = tasks.register("requireFirebaseApiKey") {
+    val key = firebaseApiKey
+    doLast {
+        if (key.isBlank()) {
+            throw GradleException(
+                "Brak klucza Firebase: dodaj firebase.apiKey=... do local.properties albo ustaw FIREBASE_API_KEY"
+            )
+        }
+    }
+}
+tasks.configureEach {
+    if (name == "generateReleaseBuildConfig") dependsOn(requireFirebaseApiKey)
+}
 
 android {
     namespace = "com.raycoll.app"
@@ -61,10 +76,6 @@ android {
         unitTests {
             isIncludeAndroidResources = true
         }
-    }
-    lint {
-        warningsAsErrors = false
-        abortOnError = true
     }
     packaging {
         resources {
