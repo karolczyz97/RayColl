@@ -1,19 +1,73 @@
 package com.raycoll.app.data.local.prefs
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
+import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /** Preferencje urządzenia: wartości domyślne, zapis i zakres szybkości mowy. */
 @RunWith(RobolectricTestRunner::class)
 class UserPreferencesRepositoryTest {
+
+    @get:Rule
+    val folder = TemporaryFolder()
+
+    @Test
+    fun `corrupted settings file gives defaults and stays writable`() = runBlocking {
+        val file = File(folder.root, "settings.preferences_pb").apply { writeBytes(ByteArray(64) { 0xFF.toByte() }) }
+        val scope = CoroutineScope(Dispatchers.IO + Job())
+        try {
+            val store = PreferenceDataStoreFactory.create(
+                corruptionHandler = settingsCorruptionHandler,
+                scope = scope,
+                produceFile = { file }
+            )
+            val repo = UserPreferencesRepository(store)
+            assertEquals(UserPreferences(), repo.preferences.first())
+            repo.setTheme(ThemePref.DARK)
+            assertEquals(ThemePref.DARK, repo.preferences.first().theme)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `read failure with IOException gives defaults, other failures are not hidden`() = runBlocking {
+        assertEquals(
+            UserPreferences(),
+            UserPreferencesRepository(failingStore(IOException("disk"))).preferences.first()
+        )
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { UserPreferencesRepository(failingStore(IllegalStateException("bug"))).preferences.first() }
+        }
+        Unit
+    }
+
+    private fun failingStore(error: Throwable) = object : DataStore<Preferences> {
+        override val data: Flow<Preferences> = flow { throw error }
+
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = throw error
+    }
 
     @Test
     fun `preferences defaults, writes and ttsRate clamping`() = runBlocking {

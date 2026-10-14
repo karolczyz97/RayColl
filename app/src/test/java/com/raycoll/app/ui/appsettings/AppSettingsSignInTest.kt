@@ -113,7 +113,7 @@ class AppSettingsSignInTest {
         sync = newSync(CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
         vm = AppSettingsViewModel(
             UserPreferencesRepository(context),
-            BackupRepository(repos.localStore, DocumentFiles(context)),
+            BackupRepository(repos.localStore, DocumentFiles(context), Dispatchers.Unconfined),
             google,
             sync,
             FakeClock()

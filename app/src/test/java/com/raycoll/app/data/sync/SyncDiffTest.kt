@@ -78,7 +78,7 @@ class SyncDiffTest {
             groups = listOf(d1.copy(cards = listOf(card("c1", reps = 1), card("c2"))))
         )
         val ops = SyncDiff.diffSave(previous, next)
-        assertEquals(listOf<SyncOp>(SyncOp.PutCard("d1", card("c1", reps = 1))), ops)
+        assertEquals(listOf<SyncOp>(SyncOp.PutCard("d1", card("c1", reps = 1), 0)), ops)
     }
 
     @Test
@@ -87,7 +87,7 @@ class SyncDiffTest {
         val previous = StoreData(groups = listOf(d1))
         val next = StoreData(groups = listOf(d1.copy(name = "Nowa nazwa")))
         val ops = SyncDiff.diffSave(previous, next)
-        assertEquals(listOf<SyncOp>(SyncOp.PutDeck(next.groups[0])), ops)
+        assertEquals(listOf<SyncOp>(SyncOp.PutDeck(next.groups[0], 0)), ops)
     }
 
     @Test
@@ -116,6 +116,44 @@ class SyncDiffTest {
             activityHeatmap = mapOf("2026-01-01" to 3)
         )
         assertEquals(emptyList<SyncOp>(), SyncDiff.diffSave(state, state))
+    }
+
+    @Test
+    fun `diffSave zapisuje pozycje talii i kart wg miejsca na liście`() {
+        val data = StoreData(
+            groups = listOf(deck("d1", listOf(card("c1"), card("c2"))), deck("d2", listOf(card("c3"))))
+        )
+        val ops = SyncDiff.diffSave(StoreData(), data)
+        assertTrue(ops.contains(SyncOp.PutDeck(data.groups[0], 0)))
+        assertTrue(ops.contains(SyncOp.PutDeck(data.groups[1], 1)))
+        assertTrue(ops.contains(SyncOp.PutCard("d1", card("c1"), 0)))
+        assertTrue(ops.contains(SyncOp.PutCard("d1", card("c2"), 1)))
+        assertTrue(ops.contains(SyncOp.PutCard("d2", card("c3"), 0)))
+    }
+
+    @Test
+    fun `diffSave zapisuje ponownie dokumenty, których miejsce na liście się zmieniło`() {
+        val previous = StoreData(
+            groups = listOf(deck("d1", listOf(card("c1"), card("c2"), card("c3"))), deck("d2", emptyList()))
+        )
+        // c1 usunięta z listy, c3 i c2 zamieniają się miejscami (c2 zostaje na miejscu 1)
+        val next = StoreData(
+            groups = listOf(deck("d2", emptyList()), deck("d1", listOf(card("c3"), card("c2"))))
+        )
+        val ops = SyncDiff.diffSave(previous, next)
+        assertTrue(ops.contains(SyncOp.PutDeck(next.groups[0], 0)))
+        assertTrue(ops.contains(SyncOp.PutDeck(next.groups[1], 1)))
+        assertTrue(ops.contains(SyncOp.PutCard("d1", card("c3"), 0)))
+        assertTrue("c2 zostaje na miejscu 1", ops.none { it is SyncOp.PutCard && it.card.id == "c2" })
+        assertTrue(ops.contains(SyncOp.DeleteCard("d1", "c1")))
+    }
+
+    @Test
+    fun `diffSave dopisuje pozycję tylko dokumentom, które jej wymagają`() {
+        val state = StoreData(groups = listOf(deck("d1", listOf(card("c1"), card("c2")))))
+        val stale = setOf(deckKey("d1"), cardKey("d1", "c2"))
+        val ops = SyncDiff.diffSave(state, state, stale)
+        assertEquals(listOf<SyncOp>(SyncOp.PutDeck(state.groups[0], 0), SyncOp.PutCard("d1", card("c2"), 1)), ops)
     }
 
     @Test

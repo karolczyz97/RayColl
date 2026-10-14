@@ -24,12 +24,14 @@ interface DeckDao {
     suspend fun getLiveDeck(ns: String, deckId: String): DeckEntity?
 
     /** Wszystkie talie, także usunięte (tombstony) i zarchiwizowane. */
-    @Query("SELECT * FROM decks WHERE namespace = :ns")
+    @Query("SELECT * FROM decks WHERE namespace = :ns ORDER BY rowid")
     suspend fun allDecks(ns: String): List<DeckEntity>
 
     @Upsert
     suspend fun upsertDeck(deck: DeckEntity)
 
+    // Soft delete nie zmienia updatedAt: tombstone ma własny deletedAt, a późniejsza edycja ma wygrać
+    // z usunięciem (MergeEngine.isAlive); to samo dla kart i trybów.
     @Query("UPDATE decks SET deletedAt = :now WHERE namespace = :ns AND id = :deckId")
     suspend fun softDeleteDeck(ns: String, deckId: String, now: Long)
 

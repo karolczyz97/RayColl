@@ -43,10 +43,8 @@ class BootstrapLoader @Inject constructor(
             return BootstrapResult.LocalOnly
         }
         namespaceManager.switchTo(uid)
-        return when (
-            val cloud =
-                withTimeoutOrNull(CLOUD_LOAD_TIMEOUT_MS) { syncEngine.load(uid) } ?: CloudLoad.Failed
-        ) {
+        val cloud = withTimeoutOrNull(CLOUD_LOAD_TIMEOUT_MS) { syncEngine.load(uid) } ?: CloudLoad.Failed
+        val result = when (cloud) {
             is CloudLoad.Loaded -> {
                 localStore.mergeWithCloud(cloud.data)
                 BootstrapResult.Merged
@@ -57,7 +55,9 @@ class BootstrapLoader @Inject constructor(
             CloudLoad.Failed -> BootstrapResult.LocalOnly
 
             CloudLoad.Empty -> bootstrapFreshAccount()
-        }.also { localStore.refreshUntouchedBuiltInModes() }
+        }
+        localStore.refreshUntouchedBuiltInModes()
+        return result
     }
 
     private suspend fun bootstrapFreshAccount(): BootstrapResult {

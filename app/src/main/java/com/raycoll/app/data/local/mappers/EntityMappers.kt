@@ -70,6 +70,12 @@ fun DeckEntity.toDomain(cards: List<CardEntity>) = FlashcardGroup(
     archivedAt = archivedAt
 )
 
+/** Talie z ich kartami (karty rozdzielone po `deckId`); kolejność talii i kart zostaje. */
+fun List<DeckEntity>.toDomain(cards: List<CardEntity>): List<FlashcardGroup> {
+    val cardsByDeck = cards.groupBy { it.deckId }
+    return map { it.toDomain(cardsByDeck[it.id].orEmpty()) }
+}
+
 fun Flashcard.toEntity(namespace: String, deckId: String) = CardEntity(
     id = id,
     namespace = namespace,

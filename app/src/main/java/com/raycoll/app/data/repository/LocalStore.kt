@@ -2,12 +2,14 @@ package com.raycoll.app.data.repository
 
 import androidx.room.withTransaction
 import com.raycoll.app.data.local.db.RayCollDatabase
+import com.raycoll.app.data.local.db.StudyModeEntity
 import com.raycoll.app.data.local.mappers.toActivityEntities
 import com.raycoll.app.data.local.mappers.toDomain
 import com.raycoll.app.data.local.mappers.toEntity
 import com.raycoll.app.data.local.mappers.toHeatmap
 import com.raycoll.app.domain.merge.mergeUserData
 import com.raycoll.app.domain.model.StoreData
+import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.normalize.normalizeStoreData
 import com.raycoll.app.domain.seed.SEED_MODES
 import com.raycoll.app.domain.seed.SeedData
@@ -38,7 +40,7 @@ class LocalStore @Inject constructor(
      */
     suspend fun snapshotOf(ns: String): StoreData = db.withTransaction {
         StoreData(
-            groups = withCards(deckDao.allDecks(ns), cardDao.allCards(ns)),
+            groups = deckDao.allDecks(ns).toDomain(cardDao.allCards(ns)),
             studyModes = modeDao.allModes(ns).map { it.toDomain() },
             activityHeatmap = activityDao.allActivity(ns).toHeatmap()
         )
@@ -97,12 +99,8 @@ class LocalStore @Inject constructor(
                 }
             }
             val existing = modeDao.allModes(ns).associateBy { it.id }
-            val missingOrUntouched = SEED_MODES.filter { seed ->
-                val current = existing[seed.id]
-                current == null ||
-                    (current.isBuiltIn && current.updatedAt == 0L && current.toDomain().steps != seed.steps)
-            }
-            modeDao.upsertModes(missingOrUntouched.map { it.toEntity(ns) })
+            val missing = SEED_MODES.filter { it.id !in existing }
+            modeDao.upsertModes((missing + outdatedBuiltInModes(existing)).map { it.toEntity(ns) })
         }
     }
 
@@ -111,14 +109,17 @@ class LocalStore @Inject constructor(
         val ns = namespaceManager.current()
         db.withTransaction {
             val existing = modeDao.allModes(ns).associateBy { it.id }
-            val outdated = SEED_MODES.filter { seed ->
-                val current = existing[seed.id]
-                current != null && current.isBuiltIn && current.updatedAt == 0L &&
-                    current.toDomain().steps != seed.steps
-            }
-            modeDao.upsertModes(outdated.map { it.toEntity(ns) })
+            modeDao.upsertModes(outdatedBuiltInModes(existing).map { it.toEntity(ns) })
         }
     }
+}
+
+/** Seedy ma wbudowany tryb tylko z updatedAt = 0 — każda edycja użytkownika to updatedAt > 0. */
+private fun StudyModeEntity.isUntouchedBuiltIn(): Boolean = isBuiltIn && updatedAt == 0L
+
+/** Wbudowane tryby z [existing], których użytkownik nie edytował, a kroki w aplikacji są nowsze. */
+private fun outdatedBuiltInModes(existing: Map<String, StudyModeEntity>): List<StudyMode> = SEED_MODES.filter { seed ->
+    existing[seed.id]?.let { it.isUntouchedBuiltIn() && it.toDomain().steps != seed.steps } == true
 }
 
 /** Konto: stałe id seedów (uid); gość: losowe. */

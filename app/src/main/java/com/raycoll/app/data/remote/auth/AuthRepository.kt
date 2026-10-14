@@ -1,6 +1,7 @@
 package com.raycoll.app.data.remote.auth
 
 import android.content.Context
+import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -13,6 +14,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.raycoll.app.data.remote.FirebaseConfig
 import com.raycoll.app.data.sync.CurrentUser
@@ -26,6 +28,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 
 data class Account(val uid: String, val email: String?)
+
+private const val TAG = "AuthRepository"
+
+private fun FirebaseUser.toAccount() = Account(uid, email)
 
 enum class SignInError { PLAY_SERVICES, NO_TOKEN, INVALID_TOKEN, LOGIN_FAILED }
 
@@ -63,12 +69,12 @@ class AuthRepository @Inject constructor(
     @ApplicationContext private val appContext: Context
 ) : CurrentUser,
     GoogleSignIn {
-    private val _account = MutableStateFlow(auth.currentUser?.let { Account(it.uid, it.email) })
+    private val _account = MutableStateFlow(auth.currentUser?.toAccount())
 
     override val account: StateFlow<Account?> = _account.asStateFlow()
 
     init {
-        auth.addAuthStateListener { _account.value = it.currentUser?.let { user -> Account(user.uid, user.email) } }
+        auth.addAuthStateListener { _account.value = it.currentUser?.toAccount() }
     }
 
     override fun currentUid(): String? = auth.currentUser?.uid
@@ -89,7 +95,8 @@ class AuthRepository @Inject constructor(
             return IdTokenResult.Cancelled
         } catch (_: NoCredentialException) {
             return IdTokenResult.Failure(SignInError.NO_TOKEN)
-        } catch (_: GetCredentialException) {
+        } catch (e: GetCredentialException) {
+            Log.w(TAG, "Google account selection failed: ${e.javaClass.simpleName}: ${e.message}")
             return IdTokenResult.Failure(SignInError.PLAY_SERVICES)
         }
         if (credential !is CustomCredential ||
@@ -108,10 +115,11 @@ class AuthRepository @Inject constructor(
         return try {
             val user = auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await().user
                 ?: return SignInResult.Failure(SignInError.LOGIN_FAILED)
-            SignInResult.Success(Account(user.uid, user.email))
+            SignInResult.Success(user.toAccount())
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Firebase sign-in failed", e)
             SignInResult.Failure(SignInError.LOGIN_FAILED)
         }
     }

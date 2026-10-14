@@ -28,8 +28,10 @@ class FirestoreDocException(message: String) : Exception(message)
  * - karta ma ZAGNIEŻDŻONY obiekt `srsState` (nie płaskie pola),
  * - tryb ma STRUKTURALNĄ tablicę `steps` (nie string JSON),
  * - `deletedAt`/`archivedAt`/`builtInSourceId` zapisywane tylko gdy obecne,
+ * - `position` (talie i karty) = miejsce na liście; opcjonalne, bo starsze dokumenty go nie mają,
  * - deserializacja jest STRICT (brak/zły typ pola → wyjątek); loader per-dokument
  *   łapie wyjątek i pomija uszkodzony dokument zamiast wywalać cały load.
+ *   Pola opcjonalne (deletedAt, archivedAt, position) są łagodne: zły typ = brak.
  */
 object FirestoreSchema {
     const val PATH_USERS = "users"
@@ -37,6 +39,9 @@ object FirestoreSchema {
     const val PATH_CARDS = "cards"
     const val PATH_MODES = "studyModes"
     const val PATH_ACTIVITY = "activity"
+
+    const val FIELD_UPDATED_AT = "updatedAt"
+    private const val FIELD_POSITION = "position"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -46,7 +51,7 @@ object FirestoreSchema {
 
     // ---------- serializacja (Kotlin → mapy Firestore) ----------
 
-    fun deckToMap(deck: FlashcardGroup): Map<String, Any> = buildMap {
+    fun deckToMap(deck: FlashcardGroup, position: Int? = null): Map<String, Any> = buildMap {
         put("id", deck.id)
         put("name", deck.name)
         put("activeModeId", deck.activeModeId)
@@ -55,12 +60,13 @@ object FirestoreSchema {
         put("activePageCount", deck.activePageCount)
         put("studyFilter", deck.studyFilter.key)
         put("cardOrder", deck.cardOrder.key)
-        put("updatedAt", deck.updatedAt)
+        put(FIELD_UPDATED_AT, deck.updatedAt)
         deck.deletedAt?.let { put("deletedAt", it) }
         deck.archivedAt?.let { put("archivedAt", it) }
+        position?.let { put(FIELD_POSITION, it) }
     }
 
-    fun cardToMap(card: Flashcard): Map<String, Any> = buildMap {
+    fun cardToMap(card: Flashcard, position: Int? = null): Map<String, Any> = buildMap {
         put("id", card.id)
         put("pages", card.pages)
         put(
@@ -77,6 +83,7 @@ object FirestoreSchema {
         put("contentUpdatedAt", card.contentUpdatedAt)
         put("srsUpdatedAt", card.srsUpdatedAt)
         card.deletedAt?.let { put("deletedAt", it) }
+        position?.let { put(FIELD_POSITION, it) }
     }
 
     fun modeToMap(mode: StudyMode): Map<String, Any> = buildMap {
@@ -86,7 +93,7 @@ object FirestoreSchema {
         put("isBuiltIn", mode.isBuiltIn)
         // pusty identyfikator źródła traktowany jak brak w zapisanych dokumentach
         mode.builtInSourceId?.takeIf { it.isNotEmpty() }?.let { put("builtInSourceId", it) }
-        put("updatedAt", mode.updatedAt)
+        put(FIELD_UPDATED_AT, mode.updatedAt)
         mode.deletedAt?.let { put("deletedAt", it) }
     }
 
@@ -111,8 +118,8 @@ object FirestoreSchema {
             studyFilter = studyFilter,
             cardOrder = cardOrder,
             updatedAt = requireFiniteNumber(data["updatedAt"], "updatedAt for deck $docId").toLong(),
-            deletedAt = optionalTimestamp(data["deletedAt"]),
-            archivedAt = optionalTimestamp(data["archivedAt"])
+            deletedAt = optionalLong(data["deletedAt"]),
+            archivedAt = optionalLong(data["archivedAt"])
         )
     }
 
@@ -142,7 +149,7 @@ object FirestoreSchema {
                 "contentUpdatedAt for card $docId"
             ).toLong(),
             srsUpdatedAt = requireFiniteNumber(data["srsUpdatedAt"], "srsUpdatedAt for card $docId").toLong(),
-            deletedAt = optionalTimestamp(data["deletedAt"])
+            deletedAt = optionalLong(data["deletedAt"])
         )
     }
 
@@ -167,9 +174,12 @@ object FirestoreSchema {
             isBuiltIn = isBuiltIn,
             builtInSourceId = builtInSourceId as? String,
             updatedAt = requireFiniteNumber(data["updatedAt"], "updatedAt for study mode $id").toLong(),
-            deletedAt = optionalTimestamp(data["deletedAt"])
+            deletedAt = optionalLong(data["deletedAt"])
         )
     }
+
+    /** Miejsce dokumentu talii/karty na liście; null w starszych dokumentach. */
+    fun positionFromMap(data: Map<String, Any?>): Long? = optionalLong(data[FIELD_POSITION])
 
     fun activityCountFromMap(docId: String, data: Map<String, Any?>): Int {
         val count = data["count"]
@@ -203,7 +213,7 @@ object FirestoreSchema {
         return value as List<String>
     }
 
-    private fun optionalTimestamp(value: Any?): Long? = (value as? Number)?.toLong()
+    private fun optionalLong(value: Any?): Long? = (value as? Number)?.toLong()
 
     /** Kroki trybu → lista map bez null, zgodna z zapisanymi dokumentami chmury. */
     internal fun stepsToPlain(steps: List<ModeStep>): List<Any?> {

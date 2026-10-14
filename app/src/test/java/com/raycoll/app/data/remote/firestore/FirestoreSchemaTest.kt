@@ -100,7 +100,32 @@ class FirestoreSchemaTest {
         assertFalse(map.containsKey("builtInSourceId"))
     }
 
+    @Test
+    fun `pozycja talii i karty jest zapisywana tylko gdy podana`() {
+        assertFalse(FirestoreSchema.deckToMap(deck()).containsKey("position"))
+        assertFalse(FirestoreSchema.cardToMap(card()).containsKey("position"))
+        assertEquals(3, FirestoreSchema.deckToMap(deck(), position = 3)["position"])
+        assertEquals(5, FirestoreSchema.cardToMap(card(), position = 5)["position"])
+    }
+
     // ---------- round-trip ----------
+
+    @Test
+    fun `pozycja wraca z dokumentu, a jej brak lub zły typ to null`() {
+        assertEquals(4L, FirestoreSchema.positionFromMap(FirestoreSchema.cardToMap(card(), position = 4)))
+        assertEquals(2L, FirestoreSchema.positionFromMap(FirestoreSchema.deckToMap(deck(), position = 2)))
+        assertNull(FirestoreSchema.positionFromMap(FirestoreSchema.cardToMap(card())))
+        assertNull(FirestoreSchema.positionFromMap(mapOf("position" to "pierwsza")))
+    }
+
+    @Test
+    fun `dokumenty z pozycją i bez niej czytają się tak samo`() {
+        val withPosition = FirestoreSchema.cardToMap(card(), position = 9)
+        assertEquals(card(), FirestoreSchema.cardFromMap("c1", withPosition))
+        assertEquals(card(), FirestoreSchema.cardFromMap("c1", FirestoreSchema.cardToMap(card())))
+        val deckWithPosition = FirestoreSchema.deckToMap(deck(), position = 1)
+        assertEquals(deck(), FirestoreSchema.deckFromMap("d1", deckWithPosition, listOf(card())))
+    }
 
     @Test
     fun `round-trip deck+card+mode 1-do-1`() {

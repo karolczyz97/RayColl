@@ -3,7 +3,6 @@ package com.raycoll.app.data.repository
 import androidx.room.withTransaction
 import com.raycoll.app.core.Clock
 import com.raycoll.app.core.LocalDates
-import com.raycoll.app.data.local.db.CardEntity
 import com.raycoll.app.data.local.db.DeckEntity
 import com.raycoll.app.data.local.db.RayCollDatabase
 import com.raycoll.app.data.local.mappers.encodeStringList
@@ -75,7 +74,7 @@ class DeckRepository @Inject constructor(
      */
     private fun decksWithCards(decks: (String) -> Flow<List<DeckEntity>>): Flow<List<FlashcardGroup>> =
         namespaceManager.active.flatMapLatest { ns ->
-            combine(decks(ns), cardDao.liveCards(ns), ::withCards)
+            combine(decks(ns), cardDao.liveCards(ns)) { decks, cards -> decks.toDomain(cards) }
         }
 
     // --- talie ---
@@ -117,11 +116,13 @@ class DeckRepository @Inject constructor(
     }
 
     suspend fun setPageName(deckId: String, pageIndex: Int, name: String) = editPageMetadata(deckId) { deck, _ ->
-        deck.copy(pageNames = deck.pageNames.mapIndexed { i, old -> if (i == pageIndex) name else old })
+        if (pageIndex !in deck.pageNames.indices) return@editPageMetadata null
+        deck.copy(pageNames = deck.pageNames.mapIndexed { i, old -> if (i == pageIndex) name.trim() else old })
     }
 
     suspend fun setPageLanguage(deckId: String, pageIndex: Int, language: String) =
         editPageMetadata(deckId) { deck, _ ->
+            if (pageIndex !in deck.pageLanguages.indices) return@editPageMetadata null
             deck.copy(pageLanguages = deck.pageLanguages.mapIndexed { i, old -> if (i == pageIndex) language else old })
         }
 
@@ -136,13 +137,14 @@ class DeckRepository @Inject constructor(
     /**
      * Nazwy/języki/liczba stron (listy JSON): odczyt i zapis tych kolumn w jednej transakcji,
      * więc dwie szybkie zmiany różnych stron nie gubią się nawzajem; reszta wiersza bez zmian.
+     * [edit] zwraca null, gdy nie ma czego zmienić (np. strona poza zakresem) — wtedy bez zapisu i wysyłki.
      */
-    private suspend fun editPageMetadata(deckId: String, edit: (FlashcardGroup, Long) -> FlashcardGroup) {
+    private suspend fun editPageMetadata(deckId: String, edit: (FlashcardGroup, Long) -> FlashcardGroup?) {
         val ns = ns
         val now = clock.now()
         val updated = db.withTransaction {
             val deck = deckDao.getLiveDeck(ns, deckId)?.toDomain(emptyList()) ?: return@withTransaction 0
-            val edited = edit(deck, now)
+            val edited = edit(deck, now) ?: return@withTransaction 0
             deckDao.updatePageMetadata(
                 ns,
                 deckId,
@@ -163,7 +165,8 @@ class DeckRepository @Inject constructor(
         val ns = ns
         val now = clock.now()
         val swappedAny = db.withTransaction {
-            val deck = getDeck(deckId) ?: return@withTransaction false
+            val deck = deckDao.getLiveDeck(ns, deckId)?.toDomain(cardDao.getLiveCardsOf(ns, deckId))
+                ?: return@withTransaction false
             if (from !in deck.pageNames.indices || to !in deck.pageNames.indices) return@withTransaction false
             val swapped = deck.withPagesSwapped(from, to, now)
             deckDao.updatePageMetadata(
@@ -195,7 +198,7 @@ class DeckRepository @Inject constructor(
         dataMutations.signal(CloudWriteMode.IMMEDIATE)
     }
 
-    /** Trwałe usunięcie talii zarchiwizowanych dłużej niż okres przechowywania. */
+    /** Usuwa (tombstone, żeby usunięcie dotarło do innych urządzeń) talie zarchiwizowane dłużej niż okres przechowywania. */
     suspend fun purgeExpiredArchives() {
         val ns = ns
         val now = clock.now()
@@ -255,9 +258,4 @@ class DeckRepository @Inject constructor(
         }
         dataMutations.signal(CloudWriteMode.STUDY)
     }
-}
-
-internal fun withCards(decks: List<DeckEntity>, cards: List<CardEntity>): List<FlashcardGroup> {
-    val cardsByDeck = cards.groupBy { it.deckId }
-    return decks.map { it.toDomain(cardsByDeck[it.id].orEmpty()) }
 }

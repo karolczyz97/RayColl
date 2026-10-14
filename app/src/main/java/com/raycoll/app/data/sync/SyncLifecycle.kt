@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +41,9 @@ internal const val FOREGROUND_CLOUD_CHECK_INTERVAL_MS = 30_000L
  * (bootstrap scala je z chmurą).
  */
 internal const val SIGN_OUT_PUSH_TIMEOUT_MS = 5_000L
+
+/** Daleko w przeszłości, żeby `now - last` nie przepełniło Long. */
+private const val NEVER_CHECKED = Long.MIN_VALUE / 2
 
 /**
  * Cykl życia synchronizacji: start aplikacji i logowanie (scalenie z chmurą),
@@ -66,12 +70,14 @@ class SyncLifecycle @Inject constructor(
     private val scheduler = SyncScheduler(scope, push = ::push)
     private val accountChanges = Mutex()
 
-    /** Anulowanie oczekiwania przez ekran nie przerywa logowania ani bootstrapu. */
-    fun signIn(idToken: String) = scope.async {
-        accountChanges.withLock {
-            googleSignIn.signInWithIdToken(idToken).also { result ->
-                if (result is SignInResult.Success) runBootstrap()
-            }
+    /** Operacja na koncie w zakresie aplikacji: anulowanie oczekiwania przez ekran jej nie przerywa. */
+    private fun <T> inAccountScope(block: suspend () -> T): Deferred<T> = scope.async {
+        accountChanges.withLock { block() }
+    }
+
+    fun signIn(idToken: String) = inAccountScope {
+        googleSignIn.signInWithIdToken(idToken).also { result ->
+            if (result is SignInResult.Success) runBootstrap()
         }
     }
 
@@ -92,7 +98,7 @@ class SyncLifecycle @Inject constructor(
 
     // sprawdzanie chmury po powrocie do aplikacji: dopiero po pierwszym bootstrapie, nie częściej niż co chwilę
     @Volatile private var bootstrapped = false
-    private val lastCloudCheckAt = AtomicLong(Long.MIN_VALUE / 2)
+    private val lastCloudCheckAt = AtomicLong(NEVER_CHECKED)
 
     private val _migrationRequired = MutableStateFlow(false)
     val migrationRequired: StateFlow<Boolean> = _migrationRequired.asStateFlow()
@@ -151,15 +157,13 @@ class SyncLifecycle @Inject constructor(
     }
 
     suspend fun resolveMigration(option: MigrationOption) {
-        scope.async {
-            accountChanges.withLock {
-                if (option == MigrationOption.CANCEL) {
-                    signOutAccount()
-                } else {
-                    scheduler.exclusive { migrationController.execute(option) }
-                    _migrationRequired.value = false
-                    pushNow()
-                }
+        inAccountScope {
+            if (option == MigrationOption.CANCEL) {
+                signOutAccount()
+            } else {
+                scheduler.exclusive { migrationController.execute(option) }
+                _migrationRequired.value = false
+                pushNow()
             }
         }.await()
     }
