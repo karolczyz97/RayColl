@@ -60,7 +60,7 @@
     <string name="browse_search_placeholder">Karteikarten suchen…</string>
     <string name="browse_edit_card">Karte bearbeiten</string>
     <string name="browse_no_cards">Keine Karteikarten gefunden.</string>
-    <string name="import_upload_file">Datei hochladen (.csv, .txt, .md)</string>
+    <string name="import_upload_file">Datei auswählen (.csv, .tsv, .txt, .md)</string>
     <string name="import_title">Karteikarten importieren</string>
     <string name="import_csv_label">CSV- / TSV-Text hier einfügen</string>
     <string name="import_separator">Trennzeichen</string>
@@ -99,8 +99,8 @@
     <string name="app_settings_theme_dark">Dunkel</string>
     <string name="app_settings_tts_rate">TTS-Sprachgeschwindigkeit</string>
     <string name="app_settings_export_import">Daten exportieren / importieren</string>
-    <string name="app_settings_export_btn">Zustand nach JSON exportieren</string>
-    <string name="app_settings_import_file_btn">Aus Datei importieren</string>
+    <string name="app_settings_export_btn">Backup in Datei speichern</string>
+    <string name="app_settings_import_file_btn">Aus Backup wiederherstellen</string>
     <string name="app_settings_export_error">Export fehlgeschlagen.</string>
     <string name="app_settings_import_success">Import erfolgreich!</string>
     <string name="app_settings_import_error">Import fehlgeschlagen.</string>
@@ -124,11 +124,11 @@
     <string name="step_wait_for_tap_to_reveal_next">Nächste Seite durch Tippen aufdecken</string>
     <string name="step_wait_for_tap_to_reveal">Restliche Seiten durch Tippen aufdecken</string>
     <string name="step_show_ratings">Bewertungstasten zeigen</string>
-    <string name="step_speak_page">TTS Seite %1$d</string>
-    <string name="step_speak_all_pages">TTS alle Seiten</string>
+    <string name="step_speak_page">Seite %1$d sprechen</string>
+    <string name="step_speak_all_pages">Alle Seiten sprechen</string>
     <string name="step_dynamic_pause">Dynamische Pause (Seite %1$d, ×%2$.1f)</string>
-    <string name="step_wait">Warte %1$dms</string>
-    <string name="step_listen_and_check">Sprache prüfen S. %1$d (Schwellenwert %2$d%%)</string>
+    <string name="step_wait">Warte %1$d ms</string>
+    <string name="step_listen_and_check">Sprache prüfen, Seite %1$d (mind. %2$d%%)</string>
     <string name="step_feedback_success">Erfolgs-Feedback abspielen</string>
     <string name="step_feedback_error">Fehler-Feedback abspielen</string>
     <string name="step_auto_rate_from_answer">Automatisch aus Ergebnis bewerten</string>
@@ -159,7 +159,7 @@
     <string name="compound_field_page">Seite</string>
     <string name="compound_field_speak">Vorlesen</string>
     <string name="compound_field_next_page">Nächste Seite</string>
-    <string name="compound_field_multiplier">Faktor dyn. Pause</string>
+    <string name="compound_field_multiplier">Pausenfaktor</string>
     <string name="compound_field_question_page">Fragenseite</string>
     <string name="compound_field_answer_page">Antwortseite</string>
     <string name="compound_field_speak_question">Frage vorlesen</string>
@@ -215,7 +215,7 @@
     <string name="mode_issue_page_out_of_range">Schritt %1$d verwendet Seite %2$d außerhalb des Bereichs</string>
     <string name="mode_issue_no_terminal">Kein Endschritt: „Bewertungstasten zeigen“ oder „Nächste Karte“ hinzufügen</string>
     <string name="mode_issue_auto_rate_without_stt">„Automatisch aus Antwort bewerten“ braucht vorher „Sprache prüfen (STT)“</string>
-    <string name="step_category_compound">Zusammengesetzte Schritte</string>
+    <string name="step_category_compound">Fertige Bausteine</string>
     <string name="step_compound">Zusammengesetzt: %1$s</string>
     <string name="mode_list_edit">Modus bearbeiten</string>
     <string name="mode_list_new">Neuer Lernmodus</string>
@@ -234,7 +234,7 @@
     <string name="settings_delete_error">Deck konnte nicht gelöscht werden. Versuche es erneut.</string>
     <string name="lang_system">System</string>
     <string name="app_settings_factory_reset">Werksdaten wiederherstellen</string>
-    <string name="app_settings_factory_reset_desc">Alle Decks, Fortschritte und Modi werden durch die Standard-Beispieldaten ersetzt. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="app_settings_factory_reset_desc">Alle Decks, Fortschritte und Modi werden durch die Standard-Beispieldaten ersetzt. Wenn du angemeldet bist, wird die Änderung auch in die Cloud übertragen. Speichere vorher ein Backup, wenn du deine Daten behalten möchtest. Das kann nicht rückgängig gemacht werden.</string>
     <string name="app_settings_version">Version %1$s</string>
     <string name="study_answer_retry">Noch einmal versuchen</string>
     <string name="study_modes_manage">Modi verwalten…</string>
@@ -263,7 +263,7 @@
     <string name="errors_save_failed">Änderungen konnten nicht gespeichert werden. Versuche es erneut.</string>
     <string name="import_preview_count">Vorschau (%1$d)</string>
     <string name="import_error_name_required">Gib einen Decknamen ein.</string>
-    <string name="import_error_page_count">Ein Deck braucht 2 bis 20 Seiten.</string>
+    <string name="import_error_page_count">Ein Deck braucht %1$d bis %2$d Seiten.</string>
     <string name="import_error_language">Ungültiger Sprachcode: %1$s</string>
     <string name="import_error_no_cards">Keine Karten zum Importieren.</string>
     <string name="import_error_empty_row">Zeile %1$d ist leer.</string>
@@ -289,5 +289,20 @@
     <string name="dashboard_browse">Durchsuchen</string>
     <string name="sync_now_success">Synchronisiert</string>
     <string name="sync_now_failed">Synchronisierung fehlgeschlagen. Änderungen sind auf dem Gerät gespeichert und werden später gesendet.</string>
+    <!-- ui2 -->
+    <string name="import_hint_format">Eine Karte pro Zeile. Seiten mit Tabulator, Semikolon, Komma oder senkrechtem Strich trennen. Die erste Zeile kann eine Kopfzeile sein.</string>
+    <string name="mode_editor_discard_title">Änderungen verwerfen?</string>
+    <string name="mode_editor_discard_desc">Die Änderungen an diesem Modus wurden nicht gespeichert.</string>
+    <string name="mode_editor_discard_confirm">Verwerfen</string>
+    <string name="mode_editor_tips_title">Hinweise:</string>
+    <string name="mode_editor_step_deleted">Schritt gelöscht</string>
+    <string name="mode_editor_undo">Rückgängig</string>
+    <string name="delete_confirm_hint">Gib %1$s zur Bestätigung ein</string>
+    <string name="app_settings_factory_reset_done">Werksdaten wiederhergestellt.</string>
+    <string name="auth_local_benefit">Melde dich an, um deine Decks zu sichern und zwischen Geräten zu synchronisieren.</string>
+    <string name="app_settings_notifications_off">Benachrichtigungen sind aus, daher erscheinen die Lernsteuerungen nicht in der Benachrichtigung.</string>
+    <string name="app_settings_notifications_open">Einstellungen</string>
+    <string name="settings_study_filter">Welche Karten</string>
+    <string name="a11y_item_action">%1$s: %2$s</string>
 </resources>
 

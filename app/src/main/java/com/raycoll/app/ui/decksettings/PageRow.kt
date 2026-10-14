@@ -30,6 +30,8 @@ fun PageRow(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit
 ) {
+    // nazwa strony w opisie przycisków, żeby czytnik ekranu odróżniał kolejne wiersze
+    val pageName = name.ifBlank { stringResource(R.string.import_page_label, pageIndex + 1) }
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -43,10 +45,24 @@ fun PageRow(
         )
         LanguagePicker(language, onLanguageChange)
         IconButton(onClick = onMoveUp, enabled = canMoveUp) {
-            Icon(Icons.Filled.ArrowUpward, contentDescription = stringResource(R.string.a11y_move_page_up))
+            Icon(
+                Icons.Filled.ArrowUpward,
+                contentDescription = stringResource(
+                    R.string.a11y_item_action,
+                    stringResource(R.string.a11y_move_page_up),
+                    pageName
+                )
+            )
         }
         IconButton(onClick = onMoveDown, enabled = canMoveDown) {
-            Icon(Icons.Filled.ArrowDownward, contentDescription = stringResource(R.string.a11y_move_page_down))
+            Icon(
+                Icons.Filled.ArrowDownward,
+                contentDescription = stringResource(
+                    R.string.a11y_item_action,
+                    stringResource(R.string.a11y_move_page_down),
+                    pageName
+                )
+            )
         }
     }
 }

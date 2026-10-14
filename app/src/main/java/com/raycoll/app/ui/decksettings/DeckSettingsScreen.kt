@@ -1,17 +1,18 @@
 package com.raycoll.app.ui.decksettings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,6 +40,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
@@ -53,9 +59,11 @@ import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ModeActions
 import com.raycoll.app.ui.components.ModeBadges
+import com.raycoll.app.ui.components.ModeDeleteDialog
+import com.raycoll.app.ui.components.ModeResetDialog
 import com.raycoll.app.ui.components.PersistedTextField
-import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.SectionCard
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.navigation.sharedDeckCard
 import com.raycoll.app.ui.navigation.sharedDeckTitle
@@ -119,7 +127,7 @@ private fun DeckSettingsContent(
             .padding(Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(Spacing.l)
     ) {
-        Section(stringResource(R.string.settings_section_general), Modifier.sharedDeckCard(deck.id)) {
+        SectionCard(Modifier.sharedDeckCard(deck.id), stringResource(R.string.settings_section_general)) {
             PersistedTextField(
                 storedValue = deck.name,
                 onValueChange = viewModel::rename,
@@ -128,7 +136,7 @@ private fun DeckSettingsContent(
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        Section(stringResource(R.string.settings_pages_config)) {
+        SectionCard(title = stringResource(R.string.settings_pages_config)) {
             for (pageIndex in 0 until deck.activePageCount) {
                 PageRow(
                     pageIndex = pageIndex,
@@ -144,7 +152,8 @@ private fun DeckSettingsContent(
             }
             PageCountStepper(deck.activePageCount, onChange = viewModel::setActivePageCount)
         }
-        Section(stringResource(R.string.settings_study_scope)) {
+        SectionCard(title = stringResource(R.string.settings_study_scope)) {
+            Text(stringResource(R.string.settings_study_filter), style = MaterialTheme.typography.labelLarge)
             ChoiceChips(
                 options = listOf(
                     StudyFilter.NEW_AND_REVIEW to R.string.filter_new_review,
@@ -155,7 +164,7 @@ private fun DeckSettingsContent(
                 selected = deck.studyFilter,
                 onSelect = viewModel::setStudyFilter
             )
-            Text(stringResource(R.string.settings_card_order), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_card_order), style = MaterialTheme.typography.labelLarge)
             ChoiceChips(
                 options = listOf(
                     CardOrder.SEQUENTIAL to R.string.settings_card_order_sequential,
@@ -220,11 +229,7 @@ private fun DeckSettingsContent(
         )
     }
     modeToDelete?.let { modeId ->
-        ConfirmDialog(
-            title = stringResource(R.string.mode_list_delete_title),
-            text = stringResource(R.string.mode_list_delete_desc),
-            confirmLabel = stringResource(R.string.btn_delete),
-            destructive = true,
+        ModeDeleteDialog(
             onConfirm = {
                 viewModel.deleteMode(modeId)
                 modeToDelete = null
@@ -233,26 +238,13 @@ private fun DeckSettingsContent(
         )
     }
     modeToReset?.let { modeId ->
-        ConfirmDialog(
-            title = stringResource(R.string.mode_list_reset_title),
-            text = stringResource(R.string.mode_list_reset_desc),
-            confirmLabel = stringResource(R.string.mode_list_reset),
+        ModeResetDialog(
             onConfirm = {
                 viewModel.resetMode(modeId)
                 modeToReset = null
             },
             onDismiss = { modeToReset = null }
         )
-    }
-}
-
-@Composable
-private fun Section(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    RayCollCard(modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            content()
-        }
     }
 }
 
@@ -280,16 +272,19 @@ private fun PageCountStepper(count: Int, onChange: (Int) -> Unit) {
 
 @Composable
 private fun <T> ChoiceChips(options: List<Pair<T, Int>>, selected: T, onSelect: (T) -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+    FlowRow(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         options.forEach { (value, label) ->
-            FilterChip(selected = selected == value, onClick = {
-                onSelect(value)
-            }, label = { Text(stringResource(label)) })
+            FilterChip(
+                selected = selected == value,
+                onClick = { onSelect(value) },
+                label = { Text(stringResource(label)) },
+                // wybór jednej opcji, nie pole wyboru
+                modifier = Modifier.semantics { role = Role.RadioButton }
+            )
         }
     }
 }
@@ -303,49 +298,57 @@ private fun ModesSection(
     onReset: (StudyMode) -> Unit,
     onDelete: (StudyMode) -> Unit
 ) {
-    RayCollCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.study_modes_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                TextButton(onClick = { onEdit(null) }) {
-                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Text(stringResource(R.string.mode_list_new), modifier = Modifier.padding(start = Spacing.xs))
-                }
+    SectionCard(spacing = Spacing.s) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.study_modes_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() }
+            )
+            TextButton(onClick = { onEdit(null) }) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Text(stringResource(R.string.mode_list_new), modifier = Modifier.padding(start = Spacing.xs))
             }
-            modes.forEach { mode ->
-                val active = activeModeId == mode.id
+        }
+        modes.forEach { mode ->
+            val active = activeModeId == mode.id
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = if (active) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                        } else {
+                            Color.Transparent
+                        },
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(horizontal = Spacing.s, vertical = Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // wybór trybu obejmuje cały wiersz z nazwą; przyciski akcji zostają osobnymi elementami
                 Row(
                     Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = if (active) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(
-                                    alpha = 0.35f
-                                )
-                            } else {
-                                Color.Transparent
-                            },
-                            shape = MaterialTheme.shapes.small
-                        )
-                        .padding(horizontal = Spacing.s, vertical = Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .selectable(selected = active, role = Role.RadioButton, onClick = { onSelect(mode.id) }),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.s)
                 ) {
-                    RadioButton(selected = active, onClick = { onSelect(mode.id) })
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                    RadioButton(selected = active, onClick = null)
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                         Text(mode.displayName(), style = MaterialTheme.typography.bodyLarge)
                         ModeBadges(mode)
                     }
-                    ModeActions(
-                        mode,
-                        onEdit = { onEdit(mode.id) },
-                        onReset = { onReset(mode) },
-                        onDelete = { onDelete(mode) }
-                    )
                 }
+                ModeActions(
+                    mode,
+                    onEdit = { onEdit(mode.id) },
+                    onReset = { onReset(mode) },
+                    onDelete = { onDelete(mode) }
+                )
             }
         }
     }

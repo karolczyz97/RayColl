@@ -55,7 +55,8 @@ internal val DecimalNumberFormat = NumberFormat(
  * trafia tylko poprawna liczba z [range]; wartość spoza zakresu jest oznaczona błędem.
  * Po wyjściu z pola (lub „Gotowe”) liczba spoza zakresu jest przycinana do zakresu,
  * a niepoprawny tekst wraca do wartości z modelu. [onValidityChange] pozwala ekranowi
- * zablokować zapis, dopóki pole pokazuje błąd.
+ * zablokować zapis, dopóki pole pokazuje błąd. [hint] to podpowiedź pod poprawną liczbą
+ * (np. nazwa oceny); przy błędzie pod polem jest zakres.
  */
 @Composable
 internal fun <T : Comparable<T>> NumberField(
@@ -65,7 +66,8 @@ internal fun <T : Comparable<T>> NumberField(
     numberFormat: NumberFormat<T>,
     onChange: (T) -> Unit,
     modifier: Modifier = Modifier,
-    onValidityChange: (Boolean) -> Unit = {}
+    onValidityChange: (Boolean) -> Unit = {},
+    hint: (T) -> String? = { null }
 ) {
     val formatted = numberFormat.format(value)
     var text by rememberSaveable { mutableStateOf(formatted) }
@@ -103,7 +105,7 @@ internal fun <T : Comparable<T>> NumberField(
         label = { Text(label) },
         isError = !valid,
         supportingText = if (valid) {
-            null
+            hint(parsed)?.let { hintText -> { Text(hintText) } }
         } else {
             {
                 Text("${numberFormat.format(range.start)}–${numberFormat.format(range.endInclusive)}")

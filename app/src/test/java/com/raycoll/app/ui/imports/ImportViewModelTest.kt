@@ -182,7 +182,8 @@ class ImportViewModelTest {
         vm.runImport(pageNames)
         advanceUntilIdle()
         assertEquals(ImportEvent.Imported, vm.events.first())
-        assertFalse(vm.uiState.value.importing)
+        // po udanym imporcie flaga zostaje: zdarzenie może czekać za komunikatem, a drugi klik nie doda talii
+        assertTrue(vm.uiState.value.importing)
         val deck = repos.localStore.snapshot().groups.single()
         assertEquals("Angielski", deck.name)
         assertEquals(listOf(listOf("hello", "cześć"), listOf("thanks", "dzięki")), deck.cards.map { it.pages })
@@ -406,6 +407,30 @@ class ImportViewModelTest {
         assertEquals(ImportEvent.Imported, vm.events.first())
         assertEquals(1, repos.localStore.snapshot().groups.size)
         assertEquals(listOf("cat", "kot"), repos.localStore.snapshot().groups.single().cards.single().pages)
+        assertTrue(vm.uiState.value.importing)
+    }
+
+    @Test
+    fun `a click after a successful import does not add the deck again`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.setDeckName("Once")
+        vm.onSourceTextChanged("hello;world")
+        vm.runImport(pageNames)
+        advanceUntilIdle()
+        // Imported czeka w kanale (ekran pokazuje komunikat), a przycisk jest jeszcze klikalny
+        assertFalse(vm.uiState.value.canImport)
+        vm.runImport(pageNames)
+        advanceUntilIdle()
+        assertEquals(1, repos.localStore.snapshot().groups.size)
+    }
+
+    @Test
+    fun `a failed import re-enables the button`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.onSourceTextChanged("hello;world")
+        vm.runImport(pageNames)
+        advanceUntilIdle()
+        assertEquals(ImportEvent.Invalid(ImportProblem.DeckNameRequired), vm.events.first())
         assertFalse(vm.uiState.value.importing)
     }
 

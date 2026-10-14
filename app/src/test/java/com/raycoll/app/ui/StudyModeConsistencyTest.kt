@@ -153,12 +153,13 @@ class StudyModeConsistencyTest {
     }
 
     @Test
-    fun `delete confirmation ignores letter case but requires the whole word`() {
+    fun `delete confirmation ignores letter case and accents but requires the whole word`() {
         assertTrue(isDeleteConfirmed("usuń", "USUŃ"))
         assertTrue(isDeleteConfirmed("Usuń", "USUŃ"))
         assertTrue(isDeleteConfirmed(" USUŃ ", "USUŃ"))
+        assertTrue(isDeleteConfirmed("usun", "USUŃ"))
+        assertTrue(isDeleteConfirmed("LOSCHEN", "LÖSCHEN"))
         assertFalse(isDeleteConfirmed("usu", "USUŃ"))
-        assertFalse(isDeleteConfirmed("usun", "USUŃ"))
         assertFalse(isDeleteConfirmed("", "USUŃ"))
     }
 }

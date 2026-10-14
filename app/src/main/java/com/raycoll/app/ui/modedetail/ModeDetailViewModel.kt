@@ -43,9 +43,15 @@ sealed interface ModeDetailUiState {
         /** Wbudowany tryb, z którego pochodzi edytowany (można go przywrócić). */
         val builtIn: BuiltInMode?,
         val issues: List<ModeIssue>,
-        val saving: Boolean = false
+        val saving: Boolean = false,
+        /** Nazwa i kroki w chwili otwarcia edytora (albo wyboru szablonu) — punkt odniesienia dla [dirty]. */
+        val baselineName: String = name,
+        val baselineSteps: List<ModeStep> = steps.map { it.step }
     ) : ModeDetailUiState {
         val canSave: Boolean get() = !saving && issues.none { it.blocking }
+
+        /** Czy użytkownik zmienił coś względem stanu z otwarcia ekranu (wyjście zgubiłoby te zmiany). */
+        val dirty: Boolean get() = name != baselineName || steps.map { it.step } != baselineSteps
 
         /** Przywracanie ma sens tylko, gdy edytowany stan różni się od wersji fabrycznej. */
         val canReset: Boolean get() = !saving && seedModeFor(builtIn?.id)
@@ -66,6 +72,9 @@ class ModeDetailViewModel @Inject constructor(
 ) : ViewModel() {
     private val modeId: String? = savedStateHandle.toRoute<ModeDetailRoute>().modeId
     private var existingMode: StudyMode? = null
+
+    /** Ostatnio usunięty krok (z miejscem na liście) — do cofnięcia. */
+    private var lastRemoved: Pair<Int, EditableStep>? = null
 
     private val _uiState = MutableStateFlow<ModeDetailUiState>(ModeDetailUiState.Loading)
     val uiState: StateFlow<ModeDetailUiState> = _uiState.asStateFlow()
@@ -102,7 +111,19 @@ class ModeDetailViewModel @Inject constructor(
 
     fun addStep(step: ModeStep) = editSteps { it += EditableStep(step) }
 
-    fun removeStep(index: Int) = editSteps { if (index in it.indices) it.removeAt(index) }
+    fun removeStep(index: Int) {
+        val state = _uiState.value as? ModeDetailUiState.Editing ?: return
+        val removed = state.steps.getOrNull(index) ?: return
+        lastRemoved = index to removed
+        editSteps { if (index in it.indices) it.removeAt(index) }
+    }
+
+    /** Przywraca ostatnio usunięty krok na to samo miejsce (z tym samym kluczem, więc z animacją). */
+    fun undoRemove() {
+        val (index, step) = lastRemoved ?: return
+        lastRemoved = null
+        editSteps { steps -> if (steps.none { it.key == step.key }) steps.add(index.coerceIn(0, steps.size), step) }
+    }
 
     fun moveStep(from: Int, to: Int) = editSteps { steps ->
         if (from in steps.indices && to in steps.indices) steps.add(to, steps.removeAt(from))

@@ -225,4 +225,65 @@ class ModeDetailViewModelTest {
         assertEquals(original.name, reset.name)
         assertEquals(original.steps, reset.steps)
     }
+
+    private fun editing(vm: ModeDetailViewModel) = vm.uiState.value as ModeDetailUiState.Editing
+
+    @Test
+    fun `dirty tracks changes against the state the editor was opened with`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.chooseTemplate(ModeTemplate.CLASSIC)
+        assertFalse(editing(vm).dirty)
+
+        vm.setName("Mine")
+        assertTrue(editing(vm).dirty)
+        vm.setName("")
+        assertFalse(editing(vm).dirty)
+
+        vm.removeStep(0)
+        assertTrue(editing(vm).dirty)
+        vm.undoRemove()
+        assertFalse(editing(vm).dirty)
+
+        vm.moveStep(0, 1)
+        assertTrue(editing(vm).dirty)
+        vm.moveStep(1, 0)
+        assertFalse(editing(vm).dirty)
+    }
+
+    @Test
+    fun `an existing mode is clean until edited`() = runTest(dispatcher) {
+        repos.localStore.seedIfEmpty("en")
+        val vm = vm("classic")
+        advanceUntilIdle()
+        assertFalse(editing(vm).dirty)
+        vm.setName("Classic edited")
+        assertTrue(editing(vm).dirty)
+    }
+
+    @Test
+    fun `undo puts a removed step back at its place with the same key`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.chooseTemplate(ModeTemplate.CLASSIC)
+        val before = editing(vm).steps
+        vm.removeStep(1)
+        assertEquals(before.size - 1, editing(vm).steps.size)
+
+        vm.undoRemove()
+        assertEquals(before, editing(vm).steps)
+
+        // drugie cofnięcie nic nie robi
+        vm.undoRemove()
+        assertEquals(before, editing(vm).steps)
+    }
+
+    @Test
+    fun `undo restores only the last removed step`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.chooseTemplate(ModeTemplate.CLASSIC)
+        val before = editing(vm).steps
+        vm.removeStep(0)
+        vm.removeStep(0)
+        vm.undoRemove()
+        assertEquals(listOf(before[1]) + before.drop(2), editing(vm).steps)
+    }
 }

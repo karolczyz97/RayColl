@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,11 +31,7 @@ import com.raycoll.app.ui.theme.Spacing
 fun ModeBadges(mode: StudyMode, modifier: Modifier = Modifier) {
     if (!mode.isBuiltIn) return
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        ModeBadge(
-            stringResource(R.string.mode_editor_builtin_badge),
-            MaterialTheme.colorScheme.secondaryContainer,
-            MaterialTheme.colorScheme.onSecondaryContainer
-        )
+        BuiltInBadge()
         if (mode.isModifiedBuiltIn()) {
             ModeBadge(
                 stringResource(R.string.study_modes_modified),
@@ -46,20 +42,43 @@ fun ModeBadges(mode: StudyMode, modifier: Modifier = Modifier) {
     }
 }
 
+/** Plakietka „Tryb wbudowany” — ta sama na listach i w edytorze trybu. */
+@Composable
+fun BuiltInBadge() {
+    ModeBadge(
+        stringResource(R.string.mode_editor_builtin_badge),
+        MaterialTheme.colorScheme.secondaryContainer,
+        MaterialTheme.colorScheme.onSecondaryContainer
+    )
+}
+
 /** Przywróć domyślne (tryb wbudowany) albo usuń (tryb własny) + edytuj. */
 @Composable
 fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDelete: () -> Unit) {
+    // opis z nazwą trybu, żeby czytnik ekranu odróżniał przyciski w kolejnych wierszach
+    val name = mode.displayName()
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (mode.isBuiltIn) {
             // niezmieniony wbudowany tryb nie ma czego przywracać
             IconButton(onClick = onReset, enabled = mode.isModifiedBuiltIn()) {
-                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.mode_list_reset))
+                Icon(
+                    Icons.Filled.RestartAlt,
+                    contentDescription = stringResource(
+                        R.string.a11y_item_action,
+                        stringResource(R.string.mode_list_reset),
+                        name
+                    )
+                )
             }
         } else {
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.DeleteOutline,
-                    contentDescription = stringResource(R.string.btn_delete),
+                    contentDescription = stringResource(
+                        R.string.a11y_item_action,
+                        stringResource(R.string.btn_delete),
+                        name
+                    ),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -67,7 +86,11 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
         IconButton(onClick = onEdit) {
             Icon(
                 Icons.Filled.Edit,
-                contentDescription = stringResource(R.string.mode_list_edit),
+                contentDescription = stringResource(
+                    R.string.a11y_item_action,
+                    stringResource(R.string.mode_list_edit),
+                    name
+                ),
                 tint = MaterialTheme.colorScheme.primary
             )
         }

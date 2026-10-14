@@ -61,7 +61,7 @@
     <string name="browse_search_placeholder">Cerca flashcard…</string>
     <string name="browse_edit_card">Modifica flashcard</string>
     <string name="browse_no_cards">Nessuna flashcard trovata.</string>
-    <string name="import_upload_file">Carica file (.csv, .txt, .md)</string>
+    <string name="import_upload_file">Scegli file (.csv, .tsv, .txt, .md)</string>
     <string name="import_title">Importa flashcard</string>
     <string name="import_csv_label">Incolla il testo CSV / TSV qui</string>
     <string name="import_separator">Separatore</string>
@@ -101,8 +101,8 @@
     <string name="app_settings_theme_dark">Scuro</string>
     <string name="app_settings_tts_rate">Velocità voce TTS</string>
     <string name="app_settings_export_import">Esporta / Importa dati</string>
-    <string name="app_settings_export_btn">Esporta stato in JSON</string>
-    <string name="app_settings_import_file_btn">Importa da file</string>
+    <string name="app_settings_export_btn">Salva backup su file</string>
+    <string name="app_settings_import_file_btn">Ripristina da backup</string>
     <string name="app_settings_export_error">Esportazione non riuscita.</string>
     <string name="app_settings_import_success">Import completato!</string>
     <string name="app_settings_import_error">Import non riuscito.</string>
@@ -127,11 +127,11 @@
     <string name="step_wait_for_tap_to_reveal_next">Rivela la pagina successiva toccando</string>
     <string name="step_wait_for_tap_to_reveal">Rivela le pagine rimanenti toccando</string>
     <string name="step_show_ratings">Mostra i pulsanti di valutazione</string>
-    <string name="step_speak_page">TTS pagina %1$d</string>
-    <string name="step_speak_all_pages">TTS tutte le pagine</string>
+    <string name="step_speak_page">Pronuncia pagina %1$d</string>
+    <string name="step_speak_all_pages">Pronuncia tutte le pagine</string>
     <string name="step_dynamic_pause">Pausa dinamica (pag. %1$d, ×%2$.1f)</string>
-    <string name="step_wait">Attendi %1$dms</string>
-    <string name="step_listen_and_check">Verifica voce pag. %1$d (soglia %2$d%%)</string>
+    <string name="step_wait">Attendi %1$d ms</string>
+    <string name="step_listen_and_check">Verifica voce, pagina %1$d (min. %2$d%%)</string>
     <string name="step_feedback_success">Riproduci feedback di successo</string>
     <string name="step_feedback_error">Riproduci feedback di errore</string>
     <string name="step_auto_rate_from_answer">Valuta automaticamente dal risultato</string>
@@ -162,7 +162,7 @@
     <string name="compound_field_page">Pagina</string>
     <string name="compound_field_speak">Leggi ad alta voce</string>
     <string name="compound_field_next_page">Pagina successiva</string>
-    <string name="compound_field_multiplier">Fattore pausa dinamica</string>
+    <string name="compound_field_multiplier">Fattore pausa</string>
     <string name="compound_field_question_page">Pagina della domanda</string>
     <string name="compound_field_answer_page">Pagina della risposta</string>
     <string name="compound_field_speak_question">Leggi la domanda</string>
@@ -220,7 +220,7 @@
     <string name="mode_issue_page_out_of_range">Il passaggio %1$d usa la pagina %2$d, fuori intervallo</string>
     <string name="mode_issue_no_terminal">Manca il passaggio finale: aggiungi “Mostra pulsanti di valutazione” o “Prossima carta”</string>
     <string name="mode_issue_auto_rate_without_stt">“Valuta dalla risposta” richiede prima “Controlla voce (STT)”</string>
-    <string name="step_category_compound">Passaggi composti</string>
+    <string name="step_category_compound">Blocchi predefiniti</string>
     <string name="step_compound">Composto: %1$s</string>
     <string name="mode_list_edit">Modifica modalità</string>
     <string name="mode_list_new">Nuova modalità di studio</string>
@@ -239,7 +239,7 @@
     <string name="settings_delete_error">Impossibile eliminare il mazzo. Riprova.</string>
     <string name="lang_system">Sistema</string>
     <string name="app_settings_factory_reset">Ripristina dati di fabbrica</string>
-    <string name="app_settings_factory_reset_desc">Tutti i mazzi, i progressi e le modalità verranno sostituiti con i dati di esempio predefiniti. Questa operazione non può essere annullata.</string>
+    <string name="app_settings_factory_reset_desc">Tutti i mazzi, i progressi e le modalità verranno sostituiti con i dati di esempio predefiniti. Se hai effettuato l\'accesso, la modifica viene sincronizzata anche nel cloud. Salva prima un backup se vuoi conservare i tuoi dati. Questa operazione non può essere annullata.</string>
     <string name="app_settings_version">Versione %1$s</string>
     <string name="study_answer_retry">Riprova</string>
     <string name="study_modes_manage">Gestisci modalità…</string>
@@ -268,7 +268,7 @@
     <string name="errors_save_failed">Impossibile salvare le modifiche. Riprova.</string>
     <string name="import_preview_count">Anteprima (%1$d)</string>
     <string name="import_error_name_required">Inserisci un nome per il mazzo.</string>
-    <string name="import_error_page_count">Un mazzo deve avere da 2 a 20 pagine.</string>
+    <string name="import_error_page_count">Un mazzo deve avere da %1$d a %2$d pagine.</string>
     <string name="import_error_language">Codice lingua non valido: %1$s</string>
     <string name="import_error_no_cards">Nessuna flashcard da importare.</string>
     <string name="import_error_empty_row">La riga %1$d è vuota.</string>
@@ -294,5 +294,20 @@
     <string name="dashboard_browse">Sfoglia</string>
     <string name="sync_now_success">Sincronizzato</string>
     <string name="sync_now_failed">Sincronizzazione non riuscita. Le modifiche sono salvate sul dispositivo e verranno inviate più tardi.</string>
+    <!-- ui2 -->
+    <string name="import_hint_format">Una carta per riga. Separa le pagine con tabulazione, punto e virgola, virgola o barra verticale. La prima riga può essere un\'intestazione.</string>
+    <string name="mode_editor_discard_title">Scartare le modifiche?</string>
+    <string name="mode_editor_discard_desc">Le modifiche a questa modalità non sono state salvate.</string>
+    <string name="mode_editor_discard_confirm">Scarta</string>
+    <string name="mode_editor_tips_title">Suggerimenti:</string>
+    <string name="mode_editor_step_deleted">Passaggio eliminato</string>
+    <string name="mode_editor_undo">Annulla</string>
+    <string name="delete_confirm_hint">Digita %1$s per confermare</string>
+    <string name="app_settings_factory_reset_done">Dati di fabbrica ripristinati.</string>
+    <string name="auth_local_benefit">Accedi per salvare i tuoi mazzi e sincronizzarli tra i dispositivi.</string>
+    <string name="app_settings_notifications_off">Le notifiche sono disattivate, quindi i controlli di studio non appariranno nella notifica.</string>
+    <string name="app_settings_notifications_open">Impostazioni</string>
+    <string name="settings_study_filter">Quali carte</string>
+    <string name="a11y_item_action">%1$s: %2$s</string>
 </resources>
 

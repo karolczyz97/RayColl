@@ -88,6 +88,21 @@ class DialogStateRestorationTest {
         compose.waitForIdle()
     }
 
+    @Test
+    fun `discard changes confirmation stays open after state restoration`() {
+        val vm = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository)
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
+        compose.onNodeWithText("Empty mode").performClick()
+        field("Mode name").performTextInput("Mine")
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Discard changes?").assertExists()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("Discard changes?").assertExists()
+        vm.viewModelScope.cancel()
+        compose.waitForIdle()
+    }
+
     @get:Rule
     val compose = createComposeRule()
 
@@ -157,7 +172,7 @@ class DialogStateRestorationTest {
         restoration.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
 
-        compose.onAllNodesWithContentDescriptionFirst("Edit Flashcard").performClick()
+        compose.onAllNodesWithContentDescriptionFirst("Edit flashcard").performClick()
         field("Front").performTextReplacement("kitten")
 
         restoration.emulateSavedInstanceStateRestore()
@@ -168,7 +183,7 @@ class DialogStateRestorationTest {
         assertEquals(2, cards().size)
 
         // kolejna karta nie dostaje tekstu poprzedniej
-        compose.onAllNodesWithContentDescriptionFirst("Edit Flashcard", index = 1).performScrollTo().performClick()
+        compose.onAllNodesWithContentDescriptionFirst("Edit flashcard", index = 1).performScrollTo().performClick()
         assertEquals("dog", fieldText("Front"))
     }
 
@@ -181,6 +196,7 @@ class DialogStateRestorationTest {
         waitForText("TestDeck")
 
         compose.onAllNodesWithText("Delete").onFirst().performScrollTo().performClick()
+        compose.onNodeWithText("Type DELETE to confirm").assertExists()
         field("DELETE").performTextInput("del")
 
         restoration.emulateSavedInstanceStateRestore()

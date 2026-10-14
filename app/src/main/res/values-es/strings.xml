@@ -61,9 +61,9 @@
     <string name="browse_search_placeholder">Buscar tarjetas…</string>
     <string name="browse_edit_card">Editar tarjeta</string>
     <string name="browse_no_cards">No se encontraron tarjetas.</string>
-    <string name="import_upload_file">Subir archivo (.csv, .txt, .md)</string>
+    <string name="import_upload_file">Elegir archivo (.csv, .tsv, .txt, .md)</string>
     <string name="import_title">Importar tarjetas</string>
-    <string name="import_csv_label">Pegue el texto CSV / TSV aquí</string>
+    <string name="import_csv_label">Pega el texto CSV / TSV aquí</string>
     <string name="import_separator">Separador</string>
     <string name="import_sep_tab">Tabulador</string>
     <string name="import_sep_semicolon">Punto y coma (;)</string>
@@ -101,8 +101,8 @@
     <string name="app_settings_theme_dark">Oscuro</string>
     <string name="app_settings_tts_rate">Velocidad de voz de TTS</string>
     <string name="app_settings_export_import">Exportar / Importar datos</string>
-    <string name="app_settings_export_btn">Exportar estado a JSON</string>
-    <string name="app_settings_import_file_btn">Importar desde archivo</string>
+    <string name="app_settings_export_btn">Guardar copia en archivo</string>
+    <string name="app_settings_import_file_btn">Restaurar desde copia</string>
     <string name="app_settings_export_error">Export fallido.</string>
     <string name="app_settings_import_success">¡Import completado!</string>
     <string name="app_settings_import_error">Import fallido.</string>
@@ -127,11 +127,11 @@
     <string name="step_wait_for_tap_to_reveal_next">Revelar la siguiente página tocando</string>
     <string name="step_wait_for_tap_to_reveal">Revelar páginas restantes tocando</string>
     <string name="step_show_ratings">Mostrar botones de valoración</string>
-    <string name="step_speak_page">TTS página %1$d</string>
-    <string name="step_speak_all_pages">TTS todas las páginas</string>
+    <string name="step_speak_page">Hablar página %1$d</string>
+    <string name="step_speak_all_pages">Hablar todas las páginas</string>
     <string name="step_dynamic_pause">Pausa dinámica (pág. %1$d, ×%2$.1f)</string>
-    <string name="step_wait">Esperar %1$dms</string>
-    <string name="step_listen_and_check">Comprobar voz pág. %1$d (umbral %2$d%%)</string>
+    <string name="step_wait">Esperar %1$d ms</string>
+    <string name="step_listen_and_check">Comprobar voz, página %1$d (mín. %2$d%%)</string>
     <string name="step_feedback_success">Reproducir feedback de éxito</string>
     <string name="step_feedback_error">Reproducir feedback de error</string>
     <string name="step_auto_rate_from_answer">Valorar automáticamente según resultado</string>
@@ -162,7 +162,7 @@
     <string name="compound_field_page">Página</string>
     <string name="compound_field_speak">Leer en voz alta</string>
     <string name="compound_field_next_page">Página siguiente</string>
-    <string name="compound_field_multiplier">Factor de pausa dinámica</string>
+    <string name="compound_field_multiplier">Factor de pausa</string>
     <string name="compound_field_question_page">Página de la pregunta</string>
     <string name="compound_field_answer_page">Página de la respuesta</string>
     <string name="compound_field_speak_question">Leer la pregunta</string>
@@ -220,7 +220,7 @@
     <string name="mode_issue_page_out_of_range">El paso %1$d usa la página %2$d, fuera de rango</string>
     <string name="mode_issue_no_terminal">Falta paso final: añade “Mostrar botones de calificación” o “Siguiente tarjeta”</string>
     <string name="mode_issue_auto_rate_without_stt">“Calificar por respuesta” necesita antes “Comprobar voz (STT)”</string>
-    <string name="step_category_compound">Pasos compuestos</string>
+    <string name="step_category_compound">Bloques predefinidos</string>
     <string name="step_compound">Compuesto: %1$s</string>
     <string name="mode_list_edit">Editar modo</string>
     <string name="mode_list_new">Nuevo modo de estudio</string>
@@ -239,7 +239,7 @@
     <string name="settings_delete_error">No se pudo eliminar el mazo. Inténtalo de nuevo.</string>
     <string name="lang_system">Sistema</string>
     <string name="app_settings_factory_reset">Restaurar datos de fábrica</string>
-    <string name="app_settings_factory_reset_desc">Todos los mazos, el progreso y los modos se sustituirán por los datos de ejemplo predeterminados. Esto no se puede deshacer.</string>
+    <string name="app_settings_factory_reset_desc">Todos los mazos, el progreso y los modos se sustituirán por los datos de ejemplo predeterminados. Si has iniciado sesión, el cambio también se sincroniza con la nube. Guarda antes una copia si quieres conservar tus datos. Esto no se puede deshacer.</string>
     <string name="app_settings_version">Versión %1$s</string>
     <string name="study_answer_retry">Inténtalo de nuevo</string>
     <string name="study_modes_manage">Gestionar modos…</string>
@@ -268,7 +268,7 @@
     <string name="errors_save_failed">No se pudieron guardar los cambios. Inténtalo de nuevo.</string>
     <string name="import_preview_count">Vista previa (%1$d)</string>
     <string name="import_error_name_required">Introduce un nombre para el mazo.</string>
-    <string name="import_error_page_count">Un mazo necesita de 2 a 20 páginas.</string>
+    <string name="import_error_page_count">Un mazo necesita de %1$d a %2$d páginas.</string>
     <string name="import_error_language">Código de idioma no válido: %1$s</string>
     <string name="import_error_no_cards">No hay tarjetas para importar.</string>
     <string name="import_error_empty_row">La fila %1$d está vacía.</string>
@@ -294,5 +294,20 @@
     <string name="dashboard_browse">Explorar</string>
     <string name="sync_now_success">Sincronizado</string>
     <string name="sync_now_failed">No se pudo sincronizar. Los cambios están guardados en el dispositivo y se enviarán más tarde.</string>
+    <!-- ui2 -->
+    <string name="import_hint_format">Una tarjeta por línea. Separa las páginas con tabulador, punto y coma, coma o barra vertical. La primera fila puede ser una cabecera.</string>
+    <string name="mode_editor_discard_title">¿Descartar cambios?</string>
+    <string name="mode_editor_discard_desc">Los cambios de este modo no se han guardado.</string>
+    <string name="mode_editor_discard_confirm">Descartar</string>
+    <string name="mode_editor_tips_title">Consejos:</string>
+    <string name="mode_editor_step_deleted">Paso eliminado</string>
+    <string name="mode_editor_undo">Deshacer</string>
+    <string name="delete_confirm_hint">Escribe %1$s para confirmar</string>
+    <string name="app_settings_factory_reset_done">Datos de fábrica restaurados.</string>
+    <string name="auth_local_benefit">Inicia sesión para guardar una copia de tus mazos y sincronizarlos entre dispositivos.</string>
+    <string name="app_settings_notifications_off">Las notificaciones están desactivadas, así que los controles de estudio no aparecerán en la notificación.</string>
+    <string name="app_settings_notifications_open">Ajustes</string>
+    <string name="settings_study_filter">Qué tarjetas</string>
+    <string name="a11y_item_action">%1$s: %2$s</string>
 </resources>
 
