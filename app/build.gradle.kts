@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,6 +8,15 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
 }
+
+// klucz Firebase spoza repozytorium: local.properties (lokalnie) albo zmienna środowiskowa (CI / GitHub Secrets)
+val firebaseApiKey: String = Properties()
+    .apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
+    .getProperty("firebase.apiKey")
+    ?: System.getenv("FIREBASE_API_KEY")
+    ?: throw GradleException(
+        "Brak klucza Firebase: dodaj firebase.apiKey=... do local.properties albo ustaw FIREBASE_API_KEY"
+    )
 
 android {
     namespace = "com.raycoll.app"
@@ -17,6 +28,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
+        buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
     }
 
     buildTypes {

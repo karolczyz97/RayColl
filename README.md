@@ -79,6 +79,19 @@ potwierdzić ręcznie na buildzie release: utwórz własny tryb nauki z krokami
 złożonymi (compound), zamknij i otwórz aplikację — jeśli kroki wczytują się
 poprawnie z Room, serializacja przeżywa minifikację.
 
+## Firebase — klucz API
+
+Klucz Firebase API nie jest w repozytorium. Przed pierwszym buildem dopisz go
+do `local.properties` (plik jest ignorowany przez git):
+
+```
+firebase.apiKey=AIza...
+```
+
+Klucz znajdziesz w [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials?project=raycoll-io).
+W CI ustaw zamiast tego zmienną środowiskową `FIREBASE_API_KEY` (np. z GitHub Secrets).
+Bez klucza build kończy się czytelnym błędem.
+
 ## Firebase — wymagany SHA-1
 
 Logowanie Google i sync Firestore działają dopiero po zarejestrowaniu aplikacji
