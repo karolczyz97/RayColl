@@ -4,7 +4,7 @@
     <string name="nav_dashboard">Panel</string>
     <string name="route_study">Nauka</string>
     <string name="route_browse">Przegląd fiszek</string>
-    <string name="route_deck_settings">Ustawienia zestawu</string>
+    <string name="route_deck_settings">Ustawienia talii</string>
     <string name="route_study_mode_detail">Edycja trybu nauki</string>
     <string name="btn_cancel">Anuluj</string>
     <string name="btn_save">Zapisz</string>
@@ -13,9 +13,9 @@
     <string name="btn_back">Wstecz</string>
     <string name="auth_local">Tryb lokalny</string>
     <string name="auth_migration_title">Dane lokalne</string>
-    <string name="auth_migration_desc">Masz lokalne talie z poprzedniej sesji. Czy chcesz przenieść je na konto, czy zacząć od nowa?</string>
+    <string name="auth_migration_desc">Masz lokalne talie z poprzedniej sesji. Przenieś je na konto albo zacznij konto od talii przykładowych. Lokalne talie w obu przypadkach zostaną na tym urządzeniu.</string>
     <string name="auth_migration_migrate_btn">Przenieś na konto</string>
-    <string name="auth_migration_fresh_btn">Zacznij od nowa</string>
+    <string name="auth_migration_fresh_btn">Zacznij od talii przykładowych</string>
     <string name="auth_error_play_services">Usługi Google Play są niedostępne lub nieaktualne. Zaktualizuj je i spróbuj ponownie.</string>
     <string name="auth_error_no_token">Brak tokena logowania. Spróbuj ponownie.</string>
     <string name="auth_error_invalid_token">Token logowania nieprawidłowy. Spróbuj ponownie.</string>
@@ -24,25 +24,25 @@
     <string name="sync_status_offline">Tryb offline — zmiany są zapisywane na tym urządzeniu i zsynchronizują się po odzyskaniu połączenia.</string>
     <string name="dialog_delete_desc">Tej operacji nie można cofnąć.</string>
     <string name="dialog_delete_permanent_title">Usunąć trwale?</string>
-    <string name="dialog_delete_permanent_desc">Zestaw "%1$s" zostanie bezpowrotnie usunięty. Tej operacji nie można cofnąć.</string>
-    <string name="dialog_archive_title">Zarchiwizować zestaw?</string>
+    <string name="dialog_delete_permanent_desc">Talia "%1$s" zostanie bezpowrotnie usunięta. Tej operacji nie można cofnąć.</string>
+    <string name="dialog_archive_title">Zarchiwizować talię?</string>
     <plurals name="dialog_archive_confirm">
-        <item quantity="one">Zestaw trafi do Archiwum i zostanie trwale usunięty po %1$d dniu. Możesz go przywrócić wcześniej.</item>
-        <item quantity="few">Zestaw trafi do Archiwum i zostanie trwale usunięty po %1$d dniach. Możesz go przywrócić wcześniej.</item>
-        <item quantity="many">Zestaw trafi do Archiwum i zostanie trwale usunięty po %1$d dniach. Możesz go przywrócić wcześniej.</item>
-        <item quantity="other">Zestaw trafi do Archiwum i zostanie trwale usunięty po %1$d dniach. Możesz go przywrócić wcześniej.</item>
+        <item quantity="one">Talia trafi do Archiwum i zostanie trwale usunięta po %1$d dniu. Możesz ją przywrócić wcześniej.</item>
+        <item quantity="few">Talia trafi do Archiwum i zostanie trwale usunięta po %1$d dniach. Możesz ją przywrócić wcześniej.</item>
+        <item quantity="many">Talia trafi do Archiwum i zostanie trwale usunięta po %1$d dniach. Możesz ją przywrócić wcześniej.</item>
+        <item quantity="other">Talia trafi do Archiwum i zostanie trwale usunięta po %1$d dniach. Możesz ją przywrócić wcześniej.</item>
     </plurals>
     <string name="btn_archive">Archiwizuj</string>
     <string name="btn_restore">Przywróć</string>
-    <string name="dashboard_no_groups">Brak zestawów. Kliknij +, aby dodać.</string>
-    <string name="dashboard_name_label">Nazwa zestawu</string>
-    <string name="dashboard_due_count">Pozostało: %1$d</string>
-    <string name="study_finished_desc">Wszystkie zaplanowane fiszki na dzisiaj zostały opanowane.</string>
+    <string name="dashboard_no_groups">Brak talii. Zaimportuj fiszki, aby zacząć.</string>
+    <string name="dashboard_name_label">Nazwa talii</string>
+    <string name="dashboard_due_count">Do powtórki: %1$d</string>
+    <string name="study_finished_desc">Wszystkie zaplanowane na dziś fiszki zostały powtórzone.</string>
     <string name="study_no_due">Brak fiszek do powtórki.</string>
-    <string name="study_rating_1">Powtórz (Again)</string>
-    <string name="study_rating_2">Trudne (Hard)</string>
-    <string name="study_rating_3">Dobrze (Good)</string>
-    <string name="study_rating_4">Łatwe (Easy)</string>
+    <string name="study_rating_1">Powtórz</string>
+    <string name="study_rating_2">Trudne</string>
+    <string name="study_rating_3">Dobrze</string>
+    <string name="study_rating_4">Łatwe</string>
     <string name="study_restart_session">Zacznij od nowa</string>
     <string name="study_restart_failed">Powtórz błędne</string>
     <string name="study_bravo">Brawo! 🎉</string>
@@ -54,10 +54,10 @@
     <string name="study_review_save_failed">Nie udało się zapisać części ocen.</string>
     <string name="study_error_tts">Nie udało się odtworzyć dźwięku.</string>
     <string name="study_exit_confirm_title">Opuścić tryb nauki?</string>
-    <string name="study_exit_confirm_message">Jesteś w trybie nauki. Na pewno wyjść?</string>
+    <string name="study_exit_confirm_message">Dotychczasowe oceny są zapisane. Opuścić sesję nauki?</string>
     <string name="study_exit_confirm_btn">Wyjdź</string>
     <string name="study_session_ended_title">Sesja przerwana</string>
-    <string name="study_session_ended_desc">Wyszedłeś przed ukończeniem. Twój postęp jest zapisany.</string>
+    <string name="study_session_ended_desc">Sesja przerwana przed ukończeniem. Twój postęp jest zapisany.</string>
     <string name="study_background_paused">Wstrzymano — otwórz aplikację, aby kontynuować</string>
     <string name="browse_search_placeholder">Szukaj fiszek…</string>
     <string name="browse_edit_card">Edytuj fiszkę</string>
@@ -83,8 +83,8 @@
     <string name="stats_heatmap_cd">Powtórki: %1$d; dni aktywności: %2$d; długość serii: %3$d</string>
     <string name="stats_streak">Seria dni</string>
     <string name="settings_section_general">Ogólne</string>
-    <string name="settings_archive_btn">Archiwizuj zestaw</string>
-    <string name="settings_rename_label">Nazwa zestawu</string>
+    <string name="settings_archive_btn">Archiwizuj talię</string>
+    <string name="settings_rename_label">Nazwa talii</string>
     <string name="settings_pages_config">Konfiguracja stron</string>
     <string name="settings_study_scope">Zakres nauki</string>
     <string name="settings_card_order">Kolejność kart</string>
@@ -114,7 +114,7 @@
     <string name="app_settings_background_playback">Odtwarzanie w tle</string>
     <string name="app_settings_background_playback_desc">Kontynuuj odtwarzanie audio podczas nauki przy zablokowanym ekranie lub zminimalizowanej aplikacji.</string>
     <string name="archive_title">Zarchiwizowane</string>
-    <string name="archive_empty">Brak zarchiwizowanych zestawów.</string>
+    <string name="archive_empty">Brak zarchiwizowanych talii.</string>
     <plurals name="archive_auto_delete_in">
         <item quantity="one">Usuwa się za %1$d dzień</item>
         <item quantity="few">Usuwa się za %1$d dni</item>
@@ -256,13 +256,13 @@
     <string name="app_settings_export_success">Kopia zapisana.</string>
     <string name="app_settings_import_invalid">Ten plik nie jest kopią zapasową RayColl.</string>
     <string name="app_settings_import_confirm_title">Zastąpić wszystkie dane?</string>
-    <string name="app_settings_import_confirm_desc">Import kopii zastąpi wszystkie zestawy, postępy i tryby zawartością pliku. Na zalogowanym koncie zmiana trafi też do chmury.</string>
+    <string name="app_settings_import_confirm_desc">Import kopii zastąpi wszystkie talie, postępy i tryby zawartością pliku. Na zalogowanym koncie zmiana trafi też do chmury.</string>
     <string name="app_settings_tts_rate_value">%1$.1f×</string>
-    <string name="errors_deck_missing">Ten zestaw już nie istnieje.</string>
+    <string name="errors_deck_missing">Ta talia już nie istnieje.</string>
     <string name="browse_add_card">Dodaj fiszkę</string>
     <string name="filter_chip_count">%1$s (%2$d)</string>
     <string name="auth_migration_cancel_btn">Nie loguj</string>
-    <string name="a11y_deck_menu">Opcje zestawu</string>
+    <string name="a11y_deck_menu">Opcje talii</string>
     <string name="a11y_fewer_pages">Mniej stron</string>
     <string name="a11y_more_pages">Więcej stron</string>
     <string name="delete_confirm_token">USUŃ</string>
@@ -272,8 +272,8 @@
     <string name="import_column_settings_reset">Kolumny się zmieniły, więc nazwy i języki stron wykryto od nowa.</string>
     <string name="errors_save_failed">Nie udało się zapisać zmian. Spróbuj ponownie.</string>
     <string name="import_preview_count">Podgląd (%1$d)</string>
-    <string name="import_error_name_required">Podaj nazwę zestawu.</string>
-    <string name="import_error_page_count">Zestaw musi mieć od 2 do 20 stron.</string>
+    <string name="import_error_name_required">Podaj nazwę talii.</string>
+    <string name="import_error_page_count">Talia musi mieć od 2 do 20 stron.</string>
     <string name="import_error_language">Nieprawidłowy kod języka: %1$s</string>
     <string name="import_error_no_cards">Brak fiszek do zaimportowania.</string>
     <string name="import_error_empty_row">Wiersz %1$d jest pusty.</string>
@@ -284,7 +284,7 @@
     <string name="study_answer_correct_percent">Dobrze! • %1$d%%</string>
     <string name="study_answer_incorrect_percent">Źle • %1$d%%</string>
     <string name="study_answer_incorrect_threshold">Źle • %1$d%% / %2$d%%</string>
-    <string name="study_suggested_rating">%1$s (+%2$d)</string>
+    <string name="study_suggested_rating">Sugestia: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Słucham</string>
     <string name="study_badge_speaking">Czytam</string>
@@ -299,5 +299,9 @@
     <string name="dashboard_browse">Przeglądaj</string>
     <string name="sync_now_success">Zsynchronizowano</string>
     <string name="sync_now_failed">Nie udało się zsynchronizować. Zmiany są zapisane na telefonie i wyślą się później.</string>
+    <!-- ui1 -->
+    <string name="study_a11y_tap_card">Dalej</string>
+    <string name="browse_empty_deck">Ta talia nie ma jeszcze fiszek.</string>
+    <string name="a11y_deck_menu_named">Opcje talii: %1$s</string>
 </resources>
 

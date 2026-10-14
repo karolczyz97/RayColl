@@ -13,9 +13,9 @@
     <string name="btn_back">Back</string>
     <string name="auth_local">Local Mode</string>
     <string name="auth_migration_title">Local data found</string>
-    <string name="auth_migration_desc">You have local decks from a previous session. Would you like to transfer them to your account or start fresh?</string>
+    <string name="auth_migration_desc">You have local decks from a previous session. Transfer them to your account, or start the account with the sample decks. Your local decks stay on this device either way.</string>
     <string name="auth_migration_migrate_btn">Transfer to account</string>
-    <string name="auth_migration_fresh_btn">Start fresh</string>
+    <string name="auth_migration_fresh_btn">Start with sample decks</string>
     <string name="auth_error_play_services">Google Play Services are unavailable or outdated. Please update them and try again.</string>
     <string name="auth_error_no_token">No login token received. Please try again.</string>
     <string name="auth_error_invalid_token">Invalid login token. Please try again.</string>
@@ -32,7 +32,7 @@
     </plurals>
     <string name="btn_archive">Archive</string>
     <string name="btn_restore">Restore</string>
-    <string name="dashboard_no_groups">No decks found. Click + to add one.</string>
+    <string name="dashboard_no_groups">No decks yet. Import flashcards to get started.</string>
     <string name="dashboard_name_label">Deck Name</string>
     <string name="dashboard_due_count">Due: %1$d</string>
     <string name="study_finished_desc">All scheduled cards for today have been reviewed.</string>
@@ -52,7 +52,7 @@
     <string name="study_review_save_failed">Some ratings could not be saved.</string>
     <string name="study_error_tts">Audio playback failed.</string>
     <string name="study_exit_confirm_title">Leave study mode?</string>
-    <string name="study_exit_confirm_message">You are in study mode. Are you sure you want to leave?</string>
+    <string name="study_exit_confirm_message">Your ratings so far are saved. Leave this study session?</string>
     <string name="study_exit_confirm_btn">Leave</string>
     <string name="study_session_ended_title">Session ended early</string>
     <string name="study_session_ended_desc">You left before finishing. Your progress is saved.</string>
@@ -274,7 +274,7 @@
     <string name="study_answer_correct_percent">Correct! • %1$d%%</string>
     <string name="study_answer_incorrect_percent">Incorrect • %1$d%%</string>
     <string name="study_answer_incorrect_threshold">Incorrect • %1$d%% / %2$d%%</string>
-    <string name="study_suggested_rating">%1$s (+%2$d)</string>
+    <string name="study_suggested_rating">Suggested: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Listening</string>
     <string name="study_badge_speaking">Speaking</string>
@@ -289,5 +289,9 @@
     <string name="dashboard_browse">Browse</string>
     <string name="sync_now_success">Synced</string>
     <string name="sync_now_failed">Couldn\'t sync. Changes are saved on this device and will be sent later.</string>
+    <!-- ui1 -->
+    <string name="study_a11y_tap_card">Continue</string>
+    <string name="browse_empty_deck">This deck has no flashcards yet.</string>
+    <string name="a11y_deck_menu_named">Options for %1$s</string>
 </resources>
 
