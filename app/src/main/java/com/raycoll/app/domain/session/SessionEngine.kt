@@ -21,11 +21,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -51,11 +48,6 @@ class SessionEngine(
 
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
-
-    private val _autoPausedInBackground = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-
-    /** Sesja w tle stanęła i czeka na użytkownika (błąd mowy albo ręczna ocena) — serwis pokazuje "wstrzymane". */
-    val autoPausedInBackground: SharedFlow<Unit> = _autoPausedInBackground.asSharedFlow()
 
     // kroki dotyczące stron, których talia nie pokazuje, są pomijane
     private val expandedSteps: List<ModeStep> = CompoundExpander.expandModeSteps(steps).filter { step ->
@@ -247,7 +239,6 @@ class SessionEngine(
             is ShowRatingsStep -> {
                 if (!_state.value.cardReviewed) {
                     dispatch(SessionAction.ShowRatings)
-                    _autoPausedInBackground.tryEmit(Unit)
                 }
                 true
             }
@@ -269,7 +260,6 @@ class SessionEngine(
     internal fun onTtsFailure(result: SpeakResult) {
         if (_inBackground.value) {
             pause()
-            _autoPausedInBackground.tryEmit(Unit)
         } else {
             val error = if (result == SpeakResult.MISSING_VOICE) SessionError.TTS_MISSING_VOICE else SessionError.TTS
             dispatch(SessionAction.SetError(error))

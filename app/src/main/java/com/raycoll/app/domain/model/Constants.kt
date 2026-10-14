@@ -51,8 +51,6 @@ object MatchConstants {
 }
 
 object StudyConstants {
-    const val STUDY_REVIEW_FLUSH_THRESHOLD = 10
-    const val PERSISTENCE_DEBOUNCE_MS = 1200L
     const val PEEK_HOLD_THRESHOLD_MS = 500L
     const val PREVIOUS_GOES_BACK_WINDOW_MS = 3000L
     const val DYNAMIC_PAUSE_MS_PER_CHAR = 60

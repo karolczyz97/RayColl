@@ -17,7 +17,6 @@ import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.FakeSessionDeps
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -217,14 +216,9 @@ class SessionEngineBackgroundTest {
                 1.0f,
                 TestScope(UnconfinedTestDispatcher(testScheduler))
             )
-            var autoPaused = false
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                eng.autoPausedInBackground.collect { autoPaused = true }
-            }
             eng.setBackground(true)
             eng.start(listOf(card("c1"), card("c2")))
             advanceUntilIdle()
-            assertTrue(autoPaused)
             assertTrue(deps.reviews.isEmpty())
             assertEquals(0, eng.state.value.currentCardIndex)
             assertEquals(SessionStatus.REVEALED, eng.state.value.status)

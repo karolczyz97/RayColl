@@ -1,6 +1,5 @@
 package com.raycoll.app.data.sync
 
-import com.raycoll.app.domain.model.StudyConstants
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -13,6 +12,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+// zmiany czekają chwilę, żeby seria edycji poszła jedną wysyłką; w nauce wysyłka co kilka ocen
+private const val SYNC_DEBOUNCE_MS = 1_200L
+private const val STUDY_FLUSH_EVERY_REVIEWS = 10
+
 /**
  * Kiedy wysyłać zmiany do chmury (Room zapisuje się zawsze od razu):
  * - debounced: [delayMs] po ostatniej zmianie,
@@ -24,8 +27,8 @@ import kotlinx.coroutines.sync.withLock
 class SyncScheduler(
     private val scope: CoroutineScope,
     private val push: suspend () -> Boolean,
-    private val delayMs: Long = StudyConstants.PERSISTENCE_DEBOUNCE_MS,
-    private val flushThreshold: Int = StudyConstants.STUDY_REVIEW_FLUSH_THRESHOLD
+    private val delayMs: Long = SYNC_DEBOUNCE_MS,
+    private val flushThreshold: Int = STUDY_FLUSH_EVERY_REVIEWS
 ) {
     private val pending = AtomicBoolean(false)
     private val studyReviewCount = AtomicInteger(0)

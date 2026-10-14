@@ -23,7 +23,6 @@ import com.raycoll.app.testing.FakeSessionDeps
 import com.raycoll.app.testing.ReviewRecord
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -408,14 +407,10 @@ class SessionEngineSemanticsTest {
     fun `tts error in background auto-pauses instead of error status`() = runTest(UnconfinedTestDispatcher()) {
         val deps = FakeSessionDeps(speakResult = SpeakResult.ERROR)
         val eng = engine(listOf(SpeakPageStep(pageIndex = 0), NextCardStep()), deps)
-        var autoPaused = false
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            eng.autoPausedInBackground.collect { autoPaused = true }
-        }
         eng.setBackground(true)
         eng.start(listOf(card("c1"), card("c2")))
         advanceUntilIdle()
-        assertTrue(autoPaused)
+        assertTrue(eng.isPaused.value)
         assertNull(eng.state.value.error)
         assertEquals(0, eng.state.value.currentCardIndex) // łańcuch zatrzymany
     }
