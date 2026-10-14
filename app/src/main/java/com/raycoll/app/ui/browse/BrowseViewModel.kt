@@ -37,6 +37,8 @@ sealed interface BrowseUiState {
         val pageNames: List<String>,
         val activePageCount: Int,
         val cards: List<Flashcard>,
+        /** Wszystkie karty talii, bez filtra — edytowana karta nie znika, gdy wypadnie z filtra. */
+        val allCards: List<Flashcard>,
         val counts: CardStats,
         val category: SrsCardCategory?
     ) : BrowseUiState
@@ -81,6 +83,7 @@ class BrowseViewModel internal constructor(
             pageNames = deck.pageNames,
             activePageCount = deck.activePageCount,
             cards = browseFilter(deck.cards, query, selected, deck.activePageCount),
+            allCards = deck.cards,
             counts = computeCardStats(deck.cards),
             category = selected
         )

@@ -62,19 +62,14 @@ fun parseRows(text: String, separator: CsvSeparator): List<List<String>> {
 
 /** Separator, który daje najwięcej spójnych kolumn w pierwszych wierszach. */
 fun detectSeparator(text: String): CsvSeparator {
-    val best = CsvSeparator.entries.maxByOrNull { separator ->
-        val rows = parseRows(text, separator).take(ImportConstants.SEP_DETECT_ROWS)
-        if (rows.isEmpty()) return@maxByOrNull 0.0
-        val splitRows = rows.filter { it.size > 1 }
-        splitRows.sumOf { it.size - 1 } * (splitRows.size.toDouble() / rows.size)
-    }
-    return best?.takeIf { separator ->
-        parseRows(text, separator).take(ImportConstants.SEP_DETECT_ROWS).any {
-            it.size >
-                1
+    val best = CsvSeparator.entries
+        .map { separator -> separator to parseRows(text, separator).take(ImportConstants.SEP_DETECT_ROWS) }
+        .maxByOrNull { (_, rows) ->
+            if (rows.isEmpty()) return@maxByOrNull 0.0
+            val splitRows = rows.filter { it.size > 1 }
+            splitRows.sumOf { it.size - 1 } * (splitRows.size.toDouble() / rows.size)
         }
-    }
-        ?: CsvSeparator.DEFAULT
+    return best?.takeIf { (_, rows) -> rows.any { it.size > 1 } }?.first ?: CsvSeparator.DEFAULT
 }
 
 /** Komórka zapisana z powrotem do tekstu — w cudzysłowie, gdy zawiera separator, nową linię lub cudzysłów. */

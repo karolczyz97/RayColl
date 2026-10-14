@@ -33,9 +33,10 @@ fun FlashcardGroup.withActivePageCount(count: Int, now: Long): FlashcardGroup {
 /** Zamienia miejscami dwie strony: nazwę, język i treść w każdej karcie. */
 fun FlashcardGroup.withPagesSwapped(from: Int, to: Int, now: Long): FlashcardGroup {
     if (from !in pageNames.indices || to !in pageNames.indices) return this
+    val (_, languages) = padPageMetadata(pageNames, pageLanguages, pageNames.size)
     return copy(
         pageNames = pageNames.swapped(from, to),
-        pageLanguages = pageLanguages.swapped(from, to),
+        pageLanguages = languages.swapped(from, to),
         cards = cards.map { card ->
             val pages = card.pages + List((maxOf(from, to) + 1 - card.pages.size).coerceAtLeast(0)) { "" }
             card.copy(pages = pages.swapped(from, to))

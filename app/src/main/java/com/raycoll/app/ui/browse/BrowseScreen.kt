@@ -148,7 +148,7 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
             )
 
             is CardEditTarget.Existing -> {
-                val card = ready.cards.find { it.id == target.cardId }
+                val card = ready.allCards.find { it.id == target.cardId }
                 if (card == null) {
                     // karta zniknęła (usunięta na innym urządzeniu) — okno nie ma czego edytować
                     LaunchedEffect(target) { editTarget = null }

@@ -94,6 +94,13 @@ class OperationsTest {
     }
 
     @Test
+    fun `swapping pages pads missing page languages instead of crashing`() {
+        val deck = group().copy(pageLanguages = emptyList()).withPagesSwapped(0, 1, now)
+        assertEquals(listOf("Back", "Front"), deck.pageNames)
+        assertEquals(2, deck.pageLanguages.size)
+    }
+
+    @Test
     fun `archive expires at retention boundary`() {
         assertTrue(group().copy(archivedAt = now - ArchiveConstants.RETENTION_MS).isArchiveExpired(now))
         assertFalse(group().copy(archivedAt = now - ArchiveConstants.RETENTION_MS + 1).isArchiveExpired(now))
