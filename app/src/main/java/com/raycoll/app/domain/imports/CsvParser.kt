@@ -18,7 +18,7 @@ enum class CsvSeparator(val char: Char) {
 private val LINE_BREAKS = Regex("\r\n?")
 
 /** Ujednolica tekst: bez znacznika BOM, końce linii jako "\n". */
-fun normalizeCsvText(text: String): String = text.removePrefix("﻿").replace(LINE_BREAKS, "\n")
+fun normalizeCsvText(text: String): String = text.removePrefix("\uFEFF").replace(LINE_BREAKS, "\n")
 
 /**
  * Dzieli tekst na wiersze i komórki (cudzysłowy jak w CSV: `"a;b"`, `""` = cudzysłów).
