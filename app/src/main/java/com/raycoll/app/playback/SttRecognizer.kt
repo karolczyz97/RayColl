@@ -10,6 +10,7 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import com.raycoll.app.domain.session.ListenResult
 import com.raycoll.app.domain.session.ListenStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -18,10 +19,24 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+
+private const val TAG = "SttRecognizer"
+
+/**
+ * Wynik nasłuchu zakończonego błędem rozpoznawania: usłyszany tekst ma pierwszeństwo,
+ * cisza (brak dopasowania / brak mowy) to pusty, poprawny wynik, reszta to błąd techniczny.
+ */
+internal fun listenResultForError(error: Int, heard: String): ListenResult = when {
+    heard.isNotBlank() -> ListenResult(heard, ListenStatus.COMPLETED)
+
+    error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
+        ListenResult("", ListenStatus.COMPLETED)
+
+    else -> ListenResult("", ListenStatus.ERROR)
+}
 
 @Singleton
 class SttRecognizer @Inject constructor(@ApplicationContext private val context: Context) {
@@ -43,108 +58,89 @@ class SttRecognizer @Inject constructor(@ApplicationContext private val context:
                 return@withContext ListenResult("", ListenStatus.ERROR)
             }
             val accumulator = SttTranscriptAccumulator()
-            try {
-                withTimeout(timeoutMs) {
-                    suspendCancellableCoroutine { cont ->
-                        val recognizer = try {
-                            SpeechRecognizer.createSpeechRecognizer(context)
-                        } catch (_: Exception) {
-                            if (cont.isActive) cont.resume(ListenResult("", ListenStatus.ERROR))
-                            return@suspendCancellableCoroutine
-                        }
-                        if (recognizer == null) {
-                            if (cont.isActive) cont.resume(ListenResult("", ListenStatus.ERROR))
-                            return@suspendCancellableCoroutine
-                        }
+            // twardy timeout: oddaj to, co usłyszano do tej pory
+            withTimeoutOrNull(timeoutMs) {
+                suspendCancellableCoroutine<ListenResult> { cont ->
+                    val recognizer = try {
+                        SpeechRecognizer.createSpeechRecognizer(context)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Cannot create speech recognizer", e)
+                        if (cont.isActive) cont.resume(ListenResult("", ListenStatus.ERROR))
+                        return@suspendCancellableCoroutine
+                    }
 
-                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang)
-                            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-                        }
-
-                        val isCleanedUp = AtomicBoolean(false)
-                        val safeCleanup: () -> Unit = {
-                            if (isCleanedUp.compareAndSet(false, true)) {
-                                val run = {
-                                    try {
-                                        recognizer.cancel()
-                                    } catch (_: Exception) {}
-                                    try {
-                                        recognizer.destroy()
-                                    } catch (_: Exception) {}
-                                }
-                                if (Looper.myLooper() == Looper.getMainLooper()) {
-                                    run()
-                                } else {
-                                    mainHandler.post(run)
-                                }
+                    val isCleanedUp = AtomicBoolean(false)
+                    val safeCleanup: () -> Unit = {
+                        if (isCleanedUp.compareAndSet(false, true)) {
+                            val destroy = {
+                                try {
+                                    recognizer.cancel()
+                                } catch (_: Exception) {}
+                                try {
+                                    recognizer.destroy()
+                                } catch (_: Exception) {}
                             }
-                        }
-
-                        recognizer.setRecognitionListener(object : RecognitionListener {
-                            override fun onReadyForSpeech(params: Bundle?) {}
-                            override fun onBeginningOfSpeech() {}
-                            override fun onRmsChanged(rmsdB: Float) {}
-                            override fun onBufferReceived(buffer: ByteArray?) {}
-                            override fun onEndOfSpeech() {}
-                            override fun onError(error: Int) {
-                                safeCleanup()
-                                if (!cont.isActive) return
-
-                                // razem z niedokończonym fragmentem — recognizer mógł nie zdążyć go zamknąć
-                                val text = accumulator.combined()
-                                val result = when {
-                                    text.isNotBlank() ->
-                                        ListenResult(text, ListenStatus.COMPLETED)
-
-                                    error == SpeechRecognizer.ERROR_NO_MATCH ||
-                                        error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
-                                        ListenResult("", ListenStatus.COMPLETED)
-
-                                    else ->
-                                        ListenResult("", ListenStatus.ERROR)
-                                }
-                                cont.resume(result)
+                            if (Looper.myLooper() == Looper.getMainLooper()) {
+                                destroy()
+                            } else {
+                                mainHandler.post(destroy)
                             }
-                            override fun onResults(results: Bundle?) {
-                                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                                matches?.firstOrNull()?.let { accumulator.addFinal(it) }
-                                safeCleanup()
-                                if (cont.isActive) {
-                                    cont.resume(ListenResult(accumulator.combined(), ListenStatus.COMPLETED))
-                                }
-                            }
-                            override fun onPartialResults(partialResults: Bundle?) {
-                                if (isCleanedUp.get() || !cont.isActive) return
-                                val partials = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                                val text = partials?.firstOrNull() ?: return
-                                if (text.isNotBlank()) {
-                                    accumulator.addPartial(text)
-                                    onPartial(accumulator.combined())
-                                }
-                            }
-                            override fun onEvent(eventType: Int, params: Bundle?) {}
-                        })
-
-                        cont.invokeOnCancellation {
-                            safeCleanup()
-                        }
-
-                        try {
-                            recognizer.startListening(intent)
-                        } catch (_: Exception) {
-                            safeCleanup()
-                            if (cont.isActive) cont.resume(ListenResult("", ListenStatus.ERROR))
                         }
                     }
+
+                    recognizer.setRecognitionListener(object : RecognitionListener {
+                        override fun onReadyForSpeech(params: Bundle?) {}
+                        override fun onBeginningOfSpeech() {}
+                        override fun onRmsChanged(rmsdB: Float) {}
+                        override fun onBufferReceived(buffer: ByteArray?) {}
+                        override fun onEndOfSpeech() {}
+                        override fun onError(error: Int) {
+                            safeCleanup()
+                            if (!cont.isActive) return
+                            // razem z niedokończonym fragmentem — recognizer mógł nie zdążyć go zamknąć
+                            cont.resume(listenResultForError(error, accumulator.combined()))
+                        }
+                        override fun onResults(results: Bundle?) {
+                            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            matches?.firstOrNull()?.let { accumulator.addFinal(it) }
+                            safeCleanup()
+                            if (cont.isActive) {
+                                cont.resume(ListenResult(accumulator.combined(), ListenStatus.COMPLETED))
+                            }
+                        }
+                        override fun onPartialResults(partialResults: Bundle?) {
+                            if (isCleanedUp.get() || !cont.isActive) return
+                            val partials = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            val text = partials?.firstOrNull() ?: return
+                            if (text.isNotBlank()) {
+                                accumulator.addPartial(text)
+                                onPartial(accumulator.combined())
+                            }
+                        }
+                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                    })
+
+                    cont.invokeOnCancellation {
+                        safeCleanup()
+                    }
+
+                    try {
+                        recognizer.startListening(recognizerIntent(lang))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Cannot start listening", e)
+                        safeCleanup()
+                        if (cont.isActive) cont.resume(ListenResult("", ListenStatus.ERROR))
+                    }
                 }
-            } catch (e: TimeoutCancellationException) {
-                // twardy timeout: oddaj to, co usłyszano do tej pory
-                ListenResult(accumulator.combined(), ListenStatus.COMPLETED)
-            }
+            } ?: ListenResult(accumulator.combined(), ListenStatus.COMPLETED)
         }
+    }
+
+    private fun recognizerIntent(lang: String) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang)
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
     }
 }

@@ -75,6 +75,17 @@ class SessionPlayer(looper: Looper, private val controls: SessionControls) : Sim
         return Futures.immediateVoidFuture()
     }
 
+    /** Przycisk "następny/poprzedni" przełącza karty sesji. */
+    fun withCardNavigation(): Player = object : ForwardingPlayer(this) {
+        override fun seekToNext() = controls.next()
+
+        override fun seekToNextMediaItem() = controls.next()
+
+        override fun seekToPrevious() = controls.previous()
+
+        override fun seekToPreviousMediaItem() = controls.previous()
+    }
+
     private companion object {
         const val ITEM_UID = "study-session"
         val COMMANDS: Player.Commands = Player.Commands.Builder()
@@ -92,16 +103,4 @@ class SessionPlayer(looper: Looper, private val controls: SessionControls) : Sim
             )
             .build()
     }
-}
-
-/** Przycisk "następny/poprzedni" przełącza karty sesji. */
-@UnstableApi
-fun SessionPlayer.withCardNavigation(controls: SessionControls): Player = object : ForwardingPlayer(this) {
-    override fun seekToNext() = controls.next()
-
-    override fun seekToNextMediaItem() = controls.next()
-
-    override fun seekToPrevious() = controls.previous()
-
-    override fun seekToPreviousMediaItem() = controls.previous()
 }

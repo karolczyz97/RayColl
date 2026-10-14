@@ -13,5 +13,5 @@ import kotlinx.coroutines.sync.withLock
 class AudioTurn {
     private val mutex = Mutex()
 
-    suspend fun <T> take(block: suspend () -> T): T = mutex.withLock { block() }
+    suspend fun <T> withTurn(block: suspend () -> T): T = mutex.withLock { block() }
 }

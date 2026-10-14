@@ -42,7 +42,7 @@ class AudioTurnTest {
         var active: String? = null
         var overlaps = 0
 
-        private suspend fun <T> use(name: String, durationMs: Long, result: T): T = turn.take {
+        private suspend fun <T> use(name: String, durationMs: Long, result: T): T = turn.withTurn {
             if (active != null) overlaps++
             active = name
             events += "start $name"
@@ -82,7 +82,7 @@ class AudioTurnTest {
         val turn = AudioTurn()
         val events = mutableListOf<String>()
         val speaking = launch {
-            turn.take {
+            turn.withTurn {
                 events += "speak start"
                 try {
                     delay(1_000)
@@ -95,7 +95,7 @@ class AudioTurnTest {
             }
         }
         runCurrent()
-        val listening = launch { turn.take { events += "listen start" } }
+        val listening = launch { turn.withTurn { events += "listen start" } }
         runCurrent()
         speaking.cancel()
         advanceUntilIdle()
