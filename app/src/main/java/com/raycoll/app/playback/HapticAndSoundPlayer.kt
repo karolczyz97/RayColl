@@ -13,6 +13,18 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val SUCCESS_VIBRATION_MS = 20L
+private const val ERROR_VIBRATION_MS = 50L
+
+/** Czas wibracji po ocenie karty. */
+internal fun ratingVibrationMs(rating: Int): Long = when (rating) {
+    Ratings.AGAIN -> 50L
+    Ratings.HARD -> 30L
+    Ratings.GOOD -> 20L
+    Ratings.EASY -> 40L
+    else -> 20L
+}
+
 /** Dźwięki i wibracje informacji zwrotnej w sesji nauki. Żyje tyle co proces. */
 @Singleton
 class HapticAndSoundPlayer @Inject constructor(@ApplicationContext context: Context) {
@@ -56,24 +68,15 @@ class HapticAndSoundPlayer @Inject constructor(@ApplicationContext context: Cont
 
     fun playSuccess() {
         play(successSound)
-        vibrate(20L)
+        vibrate(SUCCESS_VIBRATION_MS)
     }
 
     fun playError() {
         play(errorSound)
-        vibrate(50L)
+        vibrate(ERROR_VIBRATION_MS)
     }
 
-    fun haptic(rating: Int) {
-        vibrate(
-            when (rating) {
-                Ratings.AGAIN -> 50L
-                Ratings.HARD -> 30L
-                Ratings.EASY -> 40L
-                else -> 20L
-            }
-        )
-    }
+    fun haptic(rating: Int) = vibrate(ratingVibrationMs(rating))
 
     private fun play(soundId: Int) {
         val ready = synchronized(this) {

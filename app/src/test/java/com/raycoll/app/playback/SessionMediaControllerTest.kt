@@ -55,7 +55,7 @@ class SessionMediaControllerTest {
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         player = SessionPlayer(Looper.getMainLooper(), controls)
-        session = MediaSession.Builder(context, player.withCardNavigation(controls)).build()
+        session = MediaSession.Builder(context, player.withCardNavigation()).build()
         val future = MediaController.Builder(context, session.token).buildAsync()
         idle()
         controller = future.get(5, TimeUnit.SECONDS)

@@ -3,6 +3,7 @@ package com.raycoll.app.ui.study
 import android.app.Application
 import android.content.Intent
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.PendingReview
@@ -73,11 +74,20 @@ class StudyRestartTest {
     private val clock = FakeClock()
     private lateinit var repos: TestRepos
     private lateinit var holder: StudySessionHolder
+    private var serviceStartFails = false
+    private var appVisible = true
 
     @Before
     fun setup() {
         repos = VmTestHarness.create(app, clock)
-        holder = StudySessionHolder(app)
+        holder = StudySessionHolder(
+            app,
+            { context, intent ->
+                if (serviceStartFails) throw IllegalStateException("background start not allowed")
+                ContextCompat.startForegroundService(context, intent)
+            },
+            { appVisible }
+        )
     }
 
     @After
@@ -236,6 +246,74 @@ class StudyRestartTest {
         // ten sam silnik (bez drugiej instancji) i przebieg już trwa, gdy serwis go przejmuje
         assertSame(engine, holder.current())
         assertNotEquals(SessionStatus.FINISHED, holder.current()!!.state.value.status)
+    }
+
+    @Test
+    fun `app returning to foreground does not resume a pause it did not cause`() {
+        val vm = studyVm(listOf(ShowPageStep(pageIndex = 0), ShowRatingsStep()))
+        waitFor { vm.uiState.value is StudyUiState.Active }
+        val engine = holder.current()!!
+        engine.pause()
+        vm.onAppBackground()
+        vm.onAppForeground()
+        assertTrue(engine.isPaused.value)
+        vm.endSessionEarly()
+    }
+
+    @Test
+    fun `app in background pauses a running session without background mode and resumes it`() {
+        val vm = studyVm(listOf(ShowPageStep(pageIndex = 0), ShowRatingsStep()))
+        waitFor { vm.uiState.value is StudyUiState.Active }
+        val engine = holder.current()!!
+        vm.onAppBackground()
+        assertTrue(engine.isPaused.value)
+        vm.onAppForeground()
+        assertFalse(engine.isPaused.value)
+        vm.endSessionEarly()
+    }
+
+    @Test
+    fun `refused service start does not crash and keeps the session in foreground mode`() {
+        serviceStartFails = true
+        val vm = studyVm(listOf(ShowPageStep(pageIndex = 0), WaitStep(ms = 60_000), NextCardStep()))
+        waitFor { vm.uiState.value is StudyUiState.Active }
+        idle()
+        assertFalse((vm.uiState.value as StudyUiState.Active).runsInBackground)
+        assertTrue(startedServices().isEmpty())
+        vm.onAppBackground()
+        assertTrue(holder.current()!!.isPaused.value)
+        vm.onAppForeground()
+        assertFalse(holder.current()!!.isPaused.value)
+        vm.endSessionEarly()
+    }
+
+    @Test
+    fun `session registered while the app is already in background goes to background mode`() {
+        appVisible = false
+        val vm = studyVm(listOf(ShowPageStep(pageIndex = 0), WaitStep(ms = 60_000), NextCardStep()))
+        waitFor { vm.uiState.value is StudyUiState.Active }
+        idle()
+        val engine = holder.current()!!
+        assertTrue(engine.inBackground.value)
+        assertFalse(engine.isPaused.value)
+        vm.onAppForeground()
+        assertFalse(engine.inBackground.value)
+        vm.endSessionEarly()
+    }
+
+    @Test
+    fun `refused service start with the app in background pauses until it returns`() {
+        serviceStartFails = true
+        appVisible = false
+        val vm = studyVm(listOf(ShowPageStep(pageIndex = 0), WaitStep(ms = 60_000), NextCardStep()))
+        waitFor { vm.uiState.value is StudyUiState.Active }
+        idle()
+        val engine = holder.current()!!
+        assertFalse(engine.inBackground.value)
+        assertTrue(engine.isPaused.value)
+        vm.onAppForeground()
+        assertFalse(engine.isPaused.value)
+        vm.endSessionEarly()
     }
 
     @Test

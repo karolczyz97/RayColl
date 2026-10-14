@@ -31,15 +31,16 @@ class SilentPlayback(private val createTrack: () -> SilentTrack = ::AudioTrackSi
     /** Sesja trwa — aplikacja jest aktywnym odtwarzaczem multimediów. */
     fun start() {
         if (playing) return
-        val current = track ?: runCatching(createTrack)
-            .onFailure { Log.w(TAG, "Cannot create silent track: ${it.message}") }
-            .getOrNull()
-            ?.also { track = it }
-            ?: return
+        val current = ensureTrack() ?: return
         playing = runCatching { current.play() }
-            .onFailure { Log.w(TAG, "Cannot start silent track: ${it.message}") }
+            .onFailure { Log.w(TAG, "Cannot start silent track", it) }
             .isSuccess
     }
+
+    private fun ensureTrack(): SilentTrack? = track ?: runCatching(createTrack)
+        .onFailure { Log.w(TAG, "Cannot create silent track", it) }
+        .getOrNull()
+        ?.also { track = it }
 
     /** Pauza / koniec — cisza nie trzyma toru audio. */
     fun stop() {

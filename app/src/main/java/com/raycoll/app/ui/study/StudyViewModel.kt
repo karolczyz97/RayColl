@@ -24,6 +24,7 @@ import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.navigation.StudyRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,8 +96,12 @@ class StudyViewModel @Inject constructor(
 
     private var engine: SessionEngine? = null
     private var deckName = ""
+
+    // tryb pozwala na pracę w tle (ustawienie + kroki trybu); runsInBackground — czy serwis faktycznie ruszył
+    private var backgroundAllowed = false
     private var runsInBackground = false
     private var pausedByAppBackground = false
+    private var restartJob: Job? = null
 
     // nasłuch nie wyszedł (np. brak zgody na mikrofon) — po udzieleniu zgody karta rusza od nowa
     private var listeningFailed = false
@@ -119,20 +124,28 @@ class StudyViewModel @Inject constructor(
     }
 
     private suspend fun startSession() {
-        val deck = deckRepository.getDeck(deckId) ?: return _uiState.update { StudyUiState.DeckMissing }
+        val deck = deckRepository.getDeck(deckId)
+        if (deck == null) {
+            _uiState.value = StudyUiState.DeckMissing
+            return
+        }
         val cards = getDueCards(deck.cards, deck.studyFilter, deck.cardOrder, clock.now())
-        if (cards.isEmpty()) return _uiState.update { StudyUiState.NoDueCards(deck.name) }
+        if (cards.isEmpty()) {
+            _uiState.value = StudyUiState.NoDueCards(deck.name)
+            return
+        }
 
         val steps = modeRepository.getModeOrDefault(deck.activeModeId).steps
         val preferences = prefsRepository.preferences.first()
         val engine = SessionEngine(deck, steps, sessionDeps, clock, preferences.ttsRate, viewModelScope)
-        val runsInBackground = preferences.backgroundPlayback && engine.canRunHandsFree
         this.engine = engine
         this.deckName = deck.name
-        this.runsInBackground = runsInBackground
+        backgroundAllowed = preferences.backgroundPlayback && engine.canRunHandsFree
+        runsInBackground = backgroundAllowed
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
 
         viewModelScope.launch {
+            // zmiana stanu kolejki zapisów (np. ponowienie po błędzie) przelicza też podsumowanie końca sesji
             combine(engine.state, engine.isPaused, reviewWrites.state) { session, paused, _ ->
                 session to paused
             }.collectLatest { (session, paused) ->
@@ -142,40 +155,58 @@ class StudyViewModel @Inject constructor(
                     engine.clearError()
                 }
                 _uiState.update { current ->
-                    val endedEarly = (current as? StudyUiState.Active)?.endedEarly == true &&
-                        session.status == SessionStatus.FINISHED
-                    StudyUiState.Active(
-                        deckName = deck.name,
-                        session = session,
-                        paused = paused,
-                        activePageCount = deck.activePageCount,
-                        runsInBackground = runsInBackground,
-                        needsMicrophone = engine.needsMicrophone,
-                        reviewedCardCount = engine.reviewedCardCount,
-                        resultCards = (current as? StudyUiState.Active)?.resultCards.takeIf {
-                            session.status == SessionStatus.FINISHED
-                        },
-                        endedEarly = endedEarly,
-                        completedCardCount = if (endedEarly) {
-                            (current as StudyUiState.Active).completedCardCount
-                        } else {
-                            session.cards.size
-                        }
-                    )
+                    activeState(engine, deck.activePageCount, session, paused, current as? StudyUiState.Active)
                 }
-                if (session.status == SessionStatus.FINISHED) {
-                    reviewWrites.awaitIdle()
-                    val ids = session.cards.map { it.id }.toSet()
-                    val fresh = deckRepository.getDeck(deckId)?.cards?.filter { it.id in ids }.orEmpty()
-                    _uiState.update { current ->
-                        (current as? StudyUiState.Active)?.copy(resultCards = fresh) ?: current
-                    }
-                }
+                if (session.status == SessionStatus.FINISHED) refreshResultCards(session)
             }
         }
         // przebieg musi już trwać, zanim serwis w tle zacznie go obserwować (zakończony by go zamknął)
         engine.start(cards)
-        sessionHolder.register(engine, deck.name, runsInBackground)
+        registerSession(engine)
+    }
+
+    private fun activeState(
+        engine: SessionEngine,
+        activePageCount: Int,
+        session: SessionState,
+        paused: Boolean,
+        previous: StudyUiState.Active?
+    ): StudyUiState.Active {
+        val finished = session.status == SessionStatus.FINISHED
+        val endedEarly = previous?.endedEarly == true && finished
+        return StudyUiState.Active(
+            deckName = deckName,
+            session = session,
+            paused = paused,
+            activePageCount = activePageCount,
+            runsInBackground = runsInBackground,
+            needsMicrophone = engine.needsMicrophone,
+            reviewedCardCount = engine.reviewedCardCount,
+            resultCards = previous?.resultCards.takeIf { finished },
+            endedEarly = endedEarly,
+            completedCardCount = previous?.takeIf { endedEarly }?.completedCardCount ?: session.cards.size
+        )
+    }
+
+    /** Karty podsumowania czytane z bazy dopiero po zapisie wszystkich ocen. */
+    private suspend fun refreshResultCards(session: SessionState) {
+        reviewWrites.awaitIdle()
+        val ids = session.cards.map { it.id }.toSet()
+        val fresh = deckRepository.getDeck(deckId)?.cards?.filter { it.id in ids }.orEmpty()
+        _uiState.update { current ->
+            (current as? StudyUiState.Active)?.copy(resultCards = fresh) ?: current
+        }
+    }
+
+    /**
+     * Oddaje silnik serwisowi w tle. Gdy serwis nie ruszył albo aplikacja zdążyła już zejść w tło
+     * (start trwał dłużej niż przełączenie), sesja przechodzi w tło tak jak przy zwykłym zejściu.
+     */
+    private fun registerSession(engine: SessionEngine) {
+        val started = sessionHolder.register(engine, deckName, backgroundAllowed)
+        runsInBackground = backgroundAllowed && started
+        _uiState.update { (it as? StudyUiState.Active)?.copy(runsInBackground = runsInBackground) ?: it }
+        if (!sessionHolder.appVisible()) onAppBackground()
     }
 
     fun rate(rating: Int) {
@@ -226,8 +257,9 @@ class StudyViewModel @Inject constructor(
 
     private fun restartWith(selectIds: (SessionState) -> List<String>) {
         val engine = engine ?: return
+        if (restartJob?.isActive == true) return
         val ids = selectIds(engine.state.value)
-        viewModelScope.launch {
+        restartJob = viewModelScope.launch {
             // nowa próba czyta karty z bazy — wszystkie oceny poprzedniej muszą już tam być
             if (!reviewWrites.awaitIdle()) {
                 eventSink.send(StudyEvent.ReviewSaveFailed)
@@ -241,7 +273,7 @@ class StudyViewModel @Inject constructor(
             // ten sam silnik: najpierw nowy przebieg, potem ponowne oddanie go serwisowi w tle
             // (stary serwis zamknął się przy końcu poprzedniej próby razem z powiadomieniem)
             engine.start(cards)
-            sessionHolder.register(engine, deckName, runsInBackground)
+            registerSession(engine)
         }
     }
 
@@ -254,19 +286,19 @@ class StudyViewModel @Inject constructor(
         engine?.stop()
     }
 
-    private fun onAppBackground() {
+    internal fun onAppBackground() {
         val engine = engine ?: return
-        val state = _uiState.value as? StudyUiState.Active ?: return
-        if (state.finished) return
-        if (state.runsInBackground) {
+        if (engine.state.value.status == SessionStatus.FINISHED) return
+        if (runsInBackground) {
             engine.setBackground(true)
-        } else {
+        } else if (!engine.isPaused.value) {
+            // wznawiamy po powrocie tylko to, co sami wstrzymaliśmy
             pausedByAppBackground = true
             engine.pause()
         }
     }
 
-    private fun onAppForeground() {
+    internal fun onAppForeground() {
         val engine = engine ?: return
         engine.setBackground(false)
         if (pausedByAppBackground) {

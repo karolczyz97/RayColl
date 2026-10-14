@@ -10,6 +10,8 @@ import com.raycoll.app.domain.session.SpeakResult
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "SessionDeps"
+
 /** Łączy silnik sesji z mową, dźwiękami i zapisem ocen. */
 @Singleton
 class SessionDepsAdapter @Inject constructor(
@@ -22,24 +24,25 @@ class SessionDepsAdapter @Inject constructor(
     // mikrofon nie może słuchać, gdy aplikacja jeszcze mówi (nagrałby sam siebie) — i odwrotnie
     private val audioTurn = AudioTurn()
 
-    override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult = audioTurn.take {
-        when (val result = ttsPlayer.speak(text, lang, rate)) {
-            TtsResult.Success -> SpeakResult.SUCCESS
+    override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult =
+        audioTurn.withTurn { ttsPlayer.speak(text, lang, rate).toSpeakResult() }
 
-            is TtsResult.MissingVoice -> {
-                Log.w("SessionDeps", "Missing voice: ${result.language}")
-                SpeakResult.MISSING_VOICE
-            }
+    private fun TtsResult.toSpeakResult(): SpeakResult = when (this) {
+        TtsResult.Success -> SpeakResult.SUCCESS
 
-            is TtsResult.Error -> {
-                Log.w("SessionDeps", result.reason)
-                SpeakResult.ERROR
-            }
+        is TtsResult.MissingVoice -> {
+            Log.w(TAG, "Missing voice: $language")
+            SpeakResult.MISSING_VOICE
+        }
+
+        is TtsResult.Error -> {
+            Log.w(TAG, reason)
+            SpeakResult.ERROR
         }
     }
 
     override suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult =
-        audioTurn.take { sttRecognizer.listen(lang, timeoutMs, onPartial) }
+        audioTurn.withTurn { sttRecognizer.listen(lang, timeoutMs, onPartial) }
 
     override fun feedbackSuccess() = hapticPlayer.playSuccess()
 

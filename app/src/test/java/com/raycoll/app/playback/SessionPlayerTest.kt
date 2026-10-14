@@ -75,7 +75,7 @@ class SessionPlayerTest {
 
     @Test
     fun `card navigation works despite the single-item playlist`() {
-        val navigation = player.withCardNavigation(controls)
+        val navigation = player.withCardNavigation()
         assertTrue(navigation.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT))
         assertTrue(navigation.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS))
         navigation.seekToNext()
@@ -87,7 +87,7 @@ class SessionPlayerTest {
 
     @Test
     fun `media item navigation commands are declared next to plain seek commands`() {
-        val navigation = player.withCardNavigation(controls)
+        val navigation = player.withCardNavigation()
         assertTrue(navigation.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM))
         assertTrue(navigation.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM))
         assertTrue(navigation.isCommandAvailable(Player.COMMAND_PLAY_PAUSE))
