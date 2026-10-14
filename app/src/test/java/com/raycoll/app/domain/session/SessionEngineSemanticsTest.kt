@@ -488,4 +488,51 @@ class SessionEngineSemanticsTest {
         eng.clearError()
         assertNull(eng.state.value.error)
     }
+
+    @Test
+    fun `listen that throws becomes an STT error and the session goes on to manual rating`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val deps = FakeSessionDeps(listenThrows = true)
+            val eng = engine(listOf(ListenAndCheckStep(pageIndex = 1), ShowRatingsStep()), deps)
+            eng.start(listOf(card("c1")))
+            advanceUntilIdle()
+            assertEquals(AnswerStatus.ERROR, eng.state.value.lastAnswerResult.status)
+            assertEquals(SessionError.STT, eng.state.value.error)
+            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        }
+
+    @Test
+    fun `peek targets the page hidden when the hold threshold passes`() = runTest(UnconfinedTestDispatcher()) {
+        val clock = FakeClock()
+        val eng = SessionEngine(
+            group().copy(activePageCount = 3),
+            listOf(ShowPageStep(pageIndex = 0), WaitStep(ms = 60_000L), ShowRatingsStep()),
+            FakeSessionDeps(),
+            clock,
+            1f,
+            TestScope(UnconfinedTestDispatcher(testScheduler))
+        )
+        eng.start(listOf(card("c1").copy(pages = listOf("q", "a", "extra"))))
+        advanceTimeBy(100)
+
+        eng.pressDown() // przy naciśnięciu pierwsza ukryta to strona 1
+        advanceTimeBy(200)
+        eng.dispatch(SessionAction.RevealPages(listOf(1))) // odsłonięta, zanim minie próg
+        advanceTimeBy(400)
+        assertEquals(2, eng.state.value.peekedPageIndex)
+        eng.stop()
+    }
+
+    @Test
+    fun `peek does nothing when every page got revealed during the hold`() = runTest(UnconfinedTestDispatcher()) {
+        val eng =
+            engine(listOf(ShowPageStep(pageIndex = 0), WaitStep(ms = 60_000L), ShowRatingsStep()), FakeSessionDeps())
+        eng.start(listOf(card("c1")))
+        advanceTimeBy(100)
+        eng.pressDown()
+        eng.dispatch(SessionAction.RevealPages(listOf(1)))
+        advanceTimeBy(600)
+        assertNull(eng.state.value.peekedPageIndex)
+        eng.stop()
+    }
 }

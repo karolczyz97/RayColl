@@ -2,6 +2,7 @@ package com.raycoll.app.domain.srs
 
 import com.raycoll.app.domain.model.SrsConstants
 import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.SrsStates
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -91,23 +92,12 @@ class SrsEngineTest {
     }
 
     @Test
-    fun `mapMatchToRating 90 percent gives 4`() {
-        assertEquals(4, mapMatchToRating(90))
-    }
-
-    @Test
-    fun `mapMatchToRating 70 percent gives 3`() {
-        assertEquals(3, mapMatchToRating(70))
-    }
-
-    @Test
-    fun `mapMatchToRating 50 percent gives 2`() {
-        assertEquals(2, mapMatchToRating(50))
-    }
-
-    @Test
-    fun `mapMatchToRating 20 percent gives 1`() {
-        assertEquals(1, mapMatchToRating(20))
+    fun `mapMatchToRating with default threshold 70`() {
+        assertEquals(4, mapMatchToRating(90, 70))
+        assertEquals(4, mapMatchToRating(85, 70))
+        assertEquals(3, mapMatchToRating(70, 70))
+        assertEquals(1, mapMatchToRating(50, 70))
+        assertEquals(1, mapMatchToRating(20, 70))
     }
 
     @Test
@@ -115,6 +105,15 @@ class SrsEngineTest {
         assertEquals(1, mapMatchToRating(75, 90))
         assertEquals(3, mapMatchToRating(90, 90))
         assertEquals(4, mapMatchToRating(95, 90))
+    }
+
+    @Test
+    fun `mapMatchToRating handles extreme thresholds`() {
+        assertEquals(4, mapMatchToRating(100, 100))
+        assertEquals(1, mapMatchToRating(99, 100))
+        assertEquals(4, mapMatchToRating(100, 250))
+        assertEquals(3, mapMatchToRating(0, 0))
+        assertEquals(4, mapMatchToRating(50, -10))
     }
 
     @Test
@@ -164,5 +163,15 @@ class SrsEngineTest {
         )
         val result = calculateFsrs(existing, 1, System.currentTimeMillis())
         assertEquals(3, result.state)
+    }
+
+    @Test
+    fun `getCardCategory maps every srs state`() {
+        assertEquals(SrsCardCategory.NEW, getCardCategory(SrsState(state = SrsStates.NEW)))
+        assertEquals(SrsCardCategory.LEARNING, getCardCategory(SrsState(state = SrsStates.LEARNING)))
+        assertEquals(SrsCardCategory.LEARNING, getCardCategory(SrsState(state = SrsStates.RELEARNING)))
+        assertEquals(SrsCardCategory.REVIEW, getCardCategory(SrsState(state = SrsStates.REVIEW, repetitions = 1)))
+        assertEquals(SrsCardCategory.MASTERED, getCardCategory(SrsState(state = SrsStates.REVIEW, repetitions = 3)))
+        assertEquals(SrsCardCategory.NEW, getCardCategory(SrsState(state = 42)))
     }
 }

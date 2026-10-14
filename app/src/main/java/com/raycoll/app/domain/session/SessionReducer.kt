@@ -1,20 +1,7 @@
 package com.raycoll.app.domain.session
 
 fun sessionReducer(state: SessionState, action: SessionAction): SessionState = when (action) {
-    is SessionAction.StartSession -> state.copy(
-        status = SessionStatus.IDLE,
-        currentCardIndex = 0,
-        revealedPages = listOf(0),
-        peekedPageIndex = null,
-        lastAnswerResult = LastAnswerResult(),
-        previousAnswerResult = LastAnswerResult(),
-        audioPageIndex = null,
-        interactionGate = InteractionGate(),
-        pendingStepIndexToRun = null,
-        error = null,
-        failedCardIds = emptySet(),
-        cardReviewed = false
-    )
+    is SessionAction.StartSession -> SessionState(cards = action.cards)
 
     is SessionAction.StartSpeaking -> state.copy(
         status = SessionStatus.SPEAKING,
@@ -41,14 +28,10 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
 
     is SessionAction.RevealPages -> {
         val newRevealed = (state.revealedPages + action.revealedPages).distinct().sorted()
-        val clearedPeek = if (state.peekedPageIndex != null &&
-            state.peekedPageIndex in newRevealed
-        ) {
-            null
-        } else {
-            state.peekedPageIndex
-        }
-        state.copy(revealedPages = newRevealed, peekedPageIndex = clearedPeek)
+        state.copy(
+            revealedPages = newRevealed,
+            peekedPageIndex = state.peekedPageIndex.takeUnless { it in newRevealed }
+        )
     }
 
     is SessionAction.ShowRatings -> if (state.cardReviewed) {
@@ -66,7 +49,9 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
         interactionGate = InteractionGate(),
         pendingStepIndexToRun = null,
         lastAnswerResult = LastAnswerResult(),
-        previousAnswerResult = LastAnswerResult()
+        previousAnswerResult = LastAnswerResult(),
+        audioPageIndex = null,
+        error = null
     )
 
     // nowa karta zaczyna bez wyniku; stary zostaje tylko do animacji znikania panelu
@@ -92,6 +77,7 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
 
     is SessionAction.PeekClear -> state.copy(peekedPageIndex = null)
 
+    // czyści wynik odpowiedzi, więc krok warunkowy po bramce nie pasuje (ModeIssue.ConditionAfterTapGate)
     is SessionAction.StartTapRevealGate -> state.copy(
         status = SessionStatus.IDLE,
         lastAnswerResult = LastAnswerResult(),
@@ -111,8 +97,6 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
     }
 
     is SessionAction.ConsumePendingStepIndex -> state.copy(pendingStepIndexToRun = null)
-
-    is SessionAction.SetCards -> state.copy(cards = action.cards)
 
     is SessionAction.AddFailedCard -> state.copy(failedCardIds = state.failedCardIds + action.cardId)
 

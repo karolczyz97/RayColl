@@ -11,9 +11,9 @@ fun browseFilter(
     category: SrsCardCategory?,
     activePageCount: Int
 ): List<Flashcard> {
-    val query = search.trim().lowercase()
+    val query = search.trim()
     return cards.live().filter { card ->
         (category == null || getCardCategory(card.srsState) == category) &&
-            (query.isEmpty() || card.pages.take(activePageCount).any { it.lowercase().contains(query) })
+            (query.isEmpty() || card.pages.take(activePageCount).any { it.contains(query, ignoreCase = true) })
     }
 }

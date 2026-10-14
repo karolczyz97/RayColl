@@ -15,6 +15,7 @@ import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.StepCondition.CORRECT
 import com.raycoll.app.domain.model.StepCondition.WRONG
+import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitStep
@@ -58,23 +59,23 @@ val SEED_MODES: List<StudyMode> = listOf(
             FeedbackSuccessStep(condition = CORRECT),
             ShowAllPagesStep(condition = CORRECT),
             AutoRateFromAnswerStep(condition = CORRECT),
-            WaitStep(condition = CORRECT, ms = 2000),
+            WaitStep(condition = CORRECT, ms = StudyConstants.PAUSE_AFTER_CORRECT_MS),
             NextCardStep(condition = CORRECT),
             FeedbackErrorStep(condition = WRONG),
-            WaitStep(condition = WRONG, ms = 800),
+            WaitStep(condition = WRONG, ms = StudyConstants.PAUSE_BEFORE_RETRY_MS),
             // druga próba po błędzie
             ListenAndCheckStep(condition = WRONG, pageIndex = 1),
             FeedbackSuccessStep(condition = CORRECT),
             ShowAllPagesStep(condition = CORRECT),
             AutoRateFromAnswerStep(condition = CORRECT),
-            WaitStep(condition = CORRECT, ms = 2000),
+            WaitStep(condition = CORRECT, ms = StudyConstants.PAUSE_AFTER_CORRECT_MS),
             NextCardStep(condition = CORRECT),
             FeedbackErrorStep(condition = WRONG),
             ShowAllPagesStep(condition = WRONG),
             SpeakPageStep(condition = WRONG, pageIndex = 1),
             MarkFailedStep(condition = WRONG),
             AutoRateFixedStep(condition = WRONG, rating = Ratings.AGAIN),
-            WaitStep(condition = WRONG, ms = 2200),
+            WaitStep(condition = WRONG, ms = StudyConstants.PAUSE_AFTER_WRONG_MS),
             NextCardStep(condition = WRONG),
             // pominięty nasłuch / błąd mikrofonu: ocena ręczna
             ShowAllPagesStep(),

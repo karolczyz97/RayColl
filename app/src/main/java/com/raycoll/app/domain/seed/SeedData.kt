@@ -5,7 +5,6 @@ import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.domain.seed.SEED_MODES
 import java.util.UUID
 
 /**
@@ -63,14 +62,15 @@ private enum class SeedLanguage(val locale: String, val phrases: List<String>) {
     PL("pl-PL", listOf("Dzień dobry", "Dziękuję", "Proszę", "Do widzenia", "Tak"));
 
     /** Nazwy języków zapisane w TYM języku. */
-    val languageNames: Map<SeedLanguage, String>
-        get() = when (this) {
+    val languageNames: Map<SeedLanguage, String> by lazy {
+        when (this) {
             EN -> mapOf(EN to "English", ES to "Spanish", IT to "Italian", DE to "German", PL to "Polish")
             ES -> mapOf(EN to "Inglés", ES to "Español", IT to "Italiano", DE to "Alemán", PL to "Polaco")
             IT -> mapOf(EN to "Inglese", ES to "Spagnolo", IT to "Italiano", DE to "Tedesco", PL to "Polacco")
             DE -> mapOf(EN to "Englisch", ES to "Spanisch", IT to "Italienisch", DE to "Deutsch", PL to "Polnisch")
             PL -> mapOf(EN to "Angielski", ES to "Hiszpański", IT to "Włoski", DE to "Niemiecki", PL to "Polski")
         }
+    }
 
     fun deckName(foreign: SeedLanguage): String {
         val language = languageNames.getValue(foreign)

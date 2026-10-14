@@ -74,24 +74,12 @@ object CompoundExpander {
                 if (params.speakAnswer) add(SpeakPageStep(pageIndex = params.answerPage))
             }
 
-            is CompoundParams.ListenGrade -> buildList {
-                add(ListenAndCheckStep(pageIndex = params.answerPage, successThreshold = params.threshold))
-                addAll(expandBranch(params.onCorrect, StepCondition.CORRECT))
-                addAll(expandBranch(params.onWrong, StepCondition.WRONG))
-                if (params.manualFallback) {
-                    add(ShowAllPagesStep())
-                    add(ShowRatingsStep())
-                }
+            is CompoundParams.ListenGrade -> {
+                val listen = ListenAndCheckStep(pageIndex = params.answerPage, successThreshold = params.threshold)
+                listOf<ModeStep>(listen) + gradeSteps(params.onCorrect, params.onWrong, params.manualFallback)
             }
 
-            is CompoundParams.GradeAfterListen -> buildList {
-                addAll(expandBranch(params.onCorrect, StepCondition.CORRECT))
-                addAll(expandBranch(params.onWrong, StepCondition.WRONG))
-                if (params.manualFallback) {
-                    add(ShowAllPagesStep())
-                    add(ShowRatingsStep())
-                }
-            }
+            is CompoundParams.GradeAfterListen -> gradeSteps(params.onCorrect, params.onWrong, params.manualFallback)
 
             is CompoundParams.AutoPassNext -> listOf(
                 AutoRateFixedStep(rating = params.rating),
@@ -106,15 +94,26 @@ object CompoundExpander {
         }
     }
 
+    /** Gałęzie po nasłuchu; bez nich (pominięty nasłuch, błąd mikrofonu) opcjonalnie ocena ręczna. */
+    private fun gradeSteps(
+        onCorrect: CompoundBranch,
+        onWrong: CompoundBranch,
+        manualFallback: Boolean
+    ): List<ModeStep> = buildList {
+        addAll(expandBranch(onCorrect, StepCondition.CORRECT))
+        addAll(expandBranch(onWrong, StepCondition.WRONG))
+        if (manualFallback) {
+            add(ShowAllPagesStep())
+            add(ShowRatingsStep())
+        }
+    }
+
     private fun expandBranch(branch: CompoundBranch, condition: StepCondition): List<ModeStep> = buildList {
         if (branch.feedback) {
             add(
-                if (condition ==
-                    StepCondition.CORRECT
-                ) {
-                    FeedbackSuccessStep(condition = condition)
-                } else {
-                    FeedbackErrorStep(condition = condition)
+                when (condition) {
+                    StepCondition.CORRECT -> FeedbackSuccessStep(condition = condition)
+                    StepCondition.WRONG -> FeedbackErrorStep(condition = condition)
                 }
             )
         }

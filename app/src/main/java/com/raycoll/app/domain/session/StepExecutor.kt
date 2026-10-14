@@ -84,16 +84,11 @@ internal class StepExecutor(
             }
 
             is DynamicPauseStep -> {
-                val pauseMs = pageText(card, step.nextPageIndex).length *
-                    StudyConstants.DYNAMIC_PAUSE_MS_PER_CHAR * step.pauseMultiplier
-                engine.dispatch(SessionAction.PeekClear)
-                engine.runSkippable { delay(pauseMs.toLong()) }
+                val chars = pageText(card, step.nextPageIndex).length
+                pause((chars * StudyConstants.DYNAMIC_PAUSE_MS_PER_CHAR * step.pauseMultiplier).toLong())
             }
 
-            is WaitStep -> {
-                engine.dispatch(SessionAction.PeekClear)
-                engine.runSkippable { delay(step.ms) }
-            }
+            is WaitStep -> pause(step.ms)
 
             is ListenAndCheckStep -> listenAndCheck(step, card)
 
@@ -106,7 +101,10 @@ internal class StepExecutor(
                 val answered = result.status == AnswerStatus.CORRECT || result.status == AnswerStatus.INCORRECT
                 if (!state.cardReviewed && answered) {
                     engine.submitReview(
-                        result.suggestedRating ?: mapMatchToRating(result.percent ?: 0, result.threshold)
+                        result.suggestedRating ?: mapMatchToRating(
+                            result.percent ?: 0,
+                            result.threshold ?: StudyConstants.STEP_DEFAULT_THRESHOLD
+                        )
                     )
                 }
             }
@@ -123,63 +121,57 @@ internal class StepExecutor(
         }
     }
 
+    private suspend fun pause(ms: Long) {
+        engine.dispatch(SessionAction.PeekClear)
+        engine.runSkippable { delay(ms) }
+    }
+
     private fun startRevealGate(stepIndex: Int, mode: TapRevealMode) {
         val hasHiddenPages = (0 until group.activePageCount).any { it !in state.revealedPages }
         if (hasHiddenPages) engine.dispatch(SessionAction.StartTapRevealGate(stepIndex + 1, mode))
     }
 
     private suspend fun listenAndCheck(step: ListenAndCheckStep, card: Flashcard) {
+        fun answerOf(status: AnswerStatus, text: String = "", percent: Int? = null, suggestedRating: Int? = null) =
+            LastAnswerResult(status, text, percent, step.successThreshold, step.pageIndex, suggestedRating)
+
         val expected = pageText(card, step.pageIndex)
         if (expected.isBlank()) {
-            engine.dispatch(
-                SessionAction.SetLastAnswerResult(
-                    LastAnswerResult(
-                        status = AnswerStatus.SKIPPED,
-                        pageIndex = step.pageIndex,
-                        threshold = step.successThreshold
-                    )
-                )
-            )
+            engine.dispatch(SessionAction.SetLastAnswerResult(answerOf(AnswerStatus.SKIPPED)))
             return
         }
         engine.dispatch(SessionAction.StartListening(step.pageIndex))
         // czas nasłuchu skalowany długością ostatniej wypowiedzi TTS (dłuższa fraza = dłuższa odpowiedź)
-        val timeoutMs =
-            maxOf(StudyConstants.STT_SOFT_TIMEOUT_MS_BASE, lastTtsDurationMs * 3) + StudyConstants.STT_HARD_EXTRA_MS
-        var listenResult: ListenResult? = null
-        val tapped = engine.runSkippable {
-            listenResult = deps.listen(languageOf(step.pageIndex), timeoutMs) { partial ->
-                engine.dispatch(SessionAction.UpdatePartialStt(partial))
+        val timeoutMs = maxOf(
+            StudyConstants.STT_SOFT_TIMEOUT_MS_BASE,
+            lastTtsDurationMs * StudyConstants.STT_TIMEOUT_TTS_FACTOR
+        ) + StudyConstants.STT_HARD_EXTRA_MS
+        val result = engine.runSkippable {
+            try {
+                deps.listen(languageOf(step.pageIndex), timeoutMs) { partial ->
+                    engine.dispatch(SessionAction.UpdatePartialStt(partial))
+                }
+            } catch (e: CancellationException) {
+                throw e // tap przerywający nasłuch to nie błąd
+            } catch (_: Exception) {
+                ListenResult("", ListenStatus.ERROR)
             }
         }
-        val result = listenResult
         val answer = when {
             // tap podczas nasłuchu = pominięcie, bez liczenia dopasowania
-            tapped || result == null || result.status == ListenStatus.SKIPPED ->
-                LastAnswerResult(
-                    status = AnswerStatus.SKIPPED,
-                    pageIndex = step.pageIndex,
-                    threshold = step.successThreshold
-                )
+            result == null || result.status == ListenStatus.SKIPPED -> answerOf(AnswerStatus.SKIPPED)
 
             result.status == ListenStatus.ERROR -> {
                 engine.onSttFailure()
-                LastAnswerResult(
-                    status = AnswerStatus.ERROR,
-                    text = result.text,
-                    pageIndex = step.pageIndex,
-                    threshold = step.successThreshold
-                )
+                answerOf(AnswerStatus.ERROR, result.text)
             }
 
             else -> {
                 val percent = matchSpeech(result.text, expected)
-                LastAnswerResult(
+                answerOf(
                     status = if (percent >= step.successThreshold) AnswerStatus.CORRECT else AnswerStatus.INCORRECT,
                     text = result.text,
                     percent = percent,
-                    threshold = step.successThreshold,
-                    pageIndex = step.pageIndex,
                     suggestedRating = mapMatchToRating(percent, step.successThreshold)
                 )
             }

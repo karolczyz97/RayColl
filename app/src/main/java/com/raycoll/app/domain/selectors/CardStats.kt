@@ -31,8 +31,8 @@ fun computeCardStats(cards: List<Flashcard>): CardStats {
  */
 fun computeStreak(heatmap: Map<String, Int>, now: Long): Int {
     val today = LocalDates.localDate(now)
-    val start = if ((heatmap[LocalDates.dayKey(now)] ?: 0) > 0) today else today.minusDays(1)
+    val start = if ((heatmap[LocalDates.dayKey(today)] ?: 0) > 0) today else today.minusDays(1)
     return (0 until StudyConstants.STREAK_MAX_DAYS)
-        .takeWhile { offset -> (heatmap[start.minusDays(offset.toLong()).toString()] ?: 0) > 0 }
+        .takeWhile { offset -> (heatmap[LocalDates.dayKey(start.minusDays(offset.toLong()))] ?: 0) > 0 }
         .count()
 }

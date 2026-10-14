@@ -3,6 +3,7 @@ package com.raycoll.app.domain.srs
 import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.SrsConstants
 import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.SrsStates
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
@@ -18,19 +19,19 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     val newS: Double
     val newState: Int
 
-    if (current.state == 0 || current.stability <= 0) {
+    if (current.state == SrsStates.NEW || current.stability <= 0) {
         newD = initDifficulty(w, rating)
         newS = initStability(w, rating)
-        newState = if (rating == Ratings.AGAIN) 1 else 2
+        newState = if (rating == Ratings.AGAIN) SrsStates.LEARNING else SrsStates.REVIEW
     } else {
         newD = nextDifficulty(w, current.difficulty, rating)
         val r = retrievability(elapsedDays, current.stability)
         if (rating == Ratings.AGAIN) {
             newS = minOf(current.stability, nextForgetStability(w, current.difficulty, current.stability, r))
-            newState = 3
+            newState = SrsStates.RELEARNING
         } else {
             newS = nextRecallStability(w, current.difficulty, current.stability, r, rating)
-            newState = 2
+            newState = SrsStates.REVIEW
         }
     }
 
@@ -48,13 +49,19 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     )
 }
 
-private fun initDifficulty(w: DoubleArray, rating: Int): Double = clamp(w[4] - (rating - 3) * w[5], 1.0, 10.0)
+// rating - 3: odchylenie od oceny "dobrze" (stała formuły FSRS)
+private fun initDifficulty(w: List<Double>, rating: Int): Double =
+    clamp(w[4] - (rating - 3) * w[5], SrsConstants.DIFFICULTY_MIN, SrsConstants.DIFFICULTY_MAX)
 
-private fun initStability(w: DoubleArray, rating: Int): Double = max(w[rating - 1], 0.1)
+private fun initStability(w: List<Double>, rating: Int): Double = max(w[rating - 1], SrsConstants.MIN_INTERVAL_DAYS)
 
-private fun nextDifficulty(w: DoubleArray, d: Double, rating: Int): Double {
+private fun nextDifficulty(w: List<Double>, d: Double, rating: Int): Double {
     val newD = d - w[6] * (rating - 3)
-    return clamp(w[7] * initDifficulty(w, 3) + (1 - w[7]) * newD, 1.0, 10.0)
+    return clamp(
+        w[7] * initDifficulty(w, 3) + (1 - w[7]) * newD,
+        SrsConstants.DIFFICULTY_MIN,
+        SrsConstants.DIFFICULTY_MAX
+    )
 }
 
 private fun retrievability(elapsedDays: Double, stability: Double): Double {
@@ -62,7 +69,8 @@ private fun retrievability(elapsedDays: Double, stability: Double): Double {
     return (1 + SrsConstants.FACTOR * elapsedDays / stability).pow(SrsConstants.DECAY)
 }
 
-private fun nextRecallStability(w: DoubleArray, d: Double, s: Double, r: Double, rating: Int): Double {
+// 11 - d: stała formuły FSRS (górna granica trudności + 1)
+private fun nextRecallStability(w: List<Double>, d: Double, s: Double, r: Double, rating: Int): Double {
     val hardPenalty = if (rating == Ratings.HARD) w[15] else 1.0
     val easyBonus = if (rating == Ratings.EASY) w[16] else 1.0
     return s * (
@@ -71,7 +79,7 @@ private fun nextRecallStability(w: DoubleArray, d: Double, s: Double, r: Double,
         )
 }
 
-private fun nextForgetStability(w: DoubleArray, d: Double, s: Double, r: Double): Double =
+private fun nextForgetStability(w: List<Double>, d: Double, s: Double, r: Double): Double =
     w[11] * d.pow(-w[12]) * ((s + 1).pow(w[13]) - 1) * exp((1 - r) * w[14])
 
 private fun clamp(value: Double, min: Double, max: Double): Double =

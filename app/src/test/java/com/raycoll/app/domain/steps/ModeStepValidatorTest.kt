@@ -10,7 +10,6 @@ import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.StepCondition
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitForTapStep
-import com.raycoll.app.domain.model.pageIndex
 import com.raycoll.app.domain.seed.SEED_MODES
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -248,4 +248,34 @@ class BackupValidatorTest {
         val json = """{ "groups": [], "studyModes": [], "activityHeatmap": { "2026-05-26": -2 } }"""
         assertThrows(BackupValidationException::class.java) { validateBackupJson(json) }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `compound pause with type instead of kind is rejected`() {
+        val mode = StudyMode(
+            id = "m",
+            name = "M",
+            steps = listOf(CompoundStep(params = CompoundParams.ListenGrade())),
+            updatedAt = 1L
+        )
+        val plain = FirestoreSchema.modeToMap(mode).toMutableMap()
+        val step = ((plain["steps"] as List<*>)[0] as Map<String, Any?>).toMutableMap()
+        val params = (step["params"] as Map<String, Any?>).toMutableMap()
+        val onCorrect = (params["onCorrect"] as Map<String, Any?>).toMutableMap()
+        val pause = (onCorrect["pause"] as Map<String, Any?>).toMutableMap()
+        pause["type"] = pause.remove("kind")
+        onCorrect["pause"] = pause
+        params["onCorrect"] = onCorrect
+        step["params"] = params
+        plain["steps"] = listOf(step)
+        assertThrows(BackupValidationException::class.java) {
+            validateBackupData(
+                mapOf(
+                    "groups" to emptyList<Any>(),
+                    "studyModes" to listOf(plain),
+                    "activityHeatmap" to emptyMap<String, Int>()
+                )
+            )
+        }
+    }
 }

@@ -2,14 +2,16 @@ package com.raycoll.app.domain.selectors
 
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.SrsStates
 import com.raycoll.app.domain.model.StudyFilter
+import com.raycoll.app.domain.model.isLive
 import kotlin.random.Random
 
 /** Snapshoty kopii/chmury zawierają tombstony, nawet gdy zapytania ekranów już je odfiltrowały. */
-fun List<Flashcard>.live(): List<Flashcard> = filter { it.deletedAt == null }
+fun List<Flashcard>.live(): List<Flashcard> = filter { it.isLive }
 
 fun Flashcard.matches(filter: StudyFilter, now: Long): Boolean {
-    val isNew = srsState.state == 0
+    val isNew = srsState.state == SrsStates.NEW
     val isDue = srsState.nextReviewTimestamp <= now
     return when (filter) {
         StudyFilter.ALL -> true
@@ -39,4 +41,4 @@ fun getDueCards(
 ): List<Flashcard> = orderCards(cards.live().filter { it.matches(filter, now) }, order, random)
 
 fun countDueCards(cards: List<Flashcard>, filter: StudyFilter, now: Long): Int =
-    cards.count { it.deletedAt == null && it.matches(filter, now) }
+    cards.count { it.isLive && it.matches(filter, now) }

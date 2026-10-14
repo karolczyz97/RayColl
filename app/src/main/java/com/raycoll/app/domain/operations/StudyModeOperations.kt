@@ -9,9 +9,9 @@ import com.raycoll.app.domain.seed.SEED_MODES
 import com.raycoll.app.domain.seed.seedModeFor
 
 fun newStudyMode(name: String, steps: List<ModeStep>, now: Long): StudyMode =
-    normalizeStudyMode(StudyMode(id = Ids.newId(), name = name, steps = steps, updatedAt = now))
+    normalizeStudyMode(StudyMode(id = Ids.newId(), name = name.trim(), steps = steps, updatedAt = now))
 
-fun StudyMode.edited(now: Long): StudyMode = normalizeStudyMode(copy(updatedAt = now))
+fun StudyMode.edited(now: Long): StudyMode = normalizeStudyMode(copy(name = name.trim(), updatedAt = now))
 
 /**
  * Tryb, którym talia naprawdę się uczy: przypisany, a gdy go już nie ma (np. usunięty
@@ -21,7 +21,7 @@ fun StudyMode.edited(now: Long): StudyMode = normalizeStudyMode(copy(updatedAt =
 fun resolveStudyMode(liveModes: List<StudyMode>, modeId: String): StudyMode = liveModes.firstOrNull { it.id == modeId }
     ?: liveModes.firstOrNull { it.id == DEFAULT_MODE_ID }
     ?: liveModes.firstOrNull()
-    ?: SEED_MODES.first()
+    ?: SEED_MODES.first { it.id == DEFAULT_MODE_ID }
 
 /** Wbudowany tryb zmieniony względem wersji fabrycznej (nazwa albo kroki). */
 fun StudyMode.isModifiedBuiltIn(): Boolean {

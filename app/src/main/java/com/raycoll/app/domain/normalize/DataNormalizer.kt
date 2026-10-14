@@ -23,6 +23,7 @@ import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SpeakAllPagesStep
 import com.raycoll.app.domain.model.SpeakPageStep
+import com.raycoll.app.domain.model.SrsStates
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.StudyMode
@@ -34,8 +35,6 @@ import com.raycoll.app.domain.seed.isBuiltInModeSourceId
 
 // Normalizacja danych z zewnątrz (backup, chmura, merge): przycina wartości do
 // dozwolonych zakresów, żeby uszkodzone dane nie dotarły do sesji ani UI.
-
-private val VALID_SRS_STATES = 0..3
 
 /** Dopełnia nazwy i języki stron do [count] ("Page N", język domyślny). */
 fun padPageMetadata(
@@ -54,8 +53,13 @@ fun getStoredPageCount(group: FlashcardGroup): Int {
     return minOf(rawStored, PageLimits.MAX_STORED_PAGE_COUNT)
 }
 
-private fun normalizeCard(card: Flashcard): Flashcard =
-    if (card.srsState.state in VALID_SRS_STATES) card else card.copy(srsState = card.srsState.copy(state = 0))
+private fun normalizeCard(card: Flashcard): Flashcard = if (card.srsState.state in
+    SrsStates.VALID
+) {
+    card
+} else {
+    card.copy(srsState = card.srsState.copy(state = SrsStates.NEW))
+}
 
 fun normalizeGroup(group: FlashcardGroup): FlashcardGroup {
     val storedPageCount = getStoredPageCount(group)
@@ -63,8 +67,8 @@ fun normalizeGroup(group: FlashcardGroup): FlashcardGroup {
     val maxVisible = minOf(PageLimits.MAX_VISIBLE_PAGE_COUNT, storedPageCount)
     return group.copy(
         activePageCount = PageLimits.clampActivePageCount(group.activePageCount, maxVisible),
-        pageNames = pageNames,
-        pageLanguages = pageLanguages,
+        pageNames = pageNames.take(storedPageCount),
+        pageLanguages = pageLanguages.take(storedPageCount),
         cards = group.cards.map(::normalizeCard)
     )
 }
@@ -73,7 +77,7 @@ private fun Int.asPageIndex(): Int = coerceAtLeast(0)
 
 private fun Double.asMultiplier(): Double = coerceIn(0.0, StudyConstants.MAX_PAUSE_MULTIPLIER)
 
-private fun Int.asThreshold(): Int = coerceIn(0, 100)
+private fun Int.asThreshold(): Int = coerceIn(0, StudyConstants.MAX_THRESHOLD_PERCENT)
 
 private fun Int.asRating(): Int = coerceIn(Ratings.MIN, Ratings.MAX)
 

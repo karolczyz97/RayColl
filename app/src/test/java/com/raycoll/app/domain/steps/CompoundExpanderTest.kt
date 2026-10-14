@@ -20,7 +20,6 @@ import com.raycoll.app.domain.model.StepCondition
 import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.domain.model.pageIndex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

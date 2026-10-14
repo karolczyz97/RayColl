@@ -48,7 +48,7 @@ data class SessionState(
 )
 
 sealed interface SessionAction {
-    data object StartSession : SessionAction
+    data class StartSession(val cards: List<Flashcard>) : SessionAction
     data class StartSpeaking(val pageIndex: Int) : SessionAction
     data object EndSpeaking : SessionAction
     data class StartListening(val pageIndex: Int) : SessionAction
@@ -65,7 +65,6 @@ sealed interface SessionAction {
     data class StartTapRevealGate(val continueStepIndex: Int, val revealMode: TapRevealMode) : SessionAction
     data object CompleteInteractionGate : SessionAction
     data object ConsumePendingStepIndex : SessionAction
-    data class SetCards(val cards: List<Flashcard>) : SessionAction
     data class AddFailedCard(val cardId: String) : SessionAction
     data class RemoveFailedCard(val cardId: String) : SessionAction
     data object SetCardReviewed : SessionAction

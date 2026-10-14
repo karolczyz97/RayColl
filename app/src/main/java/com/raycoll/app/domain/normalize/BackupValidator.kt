@@ -1,5 +1,6 @@
 package com.raycoll.app.domain.normalize
 
+import com.raycoll.app.domain.model.StudyConstants
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -71,7 +72,7 @@ private fun assertOptionalPage(value: Any?, message: String) {
 private fun assertCompoundPause(value: Any?, modeId: String, index: Int) {
     if (value == null) return
     if (value !is Map<*, *>) throw BackupValidationException(stepMessage(modeId, index, "has invalid compound pause"))
-    val kind = value["kind"] ?: value["type"]
+    val kind = value["kind"]
     when (kind) {
         "fixed" -> assertNonNegativeNumber(value["ms"], stepMessage(modeId, index, "has invalid compound pause"))
 
@@ -136,7 +137,7 @@ private fun assertCompoundParams(params: Any?, modeId: String, index: Int) {
         "listen_grade" -> {
             assertNonNegativeNumber(params["answerPage"], stepMessage(modeId, index, "has invalid pageIndex"))
             assertNonNegativeNumber(params["threshold"], stepMessage(modeId, index, "has invalid successThreshold"))
-            if ((params["threshold"] as Number).toInt() > 100) {
+            if ((params["threshold"] as Number).toInt() > StudyConstants.MAX_THRESHOLD_PERCENT) {
                 throw BackupValidationException(stepMessage(modeId, index, "has invalid successThreshold"))
             }
             assertCompoundBranch(params["onCorrect"], modeId, index)
@@ -183,9 +184,7 @@ fun assertStudyModeStep(step: Any?, modeId: String, index: Int) {
                 step["successThreshold"],
                 stepMessage(modeId, index, "has invalid successThreshold")
             )
-            if ((step["successThreshold"] as Number).toInt() >
-                100
-            ) {
+            if ((step["successThreshold"] as Number).toInt() > StudyConstants.MAX_THRESHOLD_PERCENT) {
                 throw BackupValidationException(stepMessage(modeId, index, "has invalid successThreshold"))
             }
         }

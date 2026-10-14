@@ -2,6 +2,7 @@ package com.raycoll.app.domain.operations
 
 import com.raycoll.app.core.Ids
 import com.raycoll.app.domain.model.ArchiveConstants
+import com.raycoll.app.domain.model.DEFAULT_PAGE_LANGUAGE
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.PageLimits
@@ -9,7 +10,7 @@ import com.raycoll.app.domain.normalize.padPageMetadata
 
 fun newGroup(
     name: String,
-    languages: List<String>,
+    pageLanguages: List<String>,
     pageNames: List<String>,
     cards: List<Flashcard>,
     now: Long
@@ -17,7 +18,7 @@ fun newGroup(
     id = Ids.newId(),
     name = name.trim(),
     cards = cards,
-    pageLanguages = languages,
+    pageLanguages = pageLanguages,
     pageNames = pageNames,
     activePageCount = PageLimits.clampActivePageCount(pageNames.size, PageLimits.MAX_VISIBLE_PAGE_COUNT),
     updatedAt = now
@@ -32,10 +33,12 @@ fun FlashcardGroup.withActivePageCount(count: Int, now: Long): FlashcardGroup {
 
 /** Zamienia miejscami dwie strony: nazwę, język i treść w każdej karcie. */
 fun FlashcardGroup.withPagesSwapped(from: Int, to: Int, now: Long): FlashcardGroup {
-    if (from !in pageNames.indices || to !in pageNames.indices) return this
+    if (from == to || from !in pageNames.indices || to !in pageNames.indices) return this
+    val languages =
+        pageLanguages + List((pageNames.size - pageLanguages.size).coerceAtLeast(0)) { DEFAULT_PAGE_LANGUAGE }
     return copy(
         pageNames = pageNames.swapped(from, to),
-        pageLanguages = pageLanguages.swapped(from, to),
+        pageLanguages = languages.swapped(from, to),
         cards = cards.map { card ->
             val pages = card.pages + List((maxOf(from, to) + 1 - card.pages.size).coerceAtLeast(0)) { "" }
             card.copy(pages = pages.swapped(from, to))

@@ -17,7 +17,8 @@ class FakeSessionDeps(
     var listenHangs: Boolean = false,
     var transcript: String = "",
     var listenStatus: ListenStatus = ListenStatus.COMPLETED,
-    private val reviewWrites: ReviewWriteQueue? = null
+    private val reviewWrites: ReviewWriteQueue? = null,
+    var listenThrows: Boolean = false
 ) : SessionDeps {
     val reviews = mutableListOf<ReviewRecord>()
     val spoken = mutableListOf<String>()
@@ -27,6 +28,7 @@ class FakeSessionDeps(
     }
     override suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult {
         if (listenHangs) awaitCancellation()
+        if (listenThrows) throw IllegalStateException("stt crashed")
         return ListenResult(transcript, listenStatus)
     }
     override fun feedbackSuccess() {}

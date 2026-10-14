@@ -29,4 +29,16 @@ class LocalDatesTest {
         assertEquals('-', key[4])
         assertEquals('-', key[7])
     }
+
+    @Test
+    fun `dayKey equals the ISO local date in any zone`() {
+        val instant = 1705276800000L
+        for (zone in listOf(ZoneId.of("UTC"), ZoneId.of("Pacific/Auckland"), ZoneId.of("America/Los_Angeles"))) {
+            assertEquals(LocalDates.localDate(instant, zone).toString(), LocalDates.dayKey(instant, zone))
+        }
+        assertEquals("2024-01-15", LocalDates.dayKey(LocalDates.localDate(instant, ZoneId.of("UTC"))))
+        // Auckland jest już następnego dnia
+        assertEquals("2024-01-15", LocalDates.dayKey(instant, ZoneId.of("Pacific/Auckland")))
+        assertEquals("2024-01-14", LocalDates.dayKey(instant, ZoneId.of("America/Los_Angeles")))
+    }
 }

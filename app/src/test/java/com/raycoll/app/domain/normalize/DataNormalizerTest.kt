@@ -160,4 +160,15 @@ class DataNormalizerTest {
         assertEquals(2, result.size)
         assertEquals(5, result["2024-01-01"])
     }
+
+    @Test
+    fun `normalizeGroup truncates oversized page metadata to the stored page count`() {
+        val group = makeGroup(cards = emptyList()).copy(
+            pageNames = (1..25).map { "N$it" },
+            pageLanguages = (1..25).map { "en-US" }
+        )
+        val result = normalizeGroup(group)
+        assertEquals(20, result.pageNames.size)
+        assertEquals(20, result.pageLanguages.size)
+    }
 }

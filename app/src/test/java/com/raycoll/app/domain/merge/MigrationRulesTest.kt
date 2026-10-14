@@ -1,6 +1,8 @@
 package com.raycoll.app.domain.merge
 
+import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.domain.seed.SEED_MODES
@@ -25,7 +27,7 @@ class MigrationRulesTest {
         assertFalse(getGuestHasData(emptyList(), emptyMap(), emptyList()))
 
         // żywa talia → dane
-        val deck = FlashcardGroup(id = "g1", name = "Deck", cards = emptyList())
+        val deck = FlashcardGroup(id = "g1", name = "Deck", cards = emptyList(), updatedAt = 1L)
         assertTrue(getGuestHasData(listOf(deck), emptyMap(), emptyList()))
 
         // usunięta talia → brak danych
@@ -63,5 +65,31 @@ class MigrationRulesTest {
         assertTrue(isUserAuthoredMode(editedSteps))
         val editedName = builtInValid.copy(name = "Edited Classic")
         assertTrue(isUserAuthoredMode(editedName))
+    }
+
+    private fun seedShapedDeck() = FlashcardGroup(
+        id = "seed",
+        name = "English - basics",
+        cards = listOf(
+            Flashcard(id = "c1", pages = listOf("Yes", "Tak"), srsState = SrsState()),
+            Flashcard(id = "c2", pages = listOf("Please", "Prosze"), srsState = SrsState())
+        )
+    )
+
+    @Test
+    fun `untouched seed decks do not count as guest data`() {
+        assertFalse(getGuestHasData(listOf(seedShapedDeck()), emptyMap(), SEED_MODES))
+    }
+
+    @Test
+    fun `edited or reviewed seed decks count as guest data`() {
+        val seed = seedShapedDeck()
+        assertTrue(getGuestHasData(listOf(seed.copy(updatedAt = 5L)), emptyMap(), emptyList()))
+
+        val reviewed = seed.copy(cards = listOf(seed.cards[0].copy(srsUpdatedAt = 9L), seed.cards[1]))
+        assertTrue(getGuestHasData(listOf(reviewed), emptyMap(), emptyList()))
+
+        val edited = seed.copy(cards = listOf(seed.cards[0].copy(contentUpdatedAt = 9L), seed.cards[1]))
+        assertTrue(getGuestHasData(listOf(edited), emptyMap(), emptyList()))
     }
 }
