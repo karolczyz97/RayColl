@@ -13,9 +13,9 @@
     <string name="btn_back">Atrás</string>
     <string name="auth_local">Modo local</string>
     <string name="auth_migration_title">Datos locales encontrados</string>
-    <string name="auth_migration_desc">Tienes mazos locales de una sesión anterior. ¿Quieres transferirlos a tu cuenta o empezar desde cero?</string>
+    <string name="auth_migration_desc">Tienes mazos locales de una sesión anterior. Transfiérelos a tu cuenta o empieza la cuenta con los mazos de ejemplo. Tus mazos locales se quedan en este dispositivo en ambos casos.</string>
     <string name="auth_migration_migrate_btn">Transferir a la cuenta</string>
-    <string name="auth_migration_fresh_btn">Empezar desde cero</string>
+    <string name="auth_migration_fresh_btn">Empezar con mazos de ejemplo</string>
     <string name="auth_error_play_services">Los servicios de Google Play no están disponibles o están desactualizados. Actualízalos e inténtalo de nuevo.</string>
     <string name="auth_error_no_token">No se recibió token de inicio de sesión. Inténtalo de nuevo.</string>
     <string name="auth_error_invalid_token">Token de inicio de sesión no válido. Inténtalo de nuevo.</string>
@@ -33,7 +33,7 @@
     </plurals>
     <string name="btn_archive">Archivar</string>
     <string name="btn_restore">Restaurar</string>
-    <string name="dashboard_no_groups">No hay mazos. Toca + para añadir uno.</string>
+    <string name="dashboard_no_groups">Aún no hay mazos. Importa tarjetas para empezar.</string>
     <string name="dashboard_name_label">Nombre del mazo</string>
     <string name="dashboard_due_count">Pendiente: %1$d</string>
     <string name="study_finished_desc">Todas las tarjetas programadas para hoy han sido repasadas.</string>
@@ -53,7 +53,7 @@
     <string name="study_review_save_failed">No se pudieron guardar algunas valoraciones.</string>
     <string name="study_error_tts">Error al reproducir el audio.</string>
     <string name="study_exit_confirm_title">¿Salir del modo estudio?</string>
-    <string name="study_exit_confirm_message">Estás en modo estudio. ¿Seguro que quieres salir?</string>
+    <string name="study_exit_confirm_message">Tus valoraciones hasta ahora están guardadas. ¿Salir de la sesión de estudio?</string>
     <string name="study_exit_confirm_btn">Salir</string>
     <string name="study_session_ended_title">Sesión interrumpida</string>
     <string name="study_session_ended_desc">Saliste antes de terminar. Tu progreso está guardado.</string>
@@ -279,7 +279,7 @@
     <string name="study_answer_correct_percent">¡Correcto! • %1$d%%</string>
     <string name="study_answer_incorrect_percent">Incorrecto • %1$d%%</string>
     <string name="study_answer_incorrect_threshold">Incorrecto • %1$d%% / %2$d%%</string>
-    <string name="study_suggested_rating">%1$s (+%2$d)</string>
+    <string name="study_suggested_rating">Sugerencia: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Escuchando</string>
     <string name="study_badge_speaking">Leyendo</string>
@@ -294,5 +294,9 @@
     <string name="dashboard_browse">Explorar</string>
     <string name="sync_now_success">Sincronizado</string>
     <string name="sync_now_failed">No se pudo sincronizar. Los cambios están guardados en el dispositivo y se enviarán más tarde.</string>
+    <!-- ui1 -->
+    <string name="study_a11y_tap_card">Continuar</string>
+    <string name="browse_empty_deck">Este mazo aún no tiene tarjetas.</string>
+    <string name="a11y_deck_menu_named">Opciones de %1$s</string>
 </resources>
 

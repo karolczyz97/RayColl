@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -51,7 +52,8 @@ fun <E> CollectEvents(events: Flow<E>, onEvent: suspend (E) -> Unit) {
     val handler = rememberUpdatedState(onEvent)
     LaunchedEffect(events, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            events.collect { handler.value(it) }
+            // własna korutyna na zdarzenie: otwarty komunikat (showSnackbar czeka na zamknięcie) nie wstrzymuje kolejnych
+            events.collect { event -> launch(start = CoroutineStart.UNDISPATCHED) { handler.value(event) } }
         }
     }
 }

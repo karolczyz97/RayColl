@@ -13,9 +13,9 @@
     <string name="btn_back">Zurück</string>
     <string name="auth_local">Lokaler Modus</string>
     <string name="auth_migration_title">Lokale Daten gefunden</string>
-    <string name="auth_migration_desc">Du hast lokale Decks aus einer früheren Sitzung. Möchtest du sie auf dein Konto übertragen oder neu beginnen?</string>
+    <string name="auth_migration_desc">Du hast lokale Decks aus einer früheren Sitzung. Übertrage sie auf dein Konto oder starte das Konto mit den Beispiel-Decks. Deine lokalen Decks bleiben in beiden Fällen auf diesem Gerät.</string>
     <string name="auth_migration_migrate_btn">Auf Konto übertragen</string>
-    <string name="auth_migration_fresh_btn">Neu beginnen</string>
+    <string name="auth_migration_fresh_btn">Mit Beispiel-Decks starten</string>
     <string name="auth_error_play_services">Google Play-Dienste sind nicht verfügbar oder veraltet. Bitte aktualisieren und erneut versuchen.</string>
     <string name="auth_error_no_token">Kein Anmeldetoken erhalten. Bitte erneut versuchen.</string>
     <string name="auth_error_invalid_token">Ungültiges Anmeldetoken. Bitte erneut versuchen.</string>
@@ -32,7 +32,7 @@
     </plurals>
     <string name="btn_archive">Archivieren</string>
     <string name="btn_restore">Wiederherstellen</string>
-    <string name="dashboard_no_groups">Keine Decks gefunden. Tippe auf +, um eines hinzuzufügen.</string>
+    <string name="dashboard_no_groups">Noch keine Decks. Importiere Karteikarten, um zu starten.</string>
     <string name="dashboard_name_label">Deckname</string>
     <string name="dashboard_due_count">Fällig: %1$d</string>
     <string name="study_finished_desc">Alle für heute geplanten Karten wurden überprüft.</string>
@@ -53,7 +53,7 @@
     <string name="study_review_save_failed">Einige Bewertungen konnten nicht gespeichert werden.</string>
     <string name="study_error_tts">Audiowiedergabe fehlgeschlagen.</string>
     <string name="study_exit_confirm_title">Lernmodus verlassen?</string>
-    <string name="study_exit_confirm_message">Du bist im Lernmodus. Möchtest du wirklich gehen?</string>
+    <string name="study_exit_confirm_message">Deine bisherigen Bewertungen sind gespeichert. Lernsitzung verlassen?</string>
     <string name="study_exit_confirm_btn">Verlassen</string>
     <string name="study_session_ended_title">Sitzung vorzeitig beendet</string>
     <string name="study_session_ended_desc">Du hast vor dem Ende beendet. Dein Fortschritt ist gespeichert.</string>
@@ -274,7 +274,7 @@
     <string name="study_answer_correct_percent">Richtig! • %1$d%%</string>
     <string name="study_answer_incorrect_percent">Falsch • %1$d%%</string>
     <string name="study_answer_incorrect_threshold">Falsch • %1$d%% / %2$d%%</string>
-    <string name="study_suggested_rating">%1$s (+%2$d)</string>
+    <string name="study_suggested_rating">Vorschlag: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Ich höre zu</string>
     <string name="study_badge_speaking">Ich spreche</string>
@@ -289,5 +289,9 @@
     <string name="dashboard_browse">Durchsuchen</string>
     <string name="sync_now_success">Synchronisiert</string>
     <string name="sync_now_failed">Synchronisierung fehlgeschlagen. Änderungen sind auf dem Gerät gespeichert und werden später gesendet.</string>
+    <!-- ui1 -->
+    <string name="study_a11y_tap_card">Weiter</string>
+    <string name="browse_empty_deck">Dieses Deck hat noch keine Karten.</string>
+    <string name="a11y_deck_menu_named">Optionen für %1$s</string>
 </resources>
 

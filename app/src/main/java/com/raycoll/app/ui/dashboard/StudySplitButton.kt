@@ -5,20 +5,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -32,6 +33,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,26 +52,33 @@ fun StudySplitButton(
     onStudy: () -> Unit,
     onSelectMode: (modeId: String) -> Unit,
     onManageModes: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hasDue: Boolean = true
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    val colors = MaterialTheme.colorScheme
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        // bez kart do powtórki przycisk nie wyróżnia się jako główne działanie (nadal działa — ekran nauki wyjaśni dlaczego pusto)
+        color = if (hasDue) colors.primary else colors.secondaryContainer,
+        contentColor = if (hasDue) colors.onPrimary else colors.onSecondaryContainer,
         modifier = modifier
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight()
+                    .defaultMinSize(minHeight = MinTouchTarget)
                     .clickable(role = Role.Button, onClick = onStudy)
                     .padding(horizontal = Spacing.s),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
                 Text(
                     stringResource(R.string.route_study),
                     style = MaterialTheme.typography.labelLarge,
@@ -81,16 +92,14 @@ fun StudySplitButton(
                 Modifier
                     .height(20.dp)
                     .width(1.dp)
-                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.28f))
+                    .background(LocalContentColor.current.copy(alpha = 0.28f))
             )
             Box(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .widthIn(min = 40.dp)
+                    .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
                     .clickable(
                         enabled = modes.isNotEmpty(),
                         role = Role.Button,
-                        onClickLabel = stringResource(R.string.study_modes_title),
                         onClick = { menuExpanded = true }
                     ),
                 contentAlignment = Alignment.Center
@@ -123,6 +132,10 @@ private fun ModeMenu(
             DropdownMenuItem(
                 text = { Text(mode.displayName()) },
                 leadingIcon = { RadioButton(selected = mode.id == activeModeId, onClick = null) },
+                modifier = Modifier.semantics {
+                    selected = mode.id == activeModeId
+                    role = Role.RadioButton
+                },
                 onClick = {
                     onDismiss()
                     onSelectMode(mode.id)

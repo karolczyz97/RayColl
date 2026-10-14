@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import com.raycoll.app.R
 import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.ui.theme.Spacing
@@ -34,7 +37,9 @@ fun SyncStatusBanner(status: SyncStatus, onRetry: () -> Unit, modifier: Modifier
         shape = MaterialTheme.shapes.medium,
         color = if (isError) colors.errorContainer else colors.primaryContainer,
         contentColor = contentColor,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { liveRegion = LiveRegionMode.Polite }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m),

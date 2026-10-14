@@ -22,6 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Ratings
@@ -38,7 +42,9 @@ fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit)
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onTap)
+            .clickable(role = Role.Button, onClick = onTap)
+            // wynik czytany na głos po zakończeniu; w trakcie nasłuchu tekst zmienia się kilka razy na sekundę (i mikrofon złapałby głos TalkBacka)
+            .semantics { if (!listening) liveRegion = LiveRegionMode.Polite }
     ) {
         Column(
             modifier = Modifier.padding(Spacing.m),
@@ -89,7 +95,7 @@ private fun CorrectResult(answer: LastAnswerResult) {
         title =
             answer.percent?.let { stringResource(R.string.study_answer_correct_percent, it) }
                 ?: stringResource(R.string.study_answer_correct),
-        badge = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(rating)), rating),
+        badge = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(rating))),
         container = srs.masteredBg,
         content = srs.masteredFg
     )
@@ -113,11 +119,7 @@ private fun IncorrectResult(answer: LastAnswerResult) {
 
             else -> stringResource(R.string.study_answer_incorrect)
         },
-        badge = stringResource(
-            R.string.study_suggested_rating,
-            stringResource(ratingLabel(Ratings.AGAIN)),
-            Ratings.AGAIN
-        ),
+        badge = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(Ratings.AGAIN))),
         container = colors.errorContainer,
         content = colors.onErrorContainer
     )

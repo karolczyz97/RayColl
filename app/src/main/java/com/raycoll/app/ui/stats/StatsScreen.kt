@@ -3,6 +3,7 @@ package com.raycoll.app.ui.stats
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,7 +68,10 @@ fun StatsScreen(onBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel())
                     }
                 }
                 items(state.decks, key = { it.id }) { deck ->
-                    SectionCard(deck.name) { CardStatsBar(deck.stats) }
+                    SectionCard(deck.name) {
+                        CardStatsBar(deck.stats)
+                        SrsDistribution(deck.stats)
+                    }
                 }
             }
         }
@@ -127,7 +131,12 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun SrsDistribution(stats: CardStats) {
     val srs = LocalSrsColors.current
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    // zawijane: przy dużej czcionce lub długich nazwach (DE) cztery kafelki nie nachodzą na siebie
+    FlowRow(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s)
+    ) {
         SrsStatItem(stringResource(R.string.srs_badge_new), stats.newCount, srs.newFg, srs.newBg)
         SrsStatItem(stringResource(R.string.srs_badge_learning), stats.learning, srs.learningFg, srs.learningBg)
         SrsStatItem(stringResource(R.string.srs_badge_review), stats.review, srs.reviewFg, srs.reviewBg)

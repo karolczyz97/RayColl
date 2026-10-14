@@ -1,8 +1,13 @@
 package com.raycoll.app.ui.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +29,7 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -62,7 +68,11 @@ import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.navigation.sharedDeckCard
 import com.raycoll.app.ui.navigation.sharedDeckTitle
+import com.raycoll.app.ui.theme.RayCollMotion
 import com.raycoll.app.ui.theme.Spacing
+
+/** Minimalny rozmiar celu dotyku (Material). */
+internal val MinTouchTarget = 48.dp
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -99,7 +109,11 @@ fun DashboardScreen(
             }
         },
         floatingActionButton = {
-            if (uiState is DashboardUiState.Ready) {
+            AnimatedVisibility(
+                visible = uiState is DashboardUiState.Ready,
+                enter = scaleIn(RayCollMotion.spatial()) + fadeIn(RayCollMotion.effects()),
+                exit = scaleOut(RayCollMotion.spatial()) + fadeOut(RayCollMotion.effects())
+            ) {
                 FloatingActionButton(
                     onClick = onImport,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -198,7 +212,7 @@ private fun DeckCard(
                     )
                     DeckSubtitle(deck)
                 }
-                DeckMenu(onSettings = onSettings, onArchive = onArchive)
+                DeckMenu(deckName = deck.name, onSettings = onSettings, onArchive = onArchive)
             }
             CardStatsBar(deck.stats, Modifier.padding(vertical = Spacing.m))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -206,13 +220,17 @@ private fun DeckCard(
                     onClick = onBrowse,
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp),
+                        .heightIn(min = MinTouchTarget),
                     shape = MaterialTheme.shapes.small
                 ) {
-                    Icon(Icons.Filled.Style, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Filled.Style,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
                     Text(
                         stringResource(R.string.dashboard_browse),
-                        modifier = Modifier.padding(start = Spacing.s),
+                        modifier = Modifier.padding(start = ButtonDefaults.IconSpacing),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -220,12 +238,13 @@ private fun DeckCard(
                 StudySplitButton(
                     modes = modes,
                     activeModeId = deck.activeMode.id,
+                    hasDue = deck.dueCount > 0,
                     onStudy = onStudy,
                     onSelectMode = onSelectMode,
                     onManageModes = onManageModes,
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .heightIn(min = MinTouchTarget)
                 )
             }
         }
@@ -278,11 +297,11 @@ private fun DeckSubtitle(deck: DeckSummary) {
 }
 
 @Composable
-private fun DeckMenu(onSettings: () -> Unit, onArchive: () -> Unit) {
+private fun DeckMenu(deckName: String, onSettings: () -> Unit, onArchive: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.a11y_deck_menu))
+            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.a11y_deck_menu_named, deckName))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(

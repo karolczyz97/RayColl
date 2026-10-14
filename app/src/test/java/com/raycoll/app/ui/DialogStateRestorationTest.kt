@@ -49,7 +49,7 @@ class DialogStateRestorationTest {
         val vm = BrowseViewModel(routeArgs("deckId" to deckId), repos.deckRepository)
         compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
-        compose.onNodeWithContentDescription("Add").performClick()
+        compose.onNodeWithContentDescription("Add card").performClick()
         field("Front").performTextInput("new question")
         field("Back").performTextInput("new answer")
         repos.db.openHelper.writableDatabase.execSQL(
@@ -64,8 +64,8 @@ class DialogStateRestorationTest {
         compose.onNodeWithText("Save").assertIsEnabled()
         repos.db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_new_card")
         compose.onNodeWithText("Save").performClick()
-        waitForText("new question")
-        assertEquals(3, cards().size)
+        compose.waitUntil(5_000) { cards().size == 3 }
+        assertEquals(listOf("new question", "new answer"), cards().last().pages)
         vm.viewModelScope.cancel()
         compose.waitForIdle()
     }
@@ -131,7 +131,7 @@ class DialogStateRestorationTest {
         restoration.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
 
-        compose.onNodeWithContentDescription("Add").performClick()
+        compose.onNodeWithContentDescription("Add card").performClick()
         field("Front").performTextInput("a very long question")
         field("Back").performTextInput("odpowiedź")
 
@@ -146,7 +146,7 @@ class DialogStateRestorationTest {
         assertEquals("a very long question?", fieldText("Front"))
 
         compose.onNodeWithText("Cancel").performClick()
-        compose.onNodeWithContentDescription("Add").performClick()
+        compose.onNodeWithContentDescription("Add card").performClick()
         assertEquals("anulowanie odrzuca szkic", "", fieldText("Front"))
     }
 
@@ -157,7 +157,7 @@ class DialogStateRestorationTest {
         restoration.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
 
-        compose.onAllNodesWithContentDescriptionFirst("Edit Flashcard").performClick()
+        compose.onNodeWithText("cat").performClick()
         field("Front").performTextReplacement("kitten")
 
         restoration.emulateSavedInstanceStateRestore()
@@ -168,7 +168,7 @@ class DialogStateRestorationTest {
         assertEquals(2, cards().size)
 
         // kolejna karta nie dostaje tekstu poprzedniej
-        compose.onAllNodesWithContentDescriptionFirst("Edit Flashcard", index = 1).performScrollTo().performClick()
+        compose.onNodeWithText("dog").performScrollTo().performClick()
         assertEquals("dog", fieldText("Front"))
     }
 
@@ -192,9 +192,4 @@ class DialogStateRestorationTest {
         compose.waitUntil(5_000) { closed }
         assertNotNull(runBlocking { repos.localStore.snapshot() }.groups.single().deletedAt)
     }
-
-    private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithContentDescriptionFirst(
-        description: String,
-        index: Int = 0
-    ) = onAllNodes(androidx.compose.ui.test.hasContentDescription(description))[index]
 }
