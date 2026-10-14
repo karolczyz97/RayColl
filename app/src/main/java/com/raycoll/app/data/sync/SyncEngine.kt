@@ -9,6 +9,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Source
 import com.raycoll.app.data.remote.firestore.FirestoreSchema
+import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.normalize.normalizeStoreData
@@ -48,8 +49,6 @@ private const val TAG = "SyncEngine"
 /** Limit operacji w jednym batchu Firestore (twardy limit backendu to 500). */
 private const val MAX_BATCH_OPS = 400
 
-private const val FIELD_UPDATED_AT = "updatedAt"
-
 /**
  * Odczyt i zapis danych konta w Firestore. Zapis wysyła tylko różnice względem
  * ostatniego znanego stanu chmury ("bazy"), więc wymaga aktualnej bazy —
@@ -60,8 +59,16 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
     private val _status = MutableStateFlow(SyncStatus.IDLE)
     override val status: StateFlow<SyncStatus> = _status.asStateFlow()
 
-    /** Stan chmury po ostatnim udanym odczycie/zapisie i znacznik, po którym poznamy cudzy zapis. */
-    private data class Baseline(val uid: String, val data: StoreData, val rootUpdatedAt: Timestamp?)
+    /**
+     * Stan chmury po ostatnim udanym odczycie/zapisie i znacznik, po którym poznamy cudzy zapis.
+     * [stalePositions]: dokumenty, których zapisana pozycja różni się od miejsca na liście (patrz [SyncDiff]).
+     */
+    private data class Baseline(
+        val uid: String,
+        val data: StoreData,
+        val rootUpdatedAt: Timestamp?,
+        val stalePositions: Set<String> = emptySet()
+    )
 
     private val mutex = Mutex()
     private var baseline: Baseline? = null
@@ -74,8 +81,14 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
     override suspend fun load(uid: String): CloudLoad = mutex.withLock {
         reportingStatus(_status, onError = CloudLoad.Failed) {
             val rootSnap = userRoot(uid).get(Source.SERVER).awaitCloud()
-            val data = if (rootSnap.exists()) fetchData(uid) else StoreData()
-            baseline = Baseline(uid, data, rootSnap.getTimestamp(FIELD_UPDATED_AT))
+            val fetched = if (rootSnap.exists()) fetchData(uid) else FetchedData(StoreData(), emptyMap())
+            val data = fetched.data
+            baseline = Baseline(
+                uid,
+                data,
+                rootSnap.getTimestamp(FirestoreSchema.FIELD_UPDATED_AT),
+                stalePositionsOf(data, fetched.positions)
+            )
             if (rootSnap.exists()) CloudLoad.Loaded(data) else CloudLoad.Empty
         }
     }
@@ -87,7 +100,8 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
     override suspend fun hasFreshBaseline(uid: String): Boolean = mutex.withLock {
         val known = baseline?.takeIf { it.uid == uid } ?: return@withLock false
         try {
-            userRoot(uid).get(Source.SERVER).awaitCloud().getTimestamp(FIELD_UPDATED_AT) == known.rootUpdatedAt
+            userRoot(uid).get(Source.SERVER).awaitCloud()
+                .getTimestamp(FirestoreSchema.FIELD_UPDATED_AT) == known.rootUpdatedAt
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -100,22 +114,27 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
     override suspend fun save(uid: String, data: StoreData): Boolean = mutex.withLock {
         val known = baseline?.takeIf { it.uid == uid } ?: return@withLock false
         reportingStatus(_status, onError = false) {
-            val ops = SyncDiff.diffSave(known.data, data)
+            val ops = SyncDiff.diffSave(known.data, data, known.stalePositions)
             if (ops.isNotEmpty()) commit(uid, ops)
-            val rootUpdatedAt = userRoot(uid).get(Source.SERVER).awaitCloud().getTimestamp(FIELD_UPDATED_AT)
+            val rootUpdatedAt =
+                userRoot(uid).get(Source.SERVER).awaitCloud().getTimestamp(FirestoreSchema.FIELD_UPDATED_AT)
             baseline = Baseline(uid, data, rootUpdatedAt)
             true
         }
     }
 
-    /** Uszkodzony pojedynczy dokument jest pomijany — nie przekreśla odczytu całego konta. */
-    private suspend fun fetchData(uid: String): StoreData = coroutineScope {
+    /**
+     * Uszkodzony pojedynczy dokument jest pomijany — nie przekreśla odczytu całego konta.
+     * Talie i karty wracają w kolejności z pola `position` (sama chmura sortuje po id dokumentu).
+     */
+    private suspend fun fetchData(uid: String): FetchedData = coroutineScope {
         val root = userRoot(uid)
         val decks = async {
-            root.collection(FirestoreSchema.PATH_DECKS).get(Source.SERVER).awaitCloud().documents
-                .map { doc -> async { fetchDeck(doc.reference, doc.id, doc.data.orEmpty()) } }
+            val docs = root.collection(FirestoreSchema.PATH_DECKS).get(Source.SERVER).awaitCloud().documents
+            docs.map { doc -> async { fetchDeck(doc.reference, doc.id, doc.data.orEmpty()) } }
                 .awaitAll()
                 .filterNotNull()
+                .sortedByPosition()
         }
         val modes = async {
             root.collection(FirestoreSchema.PATH_MODES).get(Source.SERVER).awaitCloud().documents.mapNotNull { doc ->
@@ -130,22 +149,33 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
                 }
             }.toMap()
         }
-        normalizeStoreData(
-            StoreData(groups = decks.await(), studyModes = modes.await(), activityHeatmap = activity.await())
+        val orderedDecks = decks.await()
+        FetchedData(
+            data = normalizeStoreData(
+                StoreData(
+                    groups = orderedDecks.map { deck -> deck.value.copy(cards = deck.cards.map { it.value }) },
+                    studyModes = modes.await(),
+                    activityHeatmap = activity.await()
+                )
+            ),
+            positions = positionsOf(orderedDecks)
         )
     }
 
-    private suspend fun fetchDeck(
-        deckRef: DocumentReference,
-        deckId: String,
-        data: Map<String, Any?>
-    ): FlashcardGroup? {
+    private suspend fun fetchDeck(deckRef: DocumentReference, deckId: String, data: Map<String, Any?>): FetchedDeck? {
         val cards = deckRef.collection(
             FirestoreSchema.PATH_CARDS
         ).get(Source.SERVER).awaitCloud().documents.mapNotNull { doc ->
-            parseOrSkip("card ${doc.id} in deck $deckId") { FirestoreSchema.cardFromMap(doc.id, doc.data.orEmpty()) }
+            val cardData = doc.data.orEmpty()
+            parseOrSkip("card ${doc.id} in deck $deckId") {
+                val card = FirestoreSchema.cardFromMap(doc.id, cardData)
+                Positioned(doc.id, card, FirestoreSchema.positionFromMap(cardData))
+            }
+        }.sortedByPosition()
+        return parseOrSkip("deck $deckId") {
+            val deck = FirestoreSchema.deckFromMap(deckId, data, emptyList())
+            FetchedDeck(deckId, deck, FirestoreSchema.positionFromMap(data), cards)
         }
-        return parseOrSkip("deck $deckId") { FirestoreSchema.deckFromMap(deckId, data, cards) }
     }
 
     private inline fun <T> parseOrSkip(what: String, parse: () -> T): T? = try {
@@ -169,18 +199,21 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
             },
             // po znaczniku inne urządzenia poznają zmianę; merge: tylko to pole, reszta dokumentu konta zostaje
             publishUpdatedAt = {
-                root.set(mapOf(FIELD_UPDATED_AT to FieldValue.serverTimestamp()), SetOptions.merge()).await()
+                root.set(
+                    mapOf(FirestoreSchema.FIELD_UPDATED_AT to FieldValue.serverTimestamp()),
+                    SetOptions.merge()
+                ).await()
             }
         )
     }
 
     /** Dokument i jego nowa treść; null = usunięcie. */
     private fun write(root: DocumentReference, op: SyncOp): Pair<DocumentReference, Map<String, Any>?> = when (op) {
-        is SyncOp.PutDeck -> deckRef(root, op.deck.id) to FirestoreSchema.deckToMap(op.deck)
+        is SyncOp.PutDeck -> deckRef(root, op.deck.id) to FirestoreSchema.deckToMap(op.deck, op.position)
 
         is SyncOp.DeleteDeck -> deckRef(root, op.deckId) to null
 
-        is SyncOp.PutCard -> cardRef(root, op.deckId, op.card.id) to FirestoreSchema.cardToMap(op.card)
+        is SyncOp.PutCard -> cardRef(root, op.deckId, op.card.id) to FirestoreSchema.cardToMap(op.card, op.position)
 
         is SyncOp.DeleteCard -> cardRef(root, op.deckId, op.cardId) to null
 
@@ -188,8 +221,9 @@ class SyncEngine @Inject constructor(private val firestore: FirebaseFirestore) :
 
         is SyncOp.DeleteMode -> modeRef(root, op.modeId) to null
 
+        // marker dokumentu aktywności ustawia serwer
         is SyncOp.PutActivity -> activityRef(root, op.dayKey) to
-            FirestoreSchema.activityToMap(op.count) + (FIELD_UPDATED_AT to FieldValue.serverTimestamp())
+            FirestoreSchema.activityToMap(op.count) + (FirestoreSchema.FIELD_UPDATED_AT to FieldValue.serverTimestamp())
 
         is SyncOp.DeleteActivity -> activityRef(root, op.dayKey) to null
     }
@@ -260,3 +294,46 @@ internal suspend fun <T> cloudOperation(block: suspend () -> T): T = try {
 }
 
 private suspend fun <T> Task<T>.awaitCloud(): T = cloudOperation { await() }
+
+/** Dokument z chmury z zapisaną pozycją (null: dokument sprzed pola `position`). */
+internal interface PositionedDoc {
+    val docId: String
+    val position: Long?
+}
+
+internal class Positioned<T>(override val docId: String, val value: T, override val position: Long?) : PositionedDoc
+
+/** Talia z chmury (bez kart w [value]) razem z kartami. */
+internal class FetchedDeck(
+    override val docId: String,
+    val value: FlashcardGroup,
+    override val position: Long?,
+    val cards: List<Positioned<Flashcard>>
+) : PositionedDoc
+
+/** Dane konta z chmury i zapisane pozycje dokumentów (klucze: [deckKey], [cardKey]). */
+internal class FetchedData(val data: StoreData, val positions: Map<String, Long?>)
+
+/** Kolejność wg `position`; dokumenty bez pozycji (starsze) na końcu, po id dokumentu. */
+internal fun <T : PositionedDoc> List<T>.sortedByPosition(): List<T> =
+    sortedWith(compareBy<T> { it.position ?: Long.MAX_VALUE }.thenBy { it.docId })
+
+internal fun positionsOf(decks: List<FetchedDeck>): Map<String, Long?> = buildMap {
+    for (deck in decks) {
+        put(deckKey(deck.docId), deck.position)
+        for (card in deck.cards) put(cardKey(deck.docId, card.docId), card.position)
+    }
+}
+
+/**
+ * Dokumenty, których zapisana pozycja nie jest ich miejscem na liście po odczycie
+ * (brak pola, luka po usuniętym lub pominiętym dokumencie) — kolejny zapis poprawia je raz.
+ */
+internal fun stalePositionsOf(data: StoreData, stored: Map<String, Long?>): Set<String> = buildSet {
+    data.groups.forEachIndexed { index, deck ->
+        if (stored[deckKey(deck.id)] != index.toLong()) add(deckKey(deck.id))
+        deck.cards.forEachIndexed { cardIndex, card ->
+            if (stored[cardKey(deck.id, card.id)] != cardIndex.toLong()) add(cardKey(deck.id, card.id))
+        }
+    }
+}

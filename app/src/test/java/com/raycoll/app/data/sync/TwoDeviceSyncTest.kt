@@ -47,11 +47,20 @@ private class FakeCloudBackend {
     val cards = linkedMapOf<Pair<String, String>, Flashcard>()
     val modes = linkedMapOf<String, StudyMode>()
     val activity = linkedMapOf<String, Int>()
+    val deckPositions = hashMapOf<String, Int>()
+    val cardPositions = hashMapOf<Pair<String, String>, Int>()
 
+    /** Jak Firestore: dokumenty przychodzą wg id, a kolejność list wynika tylko z pola position. */
     fun snapshot(): StoreData = normalizeStoreData(
         StoreData(
-            groups = decks.values.map { deck ->
-                deck.copy(cards = cards.filterKeys { it.first == deck.id }.values.toList())
+            groups = decks.values.sortedWith(
+                compareBy<FlashcardGroup> { deckPositions[it.id] ?: Int.MAX_VALUE }.thenBy { it.id }
+            ).map { deck ->
+                deck.copy(
+                    cards = cards.filterKeys { it.first == deck.id }.values.sortedWith(
+                        compareBy<Flashcard> { cardPositions[deck.id to it.id] ?: Int.MAX_VALUE }.thenBy { it.id }
+                    )
+                )
             },
             studyModes = modes.values.toList(),
             activityHeatmap = activity.toMap()
@@ -60,13 +69,32 @@ private class FakeCloudBackend {
 
     fun apply(op: SyncOp) {
         when (op) {
-            is SyncOp.PutDeck -> decks[op.deck.id] = op.deck.copy(cards = emptyList())
-            is SyncOp.DeleteDeck -> decks.remove(op.deckId)
-            is SyncOp.PutCard -> cards[op.deckId to op.card.id] = op.card
-            is SyncOp.DeleteCard -> cards.remove(op.deckId to op.cardId)
+            is SyncOp.PutDeck -> {
+                decks[op.deck.id] = op.deck.copy(cards = emptyList())
+                deckPositions[op.deck.id] = op.position
+            }
+
+            is SyncOp.DeleteDeck -> {
+                decks.remove(op.deckId)
+                deckPositions.remove(op.deckId)
+            }
+
+            is SyncOp.PutCard -> {
+                cards[op.deckId to op.card.id] = op.card
+                cardPositions[op.deckId to op.card.id] = op.position
+            }
+
+            is SyncOp.DeleteCard -> {
+                cards.remove(op.deckId to op.cardId)
+                cardPositions.remove(op.deckId to op.cardId)
+            }
+
             is SyncOp.PutMode -> modes[op.mode.id] = op.mode
+
             is SyncOp.DeleteMode -> modes.remove(op.modeId)
+
             is SyncOp.PutActivity -> activity[op.dayKey] = op.count
+
             is SyncOp.DeleteActivity -> activity.remove(op.dayKey)
         }
     }
@@ -265,6 +293,48 @@ class TwoDeviceSyncTest {
         )
         assertTrue("edycja offline zostaje", listOf("offline card", "offline") in tabletPages)
         assertTrue(backend.cards.values.any { it.pages.first() == "edited on phone" })
+    }
+
+    @Test
+    fun `card and deck order from one device is the same on a fresh device`() {
+        val deck = phone.decks().first()
+        runBlocking {
+            repeat(8) { phone.repos.deckRepository.addCard(deck.id, listOf("card $it", "karta $it")) }
+            repeat(3) {
+                phone.repos.deckRepository.addDeckWithCards(
+                    "Talia $it",
+                    listOf("en-US", "pl-PL"),
+                    listOf("A", "B"),
+                    listOf(listOf("q$it", "a$it"), listOf("q$it b", "a$it b"))
+                )
+            }
+            phone.sync.pushNow()
+        }
+        val fresh = Device(context, backend, FakeClock())
+        try {
+            runBlocking { fresh.sync.runBootstrap() }
+            assertEquals(phone.decks().map { it.id }, fresh.decks().map { it.id })
+            assertEquals(
+                phone.decks().map { deck -> deck.cards.map { it.id } },
+                fresh.decks().map { deck -> deck.cards.map { it.id } }
+            )
+        } finally {
+            fresh.close()
+        }
+    }
+
+    @Test
+    fun `a deleted card keeps the order of the others in the cloud`() {
+        val deck = phone.decks().first()
+        runBlocking {
+            repeat(5) { phone.repos.deckRepository.addCard(deck.id, listOf("card $it", "karta $it")) }
+            phone.sync.pushNow()
+            val cardId = phone.decks().first { it.id == deck.id }.cards[2].id
+            phone.repos.deckRepository.deleteCard(cardId)
+            phone.sync.pushNow()
+        }
+        val expected = phone.decks().first { it.id == deck.id }.cards.map { it.id }
+        assertEquals(expected, backend.snapshot().groups.first { it.id == deck.id }.cards.map { it.id })
     }
 
     @Test
