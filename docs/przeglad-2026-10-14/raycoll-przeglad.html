@@ -1,0 +1,541 @@
+<title>RayColl: przegląd modernizacji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Układ: jedna kolumna raportu (~70ch), sekcja makiet jako siatka kart-telefonów, lista ustaleń z filtrami. Paleta z motywu aplikacji (indygo + róż trzeciorzędny). */
+:root {
+  --bg: #fbf8ff;
+  --surface: #f2eef9;
+  --surface-2: #e9e4f2;
+  --card: #ffffff;
+  --fg: #1d1b22;
+  --muted: #5a5764;
+  --line: #d8d3e2;
+  --accent: #5446c7;
+  --accent-soft: #e2dfff;
+  --accent-ink: #1e0f7a;
+  --tert: #7b5267;
+  --tert-soft: #ffd8e7;
+  --tert-ink: #311023;
+  --bug: #b3261e;
+  --bug-soft: #fde4e1;
+  --high: #a8540b;
+  --high-soft: #fde9d4;
+  --med: #4a4a9a;
+  --med-soft: #e4e4f7;
+  --low: #5f5c69;
+  --low-soft: #ebe8ef;
+  --ok: #1f7a4d;
+  --ok-soft: #d9f2e4;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141218; --surface: #1d1b22; --surface-2: #26232d; --card: #211f27;
+    --fg: #e8e3ee; --muted: #aaa5b5; --line: #3a3644;
+    --accent: #c3bfff; --accent-soft: #3d2cae; --accent-ink: #e2dfff;
+    --tert: #ecb8cf; --tert-soft: #613b4f; --tert-ink: #ffd8e7;
+    --bug: #ffb4ab; --bug-soft: #5c1a16; --high: #ffb877; --high-soft: #4f2c08;
+    --med: #c3c3ff; --med-soft: #2f2f63; --low: #b9b5c3; --low-soft: #2f2c36;
+    --ok: #8fd9b0; --ok-soft: #173d2a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141218; --surface: #1d1b22; --surface-2: #26232d; --card: #211f27;
+  --fg: #e8e3ee; --muted: #aaa5b5; --line: #3a3644;
+  --accent: #c3bfff; --accent-soft: #3d2cae; --accent-ink: #e2dfff;
+  --tert: #ecb8cf; --tert-soft: #613b4f; --tert-ink: #ffd8e7;
+  --bug: #ffb4ab; --bug-soft: #5c1a16; --high: #ffb877; --high-soft: #4f2c08;
+  --med: #c3c3ff; --med-soft: #2f2f63; --low: #b9b5c3; --low-soft: #2f2c36;
+  --ok: #8fd9b0; --ok-soft: #173d2a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--f-body); font-size: 15.5px; line-height: 1.6;
+  padding: 0 16px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 80px; display: flex; flex-direction: column; gap: 56px; }
+.prose { max-width: 70ch; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.65rem; font-weight: 700; }
+h3 { font-size: 1.12rem; font-weight: 700; }
+p { margin: 0; }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.74rem; font-weight: 700; color: var(--accent); }
+.lede { color: var(--muted); font-size: 1.05rem; }
+section { display: flex; flex-direction: column; gap: 18px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* nagłówek */
+header { display: flex; flex-direction: column; gap: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; color: var(--muted); font-size: 0.9rem; }
+.meta b { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+/* liczniki wagi */
+.tally { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tally div { background: var(--surface); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; }
+.tally b { font-family: var(--f-display); font-size: 1.7rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tally span { font-size: 0.82rem; color: var(--muted); }
+.tally .t-bug b { color: var(--bug); } .tally .t-high b { color: var(--high); }
+.tally .t-med b { color: var(--med); } .tally .t-low b { color: var(--low); }
+@media (max-width: 560px) { .tally { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- makiety ---------- */
+.mock-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.phase { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--muted); }
+.phase-pill { font-weight: 600; color: var(--fg); background: var(--surface); padding: 4px 10px; border-radius: 99px; min-width: 15ch; text-align: center; }
+button.btn { font: inherit; font-weight: 600; font-size: 0.88rem; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 99px; padding: 6px 14px; cursor: pointer; }
+button.btn:hover { border-color: var(--accent); }
+.mocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .mocks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .mocks { grid-template-columns: minmax(0, 1fr); } }
+.mock { display: flex; flex-direction: column; gap: 10px; }
+.mock-label { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.mock-label h3 { font-size: 1rem; }
+.tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; }
+.tag.now { background: var(--bug-soft); color: var(--bug); }
+.tag.rec { background: var(--ok-soft); color: var(--ok); }
+.screen { background: var(--surface); border-radius: 22px; padding: 16px 12px; height: 270px; display: flex; flex-direction: column; gap: 10px; }
+.screen .bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.screen .bar i { display: block; height: 100%; width: 40%; background: var(--accent); }
+.fc { position: relative; background: var(--card); border-radius: 16px; padding: 18px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 2px solid transparent; transition: border-color .3s, box-shadow .3s; }
+.pg { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; position: relative; }
+.pg .txt { font-family: var(--f-body); font-weight: 700; font-size: 1.25rem; text-align: center; line-height: 1.25; }
+.pg.p2 .txt { font-weight: 500; font-size: 1.1rem; }
+.hr { width: 100%; height: 1px; background: var(--line); }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); white-space: nowrap; }
+.badge.listen { background: var(--tert-soft); color: var(--tert-ink); }
+.badge svg, .dot svg { width: 13px; height: 13px; fill: currentColor; flex: none; }
+.caption { font-size: 0.86rem; color: var(--muted); }
+
+/* wariant: teraz — plakietka w przepływie */
+.v-now .badge { display: none; }
+.v-now .pg.on .badge { display: inline-flex; }
+
+/* wariant A: plakietka na krawędzi karty */
+.v-a .corner { position: absolute; top: -11px; right: 10px; opacity: 0; transform: scale(.85); transition: opacity .25s, transform .25s; }
+.v-a .corner.show { opacity: 1; transform: none; }
+
+/* wariant B: podświetlona strona + ikona z boku */
+.v-b .pg { padding: 6px 30px; border-radius: 10px; transition: background-color .3s; }
+.v-b .pg.on { background: var(--accent-soft); }
+.v-b .pg.on.listen { background: var(--tert-soft); }
+.v-b .dot { position: absolute; left: 8px; top: 50%; translate: 0 -50%; opacity: 0; transition: opacity .25s; color: var(--accent); display: flex; }
+.v-b .pg.on .dot { opacity: 1; }
+.v-b .pg.on.listen .dot { color: var(--tert); }
+.v-b .pg.on .txt { color: var(--accent-ink); }
+.v-b .pg.on.listen .txt { color: var(--tert-ink); }
+
+/* wariant C: poświata krawędzi karty */
+.v-c .fc.speak { border-color: var(--accent); animation: pulse-a 1.4s ease-in-out infinite; }
+.v-c .fc.listen { border-color: var(--tert); animation: pulse-t 1.4s ease-in-out infinite; }
+.v-c .mini { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .25s; display: flex; }
+.v-c .fc.speak .mini { opacity: 1; color: var(--accent); }
+.v-c .fc.listen .mini { opacity: 1; color: var(--tert); }
+.v-c .mini svg { width: 16px; height: 16px; fill: currentColor; }
+@keyframes pulse-a { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); } }
+@keyframes pulse-t { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tert) 25%, transparent); } }
+@media (prefers-reduced-motion: reduce) {
+  .fc, .v-a .corner, .v-b .pg, .v-b .dot, .v-c .mini { transition: none; }
+  .v-c .fc.speak, .v-c .fc.listen { animation: none; }
+}
+
+.compare { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 560px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+td.y { color: var(--ok); font-weight: 600; } td.n { color: var(--bug); font-weight: 600; } td.m { color: var(--high); font-weight: 600; }
+
+/* ---------- fale ---------- */
+.waves { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.wave { background: var(--surface); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.wave .n { font-family: var(--f-display); font-weight: 700; color: var(--accent); font-size: 0.85rem; letter-spacing: .04em; }
+.wave ul { margin: 0; padding-left: 18px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 4px; }
+.wave .model { margin-top: auto; font-size: 0.8rem; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--line); }
+
+/* ---------- lista ustaleń ---------- */
+.filters { display: flex; flex-direction: column; gap: 10px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding-block: 10px; z-index: 2; border-bottom: 1px solid var(--line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chips .lbl { font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; min-width: 52px; }
+.chip { font: inherit; font-size: 0.82rem; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 99px; padding: 4px 11px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+.chip .c { font-variant-numeric: tabular-nums; opacity: .7; margin-left: 4px; }
+#q { font: inherit; font-size: 0.92rem; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); width: 100%; max-width: 420px; }
+.count { font-size: 0.85rem; color: var(--muted); }
+.list { display: flex; flex-direction: column; }
+.item { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 4px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.sev { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 3px 0; border-radius: 6px; text-align: center; align-self: start; }
+.s-bug { background: var(--bug-soft); color: var(--bug); } .s-high { background: var(--high-soft); color: var(--high); }
+.s-med { background: var(--med-soft); color: var(--med); } .s-low { background: var(--low-soft); color: var(--low); }
+.body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.body .t { font-weight: 600; }
+.body .fix { color: var(--muted); font-size: 0.92rem; }
+.body .fix b { color: var(--fg); font-weight: 600; }
+.loc { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.78rem; color: var(--muted); }
+.loc .mono { overflow-wrap: anywhere; }
+.loc .ok { color: var(--ok); font-weight: 700; }
+@media (max-width: 480px) { .item { grid-template-columns: minmax(0, 1fr); } .sev { justify-self: start; padding: 3px 8px; } }
+.empty { padding: 30px 0; color: var(--muted); }
+
+.note { background: var(--surface); border-radius: 12px; padding: 14px 16px; font-size: 0.92rem; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-spk" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></symbol>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">RayColl · Android · 14 października 2026</div>
+  <h1>Przegląd modernizacji: kod, UI i UX</h1>
+  <p class="lede prose">Pięciu recenzentów przeczytało w całości każdy plik aplikacji: logikę nauki, dane i synchronizację, dźwięk i serwis w tle oraz wszystkie ekrany. Poniżej jest to, co warto poprawić, ułożone w kolejności, w jakiej opłaca się to robić. Na górze są makiety rozwiązania problemu z ikonkami na karcie.</p>
+  <div class="meta">
+    <span><b>139</b> plików Kotlin</span>
+    <span><b>~14 200</b> linii kodu aplikacji</span>
+    <span><b>~300</b> uwag zebranych, <b id="nShown">0</b> wybranych poniżej</span>
+  </div>
+  <div class="tally" id="tally"></div>
+</header>
+
+<section id="ikony">
+  <div class="eyebrow">Twoja uwaga</div>
+  <h2>Ikonka głośnika i mikrofonu przesuwa tekst</h2>
+  <p class="prose">Przyczyna: w <code>StudyCard.kt:352</code> plakietka „Mówi” lub „Słucha” jest wstawiana do kolumny strony <b>nad</b> tekstem. Zajmuje około 32&nbsp;dp, więc gdy się pojawia, tekst zjeżdża w dół, a gdy znika, wraca w górę. Kiedy dźwięk przechodzi ze strony 1 na stronę 2, obie strony skaczą jednocześnie. Plakietka zmienia się przy każdym kroku mowy lub nasłuchu, więc karta skacze kilka razy na każdą fiszkę.</p>
+  <div class="mock-head">
+    <p class="caption">Makiety odtwarzają cykl: mówi strona 1 → słucha strona 2 → cisza.</p>
+    <div class="phase">
+      <span class="phase-pill" id="phaseLabel">Mówi: strona 1</span>
+      <button class="btn" id="playBtn" type="button">Pauza</button>
+    </div>
+  </div>
+  <div class="mocks" id="mocks"></div>
+  <div class="compare">
+    <table>
+      <thead><tr><th>Wariant</th><th>Tekst stoi w miejscu</th><th>Widać, która strona gra</th><th>Koszt</th></tr></thead>
+      <tbody>
+        <tr><td>Teraz</td><td class="n">Nie</td><td class="y">Tak</td><td>–</td></tr>
+        <tr><td>A. Plakietka na krawędzi karty</td><td class="y">Tak</td><td class="n">Nie</td><td>Mały</td></tr>
+        <tr><td>B. Podświetlona strona</td><td class="y">Tak</td><td class="y">Tak</td><td>Mały</td></tr>
+        <tr><td>C. Poświata karty</td><td class="y">Tak</td><td class="n">Nie</td><td>Mały, ale miga przez całą sesję</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note prose"><b>Rekomendacja: B.</b> Zachowuje to, co dziś daje plakietka (wiadomo, która strona jest czytana lub słuchana), a niczego nie przesuwa. Podświetlenie i ikonka mieszczą się w stałym marginesie strony. Napis „Mówi” lub „Słucha” zostaje tylko dla czytnika ekranu. Przy okazji warto rozważyć, czy plakietka nasłuchu nie dubluje panelu odpowiedzi pod kartą, który już pokazuje, że apka słucha.</p>
+</section>
+
+<section id="plan">
+  <div class="eyebrow">Kolejność</div>
+  <h2>Plan w pięciu falach</h2>
+  <p class="prose">Najpierw błędy, które użytkownik może realnie trafić, potem szybkie poprawki wyglądu, dopiero na końcu większe przebudowy kodu. Każda fala to osobna sesja z testami i sprawdzeniem na telefonie.</p>
+  <div class="waves">
+    <div class="wave"><span class="n">FALA 1 · BŁĘDY</span><h3>Naprawić, zanim coś się zepsuje</h3>
+      <ul><li>Pauza ręczna kasowana po wyjściu z apki</li><li>Podwójny import talii przez zablokowane komunikaty</li><li>Uszkodzony eksport JSON na Dysku Google</li><li>Crash przy błędzie mikrofonu lub starcie serwisu</li><li>Wyścigi synchronizacji ze znacznikiem czasu</li><li>Motyw ciemny w apce vs jasny pasek systemu</li></ul>
+      <span class="model">Model: Opus (współbieżność, sync)</span></div>
+    <div class="wave"><span class="n">FALA 2 · SZYBKI UX</span><h3>Nic nie skacze, wszystko czytelne</h3>
+      <ul><li>Ikonki na karcie (wariant B)</li><li>Pasek „wstrzymano” i przyciski ocen bez skoków</li><li>Polskie nazwy ocen bez „(Again)”</li><li>Podsumowanie sesji przewijane w poziomie</li><li>Kontrast pasków postępu, przyciski 48&nbsp;dp</li><li>Teksty PL: jedno słowo „talia” albo „zestaw”</li></ul>
+      <span class="model">Model: Sonnet (zmiany lokalne w UI)</span></div>
+    <div class="wave"><span class="n">FALA 3 · WIĘKSZY UX</span><h3>Ekrany, które dziś męczą</h3>
+      <ul><li>Import: przypięty przycisk, nagłówki kolumn, przykład formatu</li><li>Edytor trybów: pytanie przy wyjściu, przeciąganie kroków, opisy</li><li>Przeglądanie kart: tap = edycja, usuń z „Cofnij”</li><li>Ustawienia: grupy, strefa niebezpieczna, ostatnia synchronizacja</li></ul>
+      <span class="model">Model: Sonnet, przy decyzjach UX Opus</span></div>
+    <div class="wave"><span class="n">FALA 4 · CZYTELNOŚĆ</span><h3>Kod, który łatwo zmieniać</h3>
+      <ul><li>Rozbić <code>SessionEngine</code> (~400 linii)</li><li>Typy zamiast liczb: stan karty, ocena, krok atomowy</li><li>Jedno scalanie zamiast trzech kopii</li><li>Kolejki sync na jednym wątku roboczym</li><li>Wspólne komponenty UI (sekcja, chip, dialogi)</li></ul>
+      <span class="model">Model: Opus (przekrojowe refaktory)</span></div>
+    <div class="wave"><span class="n">FALA 5 · MODERNIZACJA</span><h3>Wygląd i narzędzia</h3>
+      <ul><li>Material 3 Expressive: karty bez cienia, duży pasek tytułu</li><li>Podglądy <code>@Preview</code> (jasny, ciemny, duża czcionka, poziom)</li><li>Ikona motywowa Androida 13+</li><li>Gradle: ktlint jako wtyczka, klucz Firebase tylko dla release</li></ul>
+      <span class="model">Model: Sonnet</span></div>
+  </div>
+</section>
+
+<section id="lista">
+  <div class="eyebrow">Szczegóły</div>
+  <h2>Wszystkie wybrane uwagi</h2>
+  <p class="prose">Z około 300 zgłoszeń zostawiłem te, które coś realnie zmieniają, i przetłumaczyłem je na język zachowania aplikacji. Znacznik <span class="mono" style="color:var(--ok);font-weight:700">sprawdzone</span> oznacza, że osobno potwierdziłem błąd w kodzie. Pozostałe wymagają potwierdzenia przy naprawie.</p>
+  <div class="filters">
+    <div class="chips" id="fArea"><span class="lbl">Obszar</span></div>
+    <div class="chips" id="fSev"><span class="lbl">Waga</span></div>
+    <div class="chips" id="fKind"><span class="lbl">Rodzaj</span></div>
+    <input id="q" type="search" placeholder="Szukaj, np. import, mikrofon, sync" aria-label="Szukaj w uwagach">
+    <span class="count" id="count"></span>
+  </div>
+  <div class="list" id="list"></div>
+</section>
+
+</div>
+
+<script>
+const AREAS = { nauka: "Ekran nauki", ekrany: "Pozostałe ekrany", logika: "Logika nauki", dane: "Dane i sync", audio: "Dźwięk i serwis", build: "Budowanie" };
+const SEV = { bug: "Błąd", high: "Wysoka", med: "Średnia", low: "Niska" };
+const KIND = { ux: "UX", kod: "Kod" };
+
+// [obszar, waga, rodzaj, plik, problem, propozycja, sprawdzone?]
+const F = [
+ ["nauka","bug","ux","ui/study/StudyViewModel.kt:257","Ręczna pauza znika po wyjściu z aplikacji. Wstrzymujesz sesję, przełączasz się na chwilę gdzie indziej, a po powrocie apka sama zaczyna mówić.","Pauzować przy zejściu w tło tylko wtedy, gdy sesja nie była już wstrzymana.",1],
+ ["ekrany","bug","ux","ui/components/UiEvents.kt:49","Komunikaty u dołu ekranu blokują kolejne zdarzenia. Po imporcie przejście do talii czeka do 4 s za wcześniejszym komunikatem, a przycisk „Importuj” jest już znowu aktywny, więc łatwo zaimportować talię dwa razy.","Pokazywać komunikat w osobnym wątku, nawigację obsługiwać od razu; po udanym imporcie zostawić przycisk zablokowany.",1],
+ ["nauka","bug","ux","res/values-pl/strings.xml:42","Przyciski ocen to „Powtórz (Again)”, „Trudne (Hard)” itd. Angielskie dopiski w polskiej wersji, a przy 12 sp i jednej linii napisy są ucinane.","Same polskie nazwy, czcionka co najmniej 14 sp, wysokość „co najmniej 68 dp” zamiast sztywnej.",1],
+ ["ekrany","bug","ux","MainActivity.kt:29 · Theme.kt:94","Ciemny motyw wybrany w apce przy jasnym systemie: ikony paska stanu i nawigacji są ciemne na ciemnym tle, a przy przejściach miga białe tło okna.","Styl pasków systemowych i tryb nocny okna ustawiać z motywu wybranego w apce, nie z systemowego."],
+ ["nauka","bug","ux","ui/study/SessionSummary.kt:45","Podsumowanie sesji się nie przewija. W poziomie (ok. 340 dp wysokości) przyciski „Od nowa” i „Powtórz nieudane” są poza ekranem.","Dodać przewijanie albo przypiąć przyciski na dole."],
+ ["logika","bug","kod","domain/session/StepExecutor.kt:149","Błąd silnika rozpoznawania mowy nie jest łapany (dla mowy TTS jest). Zamiast komunikatu „nie udało się rozpoznać” może zamknąć aplikację.","Owinąć nasłuch tak samo jak mowę i zamieniać wyjątek na wynik „błąd”.",1],
+ ["logika","bug","kod","domain/session/SessionEngine.kt:151","Dwa szybkie „Dalej” mogą przeskoczyć dwie karty, a „Zakończ” tuż po ocenie może wskrzesić zakończoną sesję.","Śledzić zadanie przejścia do następnej karty i sprawdzać, czy sesja nie jest już zakończona."],
+ ["logika","bug","kod","domain/normalize/BackupValidator.kt:74","Sprawdzanie kopii zapasowej rozjechało się z modelem. Odrzuca kopie bez pól, które mają wartości domyślne, a przepuszcza pauzę z polem „type”, na której potem pada wczytywanie.","Wczytywać kopię ściśle przez model i sprawdzać tylko reguły biznesowe (unikalne id, zakresy). Ubywa ok. 250 linii."],
+ ["dane","bug","kod","data/sync/SyncEngine.kt:100","Po zapisie apka odczytuje znacznik czasu z chmury. Jeśli w tej chwili zapisało inne urządzenie, apka uzna, że ma aktualne dane, choć ich nie scaliła.","Zapisywać własny unikalny znacznik w ostatniej paczce i porównywać z nim, bez ponownego odczytu."],
+ ["dane","bug","kod","data/sync/SyncEngine.kt:76","Jeśli pierwsze wysyłanie do chmury przerwie się w połowie, przy następnym starcie chmura wygląda na pustą i przykładowe talie mogą nadpisać prawdziwe.","Zapisywać znacznik główny przed pierwszą paczką albo sprawdzać, czy w chmurze są już talie."],
+ ["dane","bug","ux","data/files/DocumentFiles.kt:23","Eksport nadpisujący dłuższy istniejący plik (np. na Dysku Google) zostawia jego końcówkę, a kopia JSON jest uszkodzona.","Otwierać plik w trybie „wt” (z obcięciem) i zapisywać jawnie w UTF‑8."],
+ ["dane","bug","ux","data/files/DocumentFiles.kt:18","Import wczytuje cały plik do pamięci bez limitu, a znak BOM na początku CSV (częsty z Excela) trafia do pierwszej komórki.","Limit rozmiaru (np. 20 MB) z czytelnym komunikatem i usuwanie BOM."],
+ ["dane","bug","kod","di/AppModule.kt:32","Wyjątek podczas startowej synchronizacji zamyka całą aplikację i blokuje synchronizację do restartu.","Obsługa błędów w zakresie aplikacji: zalogować i pokazać status zamiast crasha."],
+ ["audio","bug","kod","playback/StudySessionHolder.kt:55","Serwis nauki w tle startuje dopiero po kilku odczytach z bazy. Jeśli w tym czasie zminimalizujesz apkę, Android 12+ zabroni startu i apka się zamknie.","Złapać ten wyjątek i kontynuować sesję bez serwisu."],
+ ["audio","bug","kod","playback/StudySessionService.kt:94","Po ubiciu procesu system może wznowić serwis bez sesji: na moment pojawia się powiadomienie, które od razu znika.","Gdy nie ma sesji, kończyć serwis od razu, przed pokazaniem powiadomienia."],
+ ["ekrany","bug","ux","ui/imports/ImportScreen.kt:55","Pliki .tsv (i część .csv z niektórych aplikacji) są wyszarzone w wyborze pliku, choć apka obiecuje TSV.","Dodać brakujące typy plików albo pozwolić na każdy i sprawdzać rozszerzenie."],
+ ["ekrany","bug","ux","ui/modedetail/ModeDetailViewModel.kt:76","Otwarcie trybu, który w międzyczasie usunięto (np. na innym urządzeniu), po cichu zmienia się w tworzenie nowego trybu.","Osobny ekran „Tryb nie istnieje” z przyciskiem powrotu."],
+ ["ekrany","bug","ux","ui/decksettings/DeleteDeckDialog.kt:36","Usunięcie talii wymaga wpisania słowa, ale nigdzie nie jest napisane jakiego. „USUN” bez ogonka nie przechodzi.","Podpis „Wpisz USUŃ, aby potwierdzić”, wielkie litery z klawiatury i tolerancja polskich znaków."],
+ ["dane","bug","ux","data/local/db/Daos.kt:11","Talie są sortowane wg kolejności wstawienia do bazy. Po scaleniu z chmurą kolejność jest losowa i różna na każdym urządzeniu.","Zapisywać datę utworzenia lub pozycję i sortować po niej."],
+ ["dane","bug","kod","data/remote/firestore/FirestoreSchema.kt:88","Wbudowany tryb z pustym identyfikatorem źródła zapisuje się do chmury, ale przy odczycie jest odrzucany, więc znika na innych urządzeniach.","Ujednolicić zapis i odczyt (ta sama reguła po obu stronach)."],
+ ["dane","bug","kod","di/FirebaseModule.kt:17","Firestore trzyma własną kolejkę zapisów na dysku. Zapis, który przekroczył limit czasu, może dojść później i nadpisać nowsze dane. Po wylogowaniu zostaje też pamięć podręczna poprzedniego konta.","Pamięć podręczna tylko w RAM i czyszczenie przy wylogowaniu."],
+ ["dane","bug","kod","data/local/prefs/UserPreferencesRepository.kt:20","Uszkodzony plik ustawień zamyka aplikację przy każdym starcie.","Obsługa uszkodzenia: wrócić do ustawień domyślnych."],
+ ["dane","bug","kod","data/repository/DeckRepository.kt:162","Zamiana kolejności stron może czytać talię z jednego konta, a zapisywać do drugiego, jeśli w tej chwili zmieni się konto.","Czytać talię tym samym identyfikatorem konta, którym się zapisuje."],
+ ["logika","bug","ux","domain/merge/MigrationRules.kt:14","Do potwierdzenia: gość, który ma tylko przykładowe talie, może przy każdym pierwszym logowaniu dostać pytanie o przeniesienie danych.","Nie liczyć nieruszanych talii przykładowych jako „danych gościa”."],
+ ["logika","bug","kod","domain/imports/CsvParser.kt:76","Komórka ze znakiem powrotu karetki (\\r) nie jest brana w cudzysłów przy eksporcie, więc ponowny import łamie wiersz.","Cytować komórki także przy \\r."],
+ ["logika","bug","kod","domain/normalize/DataNormalizer.kt:41","Nazwy i języki stron nie są przycinane do liczby stron (kopia z 25 nazwami zostaje z 25). „Page N” po angielsku jest zaszyte w logice.","Przycinać do liczby stron, domyślną nazwę tłumaczyć w UI."],
+ ["logika","bug","kod","domain/session/StepExecutor.kt:41","Limit czasu nasłuchu liczy się z długości mowy na poprzedniej karcie, jeśli bieżąca karta nic nie czyta.","Zerować tę wartość przy każdej karcie."],
+ ["nauka","bug","ux","ui/study/StudyCard.kt:356","Duża czcionka karty (do 28 sp) ma wysokość linii z mniejszego stylu, więc wielowierszowe odpowiedzi są ściśnięte.","Wysokość linii ok. 1,3 × rozmiar, a style karty jako tokeny w Type.kt."],
+ ["ekrany","bug","ux","ui/components/PersistedTextField.kt:30","Po wyjściu z pola nazwy tekst na chwilę wraca do starej wartości, a potem skacze na nową.","Trzymać lokalny tekst, dopóki zapis nie wróci z bazy."],
+ ["audio","bug","kod","playback/SilentPlayback.kt:58","Gdy przygotowanie cichego odtwarzacza się nie uda, odtwarzacz nie jest zwalniany (wyciek zasobu audio).","Zwolnić go w obsłudze błędu."],
+
+ ["nauka","high","ux","ui/study/StudyCard.kt:352","Plakietka głośnika lub mikrofonu przesuwa tekst karty przy każdym kroku mowy lub nasłuchu.","Wariant B z makiet: podświetlona strona i ikonka w stałym marginesie.",1],
+ ["nauka","high","ux","ui/study/StudyScreen.kt:147","Pasek „Wstrzymano” jest wstawiany nad kartą, więc przy pauzie i wznowieniu cały ekran skacze o ok. 48 dp.","Nakładka u góry z animacją, bez zmiany układu."],
+ ["nauka","high","ux","ui/components/SegmentedProgressBar.kt:49","Paski postępu i statystyk w pastelowych kolorach są prawie niewidoczne (kontrast ok. 1,2:1), w ciemnym motywie znikają. Nie mają też liczb ani legendy.","Mocniejsze odcienie (kontrast co najmniej 3:1), liczby pod paskiem i opis dla czytnika ekranu."],
+ ["nauka","med","ux","ui/study/StudyCard.kt:229","Miejsce na przyciski pod kartą zmienia wysokość (48 ↔ 68 dp), więc karta podskakuje przy odkryciu odpowiedzi.","Stała wysokość obszaru akcji."],
+ ["nauka","med","ux","ui/study/RatingButtons.kt:50","Kolory ocen to te same kolory co kategorie kart. „Dobrze” jest pomarańczowe jak ostrzeżenie.","Osobne kolory ocen, pod każdą przewidywany odstęp („10 min”, „3 dni”) i delikatna wibracja."],
+ ["nauka","med","ux","ui/study/StudyCard.kt:110","Przewijanie do nowo odkrytej strony startuje przed końcem animacji i zatrzymuje się za wcześnie. Panel odpowiedzi pod długą kartą zostaje niewidoczny.","Przewijać po zmianie wysokości treści i także do panelu odpowiedzi."],
+ ["nauka","med","ux","ui/study/StudyScreen.kt:212","Po odmowie dostępu do mikrofonu nic się nie dzieje aż do pierwszego nieudanego nasłuchu. Nie ma też drogi do ustawień systemu.","Baner „Tryb wymaga mikrofonu” z przyciskiem „Zezwól” lub „Otwórz ustawienia”."],
+ ["nauka","med","ux","ui/study/AnswerPanel.kt:92","„Dobrze (+3)” wygląda jak zdobyte punkty, a to numer oceny.","Napis „Sugerowana ocena: Dobrze”."],
+ ["nauka","med","ux","ui/study/StudyCard.kt:163","Dla czytnika ekranu cały ekran nauki to jeden przycisk bez nazwy, a wynik odpowiedzi nie jest ogłaszany.","Nazwa akcji („Odkryj odpowiedź”) i ogłaszanie wyniku."],
+ ["nauka","low","ux","ui/study/StudyCard.kt:172","Krótka karta przykleja się do góry, a pod nią zostaje pusta przestrzeń do przycisków.","Wyśrodkować kartę w pionie."],
+ ["nauka","low","ux","ui/study/StudyCard.kt:185","„Dalej” pomija kartę bez możliwości cofnięcia.","Przesuwanie palcem między kartami i komunikat „Pominięto · Cofnij”."],
+ ["nauka","low","ux","ui/study/StudyCard.kt:271","Przytrzymanie karty pokazuje podgląd następnej strony, ale nikt się o tym nie dowie.","Jednorazowa podpowiedź przy pierwszej sesji."],
+ ["nauka","low","ux","ui/study/StudyScreen.kt:113","Podczas ładowania tytuł jest pusty i potem wskakuje. Dialog wyjścia nie mówi, że oceny są już zapisane.","Tytuł zastępczy i zdanie „Twój postęp jest zapisany”."],
+
+ ["ekrany","med","ux","ui/dashboard/DashboardScreen.kt:220","Przycisk „Ucz się” jest wyróżniony nawet przy 0 kart do powtórki i prowadzi na ekran „brak kart”.","Przygaszony przycisk albo „Ćwicz mimo to” z nauką wszystkich kart."],
+ ["ekrany","med","ux","ui/dashboard/DashboardScreen.kt:101","Przycisk „+” tylko importuje, a pusty ekran mówi „kliknij +” i obok ma drugi przycisk importu.","Szeroki przycisk „Importuj” i opcja „Nowa pusta talia”."],
+ ["ekrany","med","ux","ui/dashboard/DashboardScreen.kt:208","Przyciski na kartach talii mają 40 dp wysokości, poniżej zalecanych 48 dp.","Minimalna wysokość 48 dp, także dla strzałki trybów."],
+ ["ekrany","low","ux","ui/dashboard/DashboardScreen.kt:187","Sama karta talii nie reaguje na dotyk, choć wygląda na klikalną.","Tap w kartę otwiera naukę lub przeglądanie."],
+ ["ekrany","med","ux","ui/browse/BrowseScreen.kt:288","Każda fiszka ma na stałe wiersz „Edytuj/Usuń”, co podwaja wysokość listy. Czerwone „Usuń” stoi tuż obok „Edytuj”.","Tap w fiszkę = edycja, usuwanie przesunięciem z „Cofnij”."],
+ ["ekrany","med","ux","ui/browse/BrowseScreen.kt:198","Nagłówek z paskiem, wyszukiwarką i filtrami (ok. 160 dp) stoi przypięty. W poziomie na listę zostaje skrawek ekranu.","Przewijać nagłówek razem z listą, pasek usunąć (dubluje liczniki filtrów)."],
+ ["ekrany","med","ux","ui/browse/BrowseScreen.kt:212","Ten sam napis „Nie znaleziono fiszek” dla pustej talii i dla braku wyników wyszukiwania.","Dwa stany: „Dodaj pierwszą fiszkę” i „Wyczyść filtry”."],
+ ["ekrany","med","ux","ui/browse/CardEditorDialog.kt:57","Edytor fiszki to do 20 pól w małym dialogu. Tap obok kasuje szkic bez pytania, a „Zapisz” bywa nieaktywny bez wyjaśnienia.","Edytor pełnoekranowy, pytanie przy porzuceniu zmian, podpowiedź o minimalnej liczbie stron."],
+ ["ekrany","high","ux","ui/imports/ImportScreen.kt:122","Przycisk „Importuj” jest na samym końcu podglądu, więc przy 500 wierszach trzeba przewinąć wszystko. Brak postępu i potwierdzenia.","Przypięty dolny pasek „Importuj 240 kart” ze wskaźnikiem postępu i komunikat po imporcie."],
+ ["ekrany","high","ux","ui/imports/ImportScreen.kt:243","W podglądzie importu każdy wiersz to do 20 wąskich pól bez nagłówków kolumn i z czerwonym koszem przy każdym.","Nagłówki z nazwami stron, wiersz jako karta, usuwanie przesunięciem z „Cofnij”."],
+ ["ekrany","med","ux","ui/imports/ImportScreen.kt:146","Brak przykładu formatu, a wybrany plik jest wklejany w całości do pola tekstowego.","Przykład „przód;tył” i po wyborze pliku chip „słówka.csv · 1240 wierszy · Usuń”."],
+ ["ekrany","med","ux","ui/imports/ImportViewModel.kt:99","Jeśli system zamknie apkę podczas wyboru pliku, cały szkic importu przepada.","Zapamiętywać nazwę, tekst i ustawienia w stanie przywracanym przez system."],
+ ["ekrany","high","ux","ui/modedetail/ModeDetailScreen.kt:70","Edytor trybu: przycisk wstecz po cichu kasuje wszystkie zmiany.","Pytanie „Odrzucić zmiany?”, gdy coś zmieniono."],
+ ["ekrany","high","ux","ui/modedetail/ModeDetailScreen.kt:156","Przy długiej liście kroków „Zapisz” jest nieaktywny, a powód widać tylko na samej górze.","Licznik problemów przy „Zapisz” i przewinięcie do błędnego kroku po dotknięciu."],
+ ["ekrany","high","ux","ui/modedetail/ModeDetailScreen.kt:191","„Dodaj krok” jest u góry, a nowy krok ląduje na dole listy bez przewinięcia, więc nie widać, że cokolwiek się stało.","Pływający przycisk „Dodaj krok”, przewinięcie i krótkie podświetlenie nowego kroku."],
+ ["ekrany","med","ux","ui/modedetail/ModeDetailViewModel.kt:154","Nowy tryb od razu pokazuje czerwone „Wymagana nazwa” i „Dodaj krok”, zanim użytkownik cokolwiek zrobi.","Błędy dopiero po pierwszej edycji, jako podpis pod polem."],
+ ["ekrany","med","ux","ui/modedetail/AddStepDialog.kt:44","Dodawanie kroku to lista 20+ gołych przycisków z żargonem (STT, TTS), a najprostsze gotowe bloki są na końcu.","Arkusz od dołu z wyszukiwarką i opisami: najpierw gotowe bloki, potem „Zaawansowane”."],
+ ["ekrany","med","ux","ui/modedetail/StepCard.kt:67","Każdy krok ma trzy jednakowe ikony (góra, dół, usuń), a usuwanie jest bez cofnięcia.","Przeciąganie za uchwyt i „Usunięto krok · Cofnij”."],
+ ["ekrany","med","ux","ui/modedetail/StepCard.kt:132","Pola w milisekundach, próg jako goły %, ocena jako „1–4”.","Sekundy, suwak progu, oceny po nazwie (Powtórz / Trudne / Dobrze / Łatwe)."],
+ ["ekrany","med","ux","ui/modedetail/StepCard.kt:279","W kilku miejscach dotknięcie napisu przy przełączniku lub polu wyboru nic nie robi, a czytnik ekranu czyta przełącznik bez nazwy.","Cały wiersz jako jeden klikalny element."],
+ ["ekrany","high","ux","ui/appsettings/AppSettingsScreen.kt:160","Przywracanie ustawień fabrycznych to jedno tapnięcie, słabiej chronione niż usunięcie jednej talii. Nie mówi, że kasuje też dane w chmurze.","Potwierdzenie wpisaniem słowa, wzmianka o chmurze, propozycja kopii zapasowej i komunikat po wykonaniu."],
+ ["ekrany","med","ux","ui/appsettings/SettingsSections.kt:67","Wylogowanie bez wyjaśnienia (wygląda jak utrata danych). „Synchronizuj teraz” jest aktywne w trakcie synchronizacji. Nie widać, kiedy była ostatnia.","Potwierdzenie „Dane w chmurze zostają”, blokada przycisku i „Ostatnia synchronizacja: 2 min temu”."],
+ ["ekrany","med","ux","ui/appsettings/SettingsSections.kt:145","Suwak tempa mowy nie pozwala odsłuchać efektu.","Przycisk „Odsłuchaj próbkę”."],
+ ["ekrany","med","ux","ui/appsettings/SettingsSections.kt:242","Czerwony przycisk resetu jest w sekcji eksportu, a etykiety to żargon („Eksportuj stan do JSON”).","Sekcje „Kopia zapasowa” i osobna „Strefa niebezpieczna” na dole."],
+ ["ekrany","med","ux","ui/decksettings/DeckSettingsScreen.kt:122","Każde naciśnięcie klawisza w nazwie talii lub strony to zapis do bazy i wysyłka do chmury. Pusta nazwa jest po cichu ignorowana.","Zapis po chwili bezczynności lub po wyjściu z pola i podpis „Nazwa nie może być pusta”."],
+ ["ekrany","med","ux","ui/decksettings/PageRow.kt:33","Zamiana kolejności stron przepisuje wszystkie fiszki bez możliwości cofnięcia. Pole nazwy ma ok. 110 dp szerokości.","Układ w dwóch liniach i „Cofnij” w komunikacie."],
+ ["ekrany","med","ux","ui/studymodes/StudyModesScreen.kt:84","Karta trybu pokazuje tylko „Kroki: N”, więc nie wiadomo, co tryb robi. Usuwanie bez cofnięcia.","Podgląd przebiegu „Pokaż → Mów → Oceń” i „Usunięto tryb · Cofnij”."],
+ ["ekrany","med","ux","res/mipmap-anydpi/ic_launcher.xml:5","Ikona motywowa Androida 13+ używa kolorowego obrazka, więc wychodzi z niej płaska plama.","Osobna jednokolorowa warstwa wektorowa.",1],
+ ["ekrany","med","ux","res/values-pl/strings.xml","Raz „zestaw”, raz „talia”. „Pozostało: 3” nie znaczy „do powtórki”. „Wyszedłeś” to forma męska.","Jedno słowo w całej apce i neutralne formy („Sesja przerwana”)."],
+ ["ekrany","low","ux","res/values/strings.xml","Po angielsku mieszanka „Edit Flashcard” i „Add card”. Emoji wpisane w tekst jest czytane na głos.","Pisownia zdaniowa wszędzie, emoji poza tekstem."],
+ ["ekrany","med","ux","ui/components/ScreenScaffold.kt:40","Na tablecie i w poziomie boki ekranu nie mają tła, a pasek tytułu nie sięga krawędzi. Karty z cieniem wyglądają starzej niż obecny Material 3.","Tło na całą szerokość, karty tonalne bez cienia, duży zwijany pasek tytułu."],
+ ["ekrany","med","ux","ui/theme/Theme.kt:103","Przy kolorach dynamicznych (tapeta) kolory kategorii kart zostają stałe i gryzą się z paletą.","Dopasować je do koloru głównego."],
+ ["ekrany","low","ux","ui/archive/ArchiveScreen.kt:91","Przywrócenie talii z archiwum bez komunikatu, a każde „Usunie za N dni” jest na czerwono, jak alarm.","Komunikat „Przywrócono” i neutralny kolor do ostatnich dni."],
+ ["ekrany","low","ux","ui/stats/ActivityHeatmap.kt:60","Mapa aktywności bez nazw miesięcy i legendy. Nowy użytkownik widzi same zera.","Etykiety, legenda „mniej–więcej” i zachęcający pusty stan."],
+
+ ["logika","high","kod","domain/session/SessionEngine.kt:38","Silnik sesji to jedna klasa na ok. 400 linii z 12 zmiennymi stanu: podgląd, oceny, tło, pauza, przejścia.","Wydzielić osobne części: oceny, podgląd strony i wąski interfejs dla wykonawcy kroków."],
+ ["logika","high","kod","domain/session/SessionEngine.kt:100","Wznowienie karty po bramce „dotknij, aby odkryć” jest rozsmarowane w czterech miejscach.","Przekazywać krok startowy do uruchomienia karty; trzy pola stanu znikają."],
+ ["logika","high","kod","domain/model/ModeStep.kt:9","Kroki złożone i atomowe mają wspólny typ, więc wykonawca ma martwe gałęzie dla kroków, które nigdy nie dotrą.","Osobny typ kroków atomowych; rozwijanie zwraca tylko je."],
+ ["logika","high","kod","domain/model/SrsState.kt:11","Stan karty to liczba 0–3 porównywana z liczbami w sześciu miejscach. Ocena to też dowolny Int.","Typy wyliczeniowe „stan karty” i „ocena”; znika ręczne naprawianie zakresów."],
+ ["logika","high","kod","domain/merge/MergeEngine.kt:29","Trzy prawie identyczne funkcje scalania (karty, talie, tryby).","Jedna wspólna funkcja scalania po id; ubywa ok. 80 linii."],
+ ["logika","med","kod","domain/merge/MergeEngine.kt:41","„Usunięte” raz znaczy „data ≠ brak”, raz „data > 0”. Karty po edycji mogą ożyć, talie nie.","Jedna reguła usunięcia w jednym miejscu."],
+ ["logika","med","kod","domain/session/SessionState.kt:11","Wynik odpowiedzi i nasłuchu to worki opcjonalnych pól z wartościami „na wszelki wypadek”.","Typ z wariantami: pominięto / błąd / oceniono."],
+ ["logika","med","kod","domain/session/SessionState.kt:20","Bramka interakcji ma dwie wartości „NONE”, które mogą się nie zgadzać.","Brak bramki = brak obiektu."],
+ ["logika","med","kod","domain/steps/ModeStepValidator.kt:48","Walidator trybu to jedna funkcja na 55 linii, rozwijająca kroki trzy razy.","Rozwinąć raz i podzielić na małe reguły."],
+ ["logika","med","kod","domain/steps/CompoundExpander.kt:77","Rozwinięcia dwóch bloków nasłuchu są skopiowane.","Wspólny pomocnik."],
+ ["logika","med","kod","domain/srs/SrsEngine.kt:10","Algorytm FSRS odwołuje się do wag jako w[4], w[5], w[8]… bez nazw.","Nazwane parametry i podział na „pierwsza powtórka” i „kolejna”."],
+ ["logika","med","kod","domain/imports/HeaderDetector.kt:12","Te same dane o językach są w trzech tabelach (nagłówki, wykrywanie języka, przykładowe talie).","Jedna tabela języków."],
+ ["logika","low","kod","domain/srs/SpeechMatcher.kt:3","Nieużywane importy, wyrażenia regularne budowane od nowa przy każdym wywołaniu.","Porządki; dopasowanie słów ignoruje kolejność („pies gryzie kota” = „kot gryzie psa”), do decyzji."],
+ ["logika","low","kod","domain/model/ModeStep.kt:120","Kroki z polem „dummy: Int” tylko po to, żeby kompilator był zadowolony.","Obiekty bez pól (stare kopie dalej się wczytają)."],
+ ["logika","low","kod","domain/model/ModeStep.kt:176","Długości pauz (2000, 2200, 800, 500 ms) powtórzone w kilku plikach.","Nazwane stałe."],
+
+ ["dane","high","kod","data/repository/DeckRepository.kt:49","Każda zmiana w kartach (także każda ocena) przelicza i dekoduje wszystkie karty na wątku interfejsu.","Przenieść obliczenia na wątek tła; docelowo typowane kolumny w bazie."],
+ ["dane","high","kod","data/sync/SyncScheduler.kt:30","Harmonogram synchronizacji i kolejka ocen mieszają pięć różnych mechanizmów współbieżności.","Jeden wątek roboczy na kolejce zdarzeń; anulowanie to jedno polecenie."],
+ ["dane","med","kod","data/sync/SyncLifecycle.kt:51","Klasa z 13 zależnościami robi logowanie, start, odświeżanie, opróżnianie kolejki i czyszczenie archiwum. Warstwa danych zależy od odtwarzania.","Podzielić na konto, odświeżanie i zapis po sesji."],
+ ["dane","med","kod","data/repository/LocalStore.kt:51","Scalanie z chmurą kasuje i wstawia od nowa całą bazę przy każdym starcie i powrocie do apki.","Zapisywać tylko różnice."],
+ ["dane","med","kod","data/local/db/Entities.kt","Strony, kroki i ustawienia leżą w bazie jako tekst JSON i są ręcznie kodowane w kilku miejscach.","Konwertery typów w bazie; mapowanie skraca się do kopiowania pól."],
+ ["dane","med","kod","data/repository/DeckRepository.kt:45","W każdym repozytorium powtarzany ten sam kod „bieżące konto”.","Jeden pomocnik i typ „przestrzeń konta” zamiast pustego tekstu dla gościa."],
+ ["dane","med","kod","data/sync/SyncDiff.kt:28","Trzy skopiowane pętle porównujące karty, talie i tryby.","Wspólna funkcja różnic."],
+ ["dane","med","kod","data/repository/BackupRepository.kt:30","Kopia zapasowa jest parsowana dwa razy i na wątku interfejsu.","Raz, w tle."],
+ ["dane","low","kod","data/remote/firestore/FirestoreSchema.kt:97","Odczyt pól z chmury powtarzany w trzech funkcjach.","Mały czytnik dokumentu z nazwanymi polami."],
+ ["dane","low","kod","data/local/mappers/EntityMappers.kt:22","Trzy osobne konfiguracje JSON w trzech plikach.","Jedna wspólna."],
+ ["dane","low","kod","data/sync/SyncEngine.kt:112","Pobranie z chmury to 1 + liczba talii zapytań.","Jedno zapytanie po wszystkich kartach (wymaga zmiany reguł)."],
+ ["dane","low","kod","data/local/db/Entities.kt:10","Klucz główny [id, konto], a wszystkie zapytania filtrują najpierw po koncie.","Odwrócić kolejność, póki baza ma wersję 1."],
+
+ ["audio","high","kod","playback/SttRecognizer.kt:36","Nasłuch to jedna lambda na 110 linii z pięcioma poziomami zagnieżdżenia.","Podzielić na: przygotowanie, słuchacz, mapowanie wyniku; prostszy limit czasu."],
+ ["audio","high","kod","ui/study/StudyViewModel.kt:121","Start sesji robi wszystko naraz: silnik, obserwatory, stan, serwis. Stan jest trzy razy rzutowany.","Osobne strumienie stanu łączone w jeden; wyniki końcowe w osobnej funkcji."],
+ ["audio","med","kod","playback/StudySessionService.kt:123","Serwis przy każdej zmianie stanu (każdy tik audio) ponownie żąda fokusu audio, wybudzenia i ciszy.","Reagować tylko na zmianę „gra / nie gra”; blokadę wybudzenia w osobnej klasie."],
+ ["audio","med","kod","RayCollApplication.kt:22","Dwa niezależne obserwatory „apka zeszła w tło”.","Jeden wspólny strumień dla synchronizacji i nauki."],
+ ["audio","med","kod","playback/HapticAndSoundPlayer.kt:36","Ręcznie prowadzone zbiory „wczytane” i „oczekujące”. Dźwięk, którego nie udało się wczytać, czeka w nieskończoność.","Jeden obiekt na dźwięk z flagą gotowości."],
+ ["audio","med","kod","playback/AudioFocusManager.kt:36","Callback zmiany fokusu z kolejnych wywołań jest po cichu ignorowany.","Podawać go raz, w konstruktorze."],
+ ["audio","low","kod","ui/navigation/NavGraph.kt:75","Ten sam parametr przekazywany 11 razy przy każdym ekranie.","Podać go raz dla całej nawigacji."],
+ ["audio","low","kod","playback/TtsPlayer.kt:44","Mowa nie ma ustawionego typu audio „media”, a wynik ustawienia języka jest ignorowany.","Ustawić atrybuty audio jak dla fokusu i sprawdzać wynik."],
+
+ ["nauka","med","kod","ui (cała aplikacja)","W całej aplikacji nie ma ani jednego podglądu @Preview. Podgląd przy dużej czcionce i w poziomie wyłapałby ucinanie ocen i podsumowanie.","Podglądy kluczowych ekranów: jasny, ciemny, czcionka 1,5×, poziom."],
+ ["ekrany","med","kod","ui/components","Ta sama sekcja-karta skopiowana 5 razy, menu-chip 3 razy, dialogi trybów 3 razy, plakietka z ikoną 7 razy.","Wspólne komponenty w ui/components."],
+ ["ekrany","med","kod","ui/decksettings/DeckSettingsScreen.kt:102","Ekran dostaje cały ViewModel i woła go w 12 miejscach, więc nie da się go podejrzeć ani przetestować osobno.","Przekazywać akcje jako funkcje i podzielić na sekcje."],
+ ["ekrany","med","kod","ui/imports/ImportViewModel.kt:93","Sześć zmiennych stanu importu poza głównym stanem ekranu.","Czysty, testowalny „szkic importu” w logice."],
+ ["ekrany","low","kod","ui/theme/Spacing.kt","Brak tokenów na 48 dp, rozmiary ikon i wysokości przycisków; wartości rozsiane po plikach.","Dodać tokeny wymiarów."],
+ ["nauka","low","kod","ui/study/StudyCard.kt:132","Decyzje „czy pokazać panel”, „czy można odkryć” liczone w widoku.","Pola wyliczane w stanie ekranu."],
+ ["nauka","low","kod","ui/study/SessionSummary.kt:139","Pasek postępu przelicza kategorie wszystkich kart przy każdym tiku dźwięku.","Zapamiętać wynik dla listy kart."],
+ ["ekrany","low","kod","ui/study/StudyCard.kt:313","Formatowanie po automatycznym narzędziu: „if (index >” w trzech liniach.","Nazwane zmienne pomocnicze."],
+
+ ["build","med","kod","app/build.gradle.kts:21","Brak klucza Firebase psuje każde polecenie Gradle, także synchronizację w IDE i lint.","Wymagać klucza tylko przy budowaniu wersji release."],
+ ["build","low","kod","app/build.gradle.kts:137","Ręcznie skonfigurowany ktlint z obejściami Javy.","Gotowa wtyczka ktlint lub spotless (ok. 30 linii mniej)."],
+ ["build","low","kod","gradle/libs.versions.toml:206","Pełny zestaw ikon Material to duża biblioteka, a apka używa kilkunastu ikon.","Własne wektory dla używanych ikon."],
+ ["build","low","kod","app/proguard-rules.pro:6","Reguły dla serializacji dublują te, które biblioteka dostarcza sama.","Usunąć i sprawdzić buildem release."],
+ ["build","low","kod","AndroidManifest.xml:3","Przestarzałe „targetApi 34” i ustawienia, które są już domyślne.","Usunąć; sprawdzić, czy kopia zapasowa systemu ma obejmować bazę."]
+];
+
+const state = { area: "all", sev: "all", kind: "all", q: "" };
+
+function chips(el, key, labels, counts) {
+  const all = document.createElement("button");
+  all.className = "chip"; all.type = "button"; all.dataset.v = "all";
+  all.innerHTML = "Wszystko";
+  el.appendChild(all);
+  for (const [v, l] of Object.entries(labels)) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.dataset.v = v;
+    b.innerHTML = l + '<span class="c">' + (counts[v] || 0) + "</span>";
+    el.appendChild(b);
+  }
+  el.addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    state[key] = b.dataset.v; sync(); render();
+  });
+}
+function count(idx) { const c = {}; F.forEach(f => c[f[idx]] = (c[f[idx]] || 0) + 1); return c; }
+
+function sync() {
+  for (const [id, key] of [["fArea","area"],["fSev","sev"],["fKind","kind"]]) {
+    document.querySelectorAll("#" + id + " .chip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === state[key])));
+  }
+  try { localStorage.setItem("rc-filters", JSON.stringify(state)); } catch (e) {}
+}
+
+function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+function render() {
+  const q = state.q.trim().toLowerCase();
+  const rank = { bug: 0, high: 1, med: 2, low: 3 };
+  const rows = F.filter(f =>
+    (state.area === "all" || f[0] === state.area) &&
+    (state.sev === "all" || f[1] === state.sev) &&
+    (state.kind === "all" || f[2] === state.kind) &&
+    (!q || (f[3] + " " + f[4] + " " + f[5]).toLowerCase().includes(q))
+  ).sort((a, b) => rank[a[1]] - rank[b[1]]);
+  const list = document.getElementById("list");
+  list.innerHTML = rows.length ? rows.map(f => `
+    <div class="item">
+      <span class="sev s-${f[1]}">${SEV[f[1]]}</span>
+      <div class="body">
+        <span class="t">${esc(f[4])}</span>
+        <span class="fix"><b>Propozycja:</b> ${esc(f[5])}</span>
+        <span class="loc"><span class="mono">${esc(f[3])}</span><span>${AREAS[f[0]]} · ${KIND[f[2]]}</span>${f[6] ? '<span class="ok">sprawdzone</span>' : ""}</span>
+      </div>
+    </div>`).join("") : '<p class="empty">Brak uwag dla tych filtrów.</p>';
+  document.getElementById("count").textContent = "Pokazano " + rows.length + " z " + F.length;
+}
+
+// liczniki
+(function () {
+  const c = count(1);
+  document.getElementById("tally").innerHTML =
+    [["bug","błędów do naprawy"],["high","wysoka waga"],["med","średnia waga"],["low","niska waga"]]
+      .map(([k, l]) => `<div class="t-${k}"><b>${c[k] || 0}</b><span>${l}</span></div>`).join("");
+  document.getElementById("nShown").textContent = F.length;
+})();
+
+chips(document.getElementById("fArea"), "area", AREAS, count(0));
+chips(document.getElementById("fSev"), "sev", SEV, count(1));
+chips(document.getElementById("fKind"), "kind", KIND, count(2));
+try { Object.assign(state, JSON.parse(localStorage.getItem("rc-filters") || "{}")); } catch (e) {}
+const qEl = document.getElementById("q");
+qEl.value = state.q || "";
+qEl.addEventListener("input", () => { state.q = qEl.value; sync(); render(); });
+sync(); render();
+
+// ---------- makiety ----------
+const P1 = "die Inflation", P2 = "inflacja";
+const icon = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+const badge = listen => `<span class="badge${listen ? " listen" : ""}">${icon(listen ? "i-mic" : "i-spk")}${listen ? "Słucha" : "Mówi"}</span>`;
+
+const VARIANTS = [
+  { cls: "v-now", name: "Teraz", tag: '<span class="tag now">skacze</span>',
+    cap: "Plakietka wchodzi nad tekst aktywnej strony i spycha wszystko w dół.",
+    html: () => `<div class="pg p1">${badge(false)}<span class="txt">${P1}</span></div><div class="hr"></div><div class="pg p2">${badge(true)}<span class="txt">${P2}</span></div>` },
+  { cls: "v-a", name: "A. Plakietka na krawędzi", tag: "",
+    cap: "Plakietka siedzi na górnej krawędzi karty, poza tekstem. Nie mówi, która strona gra.",
+    html: () => `<span class="corner"></span><div class="pg p1"><span class="txt">${P1}</span></div><div class="hr"></div><div class="pg p2"><span class="txt">${P2}</span></div>` },
+  { cls: "v-b", name: "B. Podświetlona strona", tag: '<span class="tag rec">polecam</span>',
+    cap: "Aktywna strona dostaje tło w kolorze akcji, ikonka w stałym marginesie po lewej.",
+    html: () => `<div class="pg p1"><span class="dot">${icon("i-spk")}</span><span class="txt">${P1}</span></div><div class="hr"></div><div class="pg p2"><span class="dot">${icon("i-mic")}</span><span class="txt">${P2}</span></div>` },
+  { cls: "v-c", name: "C. Poświata karty", tag: "",
+    cap: "Pulsująca ramka całej karty i mała ikonka w rogu. Najmocniejszy sygnał, ale bez wskazania strony.",
+    html: () => `<span class="mini"></span><div class="pg p1"><span class="txt">${P1}</span></div><div class="hr"></div><div class="pg p2"><span class="txt">${P2}</span></div>` }
+];
+
+document.getElementById("mocks").innerHTML = VARIANTS.map(v => `
+  <div class="mock ${v.cls}">
+    <div class="mock-label"><h3>${v.name}</h3>${v.tag}</div>
+    <div class="screen"><div class="bar"><i></i></div><div class="fc">${v.html()}</div></div>
+    <p class="caption">${v.cap}</p>
+  </div>`).join("");
+
+// faza: 0 mówi strona 1, 1 słucha strona 2, 2 cisza
+const PHASES = ["Mówi: strona 1", "Słucha: strona 2", "Cisza"];
+let phase = 0, timer = null;
+function applyPhase() {
+  const active = phase === 0 ? "p1" : phase === 1 ? "p2" : null;
+  const listen = phase === 1;
+  document.querySelectorAll(".mock").forEach(m => {
+    m.querySelectorAll(".pg").forEach(p => {
+      const on = active && p.classList.contains(active);
+      p.classList.toggle("on", !!on);
+      p.classList.toggle("listen", !!on && listen);
+    });
+    const corner = m.querySelector(".corner");
+    if (corner) { corner.classList.toggle("show", !!active); if (active) corner.innerHTML = badge(listen); }
+    const fc = m.querySelector(".v-c .fc, .fc");
+    if (m.classList.contains("v-c")) {
+      fc.classList.toggle("speak", phase === 0);
+      fc.classList.toggle("listen", phase === 1);
+      m.querySelector(".mini").innerHTML = active ? icon(listen ? "i-mic" : "i-spk") : "";
+    }
+  });
+  document.getElementById("phaseLabel").textContent = PHASES[phase];
+}
+function tick() { phase = (phase + 1) % 3; applyPhase(); }
+function play() { timer = setInterval(tick, 1700); document.getElementById("playBtn").textContent = "Pauza"; }
+function stop() { clearInterval(timer); timer = null; document.getElementById("playBtn").textContent = "Odtwórz"; }
+document.getElementById("playBtn").addEventListener("click", () => timer ? stop() : play());
+applyPhase(); play();
+</script>

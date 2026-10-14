@@ -8,7 +8,6 @@
     <string name="route_study_mode_detail">Editar modo de estudio</string>
     <string name="btn_cancel">Cancelar</string>
     <string name="btn_save">Guardar</string>
-    <string name="btn_add">Añadir</string>
     <string name="btn_delete">Eliminar</string>
     <string name="btn_back">Atrás</string>
     <string name="auth_local">Modo local</string>
@@ -257,7 +256,6 @@
     <string name="browse_add_card">Añadir tarjeta</string>
     <string name="filter_chip_count">%1$s (%2$d)</string>
     <string name="auth_migration_cancel_btn">No iniciar sesión</string>
-    <string name="a11y_deck_menu">Opciones del mazo</string>
     <string name="a11y_fewer_pages">Menos páginas</string>
     <string name="a11y_more_pages">Más páginas</string>
     <string name="delete_confirm_token">BORRAR</string>

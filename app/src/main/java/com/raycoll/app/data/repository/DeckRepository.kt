@@ -126,9 +126,10 @@ class DeckRepository @Inject constructor(
             deck.copy(pageLanguages = deck.pageLanguages.mapIndexed { i, old -> if (i == pageIndex) language else old })
         }
 
-    suspend fun setActivePageCount(deckId: String, count: Int) = editPageMetadata(deckId) { deck, now ->
-        deck.withActivePageCount(count, now)
-    }
+    suspend fun setActivePageCount(deckId: String, count: Int, defaultName: (Int) -> String = { "Page ${it + 1}" }) =
+        editPageMetadata(deckId) { deck, now ->
+            deck.withActivePageCount(count, now, defaultName)
+        }
 
     private suspend fun updateDeck(write: suspend (ns: String, now: Long) -> Int) {
         if (write(ns, clock.now()) > 0) dataMutations.signal(CloudWriteMode.DEBOUNCED)

@@ -73,7 +73,7 @@ class CompoundExpanderTest {
 
     @Test
     fun `fail_next expands to mark_failed, rate and next_card`() {
-        val step = CompoundStep(params = CompoundParams.FailNext())
+        val step = CompoundStep(params = CompoundParams.FailNext)
         val expanded = CompoundExpander.expandStep(step)
         assertEquals(3, expanded.size)
         assertTrue(expanded[0] is MarkFailedStep)

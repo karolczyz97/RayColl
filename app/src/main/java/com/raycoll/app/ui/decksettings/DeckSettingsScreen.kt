@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -114,6 +115,7 @@ private fun DeckSettingsContent(
     modifier: Modifier
 ) {
     val deck = state.deck
+    val resources = LocalResources.current
     // otwarte okno (i tryb, którego dotyczy) przeżywa obrót ekranu
     var showArchiveDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
@@ -133,6 +135,7 @@ private fun DeckSettingsContent(
                 onValueChange = viewModel::rename,
                 label = stringResource(R.string.settings_rename_label),
                 isError = { it.isBlank() },
+                errorText = stringResource(R.string.import_error_name_required),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -150,7 +153,9 @@ private fun DeckSettingsContent(
                     onMoveDown = { viewModel.swapPages(pageIndex, pageIndex + 1) }
                 )
             }
-            PageCountStepper(deck.activePageCount, onChange = viewModel::setActivePageCount)
+            PageCountStepper(deck.activePageCount, onChange = { count ->
+                viewModel.setActivePageCount(count) { resources.getString(R.string.import_page_label, it + 1) }
+            })
         }
         SectionCard(title = stringResource(R.string.settings_study_scope)) {
             Text(stringResource(R.string.settings_study_filter), style = MaterialTheme.typography.labelLarge)

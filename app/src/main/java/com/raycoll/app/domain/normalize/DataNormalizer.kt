@@ -36,13 +36,14 @@ import com.raycoll.app.domain.seed.isBuiltInModeSourceId
 // Normalizacja danych z zewnątrz (backup, chmura, merge): przycina wartości do
 // dozwolonych zakresów, żeby uszkodzone dane nie dotarły do sesji ani UI.
 
-/** Dopełnia nazwy i języki stron do [count] ("Page N", język domyślny). */
+/** Dopełnia nazwy i języki stron do [count]; istniejące metadane zostają. */
 fun padPageMetadata(
     pageNames: List<String>,
     pageLanguages: List<String>,
-    count: Int
+    count: Int,
+    defaultName: (Int) -> String = { "Page ${it + 1}" }
 ): Pair<List<String>, List<String>> {
-    val names = pageNames + (pageNames.size until count).map { "Page ${it + 1}" }
+    val names = pageNames + (pageNames.size until count).map(defaultName)
     val languages = pageLanguages + List((count - pageLanguages.size).coerceAtLeast(0)) { DEFAULT_PAGE_LANGUAGE }
     return names to languages
 }

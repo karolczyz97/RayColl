@@ -192,6 +192,7 @@ private fun AppLanguagePicker(current: String, onSelect: (String) -> Unit) {
     DropdownChip(
         label = appLanguageLabel(current),
         options = APP_LANGUAGES,
+        selected = current,
         optionLabel = { appLanguageLabel(it) },
         onSelect = onSelect
     )

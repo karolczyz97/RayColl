@@ -6,17 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.raycoll.app.core.Clock
 import com.raycoll.app.core.minuteTicks
 import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.selectors.archiveDaysLeft
 import com.raycoll.app.domain.selectors.live
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
 @Immutable
@@ -33,8 +35,11 @@ sealed interface ArchiveEvent {
 }
 
 @HiltViewModel
-class ArchiveViewModel @Inject constructor(private val deckRepository: DeckRepository, private val clock: Clock) :
-    ViewModel() {
+class ArchiveViewModel @Inject constructor(
+    private val deckRepository: DeckRepository,
+    private val clock: Clock,
+    @DefaultDispatcher private val dispatcher: CoroutineDispatcher
+) : ViewModel() {
     val uiState: StateFlow<ArchiveUiState> = combine(deckRepository.archivedDecks(), clock.minuteTicks()) {
             decks,
             now
@@ -50,6 +55,7 @@ class ArchiveViewModel @Inject constructor(private val deckRepository: DeckRepos
             }
         )
     }
+        .flowOn(dispatcher)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchiveUiState.Loading)
 
     private val eventSink = UiEvents<ArchiveEvent>()

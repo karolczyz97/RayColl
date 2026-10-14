@@ -67,7 +67,7 @@ class ArchiveViewModelTest {
         repos.db.close()
     }
 
-    private fun vm() = ArchiveViewModel(repos.deckRepository, clock).also { viewModels += it }
+    private fun vm() = ArchiveViewModel(repos.deckRepository, clock, dispatcher).also { viewModels += it }
 
     private suspend fun ArchiveViewModel.decks(predicate: (List<ArchivedDeck>) -> Boolean) =
         uiState.filterIsInstance<ArchiveUiState.Ready>().first { predicate(it.decks) }.decks

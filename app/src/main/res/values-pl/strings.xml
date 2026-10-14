@@ -8,7 +8,6 @@
     <string name="route_study_mode_detail">Edycja trybu nauki</string>
     <string name="btn_cancel">Anuluj</string>
     <string name="btn_save">Zapisz</string>
-    <string name="btn_add">Dodaj</string>
     <string name="btn_delete">Usuń</string>
     <string name="btn_back">Wstecz</string>
     <string name="auth_local">Tryb lokalny</string>
@@ -262,7 +261,6 @@
     <string name="browse_add_card">Dodaj fiszkę</string>
     <string name="filter_chip_count">%1$s (%2$d)</string>
     <string name="auth_migration_cancel_btn">Nie loguj</string>
-    <string name="a11y_deck_menu">Opcje talii</string>
     <string name="a11y_fewer_pages">Mniej stron</string>
     <string name="a11y_more_pages">Więcej stron</string>
     <string name="delete_confirm_token">USUŃ</string>

@@ -204,7 +204,7 @@ class ImportViewModel @Inject constructor(
                 val payload = ImportPayload(
                     deckName = state.deckName.trim(),
                     pageNames = state.pageNames.mapIndexed { i, name ->
-                        name.ifBlank { defaultPageNames.getOrElse(i) { "" } }
+                        name.trim().ifBlank { defaultPageNames.getOrElse(i) { "" }.trim() }
                     },
                     pageLanguages = state.pageLanguages,
                     cards = state.rows.filter { row -> row.any { it.isNotBlank() } }

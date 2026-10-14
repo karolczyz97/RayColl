@@ -8,25 +8,16 @@ import com.raycoll.app.data.repository.DataMutations
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.LocalStore
 import com.raycoll.app.data.repository.NamespaceManager
-import com.raycoll.app.data.repository.ReviewWriteQueue
 import com.raycoll.app.di.ApplicationScope
-import com.raycoll.app.domain.session.SessionStatus
-import com.raycoll.app.playback.StudySessionHolder
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -48,9 +39,8 @@ private const val NEVER_CHECKED = Long.MIN_VALUE / 2
 /**
  * Cykl życia synchronizacji: start aplikacji i logowanie (scalenie z chmurą),
  * migracja danych gościa, wysyłka lokalnych zmian według [SyncScheduler]
- * oraz domknięcie zaległych zmian na końcu sesji nauki i przy zejściu w tło.
+ * oraz domknięcie zaległych zmian przy zejściu w tło.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class SyncLifecycle @Inject constructor(
     private val authRepository: CurrentUser,
@@ -61,8 +51,6 @@ class SyncLifecycle @Inject constructor(
     private val migrationController: MigrationController,
     private val syncEngine: CloudSync,
     private val dataMutations: DataMutations,
-    private val studySessionHolder: StudySessionHolder,
-    private val reviewWrites: ReviewWriteQueue,
     private val clock: Clock,
     @ApplicationScope private val scope: CoroutineScope,
     private val googleSignIn: GoogleSignIn
@@ -120,26 +108,6 @@ class SyncLifecycle @Inject constructor(
                     CloudWriteMode.IMMEDIATE -> scheduler.enqueueImmediate()
                 }
             }
-        }
-        // koniec sesji nauki (ukończona albo zamknięta) domyka zaległe oceny
-        scope.launch {
-            studySessionHolder.session
-                .flatMapLatest { active ->
-                    active?.engine?.state?.map { it.status == SessionStatus.FINISHED }
-                        ?: flowOf(true)
-                }
-                .combine(reviewWrites.state) { sessionOver, writes ->
-                    sessionOver && (writes.pending == 0 || writes.failed)
-                }
-                .distinctUntilChanged()
-                .collect { sessionOver ->
-                    // najpierw zapis ostatnich ocen w bazie, potem wysyłka; nieudane oceny
-                    // zostają w kolejce i wyślą się po ponowieniu
-                    if (sessionOver) {
-                        reviewWrites.awaitIdle()
-                        pushNow()
-                    }
-                }
         }
     }
 

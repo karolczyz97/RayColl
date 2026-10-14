@@ -16,11 +16,13 @@ import com.raycoll.app.ui.components.launchSaving
 import com.raycoll.app.ui.navigation.DeckSettingsRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
 sealed interface DeckSettingsUiState {
@@ -69,7 +71,9 @@ class DeckSettingsViewModel @Inject constructor(
             // usunięta (np. na innym urządzeniu) albo nieistniejąca talia
             else -> DeckSettingsUiState.DeckMissing
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DeckSettingsUiState.Loading)
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DeckSettingsUiState.Loading)
 
     private val eventSink = UiEvents<DeckSettingsEvent>()
     val events: Flow<DeckSettingsEvent> = eventSink.flow
@@ -88,7 +92,9 @@ class DeckSettingsViewModel @Inject constructor(
 
     fun swapPages(from: Int, to: Int) = launch { deckRepository.swapPages(deckId, from, to) }
 
-    fun setActivePageCount(count: Int) = launch { deckRepository.setActivePageCount(deckId, count) }
+    fun setActivePageCount(count: Int, defaultName: (Int) -> String = { "Page ${it + 1}" }) = launch {
+        deckRepository.setActivePageCount(deckId, count, defaultName)
+    }
 
     fun setStudyFilter(filter: StudyFilter) = launch { deckRepository.setStudyFilter(deckId, filter) }
 

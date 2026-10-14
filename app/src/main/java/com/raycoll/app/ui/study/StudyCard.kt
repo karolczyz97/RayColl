@@ -80,7 +80,6 @@ import com.raycoll.app.ui.theme.RayCollMotion
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** Reakcje ekranu nauki przekazywane do sesji. */
 class CardActions(
@@ -112,9 +111,6 @@ private const val LONGEST_TEXT = 260
 // po ustaniu dźwięku znacznik trzyma się chwilę, żeby nie migał między krokami (koniec czytania → początek następnego)
 private const val AUDIO_RELEASE_MS = 250L
 
-// jak długo przewijanie podąża za rosnącą (animowaną) nowo odsłoniętą stroną
-private const val REVEAL_FOLLOW_MS = 700L
-
 // stałe miejsce na znacznik dźwięku po bokach strony — tekst nigdy się nie przesuwa; symetrycznie, żeby wyśrodkowany tekst został w środku
 private val AudioGutter = 20.dp
 private val AudioGutterCompact = 16.dp
@@ -142,9 +138,7 @@ fun StudyCardContent(deckId: String, state: StudyUiState.Active, actions: CardAc
             scrollState.scrollTo(0)
         } else {
             // strona rośnie w animacji — dół przewijanej treści przesuwa się razem z nią
-            withTimeoutOrNull(REVEAL_FOLLOW_MS) {
-                snapshotFlow { scrollState.maxValue }.collectLatest { scrollState.animateScrollTo(it) }
-            }
+            snapshotFlow { scrollState.maxValue }.collectLatest { scrollState.animateScrollTo(it) }
         }
     }
 

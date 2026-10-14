@@ -117,7 +117,7 @@ sealed interface CompoundParams {
 
     @Serializable
     @SerialName("show_all_grade")
-    data class ShowAllGrade(val dummy: Int = 0) : CompoundParams
+    data object ShowAllGrade : CompoundParams
 
     @Serializable
     @SerialName("speak_pause_next")
@@ -157,7 +157,7 @@ sealed interface CompoundParams {
 
     @Serializable
     @SerialName("fail_next")
-    data class FailNext(val dummy: Int = 0) : CompoundParams
+    data object FailNext : CompoundParams
 }
 
 /** Co robi gałąź "poprawna"/"błędna" kroku z nasłuchem. */

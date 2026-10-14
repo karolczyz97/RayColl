@@ -50,7 +50,7 @@ private val STEP_CATALOG = listOf(
         listOf(
             StepChoice(R.string.compound_present_front_name) { CompoundStep(params = CompoundParams.PresentFront()) },
             StepChoice(R.string.compound_flip_reveal_name) { CompoundStep(params = CompoundParams.FlipReveal()) },
-            StepChoice(R.string.compound_show_all_grade_name) { CompoundStep(params = CompoundParams.ShowAllGrade()) },
+            StepChoice(R.string.compound_show_all_grade_name) { CompoundStep(params = CompoundParams.ShowAllGrade) },
             StepChoice(R.string.compound_speak_pause_next_name) {
                 CompoundStep(params = CompoundParams.SpeakPauseNext())
             },
@@ -60,7 +60,7 @@ private val STEP_CATALOG = listOf(
                 CompoundStep(params = CompoundParams.GradeAfterListen())
             },
             StepChoice(R.string.compound_auto_pass_next_name) { CompoundStep(params = CompoundParams.AutoPassNext()) },
-            StepChoice(R.string.compound_fail_next_name) { CompoundStep(params = CompoundParams.FailNext()) }
+            StepChoice(R.string.compound_fail_next_name) { CompoundStep(params = CompoundParams.FailNext) }
         )
     ),
     StepGroup(

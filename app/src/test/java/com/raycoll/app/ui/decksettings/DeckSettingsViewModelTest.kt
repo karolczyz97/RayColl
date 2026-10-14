@@ -95,7 +95,10 @@ class DeckSettingsViewModelTest {
         val vm = vm(seedDeck())
         vm.ready()
         vm.swapPages(0, 1)
-        val deck = vm.ready { it.deck.pageNames == listOf("Back", "Front") }.deck
+        val deck = vm.ready {
+            it.deck.pageNames == listOf("Back", "Front") &&
+                it.deck.cards.single().pages == listOf("cześć", "hello")
+        }.deck
         assertEquals(listOf("pl-PL", "en-US"), deck.pageLanguages)
         assertEquals(listOf("cześć", "hello"), deck.cards.single().pages)
     }
@@ -104,8 +107,13 @@ class DeckSettingsViewModelTest {
     fun `increasing page count updates padded metadata`() = runTest {
         val vm = vm(seedDeck())
         vm.ready()
-        vm.setActivePageCount(4)
-        assertEquals(4, vm.ready { it.deck.activePageCount == 4 }.deck.pageNames.size)
+        vm.setActivePageCount(4) { "Strona ${it + 1}" }
+        val deck = vm.ready { it.deck.activePageCount == 4 }.deck
+        assertEquals(listOf("Front", "Back", "Strona 3", "Strona 4"), deck.pageNames)
+        vm.setActivePageCount(2) { "Seite ${it + 1}" }
+        vm.ready { it.deck.activePageCount == 2 }
+        vm.setActivePageCount(4) { "Seite ${it + 1}" }
+        assertEquals(deck.pageNames, vm.ready { it.deck.activePageCount == 4 }.deck.pageNames)
     }
 
     @Test

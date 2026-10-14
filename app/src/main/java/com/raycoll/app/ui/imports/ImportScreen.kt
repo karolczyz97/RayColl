@@ -235,6 +235,7 @@ private fun ConfigCard(
             DropdownChip(
                 label = separatorLabel(state.separator),
                 options = CsvSeparator.entries,
+                selected = state.separator,
                 optionLabel = { separatorLabel(it) },
                 onSelect = onSeparator
             )

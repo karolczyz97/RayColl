@@ -1,5 +1,6 @@
 package com.raycoll.app
 
+import com.raycoll.app.ui.appsettings.APP_LANGUAGES
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -11,6 +12,15 @@ import org.junit.Test
  * ucieczki `\'`) ani nieprzetłumaczonych angielskich etykiet. Test czyta pliki źródłowe modułu.
  */
 class I18nConsistencyTest {
+
+    @Test
+    fun `language picker includes exactly the available translations`() {
+        val translated = resDir().listFiles().orEmpty()
+            .filter { it.isDirectory && File(it, "strings.xml").isFile }
+            .map { if (it.name == "values") "en" else it.name.removePrefix("values-") }
+            .toSet()
+        assertEquals(translated, APP_LANGUAGES.filter(String::isNotBlank).toSet())
+    }
 
     private val locales = listOf("values", "values-pl", "values-de", "values-es", "values-it")
     private val foreignLocales = locales.drop(1)

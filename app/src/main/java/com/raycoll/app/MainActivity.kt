@@ -1,7 +1,6 @@
 package com.raycoll.app
 
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -16,6 +15,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.data.local.prefs.ThemePref
@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
                 // tło okna za Compose (obrót, klawiatura, przewijanie ponad krawędź) w kolorze motywu aplikacji
                 val windowBackground = MaterialTheme.colorScheme.background.toArgb()
                 DisposableEffect(windowBackground) {
-                    window.setBackgroundDrawable(ColorDrawable(windowBackground))
+                    window.setBackgroundDrawable(windowBackground.toDrawable())
                     onDispose {}
                 }
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

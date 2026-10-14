@@ -13,7 +13,6 @@ import com.raycoll.app.data.remote.auth.SignInResult
 import com.raycoll.app.data.repository.BackupRepository
 import com.raycoll.app.data.repository.DataMutations
 import com.raycoll.app.data.repository.NamespaceManager
-import com.raycoll.app.data.repository.ReviewWriteQueue
 import com.raycoll.app.data.sync.BootstrapLoader
 import com.raycoll.app.data.sync.CloudLoad
 import com.raycoll.app.data.sync.CloudSync
@@ -24,7 +23,6 @@ import com.raycoll.app.data.sync.SIGN_OUT_PUSH_TIMEOUT_MS
 import com.raycoll.app.data.sync.SyncLifecycle
 import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.playback.StudySessionHolder
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
@@ -133,8 +131,6 @@ class AppSettingsSignInTest {
             MigrationController(repos.localStore, repos.namespaceManager),
             cloud,
             DataMutations(),
-            StudySessionHolder(context),
-            ReviewWriteQueue(repos.deckRepository, scope, repos.namespaceManager),
             FakeClock(),
             scope,
             google

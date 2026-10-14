@@ -17,6 +17,7 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.normalize.normalizeStoreData
 import com.raycoll.app.domain.session.SessionEngine
+import com.raycoll.app.playback.SessionEndSync
 import com.raycoll.app.playback.StudySessionHolder
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.FakeSessionDeps
@@ -163,12 +164,15 @@ private class Device(context: Context, backend: FakeCloudBackend, val clock: Fak
         MigrationController(repos.localStore, repos.namespaceManager),
         cloud,
         DataMutations(),
-        holder,
-        writes,
         clock,
         scope,
         user
     )
+
+    fun startSync() {
+        sync.start()
+        SessionEndSync(holder, writes, sync, scope).start()
+    }
 
     fun decks() = runBlocking { repos.localStore.snapshot().groups.filter { it.deletedAt == null } }
 
@@ -193,7 +197,7 @@ class TwoDeviceSyncTest {
 
     @Test
     fun `retry after session completion uploads the last review without another mutation`() {
-        phone.sync.start()
+        phone.startSync()
         val deck = phone.decks().first()
         val card = deck.cards.first()
         phone.repos.db.openHelper.writableDatabase.execSQL(

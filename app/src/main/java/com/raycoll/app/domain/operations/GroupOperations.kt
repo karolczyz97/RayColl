@@ -25,9 +25,13 @@ fun newGroup(
 )
 
 /** Zmiana liczby aktywnych stron; metadane dopełniane do NOWEJ liczby, żeby normalizacja jej nie cofnęła. */
-fun FlashcardGroup.withActivePageCount(count: Int, now: Long): FlashcardGroup {
+fun FlashcardGroup.withActivePageCount(
+    count: Int,
+    now: Long,
+    defaultName: (Int) -> String = { "Page ${it + 1}" }
+): FlashcardGroup {
     val clamped = PageLimits.clampActivePageCount(count, PageLimits.MAX_VISIBLE_PAGE_COUNT)
-    val (names, languages) = padPageMetadata(pageNames, pageLanguages, clamped)
+    val (names, languages) = padPageMetadata(pageNames, pageLanguages, clamped, defaultName)
     return copy(activePageCount = clamped, pageNames = names, pageLanguages = languages, updatedAt = now)
 }
 

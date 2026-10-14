@@ -284,6 +284,22 @@ class ImportViewModelTest {
 
     // --- ręczne ustawienia kolumn (nazwa/język) ---
 
+    @Test
+    fun `import trims names and uses localized defaults for whitespace only names`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.setDeckName("  Talia  ")
+        vm.onSourceTextChanged("hello;cześć")
+        advanceUntilIdle()
+        vm.setPageName(0, "  Pytanie  ")
+        vm.setPageName(1, "   ")
+        vm.runImport(listOf("Strona 1", "Strona 2"))
+        advanceUntilIdle()
+        assertEquals(ImportEvent.Imported, vm.events.first())
+        val deck = repos.localStore.snapshot().groups.single()
+        assertEquals("Talia", deck.name)
+        assertEquals(listOf("Pytanie", "Strona 2"), deck.pageNames)
+    }
+
     private suspend fun TestScope.importedDeck(vm: ImportViewModel): FlashcardGroup {
         vm.runImport(pageNames)
         advanceUntilIdle()

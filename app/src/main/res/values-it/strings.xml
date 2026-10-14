@@ -8,7 +8,6 @@
     <string name="route_study_mode_detail">Modifica modalità di studio</string>
     <string name="btn_cancel">Annulla</string>
     <string name="btn_save">Salva</string>
-    <string name="btn_add">Aggiungi</string>
     <string name="btn_delete">Elimina</string>
     <string name="btn_back">Indietro</string>
     <string name="auth_local">Modalità locale</string>
@@ -257,7 +256,6 @@
     <string name="browse_add_card">Aggiungi flashcard</string>
     <string name="filter_chip_count">%1$s (%2$d)</string>
     <string name="auth_migration_cancel_btn">Non accedere</string>
-    <string name="a11y_deck_menu">Opzioni del mazzo</string>
     <string name="a11y_fewer_pages">Meno pagine</string>
     <string name="a11y_more_pages">Più pagine</string>
     <string name="delete_confirm_token">ELIMINA</string>
