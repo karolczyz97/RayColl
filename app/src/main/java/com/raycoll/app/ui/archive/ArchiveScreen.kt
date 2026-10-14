@@ -34,6 +34,8 @@ import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.theme.Spacing
 
+private const val URGENT_DAYS_LEFT = 3
+
 @Composable
 fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,9 +62,9 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
                     contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
                     verticalArrangement = Arrangement.spacedBy(Spacing.m)
                 ) {
-                    items(state.decks, key = {
-                        it.id
-                    }) { deck -> ArchivedDeckCard(deck, onRestore = { viewModel.restore(deck.id) }) }
+                    items(state.decks, key = { deck -> deck.id }) { deck ->
+                        ArchivedDeckCard(deck, onRestore = { viewModel.restore(deck.id) })
+                    }
                 }
             }
         }
@@ -86,7 +88,12 @@ private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit) {
                     else -> pluralStringResource(R.plurals.archive_auto_delete_in, deck.daysLeft, deck.daysLeft)
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                // czerwień dopiero tuż przed usunięciem
+                color = if (deck.daysLeft <= URGENT_DAYS_LEFT) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
             OutlinedButton(
                 onClick = onRestore,

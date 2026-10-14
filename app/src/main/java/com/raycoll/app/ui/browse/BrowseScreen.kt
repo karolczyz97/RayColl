@@ -1,5 +1,6 @@
 package com.raycoll.app.ui.browse
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,8 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -35,8 +36,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
@@ -107,7 +111,7 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
                     onClick = { editTarget = CardEditTarget.New },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.btn_add)) }
+                ) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.browse_add_card)) }
             }
         }
     ) { padding ->
@@ -126,6 +130,7 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
                 onCategory = viewModel::setCategory,
                 onEdit = { editTarget = CardEditTarget.Existing(it.id) },
                 onDelete = { deleteTargetId = it.id },
+                onAdd = { editTarget = CardEditTarget.New },
                 modifier = contentModifier.imePadding()
             )
         }
@@ -138,6 +143,7 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
             CardEditTarget.New -> CardEditorDialog(
                 title = stringResource(R.string.browse_add_card),
                 draftKey = target.draftKey,
+                autoFocusFirst = true,
                 saveAttempt = saveAttempt,
                 initialPages = List(ready.activePageCount) { "" },
                 pageNames = ready.pageNames,
@@ -193,37 +199,55 @@ private fun BrowseContent(
     onCategory: (SrsCardCategory?) -> Unit,
     onEdit: (Flashcard) -> Unit,
     onDelete: (Flashcard) -> Unit,
+    onAdd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier) {
-        CardStatsBar(state.counts, Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.s))
-        OutlinedTextField(
-            value = query,
-            onValueChange = onSearch,
-            placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            shape = MaterialTheme.shapes.small,
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.screen)
-        )
-        CategoryChips(state, onCategory)
+    // nagłówek jest elementem listy (przewija się razem z nią, w poziomie zostaje miejsce na karty);
+    // jedna lista także przy braku wyników — pole wyszukiwania nie jest odtwarzane i nie traci fokusu
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.fabClearance),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s)
+    ) {
+        item(key = "header") {
+            Column {
+                CardStatsBar(state.counts, Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.s))
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onSearch,
+                    placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    shape = MaterialTheme.shapes.small,
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.screen)
+                )
+                CategoryChips(state, onCategory)
+            }
+        }
         if (state.cards.isEmpty()) {
-            EmptyState(stringResource(R.string.browse_no_cards))
+            item(key = "empty") {
+                val deckEmpty = state.counts.total == 0
+                EmptyState(
+                    message = stringResource(if (deckEmpty) R.string.browse_empty_deck else R.string.browse_no_cards),
+                    modifier = Modifier.fillParentMaxWidth(),
+                    action = if (deckEmpty) {
+                        { Button(onClick = onAdd) { Text(stringResource(R.string.browse_add_card)) } }
+                    } else {
+                        null
+                    }
+                )
+            }
         } else {
-            LazyColumn(
-                contentPadding = PaddingValues(
-                    start = Spacing.screen,
-                    end = Spacing.screen,
-                    top = Spacing.xs,
-                    bottom = Spacing.fabClearance
-                ),
-                verticalArrangement = Arrangement.spacedBy(Spacing.s)
-            ) {
-                items(state.cards, key = { it.id }) { card ->
-                    CardItem(card, state.activePageCount, onEdit = { onEdit(card) }, onDelete = { onDelete(card) })
-                }
+            items(state.cards, key = { it.id }) { card ->
+                CardItem(
+                    card = card,
+                    activePageCount = state.activePageCount,
+                    onEdit = { onEdit(card) },
+                    onDelete = { onDelete(card) },
+                    modifier = Modifier.padding(horizontal = Spacing.screen)
+                )
             }
         }
     }
@@ -257,55 +281,58 @@ private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCatego
     }
 }
 
+/** Pełny tekst strony widać w edytorze po dotknięciu karty. */
+private const val MAX_PAGE_LINES = 4
+
+/** Karta na liście: dotknięcie otwiera edycję, kosz usuwa (po potwierdzeniu). */
 @Composable
-private fun CardItem(card: Flashcard, activePageCount: Int, onEdit: () -> Unit, onDelete: () -> Unit) {
-    RayCollCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.l)) {
-            card.pages.take(activePageCount).forEachIndexed { index, page ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        Modifier.padding(vertical = Spacing.s),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                }
-                Text(
-                    page,
-                    style = if (index ==
-                        0
-                    ) {
-                        MaterialTheme.typography.titleMedium
-                    } else {
-                        MaterialTheme.typography.bodyMedium
-                    },
-                    color = if (index ==
-                        0
-                    ) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
-            Row(
+private fun CardItem(
+    card: Flashcard,
+    activePageCount: Int,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val editLabel = stringResource(R.string.browse_edit_card)
+    RayCollCard(modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(
                 Modifier
-                    .fillMaxWidth()
-                    .padding(top = Spacing.s),
-                horizontalArrangement = Arrangement.End
+                    .weight(1f)
+                    .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onEdit)
+                    .padding(Spacing.l)
             ) {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.browse_edit_card),
-                        tint = MaterialTheme.colorScheme.primary
+                card.pages.take(activePageCount).forEachIndexed { index, page ->
+                    val isFirst = index == 0
+                    if (!isFirst) {
+                        HorizontalDivider(
+                            Modifier.padding(vertical = Spacing.s),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
+                    Text(
+                        page,
+                        style = if (isFirst) {
+                            MaterialTheme.typography.titleMedium
+                        } else {
+                            MaterialTheme.typography.bodyMedium
+                        },
+                        color = if (isFirst) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        maxLines = MAX_PAGE_LINES,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.browse_delete_card),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.padding(top = Spacing.xs, end = Spacing.xs)) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.browse_delete_card),
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

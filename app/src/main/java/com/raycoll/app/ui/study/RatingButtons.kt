@@ -3,10 +3,13 @@ package com.raycoll.app.ui.study
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -23,13 +26,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
+
+/** Minimalna wysokość przycisków ocen — tyle samo zajmuje miejsce kontrolek, gdy ocen jeszcze nie widać. */
+internal val RatingButtonHeight = 68.dp
 
 @StringRes
 fun ratingLabel(rating: Int): Int = when (rating) {
@@ -46,16 +55,26 @@ private class RatingStyle(val rating: Int, val icon: ImageVector, val container:
 fun RatingButtons(onRate: (Int) -> Unit, enabled: Boolean) {
     val srs = LocalSrsColors.current
     val colors = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
     val styles = listOf(
         RatingStyle(Ratings.AGAIN, Icons.Filled.Refresh, colors.errorContainer, colors.onErrorContainer),
         RatingStyle(Ratings.HARD, Icons.Filled.SentimentDissatisfied, srs.learningBg, srs.learningFg),
-        RatingStyle(Ratings.GOOD, Icons.Filled.ThumbUp, srs.reviewBg, srs.reviewFg),
+        RatingStyle(Ratings.GOOD, Icons.Filled.ThumbUp, colors.primaryContainer, colors.onPrimaryContainer),
         RatingStyle(Ratings.EASY, Icons.Filled.CheckCircle, srs.masteredBg, srs.masteredFg)
     )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+    // wysokość = najwyższy przycisk: przy dużej czcionce etykieta może się zawinąć i nic się nie ucina
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+    ) {
         styles.forEach { style ->
             Button(
-                onClick = { onRate(style.rating) },
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    onRate(style.rating)
+                },
                 enabled = enabled,
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(
@@ -67,7 +86,8 @@ fun RatingButtons(onRate: (Int) -> Unit, enabled: Boolean) {
                 contentPadding = PaddingValues(horizontal = Spacing.xs, vertical = Spacing.s),
                 modifier = Modifier
                     .weight(1f)
-                    .height(68.dp)
+                    .fillMaxHeight()
+                    .heightIn(min = RatingButtonHeight)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -76,8 +96,9 @@ fun RatingButtons(onRate: (Int) -> Unit, enabled: Boolean) {
                     Icon(style.icon, contentDescription = null, modifier = Modifier.size(22.dp))
                     Text(
                         stringResource(ratingLabel(style.rating)),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelLarge,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

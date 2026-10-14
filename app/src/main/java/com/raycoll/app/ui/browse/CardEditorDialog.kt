@@ -12,6 +12,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -19,9 +20,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.window.DialogProperties
 import com.raycoll.app.R
 import com.raycoll.app.ui.theme.Spacing
 
@@ -41,7 +45,8 @@ fun CardEditorDialog(
     pageNames: List<String>,
     onDismiss: () -> Unit,
     onSave: (pages: List<String>) -> Unit,
-    saveAttempt: Int = 0
+    saveAttempt: Int = 0,
+    autoFocusFirst: Boolean = false
 ) {
     // tekst i kursor każdej strony przeżywają obrót; nowy szkic zaczyna z kursorem na końcu tekstu
     // key(): każde pole ma własny klucz zapisu stanu (w pętli bez niego pola dzieliłyby jeden)
@@ -54,8 +59,14 @@ fun CardEditorDialog(
     }
     val pages = fields.map { it.value.text }
     var saved by rememberSaveable(draftKey, saveAttempt) { mutableStateOf(false) }
+    val firstFieldFocus = remember { FocusRequester() }
+    if (autoFocusFirst) {
+        LaunchedEffect(Unit) { runCatching { firstFieldFocus.requestFocus() } }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
+        // dotknięcie poza oknem nie wyrzuca wpisanego tekstu; wyjście: Anuluj lub Wstecz
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(title) },
         text = {
             Column(
@@ -73,7 +84,9 @@ fun CardEditorDialog(
                             Text(pageNames.getOrNull(index) ?: stringResource(R.string.import_page_label, index + 1))
                         },
                         shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (index == 0) Modifier.focusRequester(firstFieldFocus) else Modifier)
                     )
                 }
             }

@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import com.raycoll.app.data.local.prefs.ThemePref
@@ -100,15 +101,17 @@ fun RayCollTheme(
         ThemePref.DARK -> true
         ThemePref.SYSTEM -> isSystemInDarkTheme()
     }
-    val colorScheme = when {
-        useSystemColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val context = LocalContext.current
+    val colorScheme = remember(isDark, useSystemColors, context) {
+        when {
+            useSystemColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            }
+
+            isDark -> DarkColors
+
+            else -> LightColors
         }
-
-        isDark -> DarkColors
-
-        else -> LightColors
     }
     CompositionLocalProvider(LocalSrsColors provides if (isDark) DarkSrsColors else LightSrsColors) {
         MaterialTheme(

@@ -6,19 +6,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.sp
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.domain.session.LastAnswerResult
 import com.raycoll.app.domain.session.SessionAction
 import com.raycoll.app.domain.session.SessionState
+import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.domain.session.sessionReducer
 import com.raycoll.app.ui.theme.LocalSrsColors
 import org.junit.Assert.assertEquals
@@ -28,6 +36,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
@@ -40,7 +49,7 @@ class StudyCardTest {
             SessionState(currentCardIndex = 75, cards = List(150) { Flashcard("c$it", listOf("q", "a"), SrsState()) })
         var currentColor = Color.Unspecified
         compose.setContent {
-            currentColor = LocalSrsColors.current.newBg
+            currentColor = LocalSrsColors.current.newFg
             SessionProgressBar(session)
         }
         val pixels = compose.onRoot().captureToImage().toPixelMap()
@@ -119,5 +128,136 @@ class StudyCardTest {
         compose.onNodeWithText("Skipped", substring = true).assertDoesNotExist()
         // nowa karta może być odkryta — stary wynik niczego nie blokuje
         compose.onNodeWithText("Tap to reveal").assertExists()
+    }
+
+    private val twoPageCard = Flashcard(id = "c1", pages = listOf("front", "back"), srsState = SrsState())
+
+    private fun audioState(status: SessionStatus, page: Int?) = active(
+        SessionState(
+            cards = listOf(twoPageCard),
+            revealedPages = listOf(0, 1),
+            status = status,
+            audioPageIndex = page
+        ),
+        2
+    )
+
+    private fun pageBounds(): Pair<DpRect, DpRect> = Pair(
+        compose.onNodeWithText("front", useUnmergedTree = true).getUnclippedBoundsInRoot(),
+        compose.onNodeWithText("back", useUnmergedTree = true).getUnclippedBoundsInRoot()
+    )
+
+    private fun assertAudioNeverMovesText() {
+        var state by mutableStateOf(audioState(SessionStatus.IDLE, null))
+        compose.setContent { StudyCardContent("deck", state, noActions) }
+        val idle = pageBounds()
+        listOf(
+            SessionStatus.SPEAKING to 0,
+            SessionStatus.SPEAKING to 1,
+            SessionStatus.LISTENING to 1,
+            SessionStatus.IDLE to null
+        ).forEach { (status, page) ->
+            state = audioState(status, page)
+            compose.waitForIdle()
+            assertEquals("$status/$page", idle, pageBounds())
+        }
+    }
+
+    @Test
+    fun `audio indicator never moves page text`() = assertAudioNeverMovesText()
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land")
+    fun `audio indicator never moves page text in landscape`() = assertAudioNeverMovesText()
+
+    @Test
+    fun `audio indicator is exposed to TalkBack`() {
+        var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
+        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertExists()
+
+        state = audioState(SessionStatus.LISTENING, 1)
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Listening", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `audio indicator is held briefly and then removed`() {
+        var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
+        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertExists()
+
+        compose.mainClock.autoAdvance = false
+        state = audioState(SessionStatus.IDLE, null)
+        compose.mainClock.advanceTimeBy(100)
+        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertExists()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `page font size shrinks with length and in landscape`() {
+        assertEquals(28.sp, pageFontSize("a".repeat(70), compact = false))
+        assertEquals(24.sp, pageFontSize("a".repeat(71), compact = false))
+        assertEquals(24.sp, pageFontSize("a".repeat(140), compact = false))
+        assertEquals(20.sp, pageFontSize("a".repeat(141), compact = false))
+        assertEquals(20.sp, pageFontSize("a".repeat(260), compact = false))
+        assertEquals(18.sp, pageFontSize("a".repeat(261), compact = false))
+        assertEquals(28.sp * 0.72f, pageFontSize("a", compact = true))
+    }
+
+    @Test
+    @Config(fontScale = 2.0f)
+    fun `rating buttons stay readable at large font scale`() {
+        compose.setContent { RatingButtons(onRate = {}, enabled = true) }
+        listOf("Again", "Hard", "Good", "Easy").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land")
+    fun `session summary buttons are reachable in landscape`() {
+        val cards = List(3) { Flashcard("c$it", listOf("q", "a"), SrsState()) }
+        val state = StudyUiState.Active(
+            deckName = "Deck",
+            session = SessionState(status = SessionStatus.FINISHED, cards = cards, failedCardIds = setOf("c0")),
+            activePageCount = 2,
+            runsInBackground = false,
+            needsMicrophone = false,
+            endedEarly = false,
+            resultCards = cards,
+            reviewedCardCount = 3,
+            completedCardCount = 3
+        )
+        compose.setContent { SessionSummary(state, {}, {}, {}) }
+        compose.onNodeWithText("Back to dashboard").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `answer panel is announced only when not listening`() {
+        val live = SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)
+        var listening by mutableStateOf(false)
+        compose.setContent {
+            AnswerPanel(LastAnswerResult(status = AnswerStatus.CORRECT, text = "kot"), listening = listening, onTap = {
+            })
+        }
+        compose.onAllNodes(live).assertCountEquals(1)
+        listening = true
+        compose.waitForIdle()
+        compose.onAllNodes(live).assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land")
+    fun `newly revealed page of a tall card is scrolled into view`() {
+        val tall = (1..14).joinToString("\n") { "Line $it" }
+        val card = Flashcard(id = "c1", pages = listOf("front", tall, "third page"), srsState = SrsState())
+        var state by mutableStateOf(active(SessionState(cards = listOf(card), revealedPages = listOf(0, 1)), 3))
+        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.waitForIdle()
+
+        state = active(state.session.copy(revealedPages = listOf(0, 1, 2)), 3)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithText("third page", useUnmergedTree = true).assertIsDisplayed()
     }
 }
