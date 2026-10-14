@@ -40,8 +40,29 @@ private class StepChoice(val labelRes: Int, val create: () -> ModeStep)
 
 private class StepGroup(val labelRes: Int, val choices: List<StepChoice>)
 
-/** Kroki do wyboru, pogrupowane jak w edytorze; nowy krok dostaje wartości domyślne. */
+/**
+ * Kroki do wyboru, pogrupowane jak w edytorze; nowy krok dostaje wartości domyślne.
+ * Gotowe bloki są pierwsze, bo to z nich najczęściej składa się tryb.
+ */
 private val STEP_CATALOG = listOf(
+    StepGroup(
+        R.string.step_category_compound,
+        listOf(
+            StepChoice(R.string.compound_present_front_name) { CompoundStep(params = CompoundParams.PresentFront()) },
+            StepChoice(R.string.compound_flip_reveal_name) { CompoundStep(params = CompoundParams.FlipReveal()) },
+            StepChoice(R.string.compound_show_all_grade_name) { CompoundStep(params = CompoundParams.ShowAllGrade()) },
+            StepChoice(R.string.compound_speak_pause_next_name) {
+                CompoundStep(params = CompoundParams.SpeakPauseNext())
+            },
+            StepChoice(R.string.compound_auto_flip_name) { CompoundStep(params = CompoundParams.AutoFlip()) },
+            StepChoice(R.string.compound_listen_grade_name) { CompoundStep(params = CompoundParams.ListenGrade()) },
+            StepChoice(R.string.compound_grade_after_listen_name) {
+                CompoundStep(params = CompoundParams.GradeAfterListen())
+            },
+            StepChoice(R.string.compound_auto_pass_next_name) { CompoundStep(params = CompoundParams.AutoPassNext()) },
+            StepChoice(R.string.compound_fail_next_name) { CompoundStep(params = CompoundParams.FailNext()) }
+        )
+    ),
     StepGroup(
         R.string.step_category_display,
         listOf(
@@ -78,25 +99,7 @@ private val STEP_CATALOG = listOf(
             StepChoice(R.string.step_mark_failed) { MarkFailedStep() }
         )
     ),
-    StepGroup(R.string.step_category_flow, listOf(StepChoice(R.string.step_next_card) { NextCardStep() })),
-    StepGroup(
-        R.string.step_category_compound,
-        listOf(
-            StepChoice(R.string.compound_present_front_name) { CompoundStep(params = CompoundParams.PresentFront()) },
-            StepChoice(R.string.compound_flip_reveal_name) { CompoundStep(params = CompoundParams.FlipReveal()) },
-            StepChoice(R.string.compound_show_all_grade_name) { CompoundStep(params = CompoundParams.ShowAllGrade()) },
-            StepChoice(R.string.compound_speak_pause_next_name) {
-                CompoundStep(params = CompoundParams.SpeakPauseNext())
-            },
-            StepChoice(R.string.compound_auto_flip_name) { CompoundStep(params = CompoundParams.AutoFlip()) },
-            StepChoice(R.string.compound_listen_grade_name) { CompoundStep(params = CompoundParams.ListenGrade()) },
-            StepChoice(R.string.compound_grade_after_listen_name) {
-                CompoundStep(params = CompoundParams.GradeAfterListen())
-            },
-            StepChoice(R.string.compound_auto_pass_next_name) { CompoundStep(params = CompoundParams.AutoPassNext()) },
-            StepChoice(R.string.compound_fail_next_name) { CompoundStep(params = CompoundParams.FailNext()) }
-        )
-    )
+    StepGroup(R.string.step_category_flow, listOf(StepChoice(R.string.step_next_card) { NextCardStep() }))
 )
 
 @Composable

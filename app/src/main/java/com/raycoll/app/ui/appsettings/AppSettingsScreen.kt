@@ -1,7 +1,11 @@
 package com.raycoll.app.ui.appsettings
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
@@ -13,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,7 +61,18 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::importBackup)
     }
-    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val notificationsOff = stringResource(R.string.app_settings_notifications_off)
+    val notificationsOpen = stringResource(R.string.app_settings_notifications_open)
+    val notificationPermission =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            // nauka w tle działa dalej, ale kontrolki w powiadomieniu są niewidoczne — warto o tym powiedzieć
+            if (!granted) {
+                scope.launch {
+                    val result = snackbarHostState.showSnackbar(notificationsOff, actionLabel = notificationsOpen)
+                    if (result == SnackbarResult.ActionPerformed) openNotificationSettings(context)
+                }
+            }
+        }
 
     CollectEvents(viewModel.events) { event ->
         val message = when (event) {
@@ -77,6 +93,8 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
 
             is AppSettingsEvent.SyncFinished ->
                 if (event.success) R.string.sync_now_success else R.string.sync_now_failed
+
+            AppSettingsEvent.FactoryResetDone -> R.string.app_settings_factory_reset_done
         }
         snackbarHostState.showSnackbar(resources.getString(message))
     }
@@ -132,13 +150,13 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             StudyModesLink(onStudyModes)
             BackupSection(
                 onExport = { exportLauncher.launch(viewModel.backupFileName()) },
-                onImport = { showImportDialog = true },
-                onReset = { showResetDialog = true }
+                onImport = { showImportDialog = true }
             )
+            FactoryResetSection(onReset = { showResetDialog = true })
             Text(
                 stringResource(R.string.app_settings_version, uiState.appVersion),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = Spacing.s)
             )
         }
@@ -169,6 +187,16 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             },
             onDismiss = { showResetDialog = false }
         )
+    }
+}
+
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        // brak ekranu ustawień powiadomień na tym urządzeniu — nic więcej nie da się zrobić
     }
 }
 

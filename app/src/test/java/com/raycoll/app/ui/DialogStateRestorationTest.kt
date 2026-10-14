@@ -88,6 +88,21 @@ class DialogStateRestorationTest {
         compose.waitForIdle()
     }
 
+    @Test
+    fun `discard changes confirmation stays open after state restoration`() {
+        val vm = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository)
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
+        compose.onNodeWithText("Empty mode").performClick()
+        field("Mode name").performTextInput("Mine")
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Discard changes?").assertExists()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("Discard changes?").assertExists()
+        vm.viewModelScope.cancel()
+        compose.waitForIdle()
+    }
+
     @get:Rule
     val compose = createComposeRule()
 
@@ -181,6 +196,7 @@ class DialogStateRestorationTest {
         waitForText("TestDeck")
 
         compose.onAllNodesWithText("Delete").onFirst().performScrollTo().performClick()
+        compose.onNodeWithText("Type DELETE to confirm").assertExists()
         field("DELETE").performTextInput("del")
 
         restoration.emulateSavedInstanceStateRestore()

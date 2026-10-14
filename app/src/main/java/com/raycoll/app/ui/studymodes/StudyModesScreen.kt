@@ -36,10 +36,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.ui.components.CollectEvents
-import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ModeActions
 import com.raycoll.app.ui.components.ModeBadges
+import com.raycoll.app.ui.components.ModeDeleteDialog
+import com.raycoll.app.ui.components.ModeResetDialog
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.displayName
@@ -108,10 +109,7 @@ fun StudyModesScreen(
     }
 
     resetTarget?.let { modeId ->
-        ConfirmDialog(
-            title = stringResource(R.string.mode_list_reset_title),
-            text = stringResource(R.string.mode_list_reset_desc),
-            confirmLabel = stringResource(R.string.mode_list_reset),
+        ModeResetDialog(
             onConfirm = {
                 viewModel.resetMode(modeId)
                 resetTarget = null
@@ -120,11 +118,7 @@ fun StudyModesScreen(
         )
     }
     deleteTarget?.let { modeId ->
-        ConfirmDialog(
-            title = stringResource(R.string.mode_list_delete_title),
-            text = stringResource(R.string.mode_list_delete_desc),
-            confirmLabel = stringResource(R.string.btn_delete),
-            destructive = true,
+        ModeDeleteDialog(
             onConfirm = {
                 viewModel.deleteMode(modeId)
                 deleteTarget = null

@@ -4,13 +4,16 @@ import android.content.Context
 import android.os.Looper
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -71,7 +74,7 @@ class ImportScreenTest {
         val vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
         compose.setContent { ImportScreen(onFinished = { finished = true }, viewModel = vm) }
 
-        textField("Deck Name").performTextInput("Imported")
+        textField("Deck name").performTextInput("Imported")
         textField("Paste CSV / TSV text here").performTextInput("Word;Translation\nhello;cześć\ncat;kot")
         settle()
         assertEquals(2, vm.uiState.value.rows.size)
@@ -80,8 +83,7 @@ class ImportScreenTest {
 
         list.performScrollToNode(hasSetTextAction() and hasText("cat"))
         cell("cat").performTextReplacement("kitten")
-        list.performScrollToKey("submit")
-        compose.onNode(hasText("Import Flashcards") and hasClickAction()).performClick()
+        compose.onNode(hasText("Import flashcards") and hasClickAction()).performClick()
         settle()
         compose.waitUntil(5_000) {
             settle()
@@ -92,5 +94,35 @@ class ImportScreenTest {
         assertEquals("Imported", deck.name)
         assertEquals(listOf("Word", "Translation"), deck.pageNames)
         assertEquals(listOf(listOf("hello", "cześć"), listOf("kitten", "kot")), deck.cards.map { it.pages })
+    }
+
+    @Test
+    fun `import button stays on screen and says why it is disabled`() {
+        val vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
+        compose.setContent { ImportScreen(onFinished = {}, viewModel = vm) }
+        val importButton = compose.onNode(hasText("Import flashcards") and hasClickAction())
+
+        textField("Paste CSV / TSV text here").performTextInput("Word;Translation\nhello;cześć")
+        settle()
+        importButton.assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithText("Enter a deck name.").assertIsDisplayed()
+
+        textField("Deck name").performTextInput("Named")
+        settle()
+        compose.onNodeWithText("Enter a deck name.").assertDoesNotExist()
+        importButton.assertIsEnabled()
+    }
+
+    @Test
+    fun `preview rows are headed by the page names`() {
+        val vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
+        compose.setContent { ImportScreen(onFinished = {}, viewModel = vm) }
+
+        textField("Paste CSV / TSV text here").performTextInput("Word;Translation\nhello;cześć")
+        settle()
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Preview (1)"))
+
+        compose.onNode(hasText("Word") and !hasSetTextAction()).assertExists()
+        compose.onNode(hasText("Translation") and !hasSetTextAction()).assertExists()
     }
 }

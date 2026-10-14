@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Jednobarwny szewron z ikony aplikacji (system zabarwia go w trybie ikon tematycznych); mieści się w 66dp strefie bezpiecznej. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M50.2,34.2L57.8,34.2Q60.2,34.4 61.4,36.8L75.6,66.4Q76.6,69.2 75,71.6Q73.6,73.8 71,73.6Q68.8,73.2 67.4,71.2L54.2,48.4Q53.8,47.8 53.4,48.4L40.2,71.2Q38.8,73.2 36.6,73.6Q34,73.8 32.6,71.6Q31.2,69.2 32.4,66.4L46.6,36.8Q47.8,34.4 50.2,34.2Z" />
+</vector>

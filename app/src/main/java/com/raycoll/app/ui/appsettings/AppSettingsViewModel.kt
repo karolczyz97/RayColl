@@ -54,6 +54,9 @@ sealed interface AppSettingsEvent {
 
     /** Wynik ręcznej synchronizacji. */
     data class SyncFinished(val success: Boolean) : AppSettingsEvent
+
+    /** Dane fabryczne zostały przywrócone. */
+    data object FactoryResetDone : AppSettingsEvent
 }
 
 @HiltViewModel
@@ -138,7 +141,10 @@ class AppSettingsViewModel @Inject constructor(
 
     fun setBackgroundPlayback(value: Boolean) = launch { prefsRepository.setBackgroundPlayback(value) }
 
-    fun factoryReset() = launch { backupRepository.factoryReset() }
+    fun factoryReset() = launch {
+        backupRepository.factoryReset()
+        eventSink.send(AppSettingsEvent.FactoryResetDone)
+    }
 
     fun backupFileName(): String =
         "raycoll-backup-" + BACKUP_TIMESTAMP.format(Instant.ofEpochMilli(clock.now())) + ".json"

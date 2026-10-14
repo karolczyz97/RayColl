@@ -5,21 +5,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,35 +34,33 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
+import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.domain.model.TtsRate
+import com.raycoll.app.ui.components.DropdownChip
 import com.raycoll.app.ui.components.RayCollCard
+import com.raycoll.app.ui.components.SectionCard
 import com.raycoll.app.ui.components.SyncStatusBanner
 import com.raycoll.app.ui.theme.Spacing
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Języki interfejsu ("" = jak w systemie) — te, dla których są tłumaczenia w res/values-*. */
-private val APP_LANGUAGES = listOf("", "pl", "en", "de", "es", "it")
+internal val APP_LANGUAGES = listOf("", "pl", "en", "de", "es", "it")
 
 private const val TTS_RATE_STEP = 0.1f
 
 @Composable
-private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    RayCollCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            content()
-        }
-    }
-}
-
-@Composable
 fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: () -> Unit, onSyncNow: () -> Unit) {
-    SettingsSection(stringResource(R.string.app_settings_section_account)) {
+    SectionCard(title = stringResource(R.string.app_settings_section_account)) {
         val account = state.account
         if (account != null) {
             Text(
@@ -73,8 +68,15 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                 style = MaterialTheme.typography.bodyMedium
             )
             SyncStatusBanner(status = state.syncStatus, onRetry = onSyncNow)
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Button(onClick = onSyncNow, shape = MaterialTheme.shapes.small) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s)
+            ) {
+                Button(
+                    onClick = onSyncNow,
+                    enabled = state.syncStatus != SyncStatus.SYNCING,
+                    shape = MaterialTheme.shapes.small
+                ) {
                     Text(stringResource(R.string.auth_sync_now))
                 }
                 OutlinedButton(onClick = onSignOut, shape = MaterialTheme.shapes.small) {
@@ -87,6 +89,7 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(stringResource(R.string.auth_local_benefit), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onSignIn, enabled = !state.signingIn, shape = MaterialTheme.shapes.small) {
                 if (state.signingIn) {
                     CircularProgressIndicator(modifier = Modifier.size(ButtonDefaults.IconSize), strokeWidth = 2.dp)
@@ -100,7 +103,7 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
 
 @Composable
 fun AppearanceSection(preferences: UserPreferences, onTheme: (ThemePref) -> Unit, onSystemColors: (Boolean) -> Unit) {
-    SettingsSection(stringResource(R.string.app_settings_section_appearance)) {
+    SectionCard(title = stringResource(R.string.app_settings_section_appearance)) {
         // kolory z tapety są dostępne od Androida 12
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             SwitchRow(
@@ -111,15 +114,22 @@ fun AppearanceSection(preferences: UserPreferences, onTheme: (ThemePref) -> Unit
             )
         }
         Text(stringResource(R.string.app_settings_theme), style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
             listOf(
                 ThemePref.SYSTEM to R.string.app_settings_theme_system,
                 ThemePref.LIGHT to R.string.app_settings_theme_light,
                 ThemePref.DARK to R.string.app_settings_theme_dark
             ).forEach { (theme, label) ->
-                FilterChip(selected = preferences.theme == theme, onClick = {
-                    onTheme(theme)
-                }, label = { Text(stringResource(label)) })
+                FilterChip(
+                    selected = preferences.theme == theme,
+                    onClick = { onTheme(theme) },
+                    label = { Text(stringResource(label)) },
+                    // wybór jednej opcji, nie pole wyboru
+                    modifier = Modifier.semantics { role = Role.RadioButton }
+                )
             }
         }
     }
@@ -133,7 +143,7 @@ fun LanguageSpeechSection(
     onTtsRate: (Float) -> Unit,
     onBackgroundPlayback: (Boolean) -> Unit
 ) {
-    SettingsSection(stringResource(R.string.app_settings_section_language_speech)) {
+    SectionCard(title = stringResource(R.string.app_settings_section_language_speech)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.app_settings_lang),
@@ -155,7 +165,13 @@ fun LanguageSpeechSection(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+        val rateName = stringResource(R.string.app_settings_tts_rate)
+        val rateValue = stringResource(R.string.app_settings_tts_rate_value, rate)
         Slider(
+            modifier = Modifier.semantics {
+                contentDescription = rateName
+                stateDescription = rateValue
+            },
             value = rate,
             onValueChange = { rate = it },
             onValueChangeFinished = { onTtsRate(rate) },
@@ -173,25 +189,12 @@ fun LanguageSpeechSection(
 
 @Composable
 private fun AppLanguagePicker(current: String, onSelect: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        AssistChip(
-            onClick = { expanded = true },
-            label = { Text(appLanguageLabel(current)) },
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            APP_LANGUAGES.forEach { tag ->
-                DropdownMenuItem(
-                    text = { Text(appLanguageLabel(tag)) },
-                    onClick = {
-                        expanded = false
-                        onSelect(tag)
-                    }
-                )
-            }
-        }
-    }
+    DropdownChip(
+        label = appLanguageLabel(current),
+        options = APP_LANGUAGES,
+        optionLabel = { appLanguageLabel(it) },
+        onSelect = onSelect
+    )
 }
 
 /** Nazwa języka w nim samym ("Deutsch", "Polski") — tak użytkownik najłatwiej go rozpozna. */
@@ -208,7 +211,7 @@ fun StudyModesLink(onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(Spacing.l),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.m)
@@ -239,9 +242,12 @@ fun StudyModesLink(onClick: () -> Unit) {
 }
 
 @Composable
-fun BackupSection(onExport: () -> Unit, onImport: () -> Unit, onReset: () -> Unit) {
-    SettingsSection(stringResource(R.string.app_settings_export_import)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+fun BackupSection(onExport: () -> Unit, onImport: () -> Unit) {
+    SectionCard(title = stringResource(R.string.app_settings_export_import)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
+        ) {
             Button(onClick = onExport, shape = MaterialTheme.shapes.small) {
                 Text(stringResource(R.string.app_settings_export_btn))
             }
@@ -249,6 +255,13 @@ fun BackupSection(onExport: () -> Unit, onImport: () -> Unit, onReset: () -> Uni
                 Text(stringResource(R.string.app_settings_import_file_btn))
             }
         }
+    }
+}
+
+/** Wymazanie wszystkich danych — osobno od bezpiecznych akcji kopii zapasowej. */
+@Composable
+fun FactoryResetSection(onReset: () -> Unit) {
+    SectionCard {
         Button(
             onClick = onReset,
             colors = ButtonDefaults.buttonColors(
@@ -263,7 +276,13 @@ fun BackupSection(onExport: () -> Unit, onImport: () -> Unit, onReset: () -> Uni
 
 @Composable
 private fun SwitchRow(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m)
+    ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(
@@ -272,6 +291,6 @@ private fun SwitchRow(title: String, description: String, checked: Boolean, onCh
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }

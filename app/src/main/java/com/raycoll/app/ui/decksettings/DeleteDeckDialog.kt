@@ -19,10 +19,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import com.raycoll.app.R
 import com.raycoll.app.ui.theme.Spacing
+import java.text.Normalizer
 
 /**
  * Trwałe usunięcie talii — wymaga wpisania całego słowa potwierdzenia w języku aplikacji;
- * wielkość liter nie ma znaczenia („usuń”, „Usuń”, „USUŃ”).
+ * wielkość liter i ogonki nie mają znaczenia („usun”, „Usuń”, „USUŃ”).
  */
 @Composable
 fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
@@ -38,6 +39,7 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
                     value = typed,
                     onValueChange = { typed = it },
                     label = { Text(token) },
+                    supportingText = { Text(stringResource(R.string.delete_confirm_hint, token)) },
                     shape = MaterialTheme.shapes.small,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -55,5 +57,11 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
     )
 }
 
-/** Całe słowo potwierdzenia, bez względu na wielkość liter i spacje na brzegach. */
-internal fun isDeleteConfirmed(typed: String, token: String): Boolean = typed.trim().equals(token, ignoreCase = true)
+private val DIACRITICS = Regex("\\p{M}+")
+
+private fun withoutDiacritics(text: String): String =
+    Normalizer.normalize(text, Normalizer.Form.NFD).replace(DIACRITICS, "")
+
+/** Całe słowo potwierdzenia, bez względu na wielkość liter, ogonki i spacje na brzegach. */
+internal fun isDeleteConfirmed(typed: String, token: String): Boolean =
+    withoutDiacritics(typed.trim()).equals(withoutDiacritics(token), ignoreCase = true)

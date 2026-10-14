@@ -62,7 +62,7 @@
     <string name="browse_search_placeholder">Szukaj fiszek…</string>
     <string name="browse_edit_card">Edytuj fiszkę</string>
     <string name="browse_no_cards">Nie znaleziono fiszek.</string>
-    <string name="import_upload_file">Wgraj plik (.csv, .txt, .md)</string>
+    <string name="import_upload_file">Wybierz plik (.csv, .tsv, .txt, .md)</string>
     <string name="import_title">Importuj fiszki</string>
     <string name="import_csv_label">Wklej tekst (CSV / TSV) tutaj</string>
     <string name="import_separator">Separator</string>
@@ -103,8 +103,8 @@
     <string name="app_settings_theme_dark">Ciemny</string>
     <string name="app_settings_tts_rate">Prędkość lektora (TTS)</string>
     <string name="app_settings_export_import">Eksport / Import danych</string>
-    <string name="app_settings_export_btn">Eksportuj stan do JSON</string>
-    <string name="app_settings_import_file_btn">Importuj z pliku</string>
+    <string name="app_settings_export_btn">Zapisz kopię do pliku</string>
+    <string name="app_settings_import_file_btn">Przywróć z kopii</string>
     <string name="app_settings_export_error">Eksport nie powiódł się.</string>
     <string name="app_settings_import_success">Import zakończony!</string>
     <string name="app_settings_import_error">Import nie powiódł się.</string>
@@ -130,11 +130,11 @@
     <string name="step_wait_for_tap_to_reveal_next">Odkryj następną stronę tapnięciem</string>
     <string name="step_wait_for_tap_to_reveal">Odkrywaj resztę stron tapnięciami</string>
     <string name="step_show_ratings">Pokaż przyciski oceny</string>
-    <string name="step_speak_page">TTS strona %1$d</string>
-    <string name="step_speak_all_pages">TTS wszystkie strony</string>
+    <string name="step_speak_page">Odczytaj stronę %1$d</string>
+    <string name="step_speak_all_pages">Odczytaj wszystkie strony</string>
     <string name="step_dynamic_pause">Pauza dyn. (str. %1$d, ×%2$.1f)</string>
-    <string name="step_wait">Odczekaj %1$dms</string>
-    <string name="step_listen_and_check">Sprawdź wymowę str. %1$d (próg %2$d%%)</string>
+    <string name="step_wait">Odczekaj %1$d ms</string>
+    <string name="step_listen_and_check">Sprawdź wymowę, strona %1$d (min. %2$d%%)</string>
     <string name="step_feedback_success">Odtwórz feedback sukcesu</string>
     <string name="step_feedback_error">Odtwórz feedback błędu</string>
     <string name="step_auto_rate_from_answer">Oceń automatycznie z wyniku</string>
@@ -165,7 +165,7 @@
     <string name="compound_field_page">Strona</string>
     <string name="compound_field_speak">Czytaj</string>
     <string name="compound_field_next_page">Następna strona</string>
-    <string name="compound_field_multiplier">Mnożnik pauzy dynamicznej</string>
+    <string name="compound_field_multiplier">Mnożnik pauzy</string>
     <string name="compound_field_question_page">Strona pytania</string>
     <string name="compound_field_answer_page">Strona odpowiedzi</string>
     <string name="compound_field_speak_question">Czytaj pytanie</string>
@@ -225,7 +225,7 @@
     <string name="mode_issue_page_out_of_range">Krok %1$d używa strony %2$d, która jest poza zakresem</string>
     <string name="mode_issue_no_terminal">Brak kroku kończącego: dodaj „Pokaż przyciski ocen” lub „Następna karta”</string>
     <string name="mode_issue_auto_rate_without_stt">„Oceń z odpowiedzi” wymaga wcześniejszego kroku „Sprawdź mowę (STT)”</string>
-    <string name="step_category_compound">Kroki złożone</string>
+    <string name="step_category_compound">Gotowe bloki</string>
     <string name="step_compound">Złożony: %1$s</string>
     <string name="mode_list_edit">Edytuj tryb</string>
     <string name="mode_list_new">Nowy tryb nauki</string>
@@ -244,7 +244,7 @@
     <string name="settings_delete_error">Nie udało się usunąć talii. Spróbuj ponownie.</string>
     <string name="lang_system">Systemowy</string>
     <string name="app_settings_factory_reset">Przywróć dane fabryczne</string>
-    <string name="app_settings_factory_reset_desc">Wszystkie talie, postępy i tryby zostaną zastąpione domyślnymi danymi przykładowymi. Tego nie można cofnąć.</string>
+    <string name="app_settings_factory_reset_desc">Wszystkie talie, postępy i tryby zostaną zastąpione domyślnymi danymi przykładowymi. Na zalogowanym koncie zmiana trafi też do chmury. Najpierw zapisz kopię, jeśli chcesz zachować dane. Tego nie można cofnąć.</string>
     <string name="app_settings_version">Wersja %1$s</string>
     <string name="study_answer_retry">Spróbuj jeszcze raz</string>
     <string name="study_modes_manage">Zarządzaj trybami…</string>
@@ -273,7 +273,7 @@
     <string name="errors_save_failed">Nie udało się zapisać zmian. Spróbuj ponownie.</string>
     <string name="import_preview_count">Podgląd (%1$d)</string>
     <string name="import_error_name_required">Podaj nazwę talii.</string>
-    <string name="import_error_page_count">Talia musi mieć od 2 do 20 stron.</string>
+    <string name="import_error_page_count">Talia musi mieć od %1$d do %2$d stron.</string>
     <string name="import_error_language">Nieprawidłowy kod języka: %1$s</string>
     <string name="import_error_no_cards">Brak fiszek do zaimportowania.</string>
     <string name="import_error_empty_row">Wiersz %1$d jest pusty.</string>
@@ -303,5 +303,20 @@
     <string name="study_a11y_tap_card">Dalej</string>
     <string name="browse_empty_deck">Ta talia nie ma jeszcze fiszek.</string>
     <string name="a11y_deck_menu_named">Opcje talii: %1$s</string>
+    <!-- ui2 -->
+    <string name="import_hint_format">Jedna fiszka w wierszu. Strony oddziel tabulatorem, średnikiem, przecinkiem lub kreską pionową. Pierwszy wiersz może być nagłówkiem.</string>
+    <string name="mode_editor_discard_title">Odrzucić zmiany?</string>
+    <string name="mode_editor_discard_desc">Zmiany w tym trybie nie zostały zapisane.</string>
+    <string name="mode_editor_discard_confirm">Odrzuć</string>
+    <string name="mode_editor_tips_title">Wskazówki:</string>
+    <string name="mode_editor_step_deleted">Usunięto krok</string>
+    <string name="mode_editor_undo">Cofnij</string>
+    <string name="delete_confirm_hint">Wpisz %1$s, aby potwierdzić</string>
+    <string name="app_settings_factory_reset_done">Przywrócono dane fabryczne.</string>
+    <string name="auth_local_benefit">Zaloguj się, aby mieć kopię talii i synchronizować je między urządzeniami.</string>
+    <string name="app_settings_notifications_off">Powiadomienia są wyłączone, więc kontrolki nauki nie pojawią się w powiadomieniu.</string>
+    <string name="app_settings_notifications_open">Ustawienia</string>
+    <string name="settings_study_filter">Które karty</string>
+    <string name="a11y_item_action">%1$s: %2$s</string>
 </resources>
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -22,7 +23,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
@@ -45,7 +50,11 @@ import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.theme.Spacing
 
 private const val MAX_WAIT_MS = 600_000
-private val FIELD_WIDTH: Dp = 112.dp
+private val FIELD_WIDTH: Dp = 140.dp
+
+/** Szerokość pola liczbowego rośnie z rozmiarem czcionki, żeby etykieta nie była ucinana. */
+@Composable
+private fun fieldWidth(): Dp = FIELD_WIDTH * LocalDensity.current.fontScale.coerceAtLeast(1f)
 
 /** Zgłasza, czy pole o danej etykiecie pokazuje teraz poprawną liczbę (blokada zapisu trybu). */
 private val LocalFieldValidity = staticCompositionLocalOf<(Int, Boolean) -> Unit> { { _, _ -> } }
@@ -64,11 +73,13 @@ fun StepCard(
     modifier: Modifier = Modifier,
     onFieldValidityChange: (field: Int, valid: Boolean) -> Unit = { _, _ -> }
 ) {
+    // tytuł kroku w opisach przycisków, żeby czytnik ekranu odróżniał kolejne karty
+    val title = stringResource(R.string.mode_editor_step_title, number, stepTitle(step))
     RayCollCard(modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(R.string.mode_editor_step_title, number, stepTitle(step)),
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
@@ -76,19 +87,31 @@ fun StepCard(
                 IconButton(onClick = onMoveUp, enabled = canMoveUp) {
                     Icon(
                         Icons.Filled.KeyboardArrowUp,
-                        contentDescription = stringResource(R.string.mode_editor_move_up)
+                        contentDescription = stringResource(
+                            R.string.a11y_item_action,
+                            stringResource(R.string.mode_editor_move_up),
+                            title
+                        )
                     )
                 }
                 IconButton(onClick = onMoveDown, enabled = canMoveDown) {
                     Icon(
                         Icons.Filled.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.mode_editor_move_down)
+                        contentDescription = stringResource(
+                            R.string.a11y_item_action,
+                            stringResource(R.string.mode_editor_move_down),
+                            title
+                        )
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.btn_delete),
+                        contentDescription = stringResource(
+                            R.string.a11y_item_action,
+                            stringResource(R.string.btn_delete),
+                            title
+                        ),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -103,7 +126,10 @@ fun StepCard(
 
 @Composable
 private fun ConditionSelector(step: ModeStep, onUpdate: (ModeStep) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+    ) {
         listOf(
             null to R.string.step_condition_always,
             StepCondition.CORRECT to R.string.step_condition_correct,
@@ -112,7 +138,9 @@ private fun ConditionSelector(step: ModeStep, onUpdate: (ModeStep) -> Unit) {
             FilterChip(
                 selected = step.condition == condition,
                 onClick = { onUpdate(step.withCondition(condition)) },
-                label = { Text(stringResource(label)) }
+                label = { Text(stringResource(label)) },
+                // wybór jednej opcji, nie pole wyboru
+                modifier = Modifier.semantics { role = Role.RadioButton }
             )
         }
     }
@@ -206,7 +234,10 @@ private fun CompoundParams(step: CompoundStep, onUpdate: (CompoundParams) -> Uni
 private fun RevealStyleSelector(selected: RevealStyle, onChange: (RevealStyle) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.compound_field_reveal_style), style = MaterialTheme.typography.labelMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
             listOf(
                 RevealStyle.NEXT to R.string.compound_reveal_next,
                 RevealStyle.ALL to R.string.compound_reveal_all
@@ -214,7 +245,8 @@ private fun RevealStyleSelector(selected: RevealStyle, onChange: (RevealStyle) -
                 FilterChip(
                     selected = selected == style,
                     onClick = { onChange(style) },
-                    label = { Text(stringResource(label)) }
+                    label = { Text(stringResource(label)) },
+                    modifier = Modifier.semantics { role = Role.RadioButton }
                 )
             }
         }
@@ -240,15 +272,35 @@ private fun ThresholdField(value: Int, onChange: (Int) -> Unit) = IntField(
     R.string.compound_field_threshold,
     value,
     0..100,
-    onChange
+    onChange = onChange
 )
 
 @Composable
-private fun RatingField(value: Int, onChange: (Int) -> Unit) =
-    IntField(R.string.compound_field_rating, value, Ratings.MIN..Ratings.MAX, onChange)
+private fun RatingField(value: Int, onChange: (Int) -> Unit) {
+    // nazwa oceny pod polem: „3 – Dobrze” mówi więcej niż sama liczba
+    val names = listOf(
+        R.string.study_rating_1,
+        R.string.study_rating_2,
+        R.string.study_rating_3,
+        R.string.study_rating_4
+    ).map { stringResource(it) }
+    IntField(
+        R.string.compound_field_rating,
+        value,
+        Ratings.MIN..Ratings.MAX,
+        hint = { names.getOrNull(it - Ratings.MIN) },
+        onChange = onChange
+    )
+}
 
 @Composable
-private fun IntField(labelRes: Int, value: Int, range: IntRange, onChange: (Int) -> Unit) {
+private fun IntField(
+    labelRes: Int,
+    value: Int,
+    range: IntRange,
+    hint: (Int) -> String? = { null },
+    onChange: (Int) -> Unit
+) {
     val onValidity = LocalFieldValidity.current
     NumberField(
         label = stringResource(labelRes),
@@ -257,7 +309,8 @@ private fun IntField(labelRes: Int, value: Int, range: IntRange, onChange: (Int)
         numberFormat = IntNumberFormat,
         onChange = onChange,
         onValidityChange = { onValidity(labelRes, it) },
-        modifier = Modifier.width(FIELD_WIDTH)
+        hint = hint,
+        modifier = Modifier.width(fieldWidth())
     )
 }
 
@@ -271,14 +324,18 @@ private fun MultiplierField(value: Double, onChange: (Double) -> Unit) {
         numberFormat = DecimalNumberFormat,
         onChange = onChange,
         onValidityChange = { onValidity(R.string.compound_field_multiplier, it) },
-        modifier = Modifier.width(FIELD_WIDTH)
+        modifier = Modifier.width(fieldWidth())
     )
 }
 
 @Composable
 private fun LabeledSwitch(labelRes: Int, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    Row(
+        Modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+    ) {
         Text(stringResource(labelRes), style = MaterialTheme.typography.labelMedium)
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }

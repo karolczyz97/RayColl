@@ -184,7 +184,9 @@ class ImportViewModel @Inject constructor(
     /**
      * Import tego, co widać na ekranie: najnowszy tekst (także wpisany przed końcem opóźnienia)
      * jest przetwarzany poza wątkiem UI z ręcznymi ustawieniami kolumn, a edycje komórek
-     * podglądu są brane wprost z wierszy. Kolejne kliknięcie w trakcie importu nic nie robi.
+     * podglądu są brane wprost z wierszy. Kolejne kliknięcie w trakcie importu nic nie robi;
+     * po udanym imporcie flaga zostaje do zamknięcia ekranu, więc zdarzenie czekające
+     * za komunikatem nie pozwala dodać talii drugi raz.
      * [defaultPageNames] — nazwy (w języku aplikacji) dla stron, których użytkownik nie nazwał.
      */
     fun runImport(defaultPageNames: List<String>) {
@@ -192,6 +194,7 @@ class ImportViewModel @Inject constructor(
         parseJob?.cancel()
         _uiState.update { it.copy(importing = true) }
         viewModelScope.launchSaving(onFailure = { eventSink.send(ImportEvent.SaveFailed) }) {
+            var imported = false
             try {
                 if (!rowsEdited) {
                     val input = parseInput()
@@ -217,9 +220,10 @@ class ImportViewModel @Inject constructor(
                     payload.pageNames,
                     payload.cards
                 )
+                imported = true
                 eventSink.send(ImportEvent.Imported)
             } finally {
-                _uiState.update { it.copy(importing = false) }
+                if (!imported) _uiState.update { it.copy(importing = false) }
             }
         }
     }
