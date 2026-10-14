@@ -1,5 +1,7 @@
 package com.raycoll.app.domain.session
 
+import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.SrsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -10,11 +12,33 @@ class SessionReducerTest {
 
     @Test
     fun `StartSession resets state`() {
-        val state = SessionState(currentCardIndex = 5, status = SessionStatus.FINISHED)
-        val result = sessionReducer(state, SessionAction.StartSession)
+        val state = SessionState(
+            currentCardIndex = 5,
+            status = SessionStatus.FINISHED,
+            audioPageIndex = 1,
+            failedCardIds = setOf("x")
+        )
+        val result = sessionReducer(state, SessionAction.StartSession(emptyList()))
         assertEquals(0, result.currentCardIndex)
         assertEquals(SessionStatus.IDLE, result.status)
         assertEquals(0, result.failedCardIds.size)
+        assertNull(result.audioPageIndex)
+    }
+
+    @Test
+    fun `StartSession carries the cards and nothing else from the previous state`() {
+        val card = Flashcard(id = "c1", pages = listOf("a", "b"), srsState = SrsState())
+        val result = sessionReducer(SessionState(currentCardIndex = 3), SessionAction.StartSession(listOf(card)))
+        assertEquals(SessionState(cards = listOf(card)), result)
+    }
+
+    @Test
+    fun `FinishSession clears audio page and error`() {
+        val state = SessionState(audioPageIndex = 1, error = SessionError.TTS, status = SessionStatus.SPEAKING)
+        val result = sessionReducer(state, SessionAction.FinishSession)
+        assertEquals(SessionStatus.FINISHED, result.status)
+        assertNull(result.audioPageIndex)
+        assertNull(result.error)
     }
 
     @Test
@@ -89,7 +113,8 @@ class SessionReducerTest {
         val listening = sessionReducer(result, SessionAction.StartListening(1))
         assertEquals(answer, listening.previousAnswerResult)
         assertEquals(LastAnswerResult(), sessionReducer(result, SessionAction.FinishSession).previousAnswerResult)
-        assertEquals(LastAnswerResult(), sessionReducer(result, SessionAction.StartSession).previousAnswerResult)
+        val restarted = sessionReducer(result, SessionAction.StartSession(emptyList()))
+        assertEquals(LastAnswerResult(), restarted.previousAnswerResult)
     }
 
     @Test

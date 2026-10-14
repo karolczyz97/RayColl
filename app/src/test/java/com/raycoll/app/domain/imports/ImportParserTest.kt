@@ -151,4 +151,32 @@ class ImportParserTest {
             )
         )
     }
+
+    @Test
+    fun `HeaderDetector recognizes Polish header with the dotless l`() {
+        fun rows(text: String) = parseRows(text, CsvSeparator.SEMICOLON)
+        assertTrue(HeaderDetector.looksLikeHeaderRow(rows("Słowo;Tłumaczenie\nkot;cat")))
+        assertEquals("slowo", HeaderDetector.normalizeHeaderToken("Słowo"))
+    }
+
+    @Test
+    fun `encodeCell quotes carriage returns so a cell never splits rows`() {
+        val encoded = encodeCell("a\rb", CsvSeparator.SEMICOLON)
+        assertEquals("\"a\rb\"", encoded)
+        assertEquals(1, parseRows(encoded + ";x", CsvSeparator.SEMICOLON).size)
+    }
+
+    @Test
+    fun `parseRows stops after maxRows non-blank rows`() {
+        val text = "a;b\n\nc;d\ne;f\ng;h"
+        assertEquals(listOf(listOf("a", "b"), listOf("c", "d")), parseRows(text, CsvSeparator.SEMICOLON, 2))
+        assertEquals(4, parseRows(text, CsvSeparator.SEMICOLON).size)
+    }
+
+    @Test
+    fun `detectSeparator on a long text matches the result for its first rows`() {
+        val long = (1..5000).joinToString("\n") { "front $it|back $it" }
+        assertEquals(CsvSeparator.PIPE, detectSeparator(long))
+        assertEquals(detectSeparator(long.lineSequence().take(5).joinToString("\n")), detectSeparator(long))
+    }
 }

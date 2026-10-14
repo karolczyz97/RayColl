@@ -2,6 +2,7 @@ package com.raycoll.app.domain.merge
 
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.operations.isModifiedBuiltIn
 import com.raycoll.app.domain.seed.seedModeFor
 
 /**
@@ -11,14 +12,16 @@ import com.raycoll.app.domain.seed.seedModeFor
 fun shouldTriggerMigration(hasUserLocalCache: Boolean, guestHasData: Boolean): Boolean =
     !hasUserLocalCache && guestHasData
 
+/** Realne dane gościa: talia ruszona przez użytkownika, jakakolwiek aktywność albo własny tryb. */
 fun getGuestHasData(groups: List<FlashcardGroup>, heatmap: Map<String, Int>, modes: List<StudyMode>): Boolean =
-    groups.any { it.deletedAt == null } ||
+    groups.any { it.deletedAt == null && !it.isUntouchedSeed() } ||
         heatmap.values.any { it > 0 } ||
         modes.any(::isUserAuthoredMode)
 
 /** Tryb własny albo wbudowany, któremu użytkownik zmienił nazwę lub kroki. */
-fun isUserAuthoredMode(mode: StudyMode): Boolean {
-    if (!mode.isBuiltIn) return true
-    val seed = seedModeFor(mode.builtInSourceId) ?: return true
-    return mode.name != seed.name || mode.steps != seed.steps
-}
+fun isUserAuthoredMode(mode: StudyMode): Boolean =
+    !mode.isBuiltIn || seedModeFor(mode.builtInSourceId) == null || mode.isModifiedBuiltIn()
+
+// Talie startowe mają znaczniki czasu 0; każda edycja talii/karty albo powtórka je podbija.
+private fun FlashcardGroup.isUntouchedSeed(): Boolean =
+    updatedAt == 0L && cards.isNotEmpty() && cards.all { it.contentUpdatedAt == 0L && it.srsUpdatedAt == 0L }

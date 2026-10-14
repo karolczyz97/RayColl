@@ -105,8 +105,8 @@ data class NextCardStep(override val condition: StepCondition? = null) : ModeSte
 @Serializable
 @JsonClassDiscriminator("kind")
 sealed interface CompoundParams {
-    // Wartości domyślne działają i przy dodaniu kroku w edytorze, i przy dekodowaniu
-    // backupu bez danego pola.
+    // Wartości domyślne służą edytorowi i konstruowaniu w kodzie; backup i Firestore są
+    // walidowane ściśle (wszystkie pola muszą być obecne).
     @Serializable
     @SerialName("present_front")
     data class PresentFront(val page: Int = 0, val speak: Boolean = true) : CompoundParams
@@ -173,10 +173,10 @@ data class CompoundBranch(
     val advance: Boolean = true
 ) {
     companion object {
-        val DEFAULT_CORRECT = CompoundBranch(pause = CompoundPause.Fixed(2000L))
+        val DEFAULT_CORRECT = CompoundBranch(pause = CompoundPause.Fixed(StudyConstants.PAUSE_AFTER_CORRECT_MS))
         val DEFAULT_WRONG = CompoundBranch(
             speakPage = 1,
-            pause = CompoundPause.Fixed(2200L),
+            pause = CompoundPause.Fixed(StudyConstants.PAUSE_AFTER_WRONG_MS),
             rate = BranchRating.FIXED,
             fixedRating = Ratings.AGAIN,
             markFailed = true
@@ -209,7 +209,7 @@ enum class RevealStyle(override val key: String) : KeyedEnum {
 sealed interface CompoundPause {
     @Serializable
     @SerialName("fixed")
-    data class Fixed(val ms: Long = 500) : CompoundPause
+    data class Fixed(val ms: Long = StudyConstants.STEP_DEFAULT_WAIT_MS) : CompoundPause
 
     @Serializable
     @SerialName("dynamic")
@@ -225,13 +225,30 @@ data class CompoundStep(
 ) : ModeStep
 
 /** Strona, której dotyczy krok atomowy (null: krok nie dotyczy konkretnej strony). */
-val ModeStep.pageIndex: Int?
+val ModeStep.referencedPage: Int?
     get() = when (this) {
         is ShowPageStep -> pageIndex
+
         is SpeakPageStep -> pageIndex
+
         is ListenAndCheckStep -> pageIndex
+
         is DynamicPauseStep -> nextPageIndex
-        else -> null
+
+        is ShowAllPagesStep,
+        is WaitForTapToRevealNextStep,
+        is WaitForTapToRevealStep,
+        is ShowRatingsStep,
+        is SpeakAllPagesStep,
+        is WaitStep,
+        is FeedbackSuccessStep,
+        is FeedbackErrorStep,
+        is AutoRateFromAnswerStep,
+        is AutoRateFixedStep,
+        is MarkFailedStep,
+        is WaitForTapStep,
+        is NextCardStep,
+        is CompoundStep -> null
     }
 
 /** Ten sam krok z innym warunkiem; krok złożony nie ma warunku (rozwinięcie i tak by go pominęło). */

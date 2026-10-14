@@ -18,7 +18,7 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.domain.model.pageIndex
+import com.raycoll.app.domain.model.referencedPage
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -59,12 +59,12 @@ class AtomicStepModelTest {
 
     @Test
     fun `page index is available for page-specific steps`() {
-        assertEquals(2, ShowPageStep(pageIndex = 2).pageIndex)
+        assertEquals(2, ShowPageStep(pageIndex = 2).referencedPage)
     }
 
     @Test
     fun `page index is absent for show all pages`() {
         val step: ModeStep = ShowAllPagesStep()
-        assertEquals(null, step.pageIndex)
+        assertEquals(null, step.referencedPage)
     }
 }

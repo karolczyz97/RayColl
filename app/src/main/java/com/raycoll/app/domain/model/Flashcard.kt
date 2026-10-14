@@ -11,3 +11,6 @@ data class Flashcard(
     val srsUpdatedAt: Long = 0,
     val deletedAt: Long? = null
 )
+
+/** Karta bez tombstone'a. */
+val Flashcard.isLive: Boolean get() = deletedAt == null

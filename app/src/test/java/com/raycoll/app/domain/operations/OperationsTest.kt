@@ -2,12 +2,15 @@ package com.raycoll.app.domain.operations
 
 import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.domain.model.CardOrder
+import com.raycoll.app.domain.model.DEFAULT_MODE_ID
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
+import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.normalize.normalizeGroup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -106,5 +109,33 @@ class OperationsTest {
         assertFalse(group().copy(archivedAt = now - ArchiveConstants.RETENTION_MS + 1).isArchiveExpired(now))
         assertFalse(group().isArchiveExpired(now))
         assertFalse(group().copy(archivedAt = 1, deletedAt = 2).isArchiveExpired(now))
+    }
+
+    @Test
+    fun `study mode names are trimmed on create and edit`() {
+        val mode = newStudyMode("  Mine  ", emptyList(), now)
+        assertEquals("Mine", mode.name)
+        assertEquals("Renamed", mode.copy(name = " Renamed ").edited(now + 1).name)
+    }
+
+    @Test
+    fun `resolveStudyMode falls back to the default seed mode by id`() {
+        assertEquals(DEFAULT_MODE_ID, resolveStudyMode(emptyList(), "missing").id)
+        val other = StudyMode(id = "other", name = "Other")
+        assertEquals("other", resolveStudyMode(listOf(other), "missing").id)
+    }
+
+    @Test
+    fun `swapping a page with itself returns the same deck`() {
+        val deck = group()
+        assertSame(deck, deck.withPagesSwapped(1, 1, now))
+    }
+
+    @Test
+    fun `swapping pages tolerates languages shorter than names`() {
+        val deck = group().copy(pageLanguages = listOf("pl-PL"))
+        val swapped = deck.withPagesSwapped(0, 1, now)
+        assertEquals(listOf("Back", "Front"), swapped.pageNames)
+        assertEquals(listOf("en-US", "pl-PL"), swapped.pageLanguages)
     }
 }

@@ -17,31 +17,33 @@ object HeaderDetector {
         "wloski", "hiszpanski"
     )
 
+    private val COMBINING_MARKS = "\\p{InCombiningDiacriticalMarks}+".toRegex()
+    internal val WHITESPACE = Regex("\\s+")
+
     internal fun normalizeHeaderToken(text: String): String {
         val temp = Normalizer.normalize(text, Normalizer.Form.NFD)
-        val regex = "\\p{InCombiningDiacriticalMarks}+".toRegex()
         // NFD nie rozkłada "ł" (litera z kreską, nie znak diakrytyczny)
-        return regex.replace(temp, "").replace('ł', 'l').replace('Ł', 'L').lowercase(Locale.ROOT).trim()
+        return COMBINING_MARKS.replace(temp, "").replace('ł', 'l').replace('Ł', 'L').lowercase(Locale.ROOT).trim()
     }
 
     fun looksLikeHeaderLabel(value: String): Boolean {
         val normalized = normalizeHeaderToken(value)
         if (normalized.isEmpty()) return false
-        val words = normalized.split(Regex("\\s+"))
+        val words = normalized.split(WHITESPACE)
         return words.any { HEADER_TOKENS.contains(it) }
     }
 
     fun looksLikeShortLabel(value: String): Boolean {
         val normalized = value.trim()
         if (normalized.isEmpty()) return true
-        val words = normalized.split(Regex("\\s+"))
+        val words = normalized.split(WHITESPACE)
         return normalized.length <= 24 && words.size <= 3
     }
 
     fun looksLikeDataValue(value: String): Boolean {
         val normalized = value.trim()
         if (normalized.isEmpty()) return false
-        val words = normalized.split(Regex("\\s+"))
+        val words = normalized.split(WHITESPACE)
         val hasSentenceLikeLength = normalized.length > 24 || words.size >= 5
         val hasDigits = normalized.any { it.isDigit() }
         return hasSentenceLikeLength || hasDigits

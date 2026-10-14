@@ -26,147 +26,103 @@ fun mergeActivityHeatmap(local: Map<String, Int>, cloud: Map<String, Int>): Map<
     return merged
 }
 
-fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<Flashcard> {
-    val allIds = (localCards.map { it.id } + cloudCards.map { it.id }).toSet()
-    val localMap = localCards.associateBy { it.id }
-    val cloudMap = cloudCards.associateBy { it.id }
-    val merged = mutableListOf<Flashcard>()
+/**
+ * Suma list po id: [both] scala element obecny po obu stronach, [single] obsługuje element tylko z jednej.
+ * Kolejność: najpierw id lokalne, potem te tylko z chmury (kolejność kart w talii zależy od zapisu).
+ */
+private inline fun <T> mergeById(
+    local: List<T>,
+    cloud: List<T>,
+    id: (T) -> String,
+    both: (T, T) -> T,
+    single: (T) -> T
+): List<T> {
+    val localMap = local.associateBy(id)
+    val cloudMap = cloud.associateBy(id)
+    return (local.map(id) + cloud.map(id)).toSet().map { key ->
+        val l = localMap[key]
+        val c = cloudMap[key]
+        if (l != null && c != null) both(l, c) else single(requireNotNull(l ?: c))
+    }
+}
 
-    for (id in allIds) {
-        val local = localMap[id]
-        val cloud = cloudMap[id]
-
-        if (local == null && cloud != null) {
-            val latestEdit = getLatestEdit(cloud)
-            val delAt = cloud.deletedAt ?: 0
-            merged.add(if (delAt > 0 && latestEdit > delAt) cloud.copy(deletedAt = null) else cloud)
-            continue
-        }
-        if (cloud == null && local != null) {
-            val latestEdit = getLatestEdit(local)
-            val delAt = local.deletedAt ?: 0
-            merged.add(if (delAt > 0 && latestEdit > delAt) local.copy(deletedAt = null) else local)
-            continue
-        }
-        val l = local!!
-        val c = cloud!!
-
+fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<Flashcard> = mergeById(
+    local = localCards,
+    cloud = cloudCards,
+    id = { it.id },
+    single = { card ->
+        val delAt = card.deletedAt ?: 0
+        if (delAt > 0 && getLatestEdit(card) > delAt) card.copy(deletedAt = null) else card
+    },
+    both = { l, c ->
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(getLatestEdit(l), getLatestEdit(c))
-
         if (!isAlive(latestEdit, deletedAt)) {
-            merged.add(c.copy(deletedAt = if (deletedAt > 0) deletedAt else null))
-            continue
-        }
-
-        val preferLocalSrs =
-            localSrsWins(l.srsState.repetitions, l.srsUpdatedAt, c.srsState.repetitions, c.srsUpdatedAt)
-        val contentSide = when {
-            l.contentUpdatedAt > c.contentUpdatedAt -> l
-            c.contentUpdatedAt > l.contentUpdatedAt -> c
-            preferLocalSrs -> l
-            else -> c
-        }
-
-        merged.add(
+            c.copy(deletedAt = if (deletedAt > 0) deletedAt else null)
+        } else {
+            val preferLocalSrs =
+                localSrsWins(l.srsState.repetitions, l.srsUpdatedAt, c.srsState.repetitions, c.srsUpdatedAt)
+            val contentSide = when {
+                l.contentUpdatedAt > c.contentUpdatedAt -> l
+                c.contentUpdatedAt > l.contentUpdatedAt -> c
+                preferLocalSrs -> l
+                else -> c
+            }
             Flashcard(
-                id = id,
+                id = l.id,
                 pages = contentSide.pages,
                 srsState = if (preferLocalSrs) l.srsState else c.srsState,
                 contentUpdatedAt = contentSide.contentUpdatedAt,
                 srsUpdatedAt = if (preferLocalSrs) l.srsUpdatedAt else c.srsUpdatedAt,
                 deletedAt = null // edycja nowsza niż kasowanie = ożywienie (isAlive)
             )
-        )
+        }
     }
-    return merged
-}
+)
 
-fun mergeGroups(localGroups: List<FlashcardGroup>, cloudGroups: List<FlashcardGroup>): List<FlashcardGroup> {
-    val allIds = (localGroups.map { it.id } + cloudGroups.map { it.id }).toSet()
-    val localMap = localGroups.associateBy { it.id }
-    val cloudMap = cloudGroups.associateBy { it.id }
-    val merged = mutableListOf<FlashcardGroup>()
-
-    for (id in allIds) {
-        val local = localMap[id]
-        val cloud = cloudMap[id]
-
-        if (local == null &&
-            cloud != null
-        ) {
-            merged.add(cloud.copy(cards = mergeCards(emptyList(), cloud.cards)))
-            continue
-        }
-        if (cloud == null &&
-            local != null
-        ) {
-            merged.add(local.copy(cards = mergeCards(local.cards, emptyList())))
-            continue
-        }
-
-        val l = local!!
-        val c = cloud!!
+fun mergeGroups(localGroups: List<FlashcardGroup>, cloudGroups: List<FlashcardGroup>): List<FlashcardGroup> = mergeById(
+    local = localGroups,
+    cloud = cloudGroups,
+    id = { it.id },
+    single = { group -> group.copy(cards = mergeCards(group.cards, emptyList())) },
+    both = { l, c ->
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(l.updatedAt, c.updatedAt)
-
         if (!isAlive(latestEdit, deletedAt)) {
-            merged.add(c.copy(cards = mergeCards(l.cards, c.cards), deletedAt = if (deletedAt > 0) deletedAt else null))
-            continue
-        }
-
-        val winner = if (l.updatedAt > c.updatedAt) l else c
-        merged.add(
+            c.copy(cards = mergeCards(l.cards, c.cards), deletedAt = if (deletedAt > 0) deletedAt else null)
+        } else {
+            val winner = if (l.updatedAt > c.updatedAt) l else c
             winner.copy(
                 cards = mergeCards(l.cards, c.cards),
                 updatedAt = latestEdit,
                 deletedAt = null // edycja nowsza niż kasowanie = ożywienie (isAlive)
             )
-        )
+        }
     }
-    return merged
-}
+)
 
-fun mergeStudyModes(localModes: List<StudyMode>, cloudModes: List<StudyMode>): List<StudyMode> {
-    val allIds = (localModes.map { it.id } + cloudModes.map { it.id }).toSet()
-    val localMap = localModes.associateBy { it.id }
-    val cloudMap = cloudModes.associateBy { it.id }
-    val merged = mutableListOf<StudyMode>()
-
-    for (id in allIds) {
-        val local = localMap[id]
-        val cloud = cloudMap[id]
-
-        if (local == null && cloud != null) {
-            merged.add(cloud)
-            continue
-        }
-        if (cloud == null && local != null) {
-            merged.add(local)
-            continue
-        }
-
-        val l = local!!
-        val c = cloud!!
+fun mergeStudyModes(localModes: List<StudyMode>, cloudModes: List<StudyMode>): List<StudyMode> = mergeById(
+    local = localModes,
+    cloud = cloudModes,
+    id = { it.id },
+    single = { it },
+    both = { l, c ->
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(l.updatedAt, c.updatedAt)
-
-        if (!isAlive(latestEdit, deletedAt)) {
+        val winner = if (l.updatedAt > c.updatedAt) l else c
+        if (isAlive(latestEdit, deletedAt)) {
+            winner.copy(updatedAt = latestEdit, deletedAt = null)
+        } else {
             val sourceId = l.builtInSourceId ?: c.builtInSourceId
             if (sourceId != null && isBuiltInModeSourceId(sourceId)) {
-                val winner = if (l.updatedAt > c.updatedAt) l else c
-                merged.add(winner.copy(updatedAt = latestEdit, deletedAt = null))
-                continue
+                // wbudowanego trybu nie da się usunąć na stałe: kasowanie przegrywa
+                winner.copy(updatedAt = latestEdit, deletedAt = null)
+            } else {
+                c.copy(deletedAt = if (deletedAt > 0) deletedAt else null)
             }
-            merged.add(c.copy(deletedAt = if (deletedAt > 0) deletedAt else null))
-            continue
         }
-
-        val winner = if (l.updatedAt > c.updatedAt) l else c
-        merged.add(winner.copy(updatedAt = latestEdit, deletedAt = null))
     }
-    return merged
-}
+)
 
 fun mergeUserData(local: StoreData, cloud: StoreData): StoreData {
     val mergedGroups = mergeGroups(local.groups, cloud.groups)

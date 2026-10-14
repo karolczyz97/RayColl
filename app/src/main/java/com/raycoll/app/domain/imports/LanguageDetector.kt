@@ -43,7 +43,9 @@ object LanguageDetector {
     )
 
     fun detectLanguage(header: String): String {
-        val words = HeaderDetector.normalizeHeaderToken(header).split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val words = HeaderDetector.normalizeHeaderToken(header).split(HeaderDetector.WHITESPACE).filter {
+            it.isNotEmpty()
+        }
         val named = LANGUAGES.firstOrNull { language ->
             words.any { word -> word in language.names || language.prefixes.any { word.startsWith(it) } }
         }

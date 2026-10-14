@@ -5,8 +5,9 @@ import com.raycoll.app.domain.model.CompoundStep
 import com.raycoll.app.domain.model.ModeStep
 
 /**
- * Punkty startowe nowego trybu. Budują kroki złożone (edytowalne bloki), które po
- * rozwinięciu dają to samo co wbudowane tryby.
+ * Punkty startowe nowego trybu, zbudowane z kroków złożonych (edytowalnych bloków):
+ * CLASSIC = wbudowany Klasyczny, AUDIO = uproszczone Audio (jedna próba nasłuchu, bez powtórki),
+ * BLANK = pusty.
  */
 enum class ModeTemplate(val steps: List<ModeStep>) {
     CLASSIC(

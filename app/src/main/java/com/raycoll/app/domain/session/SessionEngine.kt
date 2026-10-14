@@ -13,7 +13,7 @@ import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
-import com.raycoll.app.domain.model.pageIndex
+import com.raycoll.app.domain.model.referencedPage
 import com.raycoll.app.domain.steps.CompoundExpander
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -40,7 +40,7 @@ class SessionEngine(
     steps: List<ModeStep>,
     private val deps: SessionDeps,
     private val clock: Clock,
-    private val ttsRate: Float,
+    ttsRate: Float,
     private val scope: CoroutineScope
 ) {
     private val _state = MutableStateFlow(SessionState())
@@ -59,18 +59,17 @@ class SessionEngine(
 
     // kroki dotyczące stron, których talia nie pokazuje, są pomijane
     private val expandedSteps: List<ModeStep> = CompoundExpander.expandModeSteps(steps).filter { step ->
-        val page = step.pageIndex
+        val page = step.referencedPage
         page == null || page < group.activePageCount
     }
     private val executor = StepExecutor(this, deps, group, clock, ttsRate)
-    val needsMicrophone: Boolean get() = expandedSteps.any { it is ListenAndCheckStep }
-    val canRunHandsFree: Boolean get() = BackgroundSubstitution.isModeHandsFreeCapable(expandedSteps)
+    val needsMicrophone: Boolean = expandedSteps.any { it is ListenAndCheckStep }
+    val canRunHandsFree: Boolean = BackgroundSubstitution.isModeHandsFreeCapable(expandedSteps)
 
-    private val reviewedCardIds = mutableSetOf<String>()
-    val reviewedCardCount: Int get() = reviewedCardIds.size
-
-    // stan SRS sprzed pierwszej oceny w tej próbie — baza dla ponownej (nadpisującej) oceny
+    // stan SRS sprzed pierwszej oceny w tej próbie — baza dla ponownej (nadpisującej) oceny;
+    // klucze = karty ocenione w tej sesji
     private val baseSrsStates = mutableMapOf<String, SrsState>()
+    val reviewedCardCount: Int get() = baseSrsStates.size
     private val cardJobs = mutableMapOf<Int, Job>()
     private var lastExecutedCardIndex = -1
     private val holding = MutableStateFlow(false)
@@ -85,10 +84,8 @@ class SessionEngine(
         cancelCardJobs()
         _isPaused.value = false
         holding.value = false
-        reviewedCardIds.clear()
         baseSrsStates.clear()
-        dispatch(SessionAction.SetCards(cards))
-        dispatch(SessionAction.StartSession)
+        dispatch(SessionAction.StartSession(cards))
         if (cards.isEmpty()) {
             dispatch(SessionAction.FinishSession)
             return
@@ -164,12 +161,11 @@ class SessionEngine(
         if (s.cardReviewed) return
         val card = s.cards.getOrNull(s.currentCardIndex) ?: return
         deps.haptic(rating)
-        if (card.id in reviewedCardIds) {
+        if (card.id in baseSrsStates) {
             dispatch(SessionAction.RemoveFailedCard(card.id))
             deps.onCardReviewed(group.id, card.id, rating, baseSrsStates[card.id] ?: card.srsState)
         } else {
             baseSrsStates[card.id] = card.srsState
-            reviewedCardIds += card.id
             deps.onCardReviewed(group.id, card.id, rating, null)
         }
         if (rating == Ratings.AGAIN) dispatch(SessionAction.AddFailedCard(card.id))
@@ -178,6 +174,7 @@ class SessionEngine(
 
     private suspend fun advanceToNextCard() {
         holding.first { !it }
+        if (_state.value.status == SessionStatus.FINISHED) return
         val nextIndex = _state.value.currentCardIndex + 1
         if (nextIndex >= _state.value.cards.size) {
             dispatch(SessionAction.FinishSession)
@@ -226,22 +223,23 @@ class SessionEngine(
      * Zwraca true, gdy krok został obsłużony zastępczo.
      */
     private suspend fun substituteInBackground(step: ModeStep, card: Flashcard): Boolean {
-        val waitMs = BackgroundSubstitution.calculateBgWaitMs(card.pages.take(group.activePageCount))
+        suspend fun waitForReading() =
+            runSkippable { delay(BackgroundSubstitution.calculateBgWaitMs(card.pages.take(group.activePageCount))) }
         return when (step) {
             is WaitForTapStep -> {
-                runSkippable { delay(waitMs) }
+                waitForReading()
                 true
             }
 
             is WaitForTapToRevealNextStep -> {
-                runSkippable { delay(waitMs) }
+                waitForReading()
                 hiddenPages().firstOrNull()?.let { dispatch(SessionAction.RevealPages(listOf(it))) }
                 true
             }
 
             is WaitForTapToRevealStep -> {
-                runSkippable { delay(waitMs) }
-                hiddenPages().forEach { dispatch(SessionAction.RevealPages(listOf(it))) }
+                waitForReading()
+                hiddenPages().takeIf { it.isNotEmpty() }?.let { dispatch(SessionAction.RevealPages(it)) }
                 true
             }
 
@@ -284,17 +282,18 @@ class SessionEngine(
 
     /**
      * Uruchamia część kroku, którą tapnięcie może przerwać (mowa, pauza, nasłuch).
-     * Zwraca true, gdy przerwano ją tapnięciem.
+     * Zwraca wynik [block] albo null, gdy przerwano go tapnięciem.
      */
-    internal suspend fun runSkippable(block: suspend () -> Unit): Boolean = coroutineScope {
-        val inner = launch { block() }
+    internal suspend fun <T> runSkippable(block: suspend () -> T): T? = coroutineScope {
+        var result: T? = null
+        val inner = launch { result = block() }
         skippableJob = inner
         try {
             inner.join()
         } finally {
             if (skippableJob === inner) skippableJob = null
         }
-        inner.isCancelled
+        if (inner.isCancelled) null else result
     }
 
     /** Tapnięcie w kartę. */
@@ -304,17 +303,18 @@ class SessionEngine(
         when (s.status) {
             SessionStatus.REVEALED, SessionStatus.FINISHED -> Unit
 
+            // koniec nasłuchu = odpowiedź pominięta
             SessionStatus.LISTENING -> skippableJob?.cancel()
 
-            // koniec nasłuchu = odpowiedź pominięta
-            SessionStatus.IDLE, SessionStatus.SPEAKING, SessionStatus.ERROR ->
-                if (s.interactionGate.kind ==
-                    InteractionGateKind.TAP_TO_REVEAL
-                ) {
-                    handleGateTap()
-                } else {
-                    skippableJob?.cancel()
-                }
+            SessionStatus.IDLE, SessionStatus.SPEAKING, SessionStatus.ERROR -> handleTapWhileIdle()
+        }
+    }
+
+    private fun handleTapWhileIdle() {
+        if (_state.value.interactionGate.kind == InteractionGateKind.TAP_TO_REVEAL) {
+            handleGateTap()
+        } else {
+            skippableJob?.cancel()
         }
     }
 
@@ -342,10 +342,10 @@ class SessionEngine(
         holding.value = true
         holdStartedAt = clock.now()
         peekTimerJob?.cancel()
-        val nextHidden = hiddenPages().firstOrNull() ?: return
+        // ukryta strona liczona po opóźnieniu: w międzyczasie krok mógł już odsłonić tę wybraną przy naciśnięciu
         peekTimerJob = scope.launch {
             delay(StudyConstants.PEEK_HOLD_THRESHOLD_MS)
-            dispatch(SessionAction.PeekSet(nextHidden))
+            hiddenPages().firstOrNull()?.let { dispatch(SessionAction.PeekSet(it)) }
         }
     }
 

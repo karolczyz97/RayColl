@@ -2,20 +2,19 @@ package com.raycoll.app.domain.srs
 
 import com.raycoll.app.domain.model.MatchConstants
 import com.raycoll.app.domain.model.Ratings
-import com.raycoll.app.domain.model.SrsConstants
-import com.raycoll.app.domain.model.SrsState
-import kotlin.math.abs
+import com.raycoll.app.domain.model.StudyConstants
 import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
-fun normalizeText(text: String): String = text.lowercase()
-    .replace(Regex("[^\\p{L}\\p{N}\\s]"), "")
-    .replace(Regex("\\s+"), " ")
+private val NON_WORD_CHARS = Regex("[^\\p{L}\\p{N}\\s]")
+private val WHITESPACE = Regex("\\s+")
+
+private fun normalizeText(text: String): String = text.lowercase()
+    .replace(NON_WORD_CHARS, "")
+    .replace(WHITESPACE, " ")
     .trim()
 
-fun levenshteinDistance(a: String, b: String): Int {
+private fun levenshteinDistance(a: String, b: String): Int {
     val m = a.length
     val n = b.length
     if (m == 0) return n
@@ -48,8 +47,7 @@ private fun wordSimilarity(recognized: String, original: String): Double {
         for (i in recWords.indices) {
             if (used.contains(i)) continue
             val maxLen = maxOf(ow.length, recWords[i].length)
-            val dist = levenshteinDistance(ow, recWords[i])
-            val score = if (maxLen > 0) 1.0 - dist.toDouble() / maxLen else 1.0
+            val score = 1.0 - levenshteinDistance(ow, recWords[i]).toDouble() / maxLen
             if (score > bestScore) {
                 bestScore = score
                 bestIdx = i
@@ -69,22 +67,15 @@ fun matchSpeech(recognized: String, original: String): Int {
     if (normOrig.isEmpty()) return if (normRec.isEmpty()) 100 else 0
 
     val maxLen = maxOf(normRec.length, normOrig.length)
-    val globalSim = if (maxLen > 0) (1 - levenshteinDistance(normRec, normOrig).toDouble() / maxLen) * 100 else 100.0
+    val globalSim = (1 - levenshteinDistance(normRec, normOrig).toDouble() / maxLen) * 100
     val wordSim = wordSimilarity(normRec, normOrig)
     return maxOf(globalSim, wordSim).roundToInt()
 }
 
-fun mapMatchToRating(matchPercent: Int, successThreshold: Int? = null): Int {
-    if (successThreshold != null) {
-        val threshold = successThreshold.coerceIn(0, 100)
-        if (matchPercent < threshold) return Ratings.AGAIN
-        val easyThreshold = if (threshold >= 100) 100 else threshold + ceil((100 - threshold) / 2.0).toInt()
-        return if (matchPercent >= easyThreshold) Ratings.EASY else Ratings.GOOD
-    }
-    return when {
-        matchPercent >= MatchConstants.MATCH_EASY -> Ratings.EASY
-        matchPercent >= MatchConstants.MATCH_GOOD -> Ratings.GOOD
-        matchPercent >= MatchConstants.MATCH_HARD -> Ratings.HARD
-        else -> Ratings.AGAIN
-    }
+/** Ocena z dopasowania: poniżej progu = 1, od progu = 3, w górnej połowie przedziału do 100% = 4. */
+fun mapMatchToRating(matchPercent: Int, successThreshold: Int): Int {
+    val threshold = successThreshold.coerceIn(0, StudyConstants.MAX_THRESHOLD_PERCENT)
+    if (matchPercent < threshold) return Ratings.AGAIN
+    val easyThreshold = threshold + ceil((StudyConstants.MAX_THRESHOLD_PERCENT - threshold) / 2.0).toInt()
+    return if (matchPercent >= easyThreshold) Ratings.EASY else Ratings.GOOD
 }

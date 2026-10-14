@@ -333,4 +333,25 @@ class MergeEngineTest {
         assertNull(merged[0].deletedAt)
         assertEquals("Deleted classic", merged[0].name)
     }
+
+    @Test
+    fun `merge keeps local ids first and then cloud-only ids`() {
+        val cards = mergeCards(
+            listOf(makeCard("b"), makeCard("a")),
+            listOf(makeCard("c"), makeCard("a"), makeCard("d"))
+        )
+        assertEquals(listOf("b", "a", "c", "d"), cards.map { it.id })
+
+        val groups = mergeGroups(
+            listOf(makeDeck("y"), makeDeck("x")),
+            listOf(makeDeck("z"), makeDeck("x"))
+        )
+        assertEquals(listOf("y", "x", "z"), groups.map { it.id })
+
+        val modes = mergeStudyModes(
+            listOf(StudyMode("m2", "Two"), StudyMode("m1", "One")),
+            listOf(StudyMode("m3", "Three"), StudyMode("m1", "One"))
+        )
+        assertEquals(listOf("m2", "m1", "m3"), modes.map { it.id })
+    }
 }

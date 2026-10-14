@@ -185,4 +185,28 @@ class SelectorsTest {
         val heatmap = mapOf(todayKey to 1, yesterdayKey to 1)
         assertEquals(2, computeStreak(heatmap, fixedNow))
     }
+
+    @Test
+    fun `browse search ignores case for diacritics`() {
+        val cards = listOf(
+            makeCard("c1").copy(pages = listOf("Łódź", "Straße")),
+            makeCard("c2").copy(pages = listOf("Ärger", "x"))
+        )
+        assertEquals(listOf("c1"), browseFilter(cards, "łÓDŹ", null, 2).map { it.id })
+        assertEquals(listOf("c1"), browseFilter(cards, "STRAßE", null, 2).map { it.id })
+        assertEquals(listOf("c2"), browseFilter(cards, "ärger", null, 2).map { it.id })
+    }
+
+    @Test
+    fun `computeStreak counts consecutive days ending today`() {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.of(2026, 10, 14)
+        val at = today.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+        val heatmap = mapOf(
+            LocalDates.dayKey(today) to 3,
+            LocalDates.dayKey(today.minusDays(1)) to 1,
+            LocalDates.dayKey(today.minusDays(3)) to 1
+        )
+        assertEquals(2, computeStreak(heatmap, at))
+    }
 }

@@ -15,14 +15,16 @@ enum class CsvSeparator(val char: Char) {
     }
 }
 
+private val LINE_BREAKS = Regex("\r\n?")
+
 /** Ujednolica tekst: bez znacznika BOM, końce linii jako "\n". */
-fun normalizeCsvText(text: String): String = text.removePrefix("\uFEFF").replace(Regex("\r\n?"), "\n")
+fun normalizeCsvText(text: String): String = text.removePrefix("﻿").replace(LINE_BREAKS, "\n")
 
 /**
  * Dzieli tekst na wiersze i komórki (cudzysłowy jak w CSV: `"a;b"`, `""` = cudzysłów).
- * Komórki są przycięte, puste wiersze pominięte.
+ * Komórki są przycięte, puste wiersze pominięte; parsowanie kończy się po [maxRows] wierszach.
  */
-fun parseRows(text: String, separator: CsvSeparator): List<List<String>> {
+fun parseRows(text: String, separator: CsvSeparator, maxRows: Int = Int.MAX_VALUE): List<List<String>> {
     val rows = mutableListOf<List<String>>()
     var row = mutableListOf<String>()
     val cell = StringBuilder()
@@ -38,7 +40,7 @@ fun parseRows(text: String, separator: CsvSeparator): List<List<String>> {
     }
     val normalized = normalizeCsvText(text)
     var i = 0
-    while (i < normalized.length) {
+    while (i < normalized.length && rows.size < maxRows) {
         val char = normalized[i]
         when {
             char == '"' && inQuotes && normalized.getOrNull(i + 1) == '"' -> {
@@ -56,25 +58,29 @@ fun parseRows(text: String, separator: CsvSeparator): List<List<String>> {
         }
         i++
     }
-    endRow()
+    if (rows.size < maxRows) endRow()
     return rows
 }
 
 /** Separator, który daje najwięcej spójnych kolumn w pierwszych wierszach. */
 fun detectSeparator(text: String): CsvSeparator {
-    val best = CsvSeparator.entries
-        .map { separator -> separator to parseRows(text, separator).take(ImportConstants.SEP_DETECT_ROWS) }
-        .maxByOrNull { (_, rows) ->
-            if (rows.isEmpty()) return@maxByOrNull 0.0
-            val splitRows = rows.filter { it.size > 1 }
-            splitRows.sumOf { it.size - 1 } * (splitRows.size.toDouble() / rows.size)
-        }
+    val candidates = CsvSeparator.entries.map { separator ->
+        separator to parseRows(text, separator, ImportConstants.SEP_DETECT_ROWS)
+    }
+    val best = candidates.maxByOrNull { (_, rows) ->
+        if (rows.isEmpty()) return@maxByOrNull 0.0
+        val splitRows = rows.filter { it.size > 1 }
+        splitRows.sumOf { it.size - 1 } * (splitRows.size.toDouble() / rows.size)
+    }
     return best?.takeIf { (_, rows) -> rows.any { it.size > 1 } }?.first ?: CsvSeparator.DEFAULT
 }
 
-/** Komórka zapisana z powrotem do tekstu — w cudzysłowie, gdy zawiera separator, nową linię lub cudzysłów. */
+/**
+ * Komórka zapisana z powrotem do tekstu — w cudzysłowie, gdy zawiera separator,
+ * nową linię (także CR) lub cudzysłów.
+ */
 fun encodeCell(cell: String, separator: CsvSeparator): String =
-    if (cell.contains(separator.char) || cell.contains('\n') || cell.contains('"')) {
+    if (cell.contains(separator.char) || cell.contains('\n') || cell.contains('\r') || cell.contains('"')) {
         "\"" + cell.replace("\"", "\"\"") + "\""
     } else {
         cell
