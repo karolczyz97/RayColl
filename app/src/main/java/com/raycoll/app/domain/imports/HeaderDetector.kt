@@ -1,13 +1,11 @@
 package com.raycoll.app.domain.imports
 
 import com.raycoll.app.domain.model.ImportConstants
+import com.raycoll.app.domain.model.PageLimits
 import java.text.Normalizer
+import java.util.Locale
 import kotlin.math.abs
-
-data class HeaderDetectionResult(
-    val isLikelyHeader: Boolean,
-    val confidence: Double,
-)
+import kotlin.math.roundToInt
 
 object HeaderDetector {
 
@@ -16,14 +14,14 @@ object HeaderDetector {
         "english", "polish", "german", "deutsch", "french", "francais", "italian", "italiano",
         "spanish", "espanol", "palabra", "traduccion", "ejemplo", "wort", "ubersetzung", "beispiel",
         "slowo", "tlumaczenie", "przyklad", "angielski", "polski", "niemiecki", "francuski",
-        "wloski", "hiszpanski",
+        "wloski", "hiszpanski"
     )
 
     internal fun normalizeHeaderToken(text: String): String {
         val temp = Normalizer.normalize(text, Normalizer.Form.NFD)
         val regex = "\\p{InCombiningDiacriticalMarks}+".toRegex()
         // NFD nie rozkłada "ł" (litera z kreską, nie znak diakrytyczny)
-        return regex.replace(temp, "").replace('ł', 'l').replace('Ł', 'L').lowercase(java.util.Locale.US).trim()
+        return regex.replace(temp, "").replace('ł', 'l').replace('Ł', 'L').lowercase(Locale.ROOT).trim()
     }
 
     fun looksLikeHeaderLabel(value: String): Boolean {
@@ -49,31 +47,20 @@ object HeaderDetector {
         return hasSentenceLikeLength || hasDigits
     }
 
-    private fun rawRows(text: String, sepKey: String): List<List<String>> =
-        parseFullText(normalizeCsvText(text), resolveSep(sepKey))
-
-    fun detectPageCount(text: String, sepKey: String, skipFirstRow: Boolean = false): Int {
-        val rows = rawRows(text, sepKey).filter { r -> r.any { it.trim().isNotEmpty() } }
+    /** Liczba stron = najszersza linia danych (co najmniej minimalna liczba stron). */
+    fun detectPageCount(rows: List<List<String>>, skipFirstRow: Boolean = false): Int {
         val dataRows = if (skipFirstRow && rows.size > 1) rows.drop(1) else rows
-        if (dataRows.isEmpty()) return 2
-        val maxCols = dataRows.maxOf { it.size }
-        return maxOf(2, maxCols)
+        return maxOf(PageLimits.MIN_PAGE_COUNT, dataRows.maxOfOrNull { it.size } ?: 0)
     }
 
-    fun detectFirstRowHeader(
-        text: String,
-        sepKey: String,
-        expectedPageCount: Int? = null,
-    ): HeaderDetectionResult {
-        val rows = rawRows(text, sepKey)
-        if (rows.isEmpty()) return HeaderDetectionResult(false, 0.0)
+    fun looksLikeHeaderRow(rows: List<List<String>>): Boolean {
+        if (rows.isEmpty()) return false
 
         val firstRow = rows[0]
-        val limit = expectedPageCount ?: firstRow.size
-        val firstFields = firstRow.take(limit)
+        val firstFields = firstRow
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-        if (firstFields.isEmpty()) return HeaderDetectionResult(false, 0.0)
+        if (firstFields.isEmpty()) return false
 
         val secondRow = rows.getOrNull(1) ?: emptyList()
         var score = 0.0
@@ -94,10 +81,7 @@ object HeaderDetector {
             score -= minOf(0.35, dataLikeMatches.toDouble() * 0.15)
         }
 
-        val confidence = (Math.round(score * 100.0) / 100.0).coerceIn(0.0, 1.0)
-        return HeaderDetectionResult(
-            isLikelyHeader = confidence >= ImportConstants.HEADER_CONFIDENCE_MIN,
-            confidence = confidence,
-        )
+        val confidence = ((score * 100).roundToInt() / 100.0).coerceIn(0.0, 1.0)
+        return confidence >= ImportConstants.HEADER_CONFIDENCE_MIN
     }
 }

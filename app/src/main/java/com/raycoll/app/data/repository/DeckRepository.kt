@@ -3,269 +3,261 @@ package com.raycoll.app.data.repository
 import androidx.room.withTransaction
 import com.raycoll.app.core.Clock
 import com.raycoll.app.core.LocalDates
+import com.raycoll.app.data.local.db.CardEntity
+import com.raycoll.app.data.local.db.DeckEntity
 import com.raycoll.app.data.local.db.RayCollDatabase
-import com.raycoll.app.data.local.mappers.Mappers
+import com.raycoll.app.data.local.mappers.encodeStringList
+import com.raycoll.app.data.local.mappers.toDomain
+import com.raycoll.app.data.local.mappers.toEntity
+import com.raycoll.app.data.local.mappers.toHeatmap
+import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
-import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.domain.operations.addCard
-import com.raycoll.app.domain.operations.addGroup
-import com.raycoll.app.domain.operations.addGroupWithCards
-import com.raycoll.app.domain.operations.archiveGroup
-import com.raycoll.app.domain.operations.deleteCard
-import com.raycoll.app.domain.operations.deleteGroup
-import com.raycoll.app.domain.operations.movePage
-import com.raycoll.app.domain.operations.purgeExpiredArchives
-import com.raycoll.app.domain.operations.restoreGroup
-import com.raycoll.app.domain.operations.reviewCard
-import com.raycoll.app.domain.operations.reviewCardAgain
-import com.raycoll.app.domain.operations.setActiveStudyMode
-import com.raycoll.app.domain.operations.setCardOrder
-import com.raycoll.app.domain.operations.setStudyFilter
-import com.raycoll.app.domain.operations.setVisiblePageCount
-import com.raycoll.app.domain.operations.updateCard
-import com.raycoll.app.domain.operations.updateGroup
-import com.raycoll.app.domain.seed.SeedData
-import com.raycoll.app.domain.normalize.normalizeStoreData
+import com.raycoll.app.domain.model.StudyFilter
+import com.raycoll.app.domain.operations.isArchiveExpired
+import com.raycoll.app.domain.operations.newCard
+import com.raycoll.app.domain.operations.newGroup
+import com.raycoll.app.domain.operations.reviewed
+import com.raycoll.app.domain.operations.withActivePageCount
+import com.raycoll.app.domain.operations.withPagesSwapped
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
+/** Talie, karty i dzienna aktywność w aktywnej przestrzeni danych. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class DeckRepository @Inject constructor(
     private val db: RayCollDatabase,
     private val clock: Clock,
     private val namespaceManager: NamespaceManager,
-    private val dataMutations: DataMutations,
+    private val dataMutations: DataMutations
 ) {
     private val deckDao = db.deckDao()
+    private val cardDao = db.cardDao()
     private val activityDao = db.activityDao()
 
-    private fun notifyMutation(mode: CloudWriteMode = CloudWriteMode.DEBOUNCED) = dataMutations.signal(mode)
+    private val ns: String get() = namespaceManager.current()
 
-    fun activeDecks() = deckDao.activeDecks(namespaceManager.current()).map { entities ->
-        entities.map { Mappers.entityToDeck(it, deckDao.getCards(namespaceManager.current(), it.id)) }
-    }
-    fun archivedDecks() = deckDao.archivedDecks(namespaceManager.current()).map { entities ->
-        entities.map { Mappers.entityToDeck(it, deckDao.getCards(namespaceManager.current(), it.id)) }
-    }
-    fun cardsForDeck(deckId: String) = deckDao.cardsForDeck(namespaceManager.current(), deckId).map { entities ->
-        entities.map { Mappers.entityToCard(it) }
-    }
-    fun activityHeatmapFlow() = activityDao.heatmap(namespaceManager.current()).map { entities ->
-        entities.associate { Mappers.entityToActivity(it) }
+    // --- odczyt: strumienie śledzą aktywne konto ---
+
+    fun activeDecks(): Flow<List<FlashcardGroup>> = decksWithCards(deckDao::activeDecks)
+
+    fun archivedDecks(): Flow<List<FlashcardGroup>> = decksWithCards(deckDao::archivedDecks)
+
+    /**
+     * Talia z kartami do pokazania; null, gdy jej nie ma albo jest usunięta (tombstone
+     * zna tylko synchronizacja i kopia zapasowa — [LocalStore.snapshot]). Zarchiwizowana jest.
+     */
+    fun deck(deckId: String): Flow<FlashcardGroup?> = namespaceManager.active.flatMapLatest { ns ->
+        combine(deckDao.liveDeck(ns, deckId), cardDao.liveCardsOf(ns, deckId)) { deck, cards -> deck?.toDomain(cards) }
     }
 
+    fun activityHeatmap(): Flow<Map<String, Int>> = namespaceManager.active.flatMapLatest { ns ->
+        activityDao.heatmap(ns).map { it.toHeatmap() }
+    }
+
+    /** Jak [deck], jednorazowo: usunięta talia = null. */
     suspend fun getDeck(deckId: String): FlashcardGroup? {
-        val ns = namespaceManager.current()
-        val deckEntity = deckDao.getDeck(ns, deckId) ?: return null
-        val cards = deckDao.getCards(ns, deckId)
-        return Mappers.entityToDeck(deckEntity, cards)
+        val ns = ns
+        val deck = deckDao.getLiveDeck(ns, deckId) ?: return null
+        return deck.toDomain(cardDao.getLiveCardsOf(ns, deckId))
     }
 
-    suspend fun addDeck(name: String, languages: List<String>, pageNames: List<String>): String {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val (groups, newId) = addGroup(emptyList(), name, languages, pageNames, now)
-        val deck = groups.last()
-        deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-        notifyMutation()
-        return newId
-    }
-
-    suspend fun addDeckWithCards(name: String, languages: List<String>, pageNames: List<String>, cards: List<Flashcard>): String {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val (groups, newId) = addGroupWithCards(emptyList(), name, languages, pageNames, cards, now)
-        val deck = groups.last()
-        db.withTransaction {
-            deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-            deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, newId) })
+    /**
+     * Karty idą osobnym strumieniem, bo zapytanie na samych taliach nie emituje
+     * przy dodaniu/edycji/usunięciu karty.
+     */
+    private fun decksWithCards(decks: (String) -> Flow<List<DeckEntity>>): Flow<List<FlashcardGroup>> =
+        namespaceManager.active.flatMapLatest { ns ->
+            combine(decks(ns), cardDao.liveCards(ns), ::withCards)
         }
-        // import talii = zapis krytyczny (polityka T10: immediate)
-        notifyMutation(CloudWriteMode.IMMEDIATE)
-        return newId
+
+    // --- talie ---
+
+    /** Nowa talia z kartami (import) — zapis krytyczny, wysyłany od razu. */
+    suspend fun addDeckWithCards(
+        name: String,
+        languages: List<String>,
+        pageNames: List<String>,
+        cardPages: List<List<String>>
+    ): String {
+        val now = clock.now()
+        val deck = newGroup(name, languages, pageNames, cardPages.map { newCard(it, now) }, now)
+        val ns = ns
+        db.withTransaction {
+            deckDao.upsertDeck(deck.toEntity(ns))
+            cardDao.upsertCards(deck.cards.map { it.toEntity(ns, deck.id) })
+        }
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
+        return deck.id
     }
 
-    suspend fun updateDeck(deck: FlashcardGroup) {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val updated = updateGroup(listOf(deck), deck, now)[0]
-        db.withTransaction {
-            deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
-            for (card in updated.cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, updated.id))
+    // --- ustawienia talii: każda zmiana dotyka tylko swoich kolumn (bez „pobierz → upsert całego wiersza”) ---
+
+    suspend fun renameDeck(deckId: String, name: String) = updateDeck { ns, now ->
+        deckDao.updateName(ns, deckId, name.trim(), now)
+    }
+
+    suspend fun setStudyFilter(deckId: String, filter: StudyFilter) = updateDeck { ns, now ->
+        deckDao.updateStudyFilter(ns, deckId, filter.key, now)
+    }
+
+    suspend fun setCardOrder(deckId: String, order: CardOrder) = updateDeck { ns, now ->
+        deckDao.updateCardOrder(ns, deckId, order.key, now)
+    }
+
+    suspend fun setActiveStudyMode(deckId: String, modeId: String) = updateDeck { ns, now ->
+        deckDao.updateActiveMode(ns, deckId, modeId, now)
+    }
+
+    suspend fun setPageName(deckId: String, pageIndex: Int, name: String) = editPageMetadata(deckId) { deck, _ ->
+        deck.copy(pageNames = deck.pageNames.mapIndexed { i, old -> if (i == pageIndex) name else old })
+    }
+
+    suspend fun setPageLanguage(deckId: String, pageIndex: Int, language: String) =
+        editPageMetadata(deckId) { deck, _ ->
+            deck.copy(pageLanguages = deck.pageLanguages.mapIndexed { i, old -> if (i == pageIndex) language else old })
         }
-        notifyMutation()
+
+    suspend fun setActivePageCount(deckId: String, count: Int) = editPageMetadata(deckId) { deck, now ->
+        deck.withActivePageCount(count, now)
+    }
+
+    private suspend fun updateDeck(write: suspend (ns: String, now: Long) -> Int) {
+        if (write(ns, clock.now()) > 0) dataMutations.signal(CloudWriteMode.DEBOUNCED)
+    }
+
+    /**
+     * Nazwy/języki/liczba stron (listy JSON): odczyt i zapis tych kolumn w jednej transakcji,
+     * więc dwie szybkie zmiany różnych stron nie gubią się nawzajem; reszta wiersza bez zmian.
+     */
+    private suspend fun editPageMetadata(deckId: String, edit: (FlashcardGroup, Long) -> FlashcardGroup) {
+        val ns = ns
+        val now = clock.now()
+        val updated = db.withTransaction {
+            val deck = deckDao.getLiveDeck(ns, deckId)?.toDomain(emptyList()) ?: return@withTransaction 0
+            val edited = edit(deck, now)
+            deckDao.updatePageMetadata(
+                ns,
+                deckId,
+                encodeStringList(edited.pageNames),
+                encodeStringList(edited.pageLanguages),
+                edited.activePageCount,
+                now
+            )
+        }
+        if (updated > 0) dataMutations.signal(CloudWriteMode.DEBOUNCED)
+    }
+
+    /**
+     * Zamiana stron miejscami: metadane talii i treść każdej karty w jednej transakcji
+     * (operacja wielokolumnowa — razem albo wcale); updatedAt talii i contentUpdatedAt kart = teraz.
+     */
+    suspend fun swapPages(deckId: String, from: Int, to: Int) {
+        val ns = ns
+        val now = clock.now()
+        val swappedAny = db.withTransaction {
+            val deck = getDeck(deckId) ?: return@withTransaction false
+            if (from !in deck.pageNames.indices || to !in deck.pageNames.indices) return@withTransaction false
+            val swapped = deck.withPagesSwapped(from, to, now)
+            deckDao.updatePageMetadata(
+                ns,
+                deckId,
+                encodeStringList(swapped.pageNames),
+                encodeStringList(swapped.pageLanguages),
+                swapped.activePageCount,
+                now
+            )
+            cardDao.upsertCards(swapped.cards.map { it.copy(contentUpdatedAt = now).toEntity(ns, deckId) })
+            true
+        }
+        if (swappedAny) dataMutations.signal(CloudWriteMode.DEBOUNCED)
     }
 
     suspend fun deleteDeck(deckId: String) {
-        val ns = namespaceManager.current()
         deckDao.softDeleteDeck(ns, deckId, clock.now())
-        notifyMutation(CloudWriteMode.IMMEDIATE)
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
     }
 
     suspend fun archiveDeck(deckId: String) {
-        val ns = namespaceManager.current()
         deckDao.archiveDeck(ns, deckId, clock.now())
-        notifyMutation(CloudWriteMode.IMMEDIATE)
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
     }
 
     suspend fun restoreDeck(deckId: String) {
-        val ns = namespaceManager.current()
         deckDao.restoreDeck(ns, deckId, clock.now())
-        notifyMutation(CloudWriteMode.IMMEDIATE)
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
     }
 
-    suspend fun addCard(deckId: String, pages: List<String>): String {
-        val ns = namespaceManager.current()
-        val deck = getDeck(deckId) ?: throw IllegalStateException("Deck not found")
-        val (groups, cardId) = addCard(listOf(deck), deckId, pages, clock.now())
-        val card = groups[0].cards.last()
-        deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
-        notifyMutation()
-        return cardId
-    }
-
-    suspend fun updateCard(deckId: String, card: Flashcard) {
-        val ns = namespaceManager.current()
+    /** Trwałe usunięcie talii zarchiwizowanych dłużej niż okres przechowywania. */
+    suspend fun purgeExpiredArchives() {
+        val ns = ns
         val now = clock.now()
-        deckDao.insertCard(Mappers.cardToEntity(card.copy(contentUpdatedAt = now), ns, deckId))
-        notifyMutation()
+        val expired = deckDao.allDecks(ns).map { it.toDomain(emptyList()) }.filter { it.isArchiveExpired(now) }
+        if (expired.isEmpty()) return
+        db.withTransaction { expired.forEach { deckDao.softDeleteDeck(ns, it.id, now) } }
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
     }
 
-    suspend fun deleteCard(deckId: String, cardId: String) {
-        val ns = namespaceManager.current()
-        deckDao.softDeleteCard(ns, cardId, clock.now())
-        notifyMutation()
+    // --- karty ---
+
+    suspend fun addCard(deckId: String, pages: List<String>) {
+        cardDao.upsertCard(newCard(pages, clock.now()).toEntity(ns, deckId))
+        dataMutations.signal(CloudWriteMode.DEBOUNCED)
     }
 
-    suspend fun reviewCard(deckId: String, cardId: String, rating: Int) {
-        val ns = namespaceManager.current()
+    /**
+     * Nowa treść widocznych stron karty: zmienia tylko strony i [Flashcard.contentUpdatedAt],
+     * więc równoległa ocena (SRS) ani ukryte strony nie są nadpisywane. False: karty już nie ma.
+     */
+    suspend fun updateCardPages(cardId: String, visiblePages: List<String>): Boolean {
+        val ns = ns
         val now = clock.now()
-        val deck = getDeck(deckId) ?: return
-        val updated = reviewCard(listOf(deck), deckId, cardId, rating, now)
-        val card = updated[0].cards.find { it.id == cardId } ?: return
-        val dayKey = LocalDates.dayKey(now)
-        // Karta + heatmapa ATOMOWO (spec T5); ensureActivityRow tworzy wiersz dnia,
-        // bo samo incrementActivity (UPDATE) gubiłoby PIERWSZą ocenę każdego dnia.
-        db.withTransaction {
-            deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
-            activityDao.ensureActivityRow(ns, dayKey)
-            activityDao.incrementActivity(ns, dayKey)
+        val updated = db.withTransaction {
+            val current = cardDao.getCard(ns, cardId)?.takeIf { it.deletedAt == null }?.toDomain()
+                ?: return@withTransaction false
+            val pages = visiblePages + current.pages.drop(visiblePages.size)
+            cardDao.updateCardContent(ns, cardId, encodeStringList(pages), now) > 0
         }
-        notifyMutation(CloudWriteMode.STUDY)
+        if (updated) dataMutations.signal(CloudWriteMode.DEBOUNCED)
+        return updated
     }
 
-    suspend fun reviewCardAgain(deckId: String, cardId: String, rating: Int, baseState: SrsState) {
-        val ns = namespaceManager.current()
+    suspend fun deleteCard(cardId: String) {
+        cardDao.softDeleteCard(ns, cardId, clock.now())
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
+    }
+
+    /**
+     * Ocena karty w sesji. [baseState] != null: ponowna ocena liczona od stanu sprzed
+     * pierwszej i bez drugiego wpisu w aktywności dnia.
+     */
+    suspend fun reviewCard(
+        deckId: String,
+        cardId: String,
+        rating: Int,
+        baseState: SrsState? = null,
+        namespace: String = namespaceManager.current()
+    ) {
+        val ns = namespace
         val now = clock.now()
-        val deck = getDeck(deckId) ?: return
-        val updated = reviewCardAgain(listOf(deck), deckId, cardId, rating, baseState, now)
-        val card = updated[0].cards.find { it.id == cardId } ?: return
-        deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
-        notifyMutation(CloudWriteMode.STUDY)
-    }
-
-    /** Wspólny szablon dla setterów metadanych talii (pojedynczy zapis decka). */
-    private suspend fun mutateDeckMeta(deckId: String, op: (List<FlashcardGroup>, Long) -> List<FlashcardGroup>) {
-        val ns = namespaceManager.current()
-        val deck = getDeck(deckId) ?: return
-        val updated = op(listOf(deck), clock.now())[0]
-        deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
-        notifyMutation()
-    }
-
-    suspend fun setVisiblePageCount(deckId: String, count: Int) =
-        mutateDeckMeta(deckId) { decks, now -> setVisiblePageCount(decks, deckId, count, now) }
-
-    suspend fun setStudyFilter(deckId: String, filter: String) =
-        mutateDeckMeta(deckId) { decks, now -> setStudyFilter(decks, deckId, filter, now) }
-
-    suspend fun setCardOrder(deckId: String, order: String) =
-        mutateDeckMeta(deckId) { decks, now -> setCardOrder(decks, deckId, order, now) }
-
-    suspend fun setActiveStudyMode(deckId: String, modeId: String) =
-        mutateDeckMeta(deckId) { decks, now -> setActiveStudyMode(decks, deckId, modeId, now) }
-
-    suspend fun movePage(deckId: String, from: Int, to: Int) {
-        val ns = namespaceManager.current()
-        val deck = getDeck(deckId) ?: return
-        val updated = movePage(listOf(deck), deckId, from, to, clock.now())[0]
         db.withTransaction {
-            deckDao.insertDeck(Mappers.deckToEntity(updated, ns))
-            for (card in updated.cards) deckDao.insertCard(Mappers.cardToEntity(card, ns, deckId))
+            val card =
+                cardDao.getCard(ns, cardId)?.takeIf { it.deletedAt == null }?.toDomain() ?: return@withTransaction
+            cardDao.upsertCard(card.reviewed(rating, now, baseState ?: card.srsState).toEntity(ns, deckId))
+            if (baseState == null) activityDao.incrementActivity(ns, LocalDates.dayKey(now))
         }
-        notifyMutation()
+        dataMutations.signal(CloudWriteMode.STUDY)
     }
+}
 
-    suspend fun purgeExpiredArchives(): Boolean {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val retentionMs = com.raycoll.app.domain.model.ArchiveConstants.RETENTION_DAYS * com.raycoll.app.domain.model.SrsConstants.DAY_MS
-        val decks = deckDao.allDecks(ns)
-        val groups = decks.map { Mappers.entityToDeck(it, deckDao.getCards(ns, it.id)) }
-        val (updated, changed) = purgeExpiredArchives(groups, now, retentionMs)
-        if (changed) {
-            // zapisz tylko talie faktycznie skasowane w TYM przebiegu (wcześniej
-            // przepisywało też wszystkie stare tombstony przy każdym purge)
-            val previouslyDeleted = groups.filter { it.deletedAt != null }.map { it.id }.toSet()
-            db.withTransaction {
-                for (deck in updated) {
-                    if (deck.deletedAt != null && deck.id !in previouslyDeleted) {
-                        deckDao.softDeleteDeck(ns, deck.id, deck.deletedAt)
-                    }
-                }
-            }
-            notifyMutation()
-        }
-        return changed
-    }
-
-    suspend fun seedIfEmpty() {
-        val ns = namespaceManager.current()
-        // check + insert w JEDNEJ transakcji — seedIfEmpty woła równolegle
-        // DashboardViewModel i bootstrap; wyścig check-then-insert podwajał seedy.
-        db.withTransaction {
-            if (deckDao.allDecks(ns).isNotEmpty()) return@withTransaction
-            val normalized = normalizeStoreData(SeedData.createSeedData())
-            for (deck in normalized.groups) {
-                deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-                deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
-            }
-        }
-    }
-
-    suspend fun getSnapshot(): StoreData = getSnapshotFor(namespaceManager.current())
-
-    suspend fun getSnapshotFor(ns: String): StoreData {
-        val decks = deckDao.allDecks(ns)
-        val groups = decks.map { Mappers.entityToDeck(it, deckDao.getCards(ns, it.id)) }
-        val modes = db.studyModeDao().allModes(ns).map { Mappers.entityToMode(it) }
-        val heatmap = db.activityDao().allActivity(ns).associate { Mappers.entityToActivity(it) }
-        return StoreData(groups = groups, studyModes = modes, activityHeatmap = heatmap)
-    }
-
-    suspend fun replaceAll(snapshot: StoreData) {
-        val ns = namespaceManager.current()
-        val normalized = normalizeStoreData(snapshot)
-        // Całe zastąpienie stanu ATOMOWO — kill apki w połowie importu/resetu nie
-        // może zostawić częściowo podmienionego (skasowanego, ale nie wstawionego) stanu.
-        db.withTransaction {
-            deckDao.deleteAllDecks(ns)
-            db.studyModeDao().deleteAllModes(ns)
-            activityDao.deleteAllActivity(ns)
-            for (deck in normalized.groups) {
-                deckDao.insertDeck(Mappers.deckToEntity(deck, ns))
-                deckDao.insertCards(deck.cards.map { Mappers.cardToEntity(it, ns, deck.id) })
-            }
-            db.studyModeDao().insertModes(normalized.studyModes.map { Mappers.modeToEntity(it, ns) })
-            for ((dayKey, count) in normalized.activityHeatmap) {
-                activityDao.upsertActivity(Mappers.activityToEntity(dayKey, count, ns))
-            }
-        }
-        // import backupu / reset / migracja = zapis krytyczny (immediate)
-        notifyMutation(CloudWriteMode.IMMEDIATE)
-    }
+internal fun withCards(decks: List<DeckEntity>, cards: List<CardEntity>): List<FlashcardGroup> {
+    val cardsByDeck = cards.groupBy { it.deckId }
+    return decks.map { it.toDomain(cardsByDeck[it.id].orEmpty()) }
 }

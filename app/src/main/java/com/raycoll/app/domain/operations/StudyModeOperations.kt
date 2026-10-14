@@ -1,28 +1,36 @@
 package com.raycoll.app.domain.operations
 
+import com.raycoll.app.core.Ids
+import com.raycoll.app.domain.model.DEFAULT_MODE_ID
+import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.normalize.normalizeStudyMode
-import com.raycoll.app.domain.srs.createSeedModes
+import com.raycoll.app.domain.seed.SEED_MODES
+import com.raycoll.app.domain.seed.seedModeFor
 
-fun addStudyMode(modes: List<StudyMode>, name: String, steps: List<com.raycoll.app.domain.model.ModeStep>, now: Long): Pair<List<StudyMode>, String> {
-    val mode = normalizeStudyMode(StudyMode(id = com.raycoll.app.core.Ids.newId(), name = name, steps = steps, updatedAt = now))
-    return Pair(modes + mode, mode.id)
+fun newStudyMode(name: String, steps: List<ModeStep>, now: Long): StudyMode =
+    normalizeStudyMode(StudyMode(id = Ids.newId(), name = name, steps = steps, updatedAt = now))
+
+fun StudyMode.edited(now: Long): StudyMode = normalizeStudyMode(copy(updatedAt = now))
+
+/**
+ * Tryb, którym talia naprawdę się uczy: przypisany, a gdy go już nie ma (np. usunięty
+ * własny tryb) — klasyczny, potem pierwszy dostępny. [liveModes] bez usuniętych trybów.
+ * Zapisana w talii referencja się nie zmienia — to tylko jej rozwiązanie do użycia/pokazania.
+ */
+fun resolveStudyMode(liveModes: List<StudyMode>, modeId: String): StudyMode = liveModes.firstOrNull { it.id == modeId }
+    ?: liveModes.firstOrNull { it.id == DEFAULT_MODE_ID }
+    ?: liveModes.firstOrNull()
+    ?: SEED_MODES.first()
+
+/** Wbudowany tryb zmieniony względem wersji fabrycznej (nazwa albo kroki). */
+fun StudyMode.isModifiedBuiltIn(): Boolean {
+    val seed = seedModeFor(builtInSourceId)?.takeIf { isBuiltIn } ?: return false
+    return name != seed.name || steps != seed.steps
 }
 
-fun updateStudyMode(modes: List<StudyMode>, mode: StudyMode, now: Long): List<StudyMode> =
-    modes.map { if (it.id == mode.id) normalizeStudyMode(mode.copy(updatedAt = now)) else it }
-
-fun deleteStudyMode(modes: List<StudyMode>, modeId: String, now: Long): List<StudyMode> =
-    modes.map { if (it.id == modeId) it.copy(deletedAt = now) else it }
-
-fun resetStudyMode(modes: List<StudyMode>, modeId: String, now: Long): List<StudyMode> {
-    val seedModes = createSeedModes()
-    return modes.map { m ->
-        if (m.id != modeId) m
-        else {
-            val seed = seedModes.find { it.builtInSourceId == m.builtInSourceId }
-                ?: return@map m
-            m.copy(name = seed.name, steps = seed.steps, updatedAt = now)
-        }
-    }
+/** Przywraca nazwę i kroki wbudowanego trybu; tryb własny zostaje bez zmian. */
+fun StudyMode.resetToBuiltIn(now: Long): StudyMode {
+    val seed = seedModeFor(builtInSourceId) ?: return this
+    return copy(name = seed.name, steps = seed.steps, updatedAt = now)
 }

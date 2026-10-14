@@ -1,50 +1,85 @@
 package com.raycoll.app.ui.dashboard
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.raycoll.app.core.Clock
+import com.raycoll.app.core.minuteTicks
 import com.raycoll.app.data.repository.DeckRepository
-import com.raycoll.app.data.repository.NamespaceManager
 import com.raycoll.app.data.repository.StudyModeRepository
-import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.operations.resolveStudyMode
+import com.raycoll.app.domain.selectors.CardStats
+import com.raycoll.app.domain.selectors.computeCardStats
+import com.raycoll.app.domain.selectors.countDueCards
+import com.raycoll.app.ui.components.UiEvents
+import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+
+@Immutable
+data class DeckSummary(
+    val id: String,
+    val name: String,
+    /** Tryb, którym talia się uczy (przypisany albo domyślny, gdy przypisany usunięto). */
+    val activeMode: StudyMode,
+    val stats: CardStats,
+    val dueCount: Int
+)
+
+sealed interface DashboardUiState {
+    data object Loading : DashboardUiState
+
+    data class Ready(val decks: List<DeckSummary>, val modes: List<StudyMode>) : DashboardUiState
+}
+
+sealed interface DashboardEvent {
+    data object SaveFailed : DashboardEvent
+}
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val deckRepository: DeckRepository,
-    private val studyModeRepository: StudyModeRepository,
-    private val namespaceManager: NamespaceManager,
+    studyModeRepository: StudyModeRepository,
+    private val clock: Clock
 ) : ViewModel() {
 
-    val decks: StateFlow<List<FlashcardGroup>> = deckRepository.activeDecks()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val modes: StateFlow<List<StudyMode>> = studyModeRepository.liveModes()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    init {
-        viewModelScope.launch {
-            // Seed tylko dla gościa. Namespace zalogowanego użytkownika seeduje
-            // wyłącznie bootstrap PO potwierdzeniu, że chmura jest pusta — seed
-            // przy nieudanym loadzie chmury robiłby później duplikaty w merge.
-            if (namespaceManager.current().isEmpty()) {
-                deckRepository.seedIfEmpty()
-                studyModeRepository.seedIfEmpty()
-            }
+    val uiState: StateFlow<DashboardUiState> = combine(
+        deckRepository.activeDecks(),
+        studyModeRepository.liveModes(),
+        clock.minuteTicks()
+    ) { decks, modes, now ->
+        val summaries = decks.map { deck ->
+            DeckSummary(
+                id = deck.id,
+                name = deck.name,
+                activeMode = resolveStudyMode(modes, deck.activeModeId),
+                stats = computeCardStats(deck.cards),
+                dueCount = countDueCards(deck.cards, deck.studyFilter, now)
+            )
         }
+        DashboardUiState.Ready(summaries, modes)
     }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState.Loading)
 
-    fun setActiveMode(deckId: String, modeId: String) {
-        viewModelScope.launch { deckRepository.setActiveStudyMode(deckId, modeId) }
-    }
+    private val eventSink = UiEvents<DashboardEvent>()
 
-    fun archiveDeck(deckId: String) {
-        viewModelScope.launch { deckRepository.archiveDeck(deckId) }
+    /** Zmiana z pulpitu (tryb, archiwizacja) się nie zapisała. */
+    val events: Flow<DashboardEvent> = eventSink.flow
+
+    fun setActiveMode(deckId: String, modeId: String) = save { deckRepository.setActiveStudyMode(deckId, modeId) }
+
+    fun archiveDeck(deckId: String) = save { deckRepository.archiveDeck(deckId) }
+
+    private fun save(block: suspend () -> Unit) {
+        viewModelScope.launchSaving(onFailure = { eventSink.send(DashboardEvent.SaveFailed) }, block = block)
     }
 }

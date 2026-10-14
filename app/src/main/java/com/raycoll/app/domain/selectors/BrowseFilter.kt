@@ -4,18 +4,16 @@ import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.domain.srs.getCardCategory
 
-data class BrowseFilterResult(val cards: List<Flashcard>, val counts: CardStats)
-
-fun browseFilter(cards: List<Flashcard>, search: String, category: SrsCardCategory?, now: Long, activePageCount: Int = Int.MAX_VALUE): BrowseFilterResult {
-    val liveCards = filterLiveCards(cards)
-    val searchLower = search.trim().lowercase()
-    val filtered = if (searchLower.isEmpty()) {
-        if (category == null) liveCards else liveCards.filter { getCardCategory(it.srsState) == category }
-    } else {
-        liveCards.filter { card ->
-            (category == null || getCardCategory(card.srsState) == category) &&
-                card.pages.take(activePageCount).any { it.lowercase().contains(searchLower) }
-        }
+/** Karty przeglądarki: kategoria SRS + wyszukiwanie w aktywnych stronach (bez wielkości liter). */
+fun browseFilter(
+    cards: List<Flashcard>,
+    search: String,
+    category: SrsCardCategory?,
+    activePageCount: Int
+): List<Flashcard> {
+    val query = search.trim().lowercase()
+    return cards.live().filter { card ->
+        (category == null || getCardCategory(card.srsState) == category) &&
+            (query.isEmpty() || card.pages.take(activePageCount).any { it.lowercase().contains(query) })
     }
-    return BrowseFilterResult(cards = filtered, counts = computeCardStats(liveCards))
 }

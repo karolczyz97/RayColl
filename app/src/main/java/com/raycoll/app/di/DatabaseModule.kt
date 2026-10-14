@@ -16,16 +16,5 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): RayCollDatabase =
-        Room.databaseBuilder(context, RayCollDatabase::class.java, "raycoll.db")
-            .fallbackToDestructiveMigration()
-            .build()
-
-    @Provides
-    fun provideDeckDao(db: RayCollDatabase) = db.deckDao()
-
-    @Provides
-    fun provideStudyModeDao(db: RayCollDatabase) = db.studyModeDao()
-
-    @Provides
-    fun provideActivityDao(db: RayCollDatabase) = db.activityDao()
+        Room.databaseBuilder(context, RayCollDatabase::class.java, RayCollDatabase.NAME).build()
 }

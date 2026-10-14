@@ -4,110 +4,160 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.raycoll.app.BuildConfig
+import com.raycoll.app.core.Clock
+import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
-import com.raycoll.app.data.remote.auth.AuthRepository
+import com.raycoll.app.data.remote.auth.Account
+import com.raycoll.app.data.remote.auth.GoogleSignIn
+import com.raycoll.app.data.remote.auth.IdTokenResult
+import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
 import com.raycoll.app.data.repository.BackupRepository
-import com.raycoll.app.data.sync.MigrationController
+import com.raycoll.app.data.repository.BackupResult
 import com.raycoll.app.data.sync.SyncLifecycle
 import com.raycoll.app.data.sync.SyncStatus
+import com.raycoll.app.ui.components.UiEvents
+import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-data class AccountUiState(
-    val signedIn: Boolean = false,
-    val email: String = "",
-    val signInInProgress: Boolean = false,
+data class AppSettingsUiState(
+    val preferences: UserPreferences = UserPreferences(),
+    val account: Account? = null,
+    val signingIn: Boolean = false,
+    val syncStatus: SyncStatus = SyncStatus.IDLE,
+    val appVersion: String = BuildConfig.VERSION_NAME
 )
+
+sealed interface AppSettingsEvent {
+    data class SignInFailed(val error: SignInError) : AppSettingsEvent
+
+    data class BackupExported(val result: BackupResult) : AppSettingsEvent
+
+    data class BackupImported(val result: BackupResult) : AppSettingsEvent
+
+    /** Ustawienie albo reset danych się nie zapisały. */
+    data object SaveFailed : AppSettingsEvent
+
+    /** Wynik ręcznej synchronizacji. */
+    data class SyncFinished(val success: Boolean) : AppSettingsEvent
+}
 
 @HiltViewModel
 class AppSettingsViewModel @Inject constructor(
     private val prefsRepository: UserPreferencesRepository,
     private val backupRepository: BackupRepository,
-    private val authRepository: AuthRepository,
+    private val authRepository: GoogleSignIn,
     private val syncLifecycle: SyncLifecycle,
+    private val clock: Clock
 ) : ViewModel() {
-    val preferences: StateFlow<UserPreferences> = prefsRepository.preferences
-        .stateIn(viewModelScope, SharingStarted.Lazily, UserPreferences())
+    private val signingIn = MutableStateFlow(false)
 
-    val accountState: StateFlow<AccountUiState> = authRepository.authState
-        .map { uid ->
-            AccountUiState(signedIn = uid.isNotEmpty(), email = authRepository.currentEmail())
+    val uiState: StateFlow<AppSettingsUiState> = combine(
+        prefsRepository.preferences,
+        authRepository.account,
+        signingIn,
+        syncLifecycle.syncStatus
+    ) { preferences, account, signingIn, syncStatus ->
+        AppSettingsUiState(preferences, account, signingIn, syncStatus)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        AppSettingsUiState(account = authRepository.account.value)
+    )
+
+    private val eventSink = UiEvents<AppSettingsEvent>()
+    val events: Flow<AppSettingsEvent> = eventSink.flow
+
+    /**
+     * Wybór konta Google. Woła go ekran w SWOIM zakresie korutyn: arkusz Credential Managera
+     * potrzebuje Activity, więc ta część żyje tyle co ekran (obrót ją przerywa, a ViewModel nie
+     * trzyma starej Activity). Logowanie tokenem i synchronizacja idą w zakresie aplikacji.
+     */
+    suspend fun chooseGoogleAccount(activityContext: Context) {
+        if (signingIn.value) return
+        signingIn.value = true
+        val token = try {
+            authRepository.requestGoogleIdToken(activityContext)
+        } catch (e: CancellationException) {
+            signingIn.value = false
+            throw e
         }
-        .stateIn(
-            viewModelScope, SharingStarted.Lazily,
-            AccountUiState(signedIn = authRepository.isSignedIn(), email = authRepository.currentEmail()),
-        )
+        when (token) {
+            is IdTokenResult.Token -> {
+                val signIn = syncLifecycle.signIn(token.idToken)
+                viewModelScope.launch {
+                    try {
+                        when (val result = signIn.await()) {
+                            is SignInResult.Success -> Unit
+                            is SignInResult.Failure -> eventSink.send(AppSettingsEvent.SignInFailed(result.error))
+                        }
+                    } finally {
+                        signingIn.value = false
+                    }
+                }
+            }
 
-    val migrationRequired: StateFlow<Boolean> = syncLifecycle.migrationRequired
-    val syncStatus: StateFlow<SyncStatus> = syncLifecycle.syncStatus
+            IdTokenResult.Cancelled -> signingIn.value = false
 
-    /** Wynik logowania: null = ok/anulowano, inaczej id stringa błędu. */
-    fun signIn(activityContext: Context, onError: (Int) -> Unit) {
-        viewModelScope.launch {
-            when (val result = authRepository.signInWithGoogle(activityContext)) {
-                is SignInResult.Success -> syncLifecycle.runBootstrap()
-                is SignInResult.Cancelled -> Unit
-                is SignInResult.Error -> onError(result.messageRes)
+            is IdTokenResult.Failure -> {
+                signingIn.value = false
+                eventSink.send(AppSettingsEvent.SignInFailed(token.error))
             }
         }
     }
 
-    fun signOut(activityContext: Context) {
-        viewModelScope.launch {
-            // best-effort flush zaległych zmian PRZED wylogowaniem (polityka T10);
-            // błąd chmury nie blokuje wylogowania
-            syncLifecycle.flushBeforeSignOut()
-            authRepository.signOut(activityContext)
-            syncLifecycle.onSignedOut()
-            syncLifecycle.runBootstrap()
-        }
+    /** Najpierw wysyła zaległe zmiany (błąd chmury nie blokuje wylogowania), potem przechodzi na dane gościa. */
+    fun signOut() {
+        syncLifecycle.signOut()
     }
 
-    fun resolveMigration(option: MigrationController.MigrationOption) {
-        viewModelScope.launch { syncLifecycle.resolveMigration(option) }
-    }
-
+    /** Ręczna synchronizacja kończy się komunikatem — inaczej nie widać, czy coś się stało. */
     fun syncNow() {
-        viewModelScope.launch { syncLifecycle.pushNow() }
+        viewModelScope.launch { eventSink.send(AppSettingsEvent.SyncFinished(syncLifecycle.pushNow())) }
     }
 
-    fun setTheme(value: String) { viewModelScope.launch { prefsRepository.setThemePref(value) } }
-    fun setUiLanguage(value: String) { viewModelScope.launch { prefsRepository.setUiLanguage(value) } }
-    fun setSystemColors(value: Boolean) { viewModelScope.launch { prefsRepository.setUseSystemColors(value) } }
-    fun setTtsRate(value: Float) { viewModelScope.launch { prefsRepository.setTtsRate(value) } }
-    fun setBackgroundPlayback(value: Boolean) { viewModelScope.launch { prefsRepository.setBackgroundPlayback(value) } }
-    fun factoryReset() { viewModelScope.launch { backupRepository.factoryReset() } }
+    fun setTheme(value: ThemePref) = launch { prefsRepository.setTheme(value) }
 
-    fun exportBackup(context: Context, uri: Uri, onError: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val json = withContext(Dispatchers.IO) { backupRepository.exportJson() }
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
-                }
-                onError(false)
-            } catch (e: Exception) { onError(true) }
-        }
+    fun setSystemColors(value: Boolean) = launch { prefsRepository.setUseSystemColors(value) }
+
+    fun setTtsRate(value: Float) = launch { prefsRepository.setTtsRate(value) }
+
+    fun setBackgroundPlayback(value: Boolean) = launch { prefsRepository.setBackgroundPlayback(value) }
+
+    fun factoryReset() = launch { backupRepository.factoryReset() }
+
+    fun backupFileName(): String =
+        "raycoll-backup-" + BACKUP_TIMESTAMP.format(Instant.ofEpochMilli(clock.now())) + ".json"
+
+    fun exportBackup(uri: Uri) = launch {
+        eventSink.send(AppSettingsEvent.BackupExported(backupRepository.exportTo(uri)))
     }
 
-    fun importBackup(context: Context, uri: Uri, onSuccess: () -> Unit, onError: () -> Unit) {
-        viewModelScope.launch {
-            try {
-                val json = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                } ?: throw IllegalStateException("Cannot read file")
-                withContext(Dispatchers.IO) { backupRepository.importJson(json) }
-                onSuccess()
-            } catch (e: Exception) { onError() }
-        }
+    fun importBackup(uri: Uri) = launch {
+        eventSink.send(AppSettingsEvent.BackupImported(backupRepository.importFrom(uri)))
+    }
+
+    private fun launch(block: suspend () -> Unit) {
+        viewModelScope.launchSaving(onFailure = { eventSink.send(AppSettingsEvent.SaveFailed) }, block = block)
+    }
+
+    private companion object {
+        val BACKUP_TIMESTAMP: DateTimeFormatter = DateTimeFormatter.ofPattern(
+            "yyyy-MM-dd-HH-mm"
+        ).withZone(ZoneId.systemDefault())
     }
 }

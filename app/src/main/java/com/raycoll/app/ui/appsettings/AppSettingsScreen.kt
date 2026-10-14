@@ -1,221 +1,180 @@
 package com.raycoll.app.ui.appsettings
 
-import android.content.Context
-import android.net.Uri
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.os.LocaleListCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
-import com.raycoll.app.data.local.prefs.UserPreferences
-import com.raycoll.app.data.sync.MigrationController
-import com.raycoll.app.ui.components.MigrationDialog
-import com.raycoll.app.ui.components.SyncStatusBanner
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import com.raycoll.app.data.remote.auth.SignInError
+import com.raycoll.app.data.repository.BackupResult
+import com.raycoll.app.ui.components.CollectEvents
+import com.raycoll.app.ui.components.ConfirmDialog
+import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val BACKUP_MIME_TYPE = "application/json"
+
 @Composable
-fun AppSettingsScreen(onBack: () -> Unit, viewModel: AppSettingsViewModel = hiltViewModel()) {
-    val prefs by viewModel.preferences.collectAsStateWithLifecycle(UserPreferences())
-    val accountState by viewModel.accountState.collectAsStateWithLifecycle()
-    val migrationRequired by viewModel.migrationRequired.collectAsStateWithLifecycle()
-    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
+fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: AppSettingsViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val snackbarHost = remember { SnackbarHostState() }
-    var showResetDialog by remember { mutableStateOf(false) }
-    var importError by remember { mutableStateOf(false) }
-    var importSuccess by remember { mutableStateOf(false) }
-    var authErrorRes by remember { mutableStateOf<Int?>(null) }
+    val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
+    var showImportDialog by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(authErrorRes) {
-        authErrorRes?.let { snackbarHost.showSnackbar(context.getString(it)); authErrorRes = null }
-    }
-
-    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"))
-    val exportFilename = "raycoll-backup-$timestamp.json"
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.exportBackup(context, it) { error -> if (error) importError = true }
+    val exportLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(BACKUP_MIME_TYPE)) { uri ->
+            uri?.let(viewModel::exportBackup)
         }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(viewModel::importBackup)
     }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.importBackup(context, it,
-                onSuccess = { importSuccess = true },
-                onError = { importError = true }
-            )
+    CollectEvents(viewModel.events) { event ->
+        val message = when (event) {
+            is AppSettingsEvent.SignInFailed -> signInErrorMessage(event.error)
+
+            is AppSettingsEvent.BackupExported -> when (event.result) {
+                BackupResult.SUCCESS -> R.string.app_settings_export_success
+                BackupResult.FILE_ERROR, BackupResult.INVALID_BACKUP -> R.string.app_settings_export_error
+            }
+
+            is AppSettingsEvent.BackupImported -> when (event.result) {
+                BackupResult.SUCCESS -> R.string.app_settings_import_success
+                BackupResult.FILE_ERROR -> R.string.app_settings_import_error
+                BackupResult.INVALID_BACKUP -> R.string.app_settings_import_invalid
+            }
+
+            AppSettingsEvent.SaveFailed -> R.string.errors_save_failed
+
+            is AppSettingsEvent.SyncFinished ->
+                if (event.success) R.string.sync_now_success else R.string.sync_now_failed
         }
+        snackbarHostState.showSnackbar(resources.getString(message))
     }
 
-    LaunchedEffect(importError) { if (importError) { snackbarHost.showSnackbar(context.getString(R.string.app_settings_import_error)); importError = false } }
-    LaunchedEffect(importSuccess) { if (importSuccess) { snackbarHost.showSnackbar(context.getString(R.string.app_settings_import_success)); importSuccess = false } }
-
-    Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_settings_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) } }) },
-        snackbarHost = { SnackbarHost(snackbarHost) }
+    ScreenScaffold(
+        title = stringResource(R.string.app_settings_title),
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
     ) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(stringResource(R.string.app_settings_section_account), style = MaterialTheme.typography.titleMedium)
-            if (accountState.signedIn) {
-                Text(stringResource(R.string.auth_signed_in_as, accountState.email))
-                // banner statusu z przyciskiem Ponów przy błędzie (spec T10)
-                SyncStatusBanner(status = syncStatus, onRetry = { viewModel.syncNow() })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { viewModel.syncNow() }) { Text(stringResource(R.string.auth_sync_now)) }
-                    TextButton(onClick = { viewModel.signOut(context) }) { Text(stringResource(R.string.auth_sign_out)) }
-                }
-            } else {
-                Text(stringResource(R.string.auth_local), style = MaterialTheme.typography.bodySmall)
-                Button(onClick = {
-                    viewModel.signIn(context) { messageRes -> authErrorRes = messageRes }
-                }) { Text(stringResource(R.string.auth_sign_in_google)) }
-            }
-
-            Text(stringResource(R.string.app_settings_section_appearance), style = MaterialTheme.typography.titleMedium)
-            // Material You dostępne od Androida 12
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.app_settings_dynamic_colors_title))
-                    Switch(checked = prefs.useSystemColors, onCheckedChange = { viewModel.setSystemColors(it) })
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.app_settings_theme))
-                Row {
-                    listOf(R.string.app_settings_theme_system to "system", R.string.app_settings_theme_light to "light", R.string.app_settings_theme_dark to "dark").forEach { (label, value) ->
-                        TextButton(onClick = { viewModel.setTheme(value) }) {
-                            Text(stringResource(label), color = if (prefs.themePref == value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.screen),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l)
+        ) {
+            AccountSection(
+                state = uiState,
+                // wybór konta w zakresie ekranu — obrót go przerywa i nie zostawia Activity w ViewModelu
+                onSignIn = { scope.launch { viewModel.chooseGoogleAccount(context) } },
+                onSignOut = viewModel::signOut,
+                onSyncNow = viewModel::syncNow
+            )
+            AppearanceSection(
+                preferences = uiState.preferences,
+                onTheme = viewModel::setTheme,
+                onSystemColors = viewModel::setSystemColors
+            )
+            LanguageSpeechSection(
+                preferences = uiState.preferences,
+                currentLanguage = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-'),
+                onLanguage = { tag ->
+                    AppCompatDelegate.setApplicationLocales(
+                        if (tag.isEmpty()) {
+                            LocaleListCompat.getEmptyLocaleList()
+                        } else {
+                            LocaleListCompat.forLanguageTags(
+                                tag
+                            )
                         }
-                    }
-                }
-            }
-
-            Text(stringResource(R.string.app_settings_section_language_speech), style = MaterialTheme.typography.titleMedium)
-            // Język UI: 5 opcji + systemowy; zmiana natychmiastowa (per-app locale), persystowana przez appcompat
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text(stringResource(R.string.app_settings_lang))
-                var langMenu by remember { mutableStateOf(false) }
-                val currentTag = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags()
-                TextButton(onClick = { langMenu = true }) {
-                    Text(languageLabel(currentTag))
-                }
-                DropdownMenu(expanded = langMenu, onDismissRequest = { langMenu = false }) {
-                    listOf("", "pl", "en", "de", "es", "it").forEach { tag ->
-                        DropdownMenuItem(
-                            text = { Text(languageLabel(tag)) },
-                            onClick = {
-                                langMenu = false
-                                viewModel.setUiLanguage(tag)
-                                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
-                                    if (tag.isEmpty()) androidx.core.os.LocaleListCompat.getEmptyLocaleList()
-                                    else androidx.core.os.LocaleListCompat.forLanguageTags(tag)
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-            Text(stringResource(R.string.app_settings_tts_rate))
-            Slider(value = prefs.ttsRate, onValueChange = { viewModel.setTtsRate(it) }, valueRange = 0.5f..2.0f, steps = 14)
-
-            val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.app_settings_background_playback))
-                Switch(checked = prefs.backgroundPlayback, onCheckedChange = { enabled ->
+                    )
+                },
+                onTtsRate = viewModel::setTtsRate,
+                onBackgroundPlayback = { enabled ->
                     viewModel.setBackgroundPlayback(enabled)
-                    // API 33+: bez POST_NOTIFICATIONS notyfikacja odtwarzacza w tle się nie pokaże
-                    if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
-                        notifLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    // kontrolki nauki w tle są w powiadomieniu
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
-                })
-            }
-
-            Text(stringResource(R.string.app_settings_export_import), style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { exportLauncher.launch(exportFilename) }) { Text(stringResource(R.string.app_settings_export_btn)) }
-            Button(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "text/csv")) }) { Text(stringResource(R.string.app_settings_import_file_btn)) }
-
-            Button(onClick = { showResetDialog = true }, colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                Text(stringResource(R.string.app_settings_factory_reset))
-            }
-
-            // Wersja aplikacji
-            val versionName = remember {
-                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
-            }
+                }
+            )
+            StudyModesLink(onStudyModes)
+            BackupSection(
+                onExport = { exportLauncher.launch(viewModel.backupFileName()) },
+                onImport = { showImportDialog = true },
+                onReset = { showResetDialog = true }
+            )
             Text(
-                stringResource(R.string.app_settings_version, versionName),
+                stringResource(R.string.app_settings_version, uiState.appVersion),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(start = Spacing.s)
             )
         }
     }
 
-    if (migrationRequired) {
-        MigrationDialog(
-            onMigrate = { viewModel.resolveMigration(MigrationController.MigrationOption.MIGRATE) },
-            onFresh = { viewModel.resolveMigration(MigrationController.MigrationOption.FRESH) },
-            onCancel = { viewModel.resolveMigration(MigrationController.MigrationOption.CANCEL) },
+    if (showImportDialog) {
+        ConfirmDialog(
+            title = stringResource(R.string.app_settings_import_confirm_title),
+            text = stringResource(R.string.app_settings_import_confirm_desc),
+            confirmLabel = stringResource(R.string.app_settings_import_file_btn),
+            destructive = true,
+            onConfirm = {
+                showImportDialog = false
+                importLauncher.launch(arrayOf(BACKUP_MIME_TYPE, "text/plain"))
+            },
+            onDismiss = { showImportDialog = false }
         )
     }
-
     if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text(stringResource(R.string.app_settings_factory_reset)) },
-            text = { Text(stringResource(R.string.app_settings_factory_reset_desc)) },
-            confirmButton = { TextButton(onClick = { showResetDialog = false; viewModel.factoryReset() }) { Text(stringResource(R.string.btn_delete)) } },
-            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.btn_cancel)) } },
+        ConfirmDialog(
+            title = stringResource(R.string.app_settings_factory_reset),
+            text = stringResource(R.string.app_settings_factory_reset_desc),
+            confirmLabel = stringResource(R.string.app_settings_factory_reset),
+            destructive = true,
+            onConfirm = {
+                showResetDialog = false
+                viewModel.factoryReset()
+            },
+            onDismiss = { showResetDialog = false }
         )
     }
 }
 
-@Composable
-private fun languageLabel(tag: String): String = when (tag.substringBefore('-').lowercase()) {
-    "pl" -> stringResource(R.string.lang_pl_PL)
-    "en" -> stringResource(R.string.lang_en_US)
-    "de" -> stringResource(R.string.lang_de_DE)
-    "es" -> stringResource(R.string.lang_es_ES)
-    "it" -> stringResource(R.string.lang_it_IT)
-    else -> stringResource(R.string.lang_system)
+private fun signInErrorMessage(error: SignInError): Int = when (error) {
+    SignInError.PLAY_SERVICES -> R.string.auth_error_play_services
+    SignInError.NO_TOKEN -> R.string.auth_error_no_token
+    SignInError.INVALID_TOKEN -> R.string.auth_error_invalid_token
+    SignInError.LOGIN_FAILED -> R.string.auth_error_login_failed
 }

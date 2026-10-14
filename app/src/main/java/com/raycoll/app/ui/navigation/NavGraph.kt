@@ -1,21 +1,30 @@
 package com.raycoll.app.ui.navigation
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
-import com.raycoll.app.R
 import com.raycoll.app.ui.appsettings.AppSettingsScreen
 import com.raycoll.app.ui.archive.ArchiveScreen
 import com.raycoll.app.ui.browse.BrowseScreen
@@ -25,58 +34,107 @@ import com.raycoll.app.ui.imports.ImportScreen
 import com.raycoll.app.ui.modedetail.ModeDetailScreen
 import com.raycoll.app.ui.stats.StatsScreen
 import com.raycoll.app.ui.study.StudyScreen
+import com.raycoll.app.ui.studymodes.StudyModesScreen
+import com.raycoll.app.ui.theme.RayCollMotion
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val spatialOffset = RayCollMotion.spatial<IntOffset>()
+private val spatialFloat = RayCollMotion.spatial<Float>()
+private val effects = RayCollMotion.effects<Float>()
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.slideIn(): EnterTransition =
+    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, spatialOffset) + fadeIn(effects)
+
+private fun shrinkAway(): ExitTransition = scaleOut(spatialFloat, targetScale = 0.92f) + fadeOut(effects)
+
+private fun growBack(): EnterTransition = scaleIn(spatialFloat, initialScale = 0.92f) + fadeIn(effects)
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.slideAway(): ExitTransition =
+    scaleOut(spatialFloat, targetScale = 0.9f) +
+        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, spatialOffset) +
+        fadeOut(effects)
+
+/** Ekrany z przejściem talii (karta przelatuje) zamykają się bez przesuwania w bok. */
+private fun shrinkInPlace(): ExitTransition = scaleOut(spatialFloat, targetScale = 0.9f) + fadeOut(effects)
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun RayCollNavHost() {
     val navController = rememberNavController()
+    SharedTransitionLayout {
+        NavHost(
+            navController = navController,
+            startDestination = DashboardRoute,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            enterTransition = { slideIn() },
+            exitTransition = { shrinkAway() },
+            popEnterTransition = { growBack() },
+            popExitTransition = { slideAway() }
+        ) {
+            screen<DashboardRoute>(this@SharedTransitionLayout) {
+                DashboardScreen(
+                    onStudy = { navController.navigate(StudyRoute(it)) },
+                    onBrowse = { navController.navigate(BrowseRoute(it)) },
+                    onDeckSettings = { navController.navigate(DeckSettingsRoute(it)) },
+                    onImport = { navController.navigate(ImportRoute) },
+                    onStats = { navController.navigate(StatsRoute) },
+                    onArchive = { navController.navigate(ArchiveRoute) },
+                    onAppSettings = { navController.navigate(AppSettingsRoute) },
+                    onManageModes = { navController.navigate(StudyModesRoute) }
+                )
+            }
+            screen<StudyRoute>(this@SharedTransitionLayout, popExit = { shrinkInPlace() }) {
+                StudyScreen(onExit = navController::up)
+            }
+            screen<BrowseRoute>(this@SharedTransitionLayout, popExit = { shrinkInPlace() }) {
+                BrowseScreen(onBack = navController::up)
+            }
+            screen<DeckSettingsRoute>(this@SharedTransitionLayout, popExit = { shrinkInPlace() }) {
+                DeckSettingsScreen(onBack = navController::up, onEditMode = {
+                    navController.navigate(ModeDetailRoute(it))
+                })
+            }
+            screen<ModeDetailRoute>(this@SharedTransitionLayout) { ModeDetailScreen(onBack = navController::up) }
+            screen<ImportRoute>(this@SharedTransitionLayout) { ImportScreen(onFinished = navController::up) }
+            screen<StatsRoute>(this@SharedTransitionLayout) { StatsScreen(onBack = navController::up) }
+            screen<ArchiveRoute>(this@SharedTransitionLayout) { ArchiveScreen(onBack = navController::up) }
+            screen<AppSettingsRoute>(this@SharedTransitionLayout) {
+                AppSettingsScreen(onBack = navController::up, onStudyModes = {
+                    navController.navigate(StudyModesRoute)
+                })
+            }
+            screen<StudyModesRoute>(this@SharedTransitionLayout) {
+                StudyModesScreen(
+                    onBack = navController::up,
+                    onEditMode = { navController.navigate(ModeDetailRoute(it)) },
+                    onNewMode = { navController.navigate(ModeDetailRoute()) }
+                )
+            }
+        }
+    }
+}
 
-    NavHost(
-        navController = navController,
-        startDestination = DashboardRoute,
-    ) {
-        composable<DashboardRoute> {
-            DashboardScreen(
-                onStudyClick = { id -> navController.navigate(StudyRoute(id)) },
-                onBrowseClick = { id -> navController.navigate(BrowseRoute(id)) },
-                onDeckSettingsClick = { id -> navController.navigate(DeckSettingsRoute(id)) },
-                onImportClick = { navController.navigate(ImportRoute) },
-                onStatsClick = { navController.navigate(StatsRoute) },
-                onArchiveClick = { navController.navigate(ArchiveRoute) },
-                onAppSettingsClick = { navController.navigate(AppSettingsRoute) },
-            )
+/** Ekran z dostępem do przejść talii między ekranami. */
+@OptIn(ExperimentalSharedTransitionApi::class)
+private inline fun <reified T : Any> NavGraphBuilder.screen(
+    sharedScope: SharedTransitionScope,
+    noinline popExit: (AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?)? = null,
+    crossinline content: @Composable AnimatedContentScope.() -> Unit
+) {
+    composable<T>(popExitTransition = popExit) {
+        CompositionLocalProvider(
+            LocalSharedTransitionScope provides sharedScope,
+            LocalNavAnimatedVisibilityScope provides this
+        ) {
+            content()
         }
-        composable<StudyRoute> { backStack ->
-            val route = backStack.toRoute<StudyRoute>()
-            StudyScreen(deckId = route.deckId, onExit = { navController.popBackStack() })
-        }
-        composable<BrowseRoute> { backStack ->
-            val route = backStack.toRoute<BrowseRoute>()
-            BrowseScreen(deckId = route.deckId, onBack = { navController.popBackStack() })
-        }
-        composable<DeckSettingsRoute> { backStack ->
-            val route = backStack.toRoute<DeckSettingsRoute>()
-            DeckSettingsScreen(
-                deckId = route.deckId,
-                onBack = { navController.popBackStack() },
-                onEditMode = { modeId -> navController.navigate(ModeDetailRoute(modeId)) },
-            )
-        }
-        composable<ModeDetailRoute> { backStack ->
-            val route = backStack.toRoute<ModeDetailRoute>()
-            ModeDetailScreen(modeId = route.modeId, onBack = { navController.popBackStack() })
-        }
-        composable<ImportRoute> {
-            ImportScreen(onFinished = { navController.popBackStack() })
-        }
-        composable<StatsRoute> {
-            StatsScreen(onBack = { navController.popBackStack() })
-        }
-        composable<ArchiveRoute> {
-            ArchiveScreen(onBack = { navController.popBackStack() })
-        }
-        composable<AppSettingsRoute> {
-            AppSettingsScreen(onBack = { navController.popBackStack() })
-        }
+    }
+}
+
+/** Powrót z ekranu; ignoruje drugie szybkie dotknięcie, gdy ekran już się zamyka. */
+private fun NavHostController.up() {
+    if (currentBackStackEntry?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true) {
+        popBackStack()
     }
 }

@@ -2,88 +2,85 @@ package com.raycoll.app.domain.imports
 
 import com.raycoll.app.domain.model.ImportConstants
 
-val SEPARATORS = mapOf(
-    "tab" to "\t", "semicolon" to ";", "comma" to ",", "pipe" to "|",
-)
+/** Separator kolumn w imporcie tekstowym. */
+enum class CsvSeparator(val char: Char) {
+    TAB('\t'),
+    SEMICOLON(';'),
+    COMMA(','),
+    PIPE('|')
+    ;
 
-fun resolveSep(keyOrChar: String): String = SEPARATORS[keyOrChar] ?: keyOrChar
+    companion object {
+        val DEFAULT = SEMICOLON
+    }
+}
 
-fun normalizeImportCell(value: String): String = value.trim()
+/** Ujednolica tekst: bez znacznika BOM, końce linii jako "\n". */
+fun normalizeCsvText(text: String): String = text.removePrefix("\uFEFF").replace(Regex("\r\n?"), "\n")
 
-fun normalizeCsvText(text: String): String =
-    text.replace(Regex("^\\uFEFF"), "").replace(Regex("\r\n?"), "\n")
-
-fun readNextField(text: String, startPos: Int, sep: String): Pair<String, Int> {
-    val field = StringBuilder()
+/**
+ * Dzieli tekst na wiersze i komórki (cudzysłowy jak w CSV: `"a;b"`, `""` = cudzysłów).
+ * Komórki są przycięte, puste wiersze pominięte.
+ */
+fun parseRows(text: String, separator: CsvSeparator): List<List<String>> {
+    val rows = mutableListOf<List<String>>()
+    var row = mutableListOf<String>()
+    val cell = StringBuilder()
     var inQuotes = false
-    var i = startPos
-    while (i < text.length) {
-        val char = text[i]
-        if (char == '"') {
-            if (inQuotes && i + 1 < text.length && text[i + 1] == '"') {
-                field.append('"'); i++
-            } else {
-                inQuotes = !inQuotes
+    fun endCell() {
+        row += cell.toString().trim()
+        cell.clear()
+    }
+    fun endRow() {
+        endCell()
+        if (row.any { it.isNotBlank() }) rows += row
+        row = mutableListOf()
+    }
+    val normalized = normalizeCsvText(text)
+    var i = 0
+    while (i < normalized.length) {
+        val char = normalized[i]
+        when {
+            char == '"' && inQuotes && normalized.getOrNull(i + 1) == '"' -> {
+                cell.append('"')
+                i++
             }
-        } else if (!inQuotes && sep.isNotEmpty() && text.startsWith(sep, i)) {
-            break
-        } else if (char == '\n' && !inQuotes) {
-            break
-        } else {
-            field.append(char)
+
+            char == '"' && (inQuotes || cell.isBlank()) -> inQuotes = !inQuotes
+
+            !inQuotes && char == separator.char -> endCell()
+
+            !inQuotes && char == '\n' -> endRow()
+
+            else -> cell.append(char)
         }
         i++
     }
-    return Pair(field.toString(), i)
-}
-
-fun parseFullText(text: String, sep: String): List<List<String>> {
-    val rows = mutableListOf<List<String>>()
-    var currentRow = mutableListOf<String>()
-    val sepLen = maxOf(sep.length, 1)
-    var pos = 0
-
-    while (pos < text.length) {
-        val (field, nextPos) = readNextField(text, pos, sep)
-        currentRow.add(normalizeImportCell(field))
-        if (nextPos >= text.length) break
-        if (text[nextPos] == '\n') {
-            if (currentRow.any { it.isNotBlank() }) rows.add(currentRow)
-            currentRow = mutableListOf()
-            pos = nextPos + 1
-        } else {
-            pos = nextPos + sepLen
-        }
-    }
-    if (currentRow.any { it.isNotBlank() }) rows.add(currentRow)
+    endRow()
     return rows
 }
 
-fun parseCsv(text: String, sepKey: String, pageCount: Int): List<List<String>> {
-    val sep = resolveSep(sepKey)
-    return parseFullText(normalizeCsvText(text), sep).map { row ->
-        val padded = row.toMutableList()
-        while (padded.size < pageCount) padded.add("")
-        padded
+/** Separator, który daje najwięcej spójnych kolumn w pierwszych wierszach. */
+fun detectSeparator(text: String): CsvSeparator {
+    val best = CsvSeparator.entries.maxByOrNull { separator ->
+        val rows = parseRows(text, separator).take(ImportConstants.SEP_DETECT_ROWS)
+        if (rows.isEmpty()) return@maxByOrNull 0.0
+        val splitRows = rows.filter { it.size > 1 }
+        splitRows.sumOf { it.size - 1 } * (splitRows.size.toDouble() / rows.size)
     }
-}
-
-fun detectSeparator(text: String): String {
-    val normalized = normalizeCsvText(text)
-    var bestKey = "semicolon"
-    var bestScore = 0.0
-
-    for ((key, sep) in SEPARATORS) {
-        val rows = parseFullText(normalized, sep).filter { row -> row.any { it.isNotBlank() } }.take(ImportConstants.SEP_DETECT_ROWS)
-        if (rows.isEmpty()) continue
-        var totalCount = 0
-        var consistentLines = 0
-        for (row in rows) {
-            val count = row.size - 1
-            if (count > 0) { totalCount += count; consistentLines++ }
+    return best?.takeIf { separator ->
+        parseRows(text, separator).take(ImportConstants.SEP_DETECT_ROWS).any {
+            it.size >
+                1
         }
-        val score = totalCount * (consistentLines.toDouble() / rows.size)
-        if (score > bestScore) { bestScore = score; bestKey = key }
     }
-    return if (bestScore > 0) bestKey else "semicolon"
+        ?: CsvSeparator.DEFAULT
 }
+
+/** Komórka zapisana z powrotem do tekstu — w cudzysłowie, gdy zawiera separator, nową linię lub cudzysłów. */
+fun encodeCell(cell: String, separator: CsvSeparator): String =
+    if (cell.contains(separator.char) || cell.contains('\n') || cell.contains('"')) {
+        "\"" + cell.replace("\"", "\"\"") + "\""
+    } else {
+        cell
+    }

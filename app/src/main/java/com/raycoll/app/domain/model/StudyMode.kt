@@ -10,5 +10,5 @@ data class StudyMode(
     val isBuiltIn: Boolean = false,
     val builtInSourceId: String? = null,
     val updatedAt: Long = 0,
-    val deletedAt: Long? = null,
+    val deletedAt: Long? = null
 )

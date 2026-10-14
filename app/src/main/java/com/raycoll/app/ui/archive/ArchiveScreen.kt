@@ -1,68 +1,100 @@
 package com.raycoll.app.ui.archive
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
-import com.raycoll.app.domain.selectors.archiveCountdown
+import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.EmptyState
+import com.raycoll.app.ui.components.LoadingState
+import com.raycoll.app.ui.components.RayCollCard
+import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.theme.Spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewModel()) {
-    val decks by viewModel.archivedDecks.collectAsStateWithLifecycle(emptyList())
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val saveFailed = stringResource(R.string.errors_save_failed)
+    CollectEvents(viewModel.events) { snackbarHostState.showSnackbar(saveFailed) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.archive_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) } }) }) { padding ->
-        if (decks.isEmpty()) {
-            EmptyState(stringResource(R.string.archive_empty), Modifier.padding(padding))
-        } else {
-            val now = System.currentTimeMillis()
-            // sort: najnowiej zarchiwizowana pierwsza
-            val sorted = decks.sortedByDescending { it.archivedAt ?: 0 }
-            LazyColumn(Modifier.padding(padding).padding(16.dp)) {
-                items(sorted, key = { it.id }) { deck ->
-                    Card(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(deck.name, style = MaterialTheme.typography.titleMedium)
-                            val cardCount = deck.cards.count { it.deletedAt == null }
-                            Text(
-                                androidx.compose.ui.res.pluralStringResource(R.plurals.cards_count, cardCount, cardCount),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            val daysLeft = archiveCountdown(deck, now)
-                            Text(
-                                when {
-                                    daysLeft <= 0 -> stringResource(R.string.archive_auto_delete_today)
-                                    daysLeft == 1 -> stringResource(R.string.archive_auto_delete_tomorrow)
-                                    else -> stringResource(R.string.archive_auto_delete_in, daysLeft)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            TextButton(onClick = { viewModel.restore(deck.id) }) { Text(stringResource(R.string.btn_restore)) }
-                        }
-                    }
+    ScreenScaffold(
+        title = stringResource(R.string.archive_title),
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { padding ->
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+        when (val state = uiState) {
+            ArchiveUiState.Loading -> LoadingState(contentModifier)
+
+            is ArchiveUiState.Ready -> if (state.decks.isEmpty()) {
+                EmptyState(stringResource(R.string.archive_empty), contentModifier)
+            } else {
+                LazyColumn(
+                    modifier = contentModifier,
+                    contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.m)
+                ) {
+                    items(state.decks, key = {
+                        it.id
+                    }) { deck -> ArchivedDeckCard(deck, onRestore = { viewModel.restore(deck.id) }) }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit) {
+    RayCollCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Text(deck.name, style = MaterialTheme.typography.titleLarge)
+            Text(
+                pluralStringResource(R.plurals.cards_count, deck.cardCount, deck.cardCount),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                when (deck.daysLeft) {
+                    0 -> stringResource(R.string.archive_auto_delete_today)
+                    1 -> stringResource(R.string.archive_auto_delete_tomorrow)
+                    else -> pluralStringResource(R.plurals.archive_auto_delete_in, deck.daysLeft, deck.daysLeft)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            OutlinedButton(
+                onClick = onRestore,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Text(stringResource(R.string.btn_restore), modifier = Modifier.padding(start = Spacing.s))
             }
         }
     }

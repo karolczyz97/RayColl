@@ -2,12 +2,12 @@
 <data-extraction-rules>
     <cloud-backup>
         <include domain="database" path="." />
-        <include domain="sharedpref" path="." />
+        <include domain="file" path="androidx.appcompat.app.AppCompatDelegate.application_locales_record_file" />
         <include domain="file" path="datastore/" />
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="." />
-        <include domain="sharedpref" path="." />
+        <include domain="file" path="androidx.appcompat.app.AppCompatDelegate.application_locales_record_file" />
         <include domain="file" path="datastore/" />
     </device-transfer>
 </data-extraction-rules>

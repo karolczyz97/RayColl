@@ -13,7 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Port testów MergeEngine z równoległej implementacji "RayColl - Kopie" (spec = merge.ts). */
+/** Scalanie zmian z dwóch urządzeń: treść, postęp nauki i usunięcia. */
 class MergeEngineTest {
 
     private val now = 1000000000000L
@@ -24,14 +24,14 @@ class MergeEngineTest {
         repetitions: Int = 0,
         contentUpdatedAt: Long = 0L,
         srsUpdatedAt: Long = 0L,
-        deletedAt: Long? = null,
+        deletedAt: Long? = null
     ) = Flashcard(
         id = id,
         pages = pages,
         srsState = SrsState(repetitions = repetitions),
         contentUpdatedAt = contentUpdatedAt,
         srsUpdatedAt = srsUpdatedAt,
-        deletedAt = deletedAt,
+        deletedAt = deletedAt
     )
 
     private fun makeDeck(
@@ -39,7 +39,7 @@ class MergeEngineTest {
         name: String = "Test Deck",
         cards: List<Flashcard> = emptyList(),
         updatedAt: Long = 0L,
-        deletedAt: Long? = null,
+        deletedAt: Long? = null
     ) = FlashcardGroup(
         id = id,
         name = name,
@@ -47,7 +47,7 @@ class MergeEngineTest {
         pageLanguages = listOf("en-US", "pl-PL"),
         pageNames = listOf("Front", "Back"),
         updatedAt = updatedAt,
-        deletedAt = deletedAt,
+        deletedAt = deletedAt
     )
 
     @Test
@@ -60,8 +60,22 @@ class MergeEngineTest {
 
     @Test
     fun `mergeCards content last-write-wins srs never-regress`() {
-        val localCard = makeCard("c1", pages = listOf("local", "card"), repetitions = 4, contentUpdatedAt = now - 2000, srsUpdatedAt = now)
-        val cloudCard = makeCard("c1", pages = listOf("cloud", "card"), repetitions = 1, contentUpdatedAt = now - 1000, srsUpdatedAt = 0L)
+        val localCard =
+            makeCard(
+                "c1",
+                pages = listOf("local", "card"),
+                repetitions = 4,
+                contentUpdatedAt = now - 2000,
+                srsUpdatedAt = now
+            )
+        val cloudCard =
+            makeCard(
+                "c1",
+                pages = listOf("cloud", "card"),
+                repetitions = 1,
+                contentUpdatedAt = now - 1000,
+                srsUpdatedAt = 0L
+            )
 
         val result = mergeCards(listOf(localCard), listOf(cloudCard))
         assertEquals(1, result.size)
@@ -84,8 +98,22 @@ class MergeEngineTest {
 
     @Test
     fun `mergeCards uses srs side as content tiebreaker`() {
-        val localCard = makeCard("c2", pages = listOf("local-tie", "page"), repetitions = 5, contentUpdatedAt = now, srsUpdatedAt = now)
-        val cloudCard = makeCard("c2", pages = listOf("cloud-tie", "page"), repetitions = 1, contentUpdatedAt = now, srsUpdatedAt = 0L)
+        val localCard =
+            makeCard(
+                "c2",
+                pages = listOf("local-tie", "page"),
+                repetitions = 5,
+                contentUpdatedAt = now,
+                srsUpdatedAt = now
+            )
+        val cloudCard =
+            makeCard(
+                "c2",
+                pages = listOf("cloud-tie", "page"),
+                repetitions = 1,
+                contentUpdatedAt = now,
+                srsUpdatedAt = 0L
+            )
 
         val result = mergeCards(listOf(localCard), listOf(cloudCard))
         assertEquals(1, result.size)
@@ -95,8 +123,22 @@ class MergeEngineTest {
 
     @Test
     fun `mergeCards full tie breaks to cloud`() {
-        val localCard = makeCard("c3", pages = listOf("local-full-tie", "page"), repetitions = 3, contentUpdatedAt = now, srsUpdatedAt = now)
-        val cloudCard = makeCard("c3", pages = listOf("cloud-full-tie", "page"), repetitions = 3, contentUpdatedAt = now, srsUpdatedAt = now)
+        val localCard =
+            makeCard(
+                "c3",
+                pages = listOf("local-full-tie", "page"),
+                repetitions = 3,
+                contentUpdatedAt = now,
+                srsUpdatedAt = now
+            )
+        val cloudCard =
+            makeCard(
+                "c3",
+                pages = listOf("cloud-full-tie", "page"),
+                repetitions = 3,
+                contentUpdatedAt = now,
+                srsUpdatedAt = now
+            )
 
         val result = mergeCards(listOf(localCard), listOf(cloudCard))
         assertEquals(1, result.size)
@@ -106,18 +148,49 @@ class MergeEngineTest {
 
     @Test
     fun `mergeUserData basic combines modes cards and heatmap`() {
-        val localCard = makeCard("c1", pages = listOf("local", "card"), repetitions = 4, contentUpdatedAt = now - 2000, srsUpdatedAt = now)
-        val cloudCard = makeCard("c1", pages = listOf("cloud", "card"), repetitions = 1, contentUpdatedAt = now - 1000, srsUpdatedAt = 0L)
+        val localCard =
+            makeCard(
+                "c1",
+                pages = listOf("local", "card"),
+                repetitions = 4,
+                contentUpdatedAt = now - 2000,
+                srsUpdatedAt = now
+            )
+        val cloudCard =
+            makeCard(
+                "c1",
+                pages = listOf("cloud", "card"),
+                repetitions = 1,
+                contentUpdatedAt = now - 1000,
+                srsUpdatedAt = 0L
+            )
 
         val localSnapshot = StoreData(
             groups = listOf(makeDeck("g1", name = "Local deck", cards = listOf(localCard), updatedAt = now - 2000)),
-            studyModes = listOf(StudyMode("custom-mode", name = "Custom", steps = listOf(WaitStep(ms = 100L)), isBuiltIn = false, updatedAt = now)),
-            activityHeatmap = mapOf("2026-05-27" to 3),
+            studyModes = listOf(
+                StudyMode(
+                    "custom-mode",
+                    name = "Custom",
+                    steps = listOf(WaitStep(ms = 100L)),
+                    isBuiltIn = false,
+                    updatedAt = now
+                )
+            ),
+            activityHeatmap = mapOf("2026-05-27" to 3)
         )
         val cloudSnapshot = StoreData(
             groups = listOf(makeDeck("g1", name = "Cloud deck", cards = listOf(cloudCard), updatedAt = now - 1000)),
-            studyModes = listOf(StudyMode("classic", name = "Classic", steps = emptyList(), isBuiltIn = true, builtInSourceId = "classic", updatedAt = now)),
-            activityHeatmap = mapOf("2026-05-27" to 1),
+            studyModes = listOf(
+                StudyMode(
+                    "classic",
+                    name = "Classic",
+                    steps = emptyList(),
+                    isBuiltIn = true,
+                    builtInSourceId = "classic",
+                    updatedAt = now
+                )
+            ),
+            activityHeatmap = mapOf("2026-05-27" to 1)
         )
 
         val merged = mergeUserData(localSnapshot, cloudSnapshot)
@@ -138,7 +211,13 @@ class MergeEngineTest {
 
     @Test
     fun `edit newer than deletion revives card`() {
-        val revivedCard = makeCard("c4", pages = listOf("revived", "card"), contentUpdatedAt = now, deletedAt = now - 10000)
+        val revivedCard = makeCard(
+            "c4",
+            pages = listOf("revived", "card"),
+            contentUpdatedAt = now,
+            deletedAt =
+                now - 10000
+        )
         val merged = mergeCards(listOf(revivedCard), emptyList())
         assertNull(merged[0].deletedAt)
     }
@@ -146,7 +225,13 @@ class MergeEngineTest {
     @Test
     fun `edit on one side newer than deletion on other side revives card`() {
         val localCard = makeCard("c5", pages = listOf("revived-local", "card"), contentUpdatedAt = now)
-        val cloudCard = makeCard("c5", pages = listOf("cloud", "card"), contentUpdatedAt = now - 5000, deletedAt = now - 5000)
+        val cloudCard = makeCard(
+            "c5",
+            pages = listOf("cloud", "card"),
+            contentUpdatedAt = now - 5000,
+            deletedAt =
+                now - 5000
+        )
 
         val merged = mergeCards(listOf(localCard), listOf(cloudCard))
         assertNull(merged[0].deletedAt)
@@ -155,8 +240,28 @@ class MergeEngineTest {
 
     @Test
     fun `mergeStudyModes combines both sides`() {
-        val localModes = listOf(StudyMode("custom", name = "Custom Local", steps = listOf(ShowRatingsStep()), isBuiltIn = false, updatedAt = now))
-        val cloudModes = listOf(StudyMode("classic", name = "Classic Cloud", steps = emptyList(), isBuiltIn = true, builtInSourceId = "classic", updatedAt = now - 5000))
+        val localModes =
+            listOf(
+                StudyMode(
+                    "custom",
+                    name = "Custom Local",
+                    steps = listOf(ShowRatingsStep()),
+                    isBuiltIn = false,
+                    updatedAt = now
+                )
+            )
+        val cloudModes =
+            listOf(
+                StudyMode(
+                    "classic",
+                    name = "Classic Cloud",
+                    steps = emptyList(),
+                    isBuiltIn = true,
+                    builtInSourceId = "classic",
+                    updatedAt =
+                        now - 5000
+                )
+            )
         val merged = mergeStudyModes(localModes, cloudModes)
         assertEquals(2, merged.size)
         assertTrue(merged.any { it.id == "custom" })
@@ -165,8 +270,22 @@ class MergeEngineTest {
 
     @Test
     fun `mergeStudyModes deduplicates newer wins`() {
-        val localMode = StudyMode("conflict", name = "Local Wins", steps = listOf(ShowRatingsStep()), isBuiltIn = false, updatedAt = now)
-        val cloudMode = StudyMode("conflict", name = "Cloud Older", steps = emptyList(), isBuiltIn = false, updatedAt = now - 5000)
+        val localMode =
+            StudyMode(
+                "conflict",
+                name = "Local Wins",
+                steps = listOf(ShowRatingsStep()),
+                isBuiltIn = false,
+                updatedAt = now
+            )
+        val cloudMode = StudyMode(
+            "conflict",
+            name = "Cloud Older",
+            steps = emptyList(),
+            isBuiltIn = false,
+            updatedAt =
+                now - 5000
+        )
         val merged = mergeStudyModes(listOf(localMode), listOf(cloudMode))
         assertEquals(1, merged.size)
         assertEquals("Local Wins", merged[0].name)
@@ -174,8 +293,17 @@ class MergeEngineTest {
 
     @Test
     fun `mergeStudyModes tombstone propagates`() {
-        val localTomb = StudyMode("tomb", name = "Deleted", steps = emptyList(), isBuiltIn = false, updatedAt = now, deletedAt = now)
-        val cloudLive = StudyMode("tomb", name = "Alive", steps = emptyList(), isBuiltIn = false, updatedAt = now - 5000)
+        val localTomb =
+            StudyMode(
+                "tomb",
+                name = "Deleted",
+                steps = emptyList(),
+                isBuiltIn = false,
+                updatedAt = now,
+                deletedAt = now
+            )
+        val cloudLive =
+            StudyMode("tomb", name = "Alive", steps = emptyList(), isBuiltIn = false, updatedAt = now - 5000)
         val merged = mergeStudyModes(listOf(localTomb), listOf(cloudLive))
         assertEquals(1, merged.size)
         assertNotNull(merged[0].deletedAt)
@@ -190,7 +318,7 @@ class MergeEngineTest {
             isBuiltIn = true,
             builtInSourceId = "classic",
             updatedAt = now,
-            deletedAt = now,
+            deletedAt = now
         )
         val cloudLive = StudyMode(
             id = "classic",
@@ -198,7 +326,7 @@ class MergeEngineTest {
             steps = listOf(ShowRatingsStep()),
             isBuiltIn = true,
             builtInSourceId = "classic",
-            updatedAt = now - 5000,
+            updatedAt = now - 5000
         )
         val merged = mergeStudyModes(listOf(localTomb), listOf(cloudLive))
         assertEquals(1, merged.size)

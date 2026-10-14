@@ -1,19 +1,21 @@
 package com.raycoll.app.domain.session
 
+import com.raycoll.app.domain.model.SrsState
+
+/** Świat zewnętrzny silnika sesji: mowa, dźwięki, haptyka i zapis ocen. */
 interface SessionDeps {
     suspend fun speak(text: String, lang: String, rate: Float): SpeakResult
     suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult
     fun feedbackSuccess()
     fun feedbackError()
     fun haptic(rating: Int)
-    fun onCardReviewed(deckId: String, cardId: String, rating: Int, replaceFromBase: com.raycoll.app.domain.model.SrsState?)
+
+    /** [replaceFromBase] != null: ponowna ocena tej samej karty, liczona od stanu sprzed pierwszej. */
+    fun onCardReviewed(deckId: String, cardId: String, rating: Int, replaceFromBase: SrsState?)
 }
 
 enum class SpeakResult { SUCCESS, ERROR, MISSING_VOICE }
 
-data class ListenResult(
-    val text: String,
-    val status: ListenStatus,
-)
+data class ListenResult(val text: String, val status: ListenStatus)
 
 enum class ListenStatus { COMPLETED, SKIPPED, ERROR }

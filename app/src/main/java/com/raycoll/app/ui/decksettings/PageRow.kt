@@ -1,0 +1,52 @@
+package com.raycoll.app.ui.decksettings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.raycoll.app.R
+import com.raycoll.app.ui.components.LanguagePicker
+import com.raycoll.app.ui.components.PersistedTextField
+import com.raycoll.app.ui.theme.Spacing
+
+/** Nazwa strony, jej język i przestawianie stron. */
+@Composable
+fun PageRow(
+    pageIndex: Int,
+    name: String,
+    language: String,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onNameChange: (String) -> Unit,
+    onLanguageChange: (String) -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+    ) {
+        PersistedTextField(
+            storedValue = name,
+            onValueChange = onNameChange,
+            label = stringResource(R.string.import_page_label, pageIndex + 1),
+            modifier = Modifier.weight(1f)
+        )
+        LanguagePicker(language, onLanguageChange)
+        IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+            Icon(Icons.Filled.ArrowUpward, contentDescription = stringResource(R.string.a11y_move_page_up))
+        }
+        IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+            Icon(Icons.Filled.ArrowDownward, contentDescription = stringResource(R.string.a11y_move_page_down))
+        }
+    }
+}

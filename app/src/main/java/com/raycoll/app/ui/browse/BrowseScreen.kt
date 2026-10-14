@@ -1,207 +1,312 @@
 package com.raycoll.app.ui.browse
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.selectors.browseFilter
 import com.raycoll.app.domain.srs.SrsCardCategory
+import com.raycoll.app.ui.components.CardStatsBar
+import com.raycoll.app.ui.components.CollectEvents
+import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.EmptyState
-import com.raycoll.app.ui.components.SegmentedProgressBar
+import com.raycoll.app.ui.components.ErrorState
+import com.raycoll.app.ui.components.LoadingState
+import com.raycoll.app.ui.components.RayCollCard
+import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.navigation.sharedDeckTitle
+import com.raycoll.app.ui.theme.Spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Co edytuje okno karty: nową kartę albo istniejącą (po id — przeżywa obrót ekranu). */
+private sealed interface CardEditTarget {
+    val draftKey: String
+
+    data object New : CardEditTarget {
+        override val draftKey = ""
+    }
+
+    data class Existing(val cardId: String) : CardEditTarget {
+        override val draftKey get() = cardId
+    }
+}
+
+private val CardEditTargetSaver = Saver<CardEditTarget?, String>(
+    save = { it?.draftKey },
+    restore = { key -> if (key.isEmpty()) CardEditTarget.New else CardEditTarget.Existing(key) }
+)
+
 @Composable
-fun BrowseScreen(
-    deckId: String,
-    onBack: () -> Unit,
-    viewModel: BrowseViewModel = hiltViewModel(),
-) {
-    val cards by viewModel.cards.collectAsStateWithLifecycle(emptyList())
-    val deck by viewModel.deck.collectAsStateWithLifecycle(null)
-    val editRequestId by viewModel.editRequestCardId.collectAsStateWithLifecycle(null)
-    var search by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf<SrsCardCategory?>(null) }
-    var editingCard by remember { mutableStateOf<Flashcard?>(null) }
-    var deleteTarget by remember { mutableStateOf<Flashcard?>(null) }
+fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val query by viewModel.search.collectAsStateWithLifecycle()
+    var editTarget by rememberSaveable(stateSaver = CardEditTargetSaver) { mutableStateOf(null) }
+    var deleteTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var saveAttempt by rememberSaveable { mutableIntStateOf(0) }
+    val ready = uiState as? BrowseUiState.Ready
+    val snackbarHostState = remember { SnackbarHostState() }
+    val cardMissing = stringResource(R.string.browse_card_missing)
+    val saveFailed = stringResource(R.string.errors_save_failed)
 
-    LaunchedEffect(deckId) { viewModel.loadDeck(deckId) }
+    CollectEvents(viewModel.events) { event ->
+        when (event) {
+            BrowseEvent.Saved -> editTarget = null
 
-    // FAB dodał kartę → od razu otwórz edycję
-    LaunchedEffect(editRequestId, cards) {
-        val id = editRequestId ?: return@LaunchedEffect
-        cards.find { it.id == id }?.let {
-            editingCard = it
-            viewModel.consumeEditRequest()
+            BrowseEvent.CardMissing -> snackbarHostState.showSnackbar(cardMissing)
+
+            BrowseEvent.SaveFailed -> {
+                saveAttempt++
+                snackbarHostState.showSnackbar(saveFailed)
+            }
         }
     }
 
-    val activePageCount = deck?.activePageCount ?: 2
-    val filtered = browseFilter(cards, search, category, System.currentTimeMillis(), activePageCount)
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(deck?.name ?: stringResource(R.string.route_browse)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) } }
-            )
-        },
+    ScreenScaffold(
+        title = ready?.deckName ?: stringResource(R.string.route_browse),
+        titleModifier = Modifier.sharedDeckTitle(viewModel.deckId),
+        onBack = onBack,
+        snackbarHostState = snackbarHostState,
         floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.addCard(deckId) }) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.btn_add))
+            if (ready != null) {
+                FloatingActionButton(
+                    onClick = { editTarget = CardEditTarget.New },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.btn_add)) }
             }
         }
     ) { padding ->
-        Column(Modifier.padding(padding)) {
-            // nagłówek: pasek statystyk talii, odświeżany po każdej zmianie
-            SegmentedProgressBar(filtered.counts, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            TextField(
-                value = search, onValueChange = { search = it },
-                placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                singleLine = true,
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+        when (val state = uiState) {
+            BrowseUiState.Loading -> LoadingState(contentModifier)
+
+            BrowseUiState.DeckMissing -> ErrorState(stringResource(R.string.errors_deck_missing), contentModifier)
+
+            is BrowseUiState.Ready -> BrowseContent(
+                state = state,
+                query = query,
+                onSearch = viewModel::setSearch,
+                onCategory = viewModel::setCategory,
+                onEdit = { editTarget = CardEditTarget.Existing(it.id) },
+                onDelete = { deleteTargetId = it.id },
+                modifier = contentModifier.imePadding()
             )
-            // chipy filtrów z licznikami
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                val chips = listOf(
-                    null to stringResource(R.string.filter_all) + " (${filtered.counts.total})",
-                    SrsCardCategory.NEW to stringResource(R.string.srs_badge_new) + " (${filtered.counts.newCount})",
-                    SrsCardCategory.LEARNING to stringResource(R.string.srs_badge_learning) + " (${filtered.counts.learning})",
-                    SrsCardCategory.REVIEW to stringResource(R.string.srs_badge_review) + " (${filtered.counts.review})",
-                    SrsCardCategory.MASTERED to stringResource(R.string.srs_badge_mastered) + " (${filtered.counts.mastered})",
-                )
-                chips.forEach { (cat, label) ->
-                    FilterChip(
-                        selected = category == cat,
-                        onClick = { category = cat },
-                        label = { Text(label) },
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
+        }
+    }
+
+    if (ready != null) {
+        when (val target = editTarget) {
+            null -> Unit
+
+            CardEditTarget.New -> CardEditorDialog(
+                title = stringResource(R.string.browse_add_card),
+                draftKey = target.draftKey,
+                saveAttempt = saveAttempt,
+                initialPages = List(ready.activePageCount) { "" },
+                pageNames = ready.pageNames,
+                onDismiss = { editTarget = null },
+                onSave = { pages ->
+                    viewModel.addCard(pages)
                 }
-            }
-            if (filtered.cards.isEmpty()) {
-                EmptyState(stringResource(R.string.browse_no_cards))
-            } else {
-                LazyColumn(Modifier.padding(horizontal = 16.dp)) {
-                    items(filtered.cards, key = { it.id }) { card ->
-                        Card(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                            Column(Modifier.padding(16.dp)) {
-                                card.pages.take(activePageCount).forEachIndexed { idx, page ->
-                                    Text(page, style = if (idx == 0) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium)
-                                }
-                                Row {
-                                    IconButton(onClick = { editingCard = card }) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.browse_edit_card)) }
-                                    IconButton(onClick = { deleteTarget = card }) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.browse_delete_card)) }
-                                }
-                            }
+            )
+
+            is CardEditTarget.Existing -> {
+                val card = ready.cards.find { it.id == target.cardId }
+                if (card == null) {
+                    // karta zniknęła (usunięta na innym urządzeniu) — okno nie ma czego edytować
+                    LaunchedEffect(target) { editTarget = null }
+                } else {
+                    CardEditorDialog(
+                        title = stringResource(R.string.browse_edit_card),
+                        draftKey = target.draftKey,
+                        saveAttempt = saveAttempt,
+                        initialPages = List(ready.activePageCount) { card.pages.getOrElse(it) { "" } },
+                        pageNames = ready.pageNames,
+                        onDismiss = { editTarget = null },
+                        onSave = { visiblePages ->
+                            // edytujemy tylko widoczne strony; ukryte zostają bez zmian
+                            viewModel.updateCard(card.id, visiblePages)
                         }
-                    }
+                    )
                 }
             }
         }
     }
 
-    // Edit dialog
-    editingCard?.let { card ->
-        EditCardDialog(
-            card = card,
-            activePageCount = activePageCount,
-            pageNames = deck?.pageNames ?: emptyList(),
-            onDismiss = { editingCard = null },
-            onSave = { updated -> viewModel.updateCard(deckId, updated); editingCard = null },
-        )
-    }
-
-    // Delete confirmation
-    deleteTarget?.let { card ->
-        AlertDialog(
-            onDismissRequest = { deleteTarget = null },
-            title = { Text(stringResource(R.string.dialog_delete_permanent_title)) },
-            text = { Text(stringResource(R.string.dialog_delete_desc)) },
-            confirmButton = { TextButton(onClick = { viewModel.deleteCard(deckId, card.id); deleteTarget = null }) { Text(stringResource(R.string.btn_delete)) } },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.btn_cancel)) } },
+    deleteTargetId?.let { cardId ->
+        ConfirmDialog(
+            title = stringResource(R.string.dialog_delete_permanent_title),
+            text = stringResource(R.string.dialog_delete_desc),
+            confirmLabel = stringResource(R.string.btn_delete),
+            destructive = true,
+            onConfirm = {
+                viewModel.deleteCard(cardId)
+                deleteTargetId = null
+            },
+            onDismiss = { deleteTargetId = null }
         )
     }
 }
 
 @Composable
-private fun EditCardDialog(
-    card: Flashcard,
-    activePageCount: Int,
-    pageNames: List<String>,
-    onDismiss: () -> Unit,
-    onSave: (Flashcard) -> Unit,
+private fun BrowseContent(
+    state: BrowseUiState.Ready,
+    query: String,
+    onSearch: (String) -> Unit,
+    onCategory: (SrsCardCategory?) -> Unit,
+    onEdit: (Flashcard) -> Unit,
+    onDelete: (Flashcard) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    // edytujemy tylko WIDOCZNE strony; ukryte pozostają nietknięte przy zapisie
-    val pages = remember {
-        mutableStateListOf(*List(activePageCount) { card.pages.getOrElse(it) { "" } }.toTypedArray())
+    Column(modifier) {
+        CardStatsBar(state.counts, Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.s))
+        OutlinedTextField(
+            value = query,
+            onValueChange = onSearch,
+            placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            shape = MaterialTheme.shapes.small,
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.screen)
+        )
+        CategoryChips(state, onCategory)
+        if (state.cards.isEmpty()) {
+            EmptyState(stringResource(R.string.browse_no_cards))
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = Spacing.screen,
+                    end = Spacing.screen,
+                    top = Spacing.xs,
+                    bottom = Spacing.fabClearance
+                ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s)
+            ) {
+                items(state.cards, key = { it.id }) { card ->
+                    CardItem(card, state.activePageCount, onEdit = { onEdit(card) }, onDelete = { onDelete(card) })
+                }
+            }
+        }
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.browse_edit_card)) },
-        text = {
-            Column {
-                pages.forEachIndexed { idx, page ->
-                    OutlinedTextField(
-                        value = page,
-                        onValueChange = { pages[idx] = it },
-                        label = { Text(pageNames.getOrNull(idx) ?: stringResource(R.string.import_page_label, idx + 1)) },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+}
+
+@Composable
+private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCategory?) -> Unit) {
+    val counts = state.counts
+    val chips = listOf(
+        null to (R.string.filter_all to counts.total),
+        SrsCardCategory.NEW to (R.string.srs_badge_new to counts.newCount),
+        SrsCardCategory.LEARNING to (R.string.srs_badge_learning to counts.learning),
+        SrsCardCategory.REVIEW to (R.string.srs_badge_review to counts.review),
+        SrsCardCategory.MASTERED to (R.string.srs_badge_mastered to counts.mastered)
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.screen, vertical = Spacing.s),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+    ) {
+        chips.forEach { (category, label) ->
+            val (labelRes, count) = label
+            FilterChip(
+                selected = state.category == category,
+                onClick = { onCategory(category) },
+                label = { Text(stringResource(R.string.filter_chip_count, stringResource(labelRes), count)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CardItem(card: Flashcard, activePageCount: Int, onEdit: () -> Unit, onDelete: () -> Unit) {
+    RayCollCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(Spacing.l)) {
+            card.pages.take(activePageCount).forEachIndexed { index, page ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        Modifier.padding(vertical = Spacing.s),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+                Text(
+                    page,
+                    style = if (index ==
+                        0
+                    ) {
+                        MaterialTheme.typography.titleMedium
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
+                    color = if (index ==
+                        0
+                    ) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.s),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.browse_edit_card),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.browse_delete_card),
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val merged = card.pages.toMutableList()
-                    while (merged.size < pages.size) merged.add("")
-                    pages.forEachIndexed { idx, value -> merged[idx] = value }
-                    onSave(card.copy(pages = merged))
-                },
-                enabled = pages.count { it.isNotBlank() } >= 2
-            ) { Text(stringResource(R.string.btn_save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } },
-    )
+        }
+    }
 }

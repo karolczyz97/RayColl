@@ -2,7 +2,7 @@ package com.raycoll.app.ui.navigation
 
 import kotlinx.serialization.Serializable
 
-@Serializable object DashboardRoute
+@Serializable data object DashboardRoute
 
 @Serializable data class StudyRoute(val deckId: String)
 
@@ -10,12 +10,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class DeckSettingsRoute(val deckId: String)
 
+/** [modeId] == null: nowy tryb. */
 @Serializable data class ModeDetailRoute(val modeId: String? = null)
 
-@Serializable object ImportRoute
+@Serializable data object ImportRoute
 
-@Serializable object StatsRoute
+@Serializable data object StatsRoute
 
-@Serializable object ArchiveRoute
+@Serializable data object ArchiveRoute
 
-@Serializable object AppSettingsRoute
+@Serializable data object AppSettingsRoute
+
+@Serializable data object StudyModesRoute

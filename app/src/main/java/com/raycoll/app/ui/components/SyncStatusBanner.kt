@@ -1,6 +1,5 @@
 package com.raycoll.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -9,44 +8,47 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.data.sync.SyncStatus
+import com.raycoll.app.ui.theme.Spacing
 
+/** Stan synchronizacji z chmurą; nic nie pokazuje, gdy wszystko jest wysłane. */
 @Composable
-fun SyncStatusBanner(
-    status: SyncStatus,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (status == SyncStatus.IDLE) return
+fun SyncStatusBanner(status: SyncStatus, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    val isError = status == SyncStatus.ERROR
     val message = when (status) {
-        SyncStatus.SAVING -> stringResource(R.string.sync_status_saving)
+        SyncStatus.IDLE -> return
         SyncStatus.SYNCING -> stringResource(R.string.sync_status_syncing)
         SyncStatus.ERROR -> stringResource(R.string.sync_status_offline)
-        else -> return
     }
-    val color = if (status == SyncStatus.ERROR) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-    Row(
-        modifier = modifier.fillMaxWidth().background(color).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val colors = MaterialTheme.colorScheme
+    val contentColor = if (isError) colors.onErrorContainer else colors.onPrimaryContainer
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = if (isError) colors.errorContainer else colors.primaryContainer,
+        contentColor = contentColor,
+        modifier = modifier.fillMaxWidth()
     ) {
-        Icon(
-            if (status == SyncStatus.ERROR) Icons.Filled.CloudOff else Icons.Filled.Sync,
-            contentDescription = null,
-            modifier = Modifier.padding(end = 8.dp)
-        )
-        Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        if (status == SyncStatus.ERROR) {
-            TextButton(onClick = onRetry) { Text(stringResource(R.string.errors_retry)) }
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                if (isError) Icons.Filled.CloudOff else Icons.Filled.Sync,
+                contentDescription = null,
+                modifier = Modifier.padding(end = Spacing.m)
+            )
+            Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            if (isError) {
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.errors_retry), color = contentColor) }
+            }
         }
     }
 }

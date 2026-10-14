@@ -1,0 +1,44 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "repomix-full-part2-ui.xml",
+    "style": "xml",
+    "filePathStyle": "target-relative",
+    "compress": false,
+    "headerText": "RayColl - Część 2/3 (Interfejs & Odtwarzanie): Ekrany Jetpack Compose, ViewModele, motyw, nawigacja, moduł Playback (TTS, STT, AudioFocus, StudySessionService) oraz zasoby aplikacji (strings.xml, layouty, style).",
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": false,
+    "includeEmptyDirectories": false
+  },
+  "include": [
+    "app/src/main/java/com/raycoll/app/playback/**/*.kt",
+    "app/src/main/java/com/raycoll/app/ui/**/*.kt",
+    "app/src/main/res/**/*.xml",
+    "app/src/main/res/**/*.properties"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      ".agents/**",
+      "plan_*.txt",
+      "konkluzje_*.txt",
+      "**/build/**",
+      "**/.gradle/**",
+      "**/.kotlin/**",
+      "local.properties",
+      "**/google-services.json",
+      "repomix*.xml"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}

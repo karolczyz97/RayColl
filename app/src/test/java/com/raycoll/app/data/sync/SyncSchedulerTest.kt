@@ -1,10 +1,14 @@
 package com.raycoll.app.data.sync
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -13,7 +17,10 @@ class SyncSchedulerTest {
     @Test
     fun `debounce skleja serię mutacji w jeden push`() = runTest {
         var pushes = 0
-        val scheduler = SyncScheduler(this, push = { pushes++; true }, delayMs = 1200)
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            true
+        }, delayMs = 1200)
         repeat(5) { scheduler.enqueueDebounced() }
         advanceTimeBy(1199)
         assertEquals(0, pushes)
@@ -24,7 +31,10 @@ class SyncSchedulerTest {
     @Test
     fun `study flushuje dokładnie co 10 ocen`() = runTest {
         var pushes = 0
-        val scheduler = SyncScheduler(this, push = { pushes++; true }, delayMs = 1200, flushThreshold = 10)
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            true
+        }, delayMs = 1200, flushThreshold = 10)
         repeat(9) { scheduler.enqueueStudy() }
         advanceUntilIdle()
         assertEquals(0, pushes) // 9 ocen — bez flusha, bez debounce
@@ -39,7 +49,10 @@ class SyncSchedulerTest {
     @Test
     fun `flush na granicy sesji domyka zaległe oceny`() = runTest {
         var pushes = 0
-        val scheduler = SyncScheduler(this, push = { pushes++; true })
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            true
+        })
         repeat(2) { scheduler.enqueueStudy() } // 2 oceny poniżej progu — wiszą
         scheduler.flush()
         advanceUntilIdle()
@@ -53,7 +66,10 @@ class SyncSchedulerTest {
     @Test
     fun `immediate pomija debounce`() = runTest {
         var pushes = 0
-        val scheduler = SyncScheduler(this, push = { pushes++; true })
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            true
+        })
         scheduler.enqueueImmediate()
         advanceUntilIdle()
         assertEquals(1, pushes)
@@ -63,7 +79,10 @@ class SyncSchedulerTest {
     fun `nieudany push zostaje do ponowienia przy następnym flushu`() = runTest {
         var pushes = 0
         var succeed = false
-        val scheduler = SyncScheduler(this, push = { pushes++; succeed })
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            succeed
+        })
         scheduler.enqueueImmediate()
         advanceUntilIdle()
         assertEquals(1, pushes)
@@ -79,7 +98,10 @@ class SyncSchedulerTest {
     @Test
     fun `cancel porzuca zaplanowany push`() = runTest {
         var pushes = 0
-        val scheduler = SyncScheduler(this, push = { pushes++; true })
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            true
+        })
         scheduler.enqueueDebounced()
         scheduler.cancel()
         advanceUntilIdle()
@@ -99,5 +121,23 @@ class SyncSchedulerTest {
         scheduler.flush()
         advanceUntilIdle()
         assertEquals(2, attempts)
+    }
+
+    @Test
+    fun `abort interrupts the running push and drops the queue without cancelling the caller`() = runTest {
+        var pushes = 0
+        val scheduler = SyncScheduler(this, push = {
+            pushes++
+            awaitCancellation()
+        }, delayMs = 1200)
+        val caller = launch { scheduler.flushImmediately() }
+        runCurrent()
+        scheduler.enqueueDebounced()
+        scheduler.abort()
+        caller.join()
+        assertFalse(caller.isCancelled)
+        advanceUntilIdle()
+        assertEquals(1, pushes)
+        assertEquals("zamek wolny", 7, scheduler.exclusive { 7 })
     }
 }

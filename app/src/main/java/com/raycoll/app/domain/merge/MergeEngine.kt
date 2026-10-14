@@ -5,7 +5,7 @@ import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.normalize.normalizeStoreData
-import com.raycoll.app.domain.srs.isBuiltInModeSourceId
+import com.raycoll.app.domain.seed.isBuiltInModeSourceId
 
 private fun latestDelete(a: Long?, b: Long?): Long = maxOf(a ?: 0, b ?: 0)
 
@@ -13,13 +13,12 @@ private fun isAlive(latestEdit: Long, deletedAt: Long): Boolean = deletedAt <= 0
 
 private fun getLatestEdit(card: Flashcard): Long = maxOf(card.contentUpdatedAt, card.srsUpdatedAt)
 
-private fun mergeSrsStateNeverRegress(localReps: Int, localSrsAt: Long, cloudReps: Int, cloudSrsAt: Long): String =
-    when {
-        localReps > cloudReps -> "local"
-        cloudReps > localReps -> "cloud"
-        localSrsAt > cloudSrsAt -> "local"
-        else -> "cloud"
-    }
+private fun localSrsWins(localReps: Int, localSrsAt: Long, cloudReps: Int, cloudSrsAt: Long): Boolean = when {
+    localReps > cloudReps -> true
+    cloudReps > localReps -> false
+    localSrsAt > cloudSrsAt -> true
+    else -> false
+}
 
 fun mergeActivityHeatmap(local: Map<String, Int>, cloud: Map<String, Int>): Map<String, Int> {
     val merged = cloud.toMutableMap()
@@ -49,7 +48,8 @@ fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<F
             merged.add(if (delAt > 0 && latestEdit > delAt) local.copy(deletedAt = null) else local)
             continue
         }
-        val l = local!!; val c = cloud!!
+        val l = local!!
+        val c = cloud!!
 
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(getLatestEdit(l), getLatestEdit(c))
@@ -59,22 +59,25 @@ fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<F
             continue
         }
 
-        val srsSide = mergeSrsStateNeverRegress(l.srsState.repetitions, l.srsUpdatedAt, c.srsState.repetitions, c.srsUpdatedAt)
+        val preferLocalSrs =
+            localSrsWins(l.srsState.repetitions, l.srsUpdatedAt, c.srsState.repetitions, c.srsUpdatedAt)
         val contentSide = when {
             l.contentUpdatedAt > c.contentUpdatedAt -> l
             c.contentUpdatedAt > l.contentUpdatedAt -> c
-            srsSide == "local" -> l
+            preferLocalSrs -> l
             else -> c
         }
 
-        merged.add(Flashcard(
-            id = id,
-            pages = contentSide.pages,
-            srsState = if (srsSide == "local") l.srsState else c.srsState,
-            contentUpdatedAt = contentSide.contentUpdatedAt,
-            srsUpdatedAt = if (srsSide == "local") l.srsUpdatedAt else c.srsUpdatedAt,
-            deletedAt = null, // edycja nowsza niż kasowanie = ożywienie (isAlive)
-        ))
+        merged.add(
+            Flashcard(
+                id = id,
+                pages = contentSide.pages,
+                srsState = if (preferLocalSrs) l.srsState else c.srsState,
+                contentUpdatedAt = contentSide.contentUpdatedAt,
+                srsUpdatedAt = if (preferLocalSrs) l.srsUpdatedAt else c.srsUpdatedAt,
+                deletedAt = null // edycja nowsza niż kasowanie = ożywienie (isAlive)
+            )
+        )
     }
     return merged
 }
@@ -89,10 +92,21 @@ fun mergeGroups(localGroups: List<FlashcardGroup>, cloudGroups: List<FlashcardGr
         val local = localMap[id]
         val cloud = cloudMap[id]
 
-        if (local == null && cloud != null) { merged.add(cloud.copy(cards = mergeCards(emptyList(), cloud.cards))); continue }
-        if (cloud == null && local != null) { merged.add(local.copy(cards = mergeCards(local.cards, emptyList()))); continue }
+        if (local == null &&
+            cloud != null
+        ) {
+            merged.add(cloud.copy(cards = mergeCards(emptyList(), cloud.cards)))
+            continue
+        }
+        if (cloud == null &&
+            local != null
+        ) {
+            merged.add(local.copy(cards = mergeCards(local.cards, emptyList())))
+            continue
+        }
 
-        val l = local!!; val c = cloud!!
+        val l = local!!
+        val c = cloud!!
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(l.updatedAt, c.updatedAt)
 
@@ -102,11 +116,13 @@ fun mergeGroups(localGroups: List<FlashcardGroup>, cloudGroups: List<FlashcardGr
         }
 
         val winner = if (l.updatedAt > c.updatedAt) l else c
-        merged.add(winner.copy(
-            cards = mergeCards(l.cards, c.cards),
-            updatedAt = latestEdit,
-            deletedAt = null, // edycja nowsza niż kasowanie = ożywienie (isAlive)
-        ))
+        merged.add(
+            winner.copy(
+                cards = mergeCards(l.cards, c.cards),
+                updatedAt = latestEdit,
+                deletedAt = null // edycja nowsza niż kasowanie = ożywienie (isAlive)
+            )
+        )
     }
     return merged
 }
@@ -121,10 +137,17 @@ fun mergeStudyModes(localModes: List<StudyMode>, cloudModes: List<StudyMode>): L
         val local = localMap[id]
         val cloud = cloudMap[id]
 
-        if (local == null && cloud != null) { merged.add(cloud); continue }
-        if (cloud == null && local != null) { merged.add(local); continue }
+        if (local == null && cloud != null) {
+            merged.add(cloud)
+            continue
+        }
+        if (cloud == null && local != null) {
+            merged.add(local)
+            continue
+        }
 
-        val l = local!!; val c = cloud!!
+        val l = local!!
+        val c = cloud!!
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(l.updatedAt, c.updatedAt)
 
@@ -149,5 +172,7 @@ fun mergeUserData(local: StoreData, cloud: StoreData): StoreData {
     val mergedGroups = mergeGroups(local.groups, cloud.groups)
     val mergedModes = mergeStudyModes(local.studyModes, cloud.studyModes)
     val mergedHeatmap = mergeActivityHeatmap(local.activityHeatmap, cloud.activityHeatmap)
-    return normalizeStoreData(StoreData(groups = mergedGroups, studyModes = mergedModes, activityHeatmap = mergedHeatmap))
+    return normalizeStoreData(
+        StoreData(groups = mergedGroups, studyModes = mergedModes, activityHeatmap = mergedHeatmap)
+    )
 }

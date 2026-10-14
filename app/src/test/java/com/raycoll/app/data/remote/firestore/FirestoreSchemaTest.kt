@@ -1,5 +1,6 @@
 package com.raycoll.app.data.remote.firestore
 
+import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.CompoundParams
 import com.raycoll.app.domain.model.CompoundStep
 import com.raycoll.app.domain.model.Flashcard
@@ -9,42 +10,55 @@ import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StepCondition
+import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * Parytet formatu dokumentów z firestoreSchema.ts: zagnieżdżony srsState,
+ * Zgodność z zapisanym formatem dokumentów: zagnieżdżony srsState,
  * strukturalne steps, opcjonalne pola tylko gdy obecne, strict deserializacja.
  */
 class FirestoreSchemaTest {
 
     private fun card(deleted: Long? = null) = Flashcard(
-        id = "c1", pages = listOf("front", "back"),
-        srsState = SrsState(difficulty = 5.5, stability = 2.0, repetitions = 3, state = 2, lastReviewTimestamp = 100L, nextReviewTimestamp = 200L),
-        contentUpdatedAt = 10L, srsUpdatedAt = 20L, deletedAt = deleted,
+        id = "c1",
+        pages = listOf("front", "back"),
+        srsState = SrsState(
+            difficulty = 5.5,
+            stability = 2.0,
+            repetitions = 3,
+            state = 2,
+            lastReviewTimestamp = 100L,
+            nextReviewTimestamp = 200L
+        ),
+        contentUpdatedAt = 10L,
+        srsUpdatedAt = 20L,
+        deletedAt = deleted
     )
 
     private fun deck() = FlashcardGroup(
         id = "d1", name = "Deck", cards = listOf(card()),
-        activeModeId = "classic", studyFilter = "new+review", cardOrder = "sequential",
+        activeModeId = "classic", studyFilter = StudyFilter.NEW_AND_REVIEW, cardOrder = CardOrder.SEQUENTIAL,
         pageLanguages = listOf("en-US", "pl-PL"), pageNames = listOf("A", "B"),
-        activePageCount = 2, updatedAt = 42L,
+        activePageCount = 2, updatedAt = 42L
     )
 
     private fun mode() = StudyMode(
-        id = "m1", name = "Tryb",
+        id = "m1",
+        name = "Tryb",
         steps = listOf(
             ShowPageStep(pageIndex = 0),
             ListenAndCheckStep(pageIndex = 1, successThreshold = 70, condition = StepCondition.CORRECT),
             CompoundStep(params = CompoundParams.ListenGrade()),
-            ShowRatingsStep(),
+            ShowRatingsStep()
         ),
-        isBuiltIn = false, updatedAt = 7L,
+        isBuiltIn = false,
+        updatedAt = 7L
     )
 
     // ---------- serializacja ----------
@@ -78,7 +92,7 @@ class FirestoreSchemaTest {
         val first = steps[0] as Map<*, *>
         assertEquals("show_page", first["type"])
         assertEquals(0L, (first["pageIndex"] as Number).toLong())
-        // null condition nie jest zapisywany (parytet z obiektami TS)
+        // Pusty warunek nie jest zapisywany w dokumencie chmury.
         assertFalse(first.containsKey("condition"))
         val second = steps[1] as Map<*, *>
         assertEquals("correct", second["condition"])
@@ -107,66 +121,59 @@ class FirestoreSchemaTest {
 
     // ---------- strict deserializacja ----------
 
-    private fun assertThrows(block: () -> Unit) {
-        try {
-            block()
-            fail("Expected exception")
-        } catch (e: Exception) {
-            // oczekiwane
-        }
-    }
-
     @Test
     fun `karta bez srsState odrzucona`() {
         val map = FirestoreSchema.cardToMap(card()).toMutableMap()
         map.remove("srsState")
-        assertThrows { FirestoreSchema.cardFromMap("c1", map) }
+        assertThrows(Exception::class.java) { FirestoreSchema.cardFromMap("c1", map) }
     }
 
     @Test
     fun `karta z nie-liczbowym polem srs odrzucona`() {
         val map = FirestoreSchema.cardToMap(card()).toMutableMap()
         map["srsState"] = mapOf("difficulty" to "zle")
-        assertThrows { FirestoreSchema.cardFromMap("c1", map) }
+        assertThrows(Exception::class.java) { FirestoreSchema.cardFromMap("c1", map) }
     }
 
     @Test
     fun `deck ze złym studyFilter odrzucony`() {
         val map = FirestoreSchema.deckToMap(deck()).toMutableMap()
         map["studyFilter"] = "everything"
-        assertThrows { FirestoreSchema.deckFromMap("d1", map, emptyList()) }
+        assertThrows(Exception::class.java) { FirestoreSchema.deckFromMap("d1", map, emptyList()) }
     }
 
     @Test
     fun `deck bez updatedAt odrzucony`() {
         val map = FirestoreSchema.deckToMap(deck()).toMutableMap()
         map.remove("updatedAt")
-        assertThrows { FirestoreSchema.deckFromMap("d1", map, emptyList()) }
+        assertThrows(Exception::class.java) { FirestoreSchema.deckFromMap("d1", map, emptyList()) }
     }
 
     @Test
     fun `mode bez steps odrzucony`() {
         val map = FirestoreSchema.modeToMap(mode()).toMutableMap()
         map.remove("steps")
-        assertThrows { FirestoreSchema.modeFromMap("m1", map) }
+        assertThrows(Exception::class.java) { FirestoreSchema.modeFromMap("m1", map) }
     }
 
     @Test
     fun `mode z nieznanym typem kroku odrzucony`() {
         val map = FirestoreSchema.modeToMap(mode()).toMutableMap()
         map["steps"] = listOf(mapOf("type" to "hyper_step"))
-        assertThrows { FirestoreSchema.modeFromMap("m1", map) }
+        assertThrows(Exception::class.java) { FirestoreSchema.modeFromMap("m1", map) }
     }
 
     @Test
     fun `builtIn bez builtInSourceId odrzucony, nie-builtIn z sourceId też`() {
-        val builtIn = FirestoreSchema.modeToMap(mode().copy(isBuiltIn = true, builtInSourceId = "classic")).toMutableMap()
+        val builtIn = FirestoreSchema.modeToMap(
+            mode().copy(isBuiltIn = true, builtInSourceId = "classic")
+        ).toMutableMap()
         builtIn.remove("builtInSourceId")
-        assertThrows { FirestoreSchema.modeFromMap("m1", builtIn) }
+        assertThrows(Exception::class.java) { FirestoreSchema.modeFromMap("m1", builtIn) }
 
         val notBuiltIn = FirestoreSchema.modeToMap(mode()).toMutableMap()
         notBuiltIn["builtInSourceId"] = "classic"
-        assertThrows { FirestoreSchema.modeFromMap("m1", notBuiltIn) }
+        assertThrows(Exception::class.java) { FirestoreSchema.modeFromMap("m1", notBuiltIn) }
     }
 
     @Test
@@ -178,7 +185,9 @@ class FirestoreSchemaTest {
 
     @Test
     fun `activity bez count odrzucone`() {
-        assertThrows { FirestoreSchema.activityCountFromMap("2026-01-01", mapOf("updatedAt" to 1L)) }
+        assertThrows(Exception::class.java) {
+            FirestoreSchema.activityCountFromMap("2026-01-01", mapOf("updatedAt" to 1L))
+        }
     }
 
     @Test

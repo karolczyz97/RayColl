@@ -1,16 +1,15 @@
 package com.raycoll.app.domain.srs
 
-import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.SrsConstants
+import com.raycoll.app.domain.model.SrsState
 import kotlin.math.exp
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 
 fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     val w = SrsConstants.W
-    val rating = rawRating.coerceIn(1, 4)
+    val rating = rawRating.coerceIn(Ratings.MIN, Ratings.MAX)
     val lastReview = current.lastReviewTimestamp
     val elapsedMs = now - (if (lastReview != 0L) lastReview else now)
     val elapsedDays = max(elapsedMs.toDouble() / SrsConstants.DAY_MS, 0.0)
@@ -22,21 +21,20 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     if (current.state == 0 || current.stability <= 0) {
         newD = initDifficulty(w, rating)
         newS = initStability(w, rating)
-        newState = if (rating == 1) 1 else 2
+        newState = if (rating == Ratings.AGAIN) 1 else 2
     } else {
         newD = nextDifficulty(w, current.difficulty, rating)
         val r = retrievability(elapsedDays, current.stability)
-        if (rating == 1) {
-            newS = nextForgetStability(w, newD, current.stability, r)
+        if (rating == Ratings.AGAIN) {
+            newS = minOf(current.stability, nextForgetStability(w, current.difficulty, current.stability, r))
             newState = 3
         } else {
-            newS = nextRecallStability(w, newD, current.stability, r, rating)
+            newS = nextRecallStability(w, current.difficulty, current.stability, r, rating)
             newState = 2
         }
     }
 
-    // clamp (nie coerceIn) — NaN → MIN, parytet z utils/math.ts clamp i z gałęzią
-    // difficulty niżej; coerceIn przepuściłby NaN do nextReview/serializacji.
+    // clamp zamiast coerceIn: NaN daje minimum, a nie trafia do nextReview i zapisu
     val clampedS = clamp(newS, SrsConstants.MIN_INTERVAL_DAYS, SrsConstants.MAX_INTERVAL_DAYS)
     val nextReview = now + (clampedS * SrsConstants.DAY_MS).toLong()
 
@@ -46,15 +44,13 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
         repetitions = current.repetitions + 1,
         state = newState,
         lastReviewTimestamp = now,
-        nextReviewTimestamp = nextReview,
+        nextReviewTimestamp = nextReview
     )
 }
 
-private fun initDifficulty(w: DoubleArray, rating: Int): Double =
-    clamp(w[4] - (rating - 3) * w[5], 1.0, 10.0)
+private fun initDifficulty(w: DoubleArray, rating: Int): Double = clamp(w[4] - (rating - 3) * w[5], 1.0, 10.0)
 
-private fun initStability(w: DoubleArray, rating: Int): Double =
-    max(w[rating - 1], 0.1)
+private fun initStability(w: DoubleArray, rating: Int): Double = max(w[rating - 1], 0.1)
 
 private fun nextDifficulty(w: DoubleArray, d: Double, rating: Int): Double {
     val newD = d - w[6] * (rating - 3)
@@ -67,10 +63,12 @@ private fun retrievability(elapsedDays: Double, stability: Double): Double {
 }
 
 private fun nextRecallStability(w: DoubleArray, d: Double, s: Double, r: Double, rating: Int): Double {
-    val hardPenalty = if (rating == 2) SrsConstants.W[15] else 1.0
-    val easyBonus = if (rating == 4) SrsConstants.W[16] else 1.0
-    return s * (1 + exp(w[8]) * (11 - d) * s.pow(-w[9]) *
-            (exp((1 - r) * w[10]) - 1) * hardPenalty * easyBonus)
+    val hardPenalty = if (rating == Ratings.HARD) w[15] else 1.0
+    val easyBonus = if (rating == Ratings.EASY) w[16] else 1.0
+    return s * (
+        1 + exp(w[8]) * (11 - d) * s.pow(-w[9]) *
+            (exp((1 - r) * w[10]) - 1) * hardPenalty * easyBonus
+        )
 }
 
 private fun nextForgetStability(w: DoubleArray, d: Double, s: Double, r: Double): Double =
@@ -78,5 +76,3 @@ private fun nextForgetStability(w: DoubleArray, d: Double, s: Double, r: Double)
 
 private fun clamp(value: Double, min: Double, max: Double): Double =
     if (value.isNaN()) min else maxOf(min, minOf(max, value))
-
-private fun Double.pow(exp: Double): Double = Math.pow(this, exp)

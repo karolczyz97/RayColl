@@ -5,8 +5,8 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 
 /**
- * Konfiguracja projektu Firebase `raycoll-io` (te same wartości co webowa wersja
- * w TensorDeck/.env). Inicjalizacja ręczna zamiast google-services.json — plik
+ * Konfiguracja aplikacji typu „web” w projekcie Firebase `raycoll-io`.
+ * Inicjalizacja ręczna zamiast google-services.json — plik
  * google-services.json (gdy user doda apkę Android w konsoli) ma pierwszeństwo:
  * wtedy FirebaseApp.getApps() nie będzie puste i ten init się nie wykona.
  */

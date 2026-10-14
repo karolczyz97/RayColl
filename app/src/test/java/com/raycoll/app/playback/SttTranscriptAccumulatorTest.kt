@@ -5,32 +5,29 @@ import org.junit.Test
 
 class SttTranscriptAccumulatorTest {
     @Test
-    fun `accumulator builds full text from final segments`() {
+    fun `final segments combine into a full transcript`() {
         val acc = SttTranscriptAccumulator()
         acc.addFinal("hello")
         acc.addFinal("world")
-        val result = acc.current()
-        assertEquals("hello world", result.fullText)
+        assertEquals("hello world", acc.combined())
     }
 
     @Test
-    fun `accumulator sets partial without affecting final`() {
+    fun `latest partial replaces the previous partial and preserves final segments`() {
         val acc = SttTranscriptAccumulator()
         acc.addFinal("hello")
-        acc.addPartial("wor")
-        val result = acc.current()
-        assertEquals("hello", result.fullText)
-        assertEquals("wor", result.partialText)
+        acc.addPartial("wo")
+        acc.addPartial("world")
+        assertEquals("hello world", acc.combined())
     }
 
     @Test
-    fun `clear resets accumulator`() {
+    fun `finalizing a partial does not duplicate it`() {
         val acc = SttTranscriptAccumulator()
+        acc.addPartial("hello")
         acc.addFinal("hello")
         acc.addPartial("world")
-        acc.clear()
-        val result = acc.current()
-        assertEquals("", result.fullText)
-        assertEquals("", result.partialText)
+        assertEquals("hello world", acc.combined())
+        assertEquals("", SttTranscriptAccumulator().combined())
     }
 }

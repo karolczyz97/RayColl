@@ -1,12 +1,20 @@
 package com.raycoll.app.ui.decksettings
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
-import com.raycoll.app.ui.VmTestHarness
+import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.TestRepos
+import com.raycoll.app.testing.VmTestHarness
+import com.raycoll.app.testing.routeArgs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -14,161 +22,143 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(application = android.app.Application::class)
 class DeckSettingsViewModelTest {
-
-    @get:Rule val instantExecutorRule = InstantTaskExecutorRule()
-
-    private val dispatcher = StandardTestDispatcher()
-    private lateinit var repos: com.raycoll.app.ui.TestRepos
+    private val viewModels = mutableListOf<DeckSettingsViewModel>()
+    private lateinit var repos: TestRepos
 
     @Before
     fun setup() {
-        Dispatchers.setMain(dispatcher)
-        repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), com.raycoll.app.ui.FakeClock())
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), FakeClock())
     }
 
     @After
     fun teardown() {
-        Dispatchers.resetMain()
+        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
         repos.db.close()
+        Dispatchers.resetMain()
     }
 
-    private suspend fun seedDeck(): String =
-        repos.deckRepository.addDeckWithCards(
-            "TestDeck", listOf("en-US", "pl-PL"), listOf("Front", "Back"),
-            listOf(com.raycoll.app.domain.model.Flashcard(id = "c1", pages = listOf("hello", "cześć"), srsState = com.raycoll.app.domain.model.SrsState()))
-        )
-
-    private fun vm() = DeckSettingsViewModel(repos.deckRepository, repos.studyModeRepository)
-
-    @Test
-    fun `loadDeck ładuje talię`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals("TestDeck", vm.deck.value?.name)
-    }
+    private suspend fun seedDeck() = repos.deckRepository.addDeckWithCards(
+        "TestDeck",
+        listOf("en-US", "pl-PL"),
+        listOf("Front", "Back"),
+        listOf(listOf("hello", "cześć"))
+    )
+    private fun vm(deckId: String) =
+        DeckSettingsViewModel(routeArgs("deckId" to deckId), repos.deckRepository, repos.studyModeRepository).also {
+            viewModels +=
+                it
+        }
+    private suspend fun DeckSettingsViewModel.ready(predicate: (DeckSettingsUiState.Ready) -> Boolean = { true }) =
+        uiState.filterIsInstance<DeckSettingsUiState.Ready>().first(predicate)
 
     @Test
-    fun `updateName aktualizuje nazwę w stanie`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        vm.updateName(deckId, "Nowa Nazwa")
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals("Nowa Nazwa", vm.deck.value?.name)
-        val persisted = repos.deckRepository.getDeck(deckId)
-        assertEquals("Nowa Nazwa", persisted?.name)
+    fun `route loads the selected deck`() = runTest {
+        assertEquals("TestDeck", vm(seedDeck()).ready().deck.name)
     }
 
     @Test
-    fun `updatePageName aktualizuje nazwy stron`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        vm.updatePageName(deckId, 0, "Phrase")
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals("Phrase", vm.deck.value?.pageNames?.get(0))
+    fun `rename persists and updates the screen`() = runTest {
+        val id = seedDeck()
+        val vm = vm(id)
+        vm.ready()
+        vm.rename("Nowa Nazwa")
+        assertEquals("Nowa Nazwa", vm.ready { it.deck.name == "Nowa Nazwa" }.deck.name)
+        assertEquals("Nowa Nazwa", repos.deckRepository.getDeck(id)!!.name)
     }
 
     @Test
-    fun `setPageLanguage aktualizuje języki stron`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        vm.setPageLanguage(deckId, 1, "es-ES")
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals("es-ES", vm.deck.value?.pageLanguages?.get(1))
+    fun `page name is persisted and observed`() = runTest {
+        val vm = vm(seedDeck())
+        vm.ready()
+        vm.setPageName(0, "Phrase")
+        assertEquals("Phrase", vm.ready { it.deck.pageNames[0] == "Phrase" }.deck.pageNames[0])
     }
 
     @Test
-    fun `movePage zamienia strony miejscami w stanie`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        val before0 = vm.deck.value?.pageNames?.get(0)
-        val before1 = vm.deck.value?.pageNames?.get(1)
-        vm.movePage(deckId, 0, 1)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals(before0, vm.deck.value?.pageNames?.get(1))
-        assertEquals(before1, vm.deck.value?.pageNames?.get(0))
+    fun `page language is persisted and observed`() = runTest {
+        val vm = vm(seedDeck())
+        vm.ready()
+        vm.setPageLanguage(1, "es-ES")
+        assertEquals("es-ES", vm.ready { it.deck.pageLanguages[1] == "es-ES" }.deck.pageLanguages[1])
     }
 
     @Test
-    fun `setVisiblePageCount odświeża stan z nowymi stronami`() = runTest(dispatcher) {
-        val deckId = seedDeck() // 2 strony
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        vm.setVisiblePageCount(deckId, 4)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        // _deck odświeżony → UI pokaże 4 wiersze stron z dopełnioną metadaną
-        assertEquals(4, vm.deck.value?.activePageCount)
-        assertEquals(4, vm.deck.value?.pageNames?.size)
+    fun `swapping pages updates metadata and card contents`() = runTest {
+        val vm = vm(seedDeck())
+        vm.ready()
+        vm.swapPages(0, 1)
+        val deck = vm.ready { it.deck.pageNames == listOf("Back", "Front") }.deck
+        assertEquals(listOf("pl-PL", "en-US"), deck.pageLanguages)
+        assertEquals(listOf("cześć", "hello"), deck.cards.single().pages)
     }
 
     @Test
-    fun `setActiveMode aktualizuje stan`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        vm.setActiveMode(deckId, "listen-speak")
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals("listen-speak", vm.deck.value?.activeModeId)
+    fun `increasing page count updates padded metadata`() = runTest {
+        val vm = vm(seedDeck())
+        vm.ready()
+        vm.setActivePageCount(4)
+        assertEquals(4, vm.ready { it.deck.activePageCount == 4 }.deck.pageNames.size)
     }
 
     @Test
-    fun `archive przenosi talię do archiwum`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        vm.loadDeck(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        vm.archive(deckId)
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        val persisted = repos.deckRepository.getDeck(deckId)
-        assertTrue(persisted?.archivedAt != null)
+    fun `active mode selection persists`() = runTest {
+        val vm = vm(seedDeck())
+        vm.ready()
+        vm.setActiveMode("listen-speak")
+        assertEquals("listen-speak", vm.ready { it.deck.activeModeId == "listen-speak" }.deck.activeModeId)
     }
 
     @Test
-    fun `delete onDone przy sukcesie`() = runTest(dispatcher) {
-        val deckId = seedDeck()
-        val vm = vm()
-        var doneCalled = false
-        var errorCalled = false
-        vm.delete(deckId, onDone = { doneCalled = true }, onError = { errorCalled = true })
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertTrue(doneCalled)
-        assertTrue(!errorCalled)
-        assertTrue(repos.deckRepository.getDeck(deckId)?.deletedAt != null)
+    fun `archiving persists and emits Closed`() = runTest {
+        val id = seedDeck()
+        val vm = vm(id)
+        vm.archive()
+        assertEquals(DeckSettingsEvent.Closed, vm.events.first())
+        assertTrue(repos.deckRepository.getDeck(id)!!.archivedAt != null)
     }
 
     @Test
-    fun `delete onError gdy deck nie istnieje`() = runTest(dispatcher) {
-        val vm = vm()
-        var doneCalled = false
-        var errorCalled = false
-        // deleteDeck woła deckDao.softDeleteDeck — jeśli deck nie istnieje, to nie rzuca.
-        // Zamiast tego testujemy że delete na nieistniejącym deck nie crashuje i woła onDone
-        // (soft delete na brakującym rekordzie to no-op, nie błąd).
-        // Dla prawdziwego błędu trzeba by rzucić wyjątek — sprawdzamy że path error nie crashuje.
-        vm.delete("nonexistent", onDone = { doneCalled = true }, onError = { errorCalled = true })
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        // soft delete na nieistniejącym = no-op = sukces
-        assertTrue(doneCalled)
+    fun `deleting persists tombstone and emits Closed`() = runTest {
+        val id = seedDeck()
+        val vm = vm(id)
+        vm.delete()
+        assertEquals(DeckSettingsEvent.Closed, vm.events.first())
+        assertTrue(repos.localStore.snapshot().groups.single().deletedAt != null)
+        assertEquals(null, repos.deckRepository.getDeck(id))
+    }
+
+    @Test
+    fun `deck deleted elsewhere is reported as missing`() = runTest {
+        val id = seedDeck()
+        val vm = vm(id)
+        vm.ready()
+        repos.deckRepository.deleteDeck(id)
+        assertEquals(DeckSettingsUiState.DeckMissing, vm.uiState.first { it is DeckSettingsUiState.DeckMissing })
+    }
+
+    @Test
+    fun `deleting from this screen keeps the last view until it closes`() = runTest {
+        val id = seedDeck()
+        val vm = vm(id)
+        vm.ready()
+        vm.delete()
+        assertEquals(DeckSettingsEvent.Closed, vm.events.first())
+        assertTrue(vm.uiState.value is DeckSettingsUiState.Ready)
+    }
+
+    @Test
+    fun `deleting a missing deck is an idempotent success`() = runTest {
+        val vm = vm("nonexistent")
+        vm.delete()
+        assertEquals(DeckSettingsEvent.Closed, vm.events.first())
+        assertTrue(repos.localStore.snapshot().groups.isEmpty())
     }
 }

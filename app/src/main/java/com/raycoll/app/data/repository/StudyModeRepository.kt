@@ -1,75 +1,67 @@
 package com.raycoll.app.data.repository
 
-import androidx.room.withTransaction
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.local.db.RayCollDatabase
-import com.raycoll.app.data.local.mappers.Mappers
+import com.raycoll.app.data.local.mappers.toDomain
+import com.raycoll.app.data.local.mappers.toEntity
+import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.domain.operations.addStudyMode
-import com.raycoll.app.domain.operations.deleteStudyMode
-import com.raycoll.app.domain.operations.resetStudyMode
-import com.raycoll.app.domain.operations.updateStudyMode
-import com.raycoll.app.domain.srs.createSeedModes
+import com.raycoll.app.domain.operations.edited
+import com.raycoll.app.domain.operations.newStudyMode
+import com.raycoll.app.domain.operations.resetToBuiltIn
+import com.raycoll.app.domain.operations.resolveStudyMode
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
+/** Tryby nauki w aktywnej przestrzeni danych. */
 @Singleton
 class StudyModeRepository @Inject constructor(
-    private val db: RayCollDatabase,
+    db: RayCollDatabase,
     private val clock: Clock,
     private val namespaceManager: NamespaceManager,
-    private val dataMutations: DataMutations,
+    private val dataMutations: DataMutations
 ) {
     private val modeDao = db.studyModeDao()
 
-    fun liveModes() = modeDao.liveModes(namespaceManager.current()).map { entities -> entities.map { Mappers.entityToMode(it) } }
+    private val ns: String get() = namespaceManager.current()
 
-    suspend fun getModes(): List<StudyMode> {
-        val ns = namespaceManager.current()
-        return modeDao.allModes(ns).map { Mappers.entityToMode(it) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun liveModes(): Flow<List<StudyMode>> = namespaceManager.active.flatMapLatest { ns ->
+        modeDao.liveModes(ns).map { entities -> entities.map { it.toDomain() } }
     }
 
-    suspend fun addMode(name: String, steps: List<com.raycoll.app.domain.model.ModeStep>): String {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val (modes, id) = addStudyMode(emptyList(), name, steps, now)
-        modeDao.insertMode(Mappers.modeToEntity(modes.last(), ns))
-        dataMutations.signal()
-        return id
+    suspend fun getMode(modeId: String): StudyMode? = modeDao.getMode(ns, modeId)?.toDomain()
+
+    /** Tryb sesji: przypisany albo — gdy go brak — ten sam domyślny, który pokazują ekrany. */
+    suspend fun getModeOrDefault(modeId: String): StudyMode = resolveStudyMode(
+        modeDao.allModes(ns).map { it.toDomain() }.filter { it.deletedAt == null },
+        modeId
+    )
+
+    suspend fun addMode(name: String, steps: List<ModeStep>): String {
+        val mode = newStudyMode(name, steps, clock.now())
+        modeDao.upsertMode(mode.toEntity(ns))
+        dataMutations.signal(CloudWriteMode.DEBOUNCED)
+        return mode.id
     }
 
     suspend fun updateMode(mode: StudyMode) {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val updated = updateStudyMode(listOf(mode), mode, now)
-        modeDao.insertMode(Mappers.modeToEntity(updated[0], ns))
-        dataMutations.signal()
+        modeDao.upsertMode(mode.edited(clock.now()).toEntity(ns))
+        dataMutations.signal(CloudWriteMode.DEBOUNCED)
     }
 
     suspend fun deleteMode(modeId: String) {
-        val ns = namespaceManager.current()
         modeDao.softDeleteMode(ns, modeId, clock.now())
-        dataMutations.signal()
+        dataMutations.signal(CloudWriteMode.IMMEDIATE)
     }
 
     suspend fun resetMode(modeId: String) {
-        val ns = namespaceManager.current()
-        val now = clock.now()
-        val modes = getModes()
-        val updated = resetStudyMode(modes, modeId, now)
-        val mode = updated.find { it.id == modeId } ?: return
-        modeDao.insertMode(Mappers.modeToEntity(mode, ns))
-        dataMutations.signal()
-    }
-
-    suspend fun seedIfEmpty() {
-        val ns = namespaceManager.current()
-        // check + insert w JEDNEJ transakcji — patrz DeckRepository.seedIfEmpty
-        db.withTransaction {
-            if (modeDao.allModes(ns).isEmpty()) {
-                modeDao.insertModes(createSeedModes().map { Mappers.modeToEntity(it, ns) })
-            }
-        }
+        val mode = getMode(modeId) ?: return
+        modeDao.upsertMode(mode.resetToBuiltIn(clock.now()).toEntity(ns))
+        dataMutations.signal(CloudWriteMode.DEBOUNCED)
     }
 }

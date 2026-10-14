@@ -1,56 +1,118 @@
 package com.raycoll.app.ui.browse
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.selectors.CardStats
+import com.raycoll.app.domain.selectors.browseFilter
+import com.raycoll.app.domain.selectors.computeCardStats
+import com.raycoll.app.domain.srs.SrsCardCategory
+import com.raycoll.app.ui.components.UiEvents
+import com.raycoll.app.ui.components.launchSaving
+import com.raycoll.app.ui.navigation.BrowseRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
+
+sealed interface BrowseUiState {
+    data object Loading : BrowseUiState
+
+    /** Talii nie ma (np. usunięta na innym urządzeniu). */
+    data object DeckMissing : BrowseUiState
+
+    data class Ready(
+        val deckName: String,
+        val pageNames: List<String>,
+        val activePageCount: Int,
+        val cards: List<Flashcard>,
+        val counts: CardStats,
+        val category: SrsCardCategory?
+    ) : BrowseUiState
+}
+
+sealed interface BrowseEvent {
+    data object Saved : BrowseEvent
+
+    /** Edytowanej karty już nie ma (usunięta w międzyczasie) — nic nie zapisano. */
+    data object CardMissing : BrowseEvent
+
+    data object SaveFailed : BrowseEvent
+}
 
 @HiltViewModel
-class BrowseViewModel @Inject constructor(
+class BrowseViewModel internal constructor(
+    savedStateHandle: SavedStateHandle,
     private val deckRepository: DeckRepository,
+    /** Gdzie liczy się filtr listy; testy podstawiają wstrzymywany wątek. */
+    filterContext: CoroutineContext
 ) : ViewModel() {
-    private var currentDeckId: String = ""
-    private var collectJob: Job? = null
+    @Inject constructor(savedStateHandle: SavedStateHandle, deckRepository: DeckRepository) :
+        this(savedStateHandle, deckRepository, Dispatchers.Default)
 
-    private val _cards = MutableStateFlow<List<Flashcard>>(emptyList())
-    val cards: StateFlow<List<Flashcard>> = _cards
+    val deckId: String = savedStateHandle.toRoute<BrowseRoute>().deckId
 
-    private val _deck = MutableStateFlow<FlashcardGroup?>(null)
-    val deck: StateFlow<FlashcardGroup?> = _deck
+    private val eventSink = UiEvents<BrowseEvent>()
+    val events: Flow<BrowseEvent> = eventSink.flow
 
-    /** Id świeżo dodanej karty — ekran od razu otwiera jej edycję. */
-    private val _editRequestCardId = MutableStateFlow<String?>(null)
-    val editRequestCardId: StateFlow<String?> = _editRequestCardId
+    private val _search = MutableStateFlow("")
+    val search: StateFlow<String> = _search.asStateFlow()
+    private val category = MutableStateFlow<SrsCardCategory?>(null)
 
-    fun loadDeck(deckId: String) {
-        if (deckId == currentDeckId && collectJob?.isActive == true) return
-        currentDeckId = deckId
-        collectJob?.cancel()
-        collectJob = viewModelScope.launch {
-            deckRepository.cardsForDeck(deckId).collect {
-                _cards.value = it
-                _deck.value = deckRepository.getDeck(deckId)
-            }
+    val uiState: StateFlow<BrowseUiState> = combine(deckRepository.deck(deckId), search, category) {
+            deck,
+            query,
+            selected
+        ->
+        if (deck == null) return@combine BrowseUiState.DeckMissing
+        BrowseUiState.Ready(
+            deckName = deck.name,
+            pageNames = deck.pageNames,
+            activePageCount = deck.activePageCount,
+            cards = browseFilter(deck.cards, query, selected, deck.activePageCount),
+            counts = computeCardStats(deck.cards),
+            category = selected
+        )
+    }
+        .flowOn(filterContext)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BrowseUiState.Loading)
+
+    fun setSearch(query: String) {
+        _search.value = query
+    }
+
+    fun setCategory(value: SrsCardCategory?) {
+        category.value = value
+    }
+
+    fun addCard(pages: List<String>) = write {
+        deckRepository.addCard(deckId, pages)
+        eventSink.send(BrowseEvent.Saved)
+    }
+
+    /** [visiblePages] — nowe widoczne strony; ukryte strony i postęp nauki karty zostają. */
+    fun updateCard(cardId: String, visiblePages: List<String>) = write {
+        if (deckRepository.updateCardPages(cardId, visiblePages)) {
+            eventSink.send(BrowseEvent.Saved)
+        } else {
+            eventSink.send(BrowseEvent.CardMissing)
         }
     }
 
-    fun addCard(deckId: String) {
-        viewModelScope.launch {
-            val pageCount = _deck.value?.activePageCount ?: 2
-            val id = deckRepository.addCard(deckId, List(pageCount) { "" })
-            _editRequestCardId.value = id
-        }
+    fun deleteCard(cardId: String) = write { deckRepository.deleteCard(cardId) }
+
+    private fun write(block: suspend () -> Unit) {
+        viewModelScope.launchSaving(onFailure = { eventSink.send(BrowseEvent.SaveFailed) }, block = block)
     }
-
-    fun consumeEditRequest() { _editRequestCardId.value = null }
-
-    fun updateCard(deckId: String, card: Flashcard) { viewModelScope.launch { deckRepository.updateCard(deckId, card) } }
-    fun deleteCard(deckId: String, cardId: String) { viewModelScope.launch { deckRepository.deleteCard(deckId, cardId) } }
 }

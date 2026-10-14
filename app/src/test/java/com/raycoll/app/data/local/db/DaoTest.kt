@@ -1,7 +1,11 @@
 package com.raycoll.app.data.local.db
 
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.runBlocking
+import com.raycoll.app.domain.model.CardOrder
+import com.raycoll.app.domain.model.StudyFilter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -11,124 +15,203 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
+private const val GUEST = ""
+
+private fun deck(id: String, namespace: String = GUEST, name: String = "Deck $id", activeModeId: String = "classic") =
+    DeckEntity(
+        id = id,
+        namespace = namespace,
+        name = name,
+        activeModeId = activeModeId,
+        studyFilter = StudyFilter.NEW_AND_REVIEW.key,
+        cardOrder = CardOrder.SEQUENTIAL.key,
+        pageNamesJson = "[]",
+        pageLanguagesJson = "[]",
+        activePageCount = 2,
+        updatedAt = 0,
+        deletedAt = null,
+        archivedAt = null
+    )
+
+private fun card(id: String, deckId: String, namespace: String = GUEST) = CardEntity(
+    id = id,
+    namespace = namespace,
+    deckId = deckId,
+    pagesJson = "[\"hello\",\"world\"]",
+    difficulty = 5.0,
+    stability = 0.0,
+    repetitions = 0,
+    state = 0,
+    lastReviewTimestamp = 0,
+    nextReviewTimestamp = 0,
+    contentUpdatedAt = 0,
+    srsUpdatedAt = 0,
+    deletedAt = null
+)
+
+// zwykła Application zamiast RayCollApplication — bez grafu Hilta i synchronizacji w tle
 @RunWith(RobolectricTestRunner::class)
-// Plain Application zamiast @HiltAndroidApp RayCollApplication — inaczej Robolectric
-// bootuje graf Hilt i SyncLifecycle.start na Dispatchers.IO, którego coroutine (seedIfEmpty)
-// przeżywa db.close() i wysypuje kolejny test przez UncaughtExceptionsBeforeTest.
-@Config(application = android.app.Application::class)
 class DaoTest {
 
     private lateinit var db: RayCollDatabase
-    private lateinit var deckDao: DeckDao
-    private lateinit var modeDao: StudyModeDao
-    private lateinit var activityDao: ActivityDao
+    private val deckDao get() = db.deckDao()
+    private val cardDao get() = db.cardDao()
+    private val modeDao get() = db.studyModeDao()
+    private val activityDao get() = db.activityDao()
 
     @Before
     fun setup() {
-        db = RayCollDatabase.createInMemory(ApplicationProvider.getApplicationContext())
-        deckDao = db.deckDao()
-        modeDao = db.studyModeDao()
-        activityDao = db.activityDao()
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), RayCollDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
     }
 
     @After
-    fun teardown() { db.close() }
+    fun teardown() = db.close()
 
     @Test
-    fun `deck round-trip`() = runBlocking {
-        val deck = DeckEntity(id = "d1", namespace = "", name = "Test", activePageCount = 2)
-        deckDao.insertDeck(deck)
-        val loaded = deckDao.getDeck("", "d1")
-        assertNotNull(loaded)
-        assertEquals("Test", loaded!!.name)
+    fun `deck and card round-trip`() = runTest {
+        deckDao.upsertDeck(deck("d1", name = "Test"))
+        cardDao.upsertCard(card("c1", "d1"))
+
+        assertEquals("Test", deckDao.getLiveDeck(GUEST, "d1")?.name)
+        assertEquals(listOf("c1"), cardDao.getLiveCardsOf(GUEST, "d1").map { it.id })
     }
 
     @Test
-    fun `card round-trip`() = runBlocking {
-        val deck = DeckEntity(id = "d1", namespace = "", name = "Test", activePageCount = 2)
-        deckDao.insertDeck(deck)
-        val card = CardEntity(id = "c1", namespace = "", deckId = "d1", pagesJson = "[\"hello\",\"world\"]")
-        deckDao.insertCard(card)
-        val cards = deckDao.getCards("", "d1")
-        assertEquals(1, cards.size)
-        assertEquals("c1", cards[0].id)
+    fun `namespaces are isolated`() = runTest {
+        deckDao.upsertDeck(deck("d1", name = "Guest"))
+        deckDao.upsertDeck(deck("d1", namespace = "user", name = "User copy"))
+
+        assertEquals(listOf("Guest"), deckDao.allDecks(GUEST).map { it.name })
+        assertEquals(listOf("User copy"), deckDao.allDecks("user").map { it.name })
     }
 
     @Test
-    fun `namespace isolation`() = runBlocking {
-        val deck1 = DeckEntity(id = "d1", namespace = "", name = "Guest Deck")
-        val deck2 = DeckEntity(id = "d2", namespace = "user123", name = "User Deck")
-        deckDao.insertDeck(deck1)
-        deckDao.insertDeck(deck2)
-        val guestDecks = deckDao.allDecks("")
-        val userDecks = deckDao.allDecks("user123")
-        assertEquals(1, guestDecks.size)
-        assertEquals(1, userDecks.size)
-        assertEquals("Guest Deck", guestDecks[0].name)
-        assertEquals("User Deck", userDecks[0].name)
+    fun `soft-deleted deck leaves the active list but stays as tombstone`() = runTest {
+        deckDao.upsertDeck(deck("d1"))
+        deckDao.softDeleteDeck(GUEST, "d1", 1000L)
+
+        assertTrue(deckDao.activeDecks(GUEST).first().isEmpty())
+        assertEquals(1000L, deckDao.allDecks(GUEST).single().deletedAt)
     }
 
     @Test
-    fun `soft delete hides from active`() = runBlocking {
-        deckDao.insertDeck(DeckEntity(id = "d1", namespace = "", name = "Test"))
-        deckDao.softDeleteDeck("", "d1", 1000L)
-        val active = deckDao.activeDecks("")
-        // Flow won't emit in test without collection; check allDecks instead
-        val all = deckDao.allDecks("")
-        assertEquals(1, all.size)
-        assertNotNull(all[0].deletedAt)
+    fun `soft-deleted card is hidden from live cards but kept for sync`() = runTest {
+        deckDao.upsertDeck(deck("d1"))
+        cardDao.upsertCards(listOf(card("c1", "d1"), card("c2", "d1")))
+        cardDao.softDeleteCard(GUEST, "c1", 1000L)
+
+        assertEquals(listOf("c2"), cardDao.liveCards(GUEST).first().map { it.id })
+        assertEquals(listOf("c1", "c2"), cardDao.allCards(GUEST).map { it.id })
     }
 
     @Test
-    fun `cascade delete removes cards when deck deleted`() = runBlocking {
-        deckDao.insertDeck(DeckEntity(id = "d1", namespace = "", name = "Test"))
-        deckDao.insertCard(CardEntity(id = "c1", namespace = "", deckId = "d1"))
-        deckDao.insertCard(CardEntity(id = "c2", namespace = "", deckId = "d1"))
-        val cards = deckDao.getCards("", "d1")
-        assertEquals(2, cards.size)
-        // Soft delete deck (cascade is on hard delete, but soft delete just sets flag)
-        deckDao.softDeleteDeck("", "d1", 1000L)
-        val stillThere = deckDao.getCards("", "d1")
-        assertEquals(2, stillThere.size)
+    fun `screen reads skip a deleted deck while the technical snapshot keeps its tombstone`() = runTest {
+        deckDao.upsertDeck(deck("d1"))
+        cardDao.upsertCard(card("c1", "d1"))
+        deckDao.softDeleteDeck(GUEST, "d1", 1000L)
+
+        assertNull(deckDao.getLiveDeck(GUEST, "d1"))
+        assertNull(deckDao.liveDeck(GUEST, "d1").first())
+        assertEquals(1000L, deckDao.allDecks(GUEST).single().deletedAt)
+        assertEquals(listOf("c1"), cardDao.allCards(GUEST).map { it.id })
     }
 
     @Test
-    fun `archive and restore`() = runBlocking {
-        deckDao.insertDeck(DeckEntity(id = "d1", namespace = "", name = "Test"))
-        deckDao.archiveDeck("", "d1", 1000L)
-        val archived = deckDao.allDecks("")[0]
-        assertNotNull(archived.archivedAt)
-        deckDao.restoreDeck("", "d1", 2000L)
-        val restored = deckDao.allDecks("")[0]
-        assertNull(restored.archivedAt)
+    fun `archived deck is still readable for the archive screen`() = runTest {
+        deckDao.upsertDeck(deck("d1"))
+        deckDao.archiveDeck(GUEST, "d1", 1000L)
+        assertEquals(1000L, deckDao.getLiveDeck(GUEST, "d1")?.archivedAt)
     }
 
     @Test
-    fun `study mode round-trip`() = runBlocking {
-        modeDao.insertMode(StudyModeEntity(id = "m1", namespace = "", name = "Custom", stepsJson = "[]"))
-        val modes = modeDao.allModes("")
-        assertEquals(1, modes.size)
-        assertEquals("Custom", modes[0].name)
+    fun `live cards skip cards of deleted decks but keep archived ones`() = runTest {
+        deckDao.upsertDeck(deck("active"))
+        deckDao.upsertDeck(deck("archived"))
+        deckDao.upsertDeck(deck("deleted"))
+        deckDao.upsertDeck(deck("other-ns", namespace = "user"))
+        cardDao.upsertCards(
+            listOf(card("a1", "active"), card("r1", "archived"), card("x1", "deleted"), card("x2", "deleted"))
+        )
+        cardDao.upsertCard(card("u1", "other-ns", namespace = "user"))
+        deckDao.archiveDeck(GUEST, "archived", 1000L)
+        deckDao.softDeleteDeck(GUEST, "deleted", 1000L)
+
+        assertEquals(listOf("a1", "r1"), cardDao.liveCards(GUEST).first().map { it.id })
+        // karty usuniętej talii nie dostają własnego tombstone'a — snapshot synchronizacji bez zmian
+        assertEquals(listOf("a1", "r1", "x1", "x2"), cardDao.allCards(GUEST).map { it.id })
+        assertTrue(cardDao.allCards(GUEST).all { it.deletedAt == null })
     }
 
     @Test
-    fun `activity increment`() = runBlocking {
-        activityDao.upsertActivity(ActivityDayEntity(dayKey = "2024-01-15", namespace = "", count = 0))
-        activityDao.incrementActivity("", "2024-01-15")
-        activityDao.incrementActivity("", "2024-01-15")
-        val all = activityDao.allActivity("")
-        assertEquals(2, all[0].count)
+    fun `point updates change only their own columns`() = runTest {
+        deckDao.upsertDeck(deck("d1", name = "Old", activeModeId = "classic"))
+        assertEquals(1, deckDao.updateName(GUEST, "d1", "New", 10L))
+        assertEquals(1, deckDao.updateActiveMode(GUEST, "d1", "listen-speak", 20L))
+        val stored = deckDao.getLiveDeck(GUEST, "d1")!!
+        assertEquals("New", stored.name)
+        assertEquals("listen-speak", stored.activeModeId)
+        assertEquals(20L, stored.updatedAt)
+        deckDao.softDeleteDeck(GUEST, "d1", 30L)
+        assertEquals("usunięta talia nie jest edytowana", 0, deckDao.updateName(GUEST, "d1", "Ghost", 40L))
     }
 
     @Test
-    fun `copy guest to user preserves both`() = runBlocking {
-        deckDao.insertDeck(DeckEntity(id = "d1", namespace = "", name = "Guest"))
-        deckDao.insertDeck(DeckEntity(id = "d1", namespace = "user123", name = "User Copy"))
-        val guestDecks = deckDao.allDecks("")
-        val userDecks = deckDao.allDecks("user123")
-        assertEquals(1, guestDecks.size)
-        assertEquals(1, userDecks.size)
+    fun `deleting decks removes their cards`() = runTest {
+        deckDao.upsertDeck(deck("d1"))
+        cardDao.upsertCards(listOf(card("c1", "d1"), card("c2", "d1")))
+
+        deckDao.deleteAllDecks(GUEST)
+
+        assertTrue(cardDao.allCards(GUEST).isEmpty())
+    }
+
+    @Test
+    fun `archive and restore`() = runTest {
+        deckDao.upsertDeck(deck("d1"))
+        deckDao.archiveDeck(GUEST, "d1", 1000L)
+        assertNotNull(deckDao.getLiveDeck(GUEST, "d1")?.archivedAt)
+        assertEquals(listOf("d1"), deckDao.archivedDecks(GUEST).first().map { it.id })
+
+        deckDao.restoreDeck(GUEST, "d1", 2000L)
+        assertNull(deckDao.getLiveDeck(GUEST, "d1")?.archivedAt)
+    }
+
+    @Test
+    fun `study mode round-trip`() = runTest {
+        modeDao.upsertMode(
+            StudyModeEntity(
+                "m1",
+                GUEST,
+                "Custom",
+                "[]",
+                isBuiltIn = false,
+                builtInSourceId = null,
+                updatedAt = 0,
+                deletedAt = null
+            )
+        )
+        assertEquals("Custom", modeDao.getMode(GUEST, "m1")?.name)
+    }
+
+    @Test
+    fun `activity increment creates the day on first review`() = runTest {
+        activityDao.incrementActivity(GUEST, "2024-01-15")
+        activityDao.incrementActivity(GUEST, "2024-01-15")
+
+        assertEquals(2, activityDao.allActivity(GUEST).single().count)
+    }
+
+    @Test
+    fun `editing a deck keeps its position in the list`() = runTest {
+        listOf("d1", "d2", "d3").forEach { deckDao.upsertDeck(deck(it)) }
+
+        deckDao.upsertDeck(deck("d1", activeModeId = "custom"))
+
+        val active = deckDao.activeDecks(GUEST).first()
+        assertEquals(listOf("d1", "d2", "d3"), active.map { it.id })
+        assertEquals("custom", active.first().activeModeId)
     }
 }

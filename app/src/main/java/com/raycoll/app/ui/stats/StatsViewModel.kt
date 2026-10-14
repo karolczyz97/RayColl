@@ -1,58 +1,59 @@
 package com.raycoll.app.ui.stats
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.core.Clock
+import com.raycoll.app.core.LocalDates
+import com.raycoll.app.core.minuteTicks
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.domain.selectors.computeCardStats
 import com.raycoll.app.domain.selectors.computeStreak
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
-data class DeckSummary(
-    val id: String,
-    val name: String,
-    val stats: CardStats,
-)
+@Immutable
+data class DeckStats(val id: String, val name: String, val stats: CardStats)
 
-data class StatsUiState(
-    val streak: Int = 0,
-    val heatmap: Map<String, Int> = emptyMap(),
-    val totalCards: Int = 0,
-    val newCount: Int = 0,
-    val learningCount: Int = 0,
-    val reviewCount: Int = 0,
-    val masteredCount: Int = 0,
-    val decks: List<DeckSummary> = emptyList(),
-)
+sealed interface StatsUiState {
+    data object Loading : StatsUiState
+
+    data class Ready(
+        val today: LocalDate,
+        val streak: Int,
+        val heatmap: Map<String, Int>,
+        val allCards: CardStats,
+        val decks: List<DeckStats>
+    ) : StatsUiState
+}
 
 @HiltViewModel
-class StatsViewModel @Inject constructor(
-    deckRepository: DeckRepository,
-    clock: Clock,
-) : ViewModel() {
-    val stats: StateFlow<StatsUiState> = combine(
+class StatsViewModel @Inject constructor(deckRepository: DeckRepository, clock: Clock) : ViewModel() {
+    val uiState: StateFlow<StatsUiState> = combine(
         deckRepository.activeDecks(),
-        deckRepository.activityHeatmapFlow(),
-    ) { decks, heatmap ->
-        val allCards = decks.flatMap { it.cards }
-        val cardStats = computeCardStats(allCards)
-        StatsUiState(
-            // czas zawsze przez Clock (reguła projektu; System.currentTimeMillis
-            // psuł testowalność streaka)
-            streak = computeStreak(heatmap, clock.now()),
+        deckRepository.activityHeatmap(),
+        clock.minuteTicks().flowOn(Dispatchers.Main.immediate)
+    ) {
+            decks,
+            heatmap,
+            now
+        ->
+        StatsUiState.Ready(
+            today = LocalDates.localDate(now),
+            streak = computeStreak(heatmap, now),
             heatmap = heatmap,
-            totalCards = cardStats.total,
-            newCount = cardStats.newCount,
-            learningCount = cardStats.learning,
-            reviewCount = cardStats.review,
-            masteredCount = cardStats.mastered,
-            decks = decks.map { DeckSummary(it.id, it.name, computeCardStats(it.cards)) },
+            allCards = computeCardStats(decks.flatMap { it.cards }),
+            decks = decks.map { DeckStats(it.id, it.name, computeCardStats(it.cards)) }
         )
-    }.stateIn(viewModelScope, SharingStarted.Lazily, StatsUiState())
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState.Loading)
 }

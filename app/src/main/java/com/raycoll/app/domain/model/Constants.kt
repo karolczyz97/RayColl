@@ -1,5 +1,13 @@
 package com.raycoll.app.domain.model
 
+import kotlin.math.pow
+
+/** Id wbudowanego trybu "klasycznego" — domyślny tryb nowej talii. */
+const val DEFAULT_MODE_ID = "classic"
+
+/** Język strony, gdy talia nie ma go zapisanego. */
+const val DEFAULT_PAGE_LANGUAGE = "en-US"
+
 object PageLimits {
     const val MIN_PAGE_COUNT = 2
     const val MAX_VISIBLE_PAGE_COUNT = 5
@@ -20,8 +28,15 @@ object SrsConstants {
     const val MAX_INTERVAL_DAYS = 3650.0
     const val MASTERED_MIN_REPS = 3
     const val DAY_MS = 86_400_000L
+}
 
-    private fun Double.pow(exp: Double): Double = Math.pow(this, exp)
+object Ratings {
+    const val AGAIN = 1
+    const val HARD = 2
+    const val GOOD = 3
+    const val EASY = 4
+    const val MIN = 1
+    const val MAX = EASY
 }
 
 object MatchConstants {
@@ -42,39 +57,27 @@ object StudyConstants {
     const val BG_WAIT_SUBSTITUTE_MIN = 1500L
     const val BG_WAIT_SUBSTITUTE_MAX = 15_000L
     const val BG_WAIT_MS_PER_CHAR = 120
-    const val CARD_FONT_TIER_1 = 70
-    const val CARD_FONT_TIER_2 = 140
-    const val CARD_FONT_TIER_3 = 260
-    const val ARCHIVE_RETENTION_DAYS = 14
-    const val ARCHIVE_PURGE_INTERVAL_MS = 3_600_000L
     const val STREAK_MAX_DAYS = 365
-    const val TTS_RATE_MIN = 0.5f
-    const val TTS_RATE_MAX = 2.0f
-    const val TTS_RATE_DEFAULT = 1.0f
     const val STEP_DEFAULT_THRESHOLD = 70
-    const val STEP_DEFAULT_WAIT_MS = 500
-    const val STEP_DEFAULT_RATING = 3
-    const val MAX_PAUSE_MULTIPLIER = 5
-    const val RATING_MIN = 1
-    const val RATING_MAX = 4
+    const val STEP_DEFAULT_WAIT_MS = 500L
+    const val MAX_PAUSE_MULTIPLIER = 5.0
+}
+
+object TtsRate {
+    const val MIN = 0.5f
+    const val MAX = 2.0f
+    const val DEFAULT = 1.0f
+
+    fun clamp(rate: Float): Float = rate.coerceIn(MIN, MAX)
 }
 
 object ImportConstants {
-    val SEPARATORS = listOf("\t", ";", ",", "|")
-    const val SEPARATOR_DEFAULT = ";"
     const val SEP_DETECT_ROWS = 5
     const val HEADER_CONFIDENCE_MIN = 0.5
     val LANG_CODE_REGEX = Regex("^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$")
-    const val BACKUP_FILENAME_PATTERN = "raycoll-backup-yyyy-MM-dd-HH-mm.json"
 }
 
 object ArchiveConstants {
     const val RETENTION_DAYS = 14
-    val DELETE_TOKENS = mapOf(
-        "pl" to "USUŃ",
-        "en" to "DELETE",
-        "de" to "LÖSCHEN",
-        "es" to "BORRAR",
-        "it" to "ELIMINA",
-    )
+    const val RETENTION_MS = RETENTION_DAYS * SrsConstants.DAY_MS
 }

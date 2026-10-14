@@ -2,7 +2,6 @@ package com.raycoll.app.data.local.prefs
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -10,9 +9,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
-/** Port testu preferencji z "RayColl - Kopie" — defaulty + zapis + clamp ttsRate. */
-@RunWith(AndroidJUnit4::class)
+/** Preferencje urządzenia: wartości domyślne, zapis i zakres szybkości mowy. */
+@RunWith(RobolectricTestRunner::class)
 class UserPreferencesRepositoryTest {
 
     @Test
@@ -20,25 +20,23 @@ class UserPreferencesRepositoryTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = UserPreferencesRepository(context)
 
-        // defaulty (sekcja 5 planu)
+        // wartości domyślne
         val defaults = repo.preferences.first()
-        assertEquals("system", defaults.themePref)
+        assertEquals(ThemePref.SYSTEM, defaults.theme)
         assertTrue(defaults.useSystemColors)
         assertEquals(1.0f, defaults.ttsRate, 0.001f)
-        assertFalse(defaults.backgroundPlayback)
+        assertTrue(defaults.backgroundPlayback)
 
         // zapisy
-        repo.setThemePref("dark")
+        repo.setTheme(ThemePref.DARK)
         repo.setUseSystemColors(false)
-        repo.setUiLanguage("en")
-        repo.setBackgroundPlayback(true)
+        repo.setBackgroundPlayback(false)
         repo.setTtsRate(1.5f)
 
         var prefs = repo.preferences.first()
-        assertEquals("dark", prefs.themePref)
+        assertEquals(ThemePref.DARK, prefs.theme)
         assertFalse(prefs.useSystemColors)
-        assertEquals("en", prefs.uiLanguage)
-        assertTrue(prefs.backgroundPlayback)
+        assertFalse(prefs.backgroundPlayback)
         assertEquals(1.5f, prefs.ttsRate, 0.001f)
 
         // clamp 0.5..2.0

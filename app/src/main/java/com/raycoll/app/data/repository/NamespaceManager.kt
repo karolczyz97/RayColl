@@ -1,17 +1,31 @@
 package com.raycoll.app.data.repository
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
+/**
+ * Która przestrzeń danych lokalnych jest aktywna: "" = gość, inaczej uid konta.
+ * Repozytoria czytają i piszą tylko w aktywnej przestrzeni; ekrany obserwują [active].
+ */
 @Singleton
 class NamespaceManager @Inject constructor() {
-    private val _activeNamespace = MutableStateFlow("")
-    val activeNamespace: StateFlow<String> = _activeNamespace.asStateFlow()
+    private val _active = MutableStateFlow(GUEST)
+    val active: StateFlow<String> = _active.asStateFlow()
 
-    fun setNamespace(ns: String) { _activeNamespace.value = ns }
-    fun resetToGuest() { _activeNamespace.value = "" }
-    fun current(): String = _activeNamespace.value
+    fun current(): String = _active.value
+
+    fun switchTo(uid: String) {
+        _active.value = uid
+    }
+
+    fun switchToGuest() {
+        _active.value = GUEST
+    }
+
+    companion object {
+        const val GUEST = ""
+    }
 }

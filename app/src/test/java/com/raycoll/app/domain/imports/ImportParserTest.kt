@@ -2,146 +2,153 @@ package com.raycoll.app.domain.imports
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Port testów parsera importu z "RayColl - Kopie" i chudej wersji (spec = csv.ts / headerDetection.ts). */
 class ImportParserTest {
-
     @Test
-    fun `detectSeparator picks best candidate, default semicolon`() {
-        assertEquals("tab", detectSeparator("front\tback\nhello\tczesc"))
-        assertEquals("comma", detectSeparator("﻿front,back\r\nhello,czesc"))
-        assertEquals("semicolon", detectSeparator("a;b;c\nd,e,f\ng;h;i"))
-        assertEquals("semicolon", detectSeparator("hello\nworld"))
-        assertEquals("semicolon", detectSeparator("a;b;c\n1;2;3\nx;y;z"))
-        assertEquals("tab", detectSeparator("a\tb\tc\n1\t2\t3"))
-        assertEquals("semicolon", detectSeparator("\"a;b\"\n1;2\n3;4"))
+    fun `quotes within unquoted cells do not absorb following rows`() {
+        assertEquals(
+            listOf(listOf("12\" pizza", "b"), listOf("c", "d")),
+            parseRows("12\" pizza;b\nc;d", CsvSeparator.SEMICOLON)
+        )
+        assertEquals(listOf(listOf("helloworld", "b")), parseRows("\"hello\"world;b", CsvSeparator.SEMICOLON))
+        assertEquals(listOf(listOf("hello;world", "b")), parseRows("  \"hello;world\";b", CsvSeparator.SEMICOLON))
     }
 
     @Test
-    fun `parseCsv handles quotes, multiline cells, multichar separators and padding`() {
+    fun `detectSeparator picks the most consistent candidate and defaults to semicolon`() {
+        assertEquals(CsvSeparator.TAB, detectSeparator("front\tback\nhello\tczesc"))
+        assertEquals(CsvSeparator.COMMA, detectSeparator("\uFEFFfront,back\r\nhello,czesc"))
+        assertEquals(CsvSeparator.SEMICOLON, detectSeparator("a;b;c\nd,e,f\ng;h;i"))
+        assertEquals(CsvSeparator.SEMICOLON, detectSeparator("hello\nworld"))
+        assertEquals(CsvSeparator.SEMICOLON, detectSeparator("\"a;b\"\n1;2\n3;4"))
+        assertEquals(CsvSeparator.PIPE, detectSeparator("front|back\nhello|czesc"))
+    }
+
+    @Test
+    fun `parseRows handles BOM CRLF quotes and multiline cells`() {
         assertEquals(
             listOf(listOf("front", "back"), listOf("hello", "czesc")),
-            parseCsv("front,back\nhello,czesc", "comma", 2)
+            parseRows("front,back\nhello,czesc", CsvSeparator.COMMA)
         )
-        // BOM + CRLF + podwojony cudzysłów w środku
         assertEquals(
             listOf(listOf("front", "back"), listOf("he said \"hi\"", "czesc")),
-            parseCsv("﻿front;back\r\n\"he said \"\"hi\"\"\";czesc", "semicolon", 2)
+            parseRows("\uFEFFfront;back\r\n\"he said \"\"hi\"\"\";czesc", CsvSeparator.SEMICOLON)
         )
-        // newline w komórce w cudzysłowie
         assertEquals(
             listOf(listOf("line1\nline2", "translation"), listOf("next", "row")),
-            parseCsv("\"line1\nline2\";translation\nnext;row", "semicolon", 2)
+            parseRows("\"line1\nline2\";translation\nnext;row", CsvSeparator.SEMICOLON)
         )
-        // separator w cudzysłowie
         assertEquals(
             listOf(listOf("has;semicolon", "also;here"), listOf("foo", "bar")),
-            parseCsv("\"has;semicolon\";\"also;here\"\nfoo;bar", "semicolon", 2)
+            parseRows("\"has;semicolon\";\"also;here\"\nfoo;bar", CsvSeparator.SEMICOLON)
         )
-        // nadmiar kolumn zostaje
-        assertEquals(listOf(listOf("a", "b", "c", "d")), parseCsv("a;b;c;d", "semicolon", 2))
-        // padding do pageCount
-        assertEquals(listOf(listOf("a", "b", "", "")), parseCsv("a;b", "semicolon", 4))
-        // wiersze o różnej liczbie kolumn
-        assertEquals(listOf(listOf("a", "b"), listOf("c", "d", "e")), parseCsv("a;b\nc;d;e", "semicolon", 2))
-        // separator wieloznakowy
+    }
+
+    @Test
+    fun `parseRows retains extra columns and omits blank rows`() {
+        assertEquals(listOf(listOf("a", "b", "c", "d")), parseRows("a;b;c;d", CsvSeparator.SEMICOLON))
         assertEquals(
-            listOf(listOf("front", "back"), listOf("hello", "czesc")),
-            parseCsv("front::back\nhello::czesc", "::", 2)
+            listOf(listOf("a", "b"), listOf("c", "d", "e")),
+            parseRows("a;b\n ; \nc;d;e", CsvSeparator.SEMICOLON)
         )
-        assertEquals(listOf(listOf("a:b", "c:d")), parseCsv("a:b::c:d", "::", 2))
+        assertEquals(listOf(listOf("a", "b")), parseRows("a|b", CsvSeparator.PIPE))
     }
 
     @Test
-    fun `HeaderDetector detectPageCount uses max columns of data rows, min 2`() {
-        assertEquals(2, HeaderDetector.detectPageCount("front;back\nexample;translation", ";"))
-        assertEquals(5, HeaderDetector.detectPageCount("h1;h2\n1;2;3;4;5", ";", skipFirstRow = true))
-        assertEquals(5, HeaderDetector.detectPageCount("1;2;3;4;5", ";"))
-        assertEquals(10, HeaderDetector.detectPageCount("h1;h2\n1;2;3;4;5;6;7;8;9;0", ";", skipFirstRow = true))
-        assertEquals(21, HeaderDetector.detectPageCount("1;2;3;4;5;6;7;8;9;0;11;12;13;14;15;16;17;18;19;20;21", ";"))
-        assertEquals(3, HeaderDetector.detectPageCount("a;\"line\nbreak\";c\nd;e;f", ";"))
+    fun `HeaderDetector uses the widest data row with minimum two pages`() {
+        fun rows(text: String) = parseRows(text, CsvSeparator.SEMICOLON)
+        assertEquals(2, HeaderDetector.detectPageCount(rows("front;back\nexample;translation")))
+        assertEquals(5, HeaderDetector.detectPageCount(rows("h1;h2\n1;2;3;4;5"), skipFirstRow = true))
+        assertEquals(5, HeaderDetector.detectPageCount(rows("1;2;3;4;5")))
+        assertEquals(21, HeaderDetector.detectPageCount(rows((1..21).joinToString(";"))))
+        assertEquals(3, HeaderDetector.detectPageCount(rows("a;\"line\nbreak\";c\nd;e;f")))
     }
 
     @Test
-    fun `HeaderDetector detectFirstRowHeader scores keyword rows`() {
-        assertTrue(HeaderDetector.detectFirstRowHeader("Phrase;Translation;Example\nhello;czesc;example", "semicolon", 3).isLikelyHeader)
-        assertFalse(HeaderDetector.detectFirstRowHeader("hello;czesc\nbye;pa", "semicolon", 2).isLikelyHeader)
-        assertTrue(HeaderDetector.detectFirstRowHeader("word;translation\nhello;cześć", "semicolon").isLikelyHeader)
+    fun `HeaderDetector recognizes labels rather than ordinary values`() {
+        fun rows(text: String) = parseRows(text, CsvSeparator.SEMICOLON)
+        assertTrue(
+            HeaderDetector.looksLikeHeaderRow(rows("Phrase;Translation;Example\nhello;czesc;example"))
+        )
+        assertFalse(HeaderDetector.looksLikeHeaderRow(rows("hello;czesc\nbye;pa")))
+        assertTrue(HeaderDetector.looksLikeHeaderRow(rows("word;translation\nhello;cześć")))
     }
 
     @Test
-    fun `normalizeImportCell trims`() {
-        assertEquals("hello", normalizeImportCell(" hello "))
-        assertEquals("", normalizeImportCell(""))
-        assertEquals("a  b", normalizeImportCell("  a  b  "))
-        assertEquals("no_space", normalizeImportCell("no_space"))
+    fun `parser trims cells without collapsing internal spaces`() {
+        assertEquals(
+            listOf(listOf("hello", "a  b", "no_space", "")),
+            parseRows(" hello ;  a  b  ;no_space;", CsvSeparator.SEMICOLON)
+        )
     }
 
     @Test
-    fun `LanguageDetector detects language from header tokens`() {
-        assertEquals("en-US", LanguageDetector.detectLangFromHeader("translation"))
-        assertEquals("pl-PL", LanguageDetector.detectLangFromHeader("słowo"))
-        assertEquals("en-US", LanguageDetector.detectLangFromHeader("word"))
-        assertEquals("en-US", LanguageDetector.detectLangFromHeader("phrase"))
-        assertEquals("es-ES", LanguageDetector.detectLangFromHeader("palabra"))
-        assertEquals("de-DE", LanguageDetector.detectLangFromHeader("ubersetzung"))
-        assertEquals("it-IT", LanguageDetector.detectLangFromHeader("it"))
-        assertEquals("en-US", LanguageDetector.detectLangFromHeader("cokolwiek innego"))
+    fun `encoded edited cells round trip through every supported separator`() {
+        val cells = listOf("semi;tab\tcomma,pipe|", "he said \"hi\"", "line1\nline2", "")
+        CsvSeparator.entries.forEach { separator ->
+            val text = cells.joinToString(separator.char.toString()) { encodeCell(it, separator) }
+            assertEquals(listOf(cells), parseRows(text, separator))
+        }
     }
 
     @Test
-    fun `validateImportPayload rejects bad payloads and accepts valid`() {
+    fun `LanguageDetector recognizes translated labels and language codes`() {
+        mapOf(
+            "translation" to "en-US",
+            "Polish translation" to "pl-PL",
+            "German" to "de-DE",
+            "German fraza" to "de-DE",
+            "Spanish example" to "es-ES",
+            "Italian word" to "it-IT",
+            "słowo" to "pl-PL",
+            "word" to "en-US",
+            "phrase" to "en-US",
+            "palabra" to "es-ES",
+            "ubersetzung" to "de-DE",
+            "it" to "it-IT",
+            "cokolwiek innego" to "en-US"
+        ).forEach { (header, language) ->
+            assertEquals(language, LanguageDetector.detectLanguage(header))
+        }
+    }
+
+    @Test
+    fun `validation returns typed problems and accepts normalized partial rows`() {
         fun payload(
             name: String = "Test",
             languages: List<String> = listOf("en-US", "pl-PL"),
-            pageNames: List<String> = listOf("A", "B"),
-            cards: List<List<String>> = listOf(listOf("a", "b")),
-        ) = ImportPayload(deckName = name, pageNames = pageNames, pageLanguages = languages, cards = cards)
-
-        // poprawny — nie rzuca
-        validateImportPayload(payload())
-
-        // pusty język (nie pasuje do LANG_CODE_REGEX)
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(languages = listOf("en-US", "")))
-        }
-        // liczba języków != liczba stron
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(languages = listOf("en-US"), pageNames = listOf("A", "B", "C"), cards = listOf(listOf("a", "b", "c"))))
-        }
-        // pusta nazwa talii
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(name = "   "))
-        }
-        // niepoprawny tag języka
-        assertThrows(ImportValidationException::class.java) {
+            names: List<String> = listOf("A", "B"),
+            cards: List<List<String>> = listOf(listOf("a", "b"))
+        ) = ImportPayload(name, names, languages, cards)
+        assertNull(validateImportPayload(payload()))
+        assertEquals(ImportProblem.InvalidLanguage(""), validateImportPayload(payload(languages = listOf("en-US", ""))))
+        assertEquals(ImportProblem.InvalidPageCount, validateImportPayload(payload(languages = listOf("en-US"))))
+        assertEquals(ImportProblem.DeckNameRequired, validateImportPayload(payload(name = "   ")))
+        assertEquals(
+            ImportProblem.InvalidLanguage("not a lang"),
             validateImportPayload(payload(languages = listOf("not a lang", "pl-PL")))
-        }
-        // karta z mniejszą liczbą pól niż stron
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(cards = listOf(listOf("hello"))))
-        }
-        // wiersz całkiem pusty
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(cards = listOf(listOf("", " "))))
-        }
-        // brak kart
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(cards = emptyList()))
-        }
-        // za mało stron (< 2)
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(languages = listOf("en-US"), pageNames = listOf("Only"), cards = listOf(listOf("one"))))
-        }
-        // za dużo stron (> 20)
-        val manyNames = (1..21).map { "Page $it" }
-        val manyLangs = (1..21).map { "en-US" }
-        val manyCardPages = (1..21).map { "data$it" }
-        assertThrows(ImportValidationException::class.java) {
-            validateImportPayload(payload(languages = manyLangs, pageNames = manyNames, cards = listOf(manyCardPages)))
-        }
+        )
+        assertNull(validateImportPayload(payload(cards = listOf(listOf("hello", "")))))
+        assertEquals(ImportProblem.EmptyRow(1), validateImportPayload(payload(cards = listOf(listOf("", " ")))))
+        assertEquals(ImportProblem.NoCards, validateImportPayload(payload(cards = emptyList())))
+        assertEquals(
+            ImportProblem.InvalidPageCount,
+            validateImportPayload(payload(languages = listOf("en-US"), names = listOf("Only")))
+        )
+        assertEquals(
+            ImportProblem.InvalidPageCount,
+            validateImportPayload(
+                payload(
+                    languages = List(21) {
+                        "en-US"
+                    },
+                    names = List(21) { "Page $it" },
+                    cards = listOf(List(21) { "data$it" })
+                )
+            )
+        )
     }
 }

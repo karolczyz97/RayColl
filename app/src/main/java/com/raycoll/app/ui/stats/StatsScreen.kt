@@ -1,114 +1,149 @@
 package com.raycoll.app.ui.stats
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
-import com.raycoll.app.ui.components.SegmentedProgressBar
-import java.time.LocalDate
+import com.raycoll.app.domain.selectors.CardStats
+import com.raycoll.app.ui.components.CardStatsBar
+import com.raycoll.app.ui.components.LoadingState
+import com.raycoll.app.ui.components.RayCollCard
+import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.theme.LocalSrsColors
+import com.raycoll.app.ui.theme.Spacing
 
-private const val HEATMAP_DAYS = 140
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(onBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel()) {
-    val stats by viewModel.stats.collectAsStateWithLifecycle(StatsUiState())
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.stats_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) } }) }) { padding ->
-        LazyColumn(Modifier.padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                Text(stringResource(R.string.stats_heatmap_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-                ActivityHeatmap(stats.heatmap)
-            }
-            item {
-                Text(stringResource(R.string.stats_streak) + ": ${stats.streak}", style = MaterialTheme.typography.titleLarge)
-            }
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.stats_cards_title) + ": ${stats.totalCards}", style = MaterialTheme.typography.bodyLarge)
-                        Text(stringResource(R.string.srs_badge_new) + ": ${stats.newCount}", style = MaterialTheme.typography.bodyMedium)
-                        Text(stringResource(R.string.srs_badge_learning) + ": ${stats.learningCount}", style = MaterialTheme.typography.bodyMedium)
-                        Text(stringResource(R.string.srs_badge_review) + ": ${stats.reviewCount}", style = MaterialTheme.typography.bodyMedium)
-                        Text(stringResource(R.string.srs_badge_mastered) + ": ${stats.masteredCount}", style = MaterialTheme.typography.bodyMedium)
+    ScreenScaffold(title = stringResource(R.string.stats_title), onBack = onBack) { padding ->
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+        when (val state = uiState) {
+            StatsUiState.Loading -> LoadingState(contentModifier)
+
+            is StatsUiState.Ready -> LazyColumn(
+                modifier = contentModifier,
+                contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.m)
+            ) {
+                item(key = "streak") { StreakCard(state.streak) }
+                item(key = "heatmap") {
+                    val days = heatmapDaysShown(state.today)
+                    SectionCard(pluralStringResource(R.plurals.stats_heatmap_title, days, days)) {
+                        ActivityHeatmap(state.heatmap, state.streak, state.today)
                     }
                 }
-            }
-            items(stats.decks, key = { it.id }) { deck ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(deck.name, style = MaterialTheme.typography.titleMedium)
-                        SegmentedProgressBar(deck.stats, Modifier.padding(top = 8.dp))
+                item(key = "distribution") {
+                    SectionCard(stringResource(R.string.stats_cards_total, state.allCards.total)) {
+                        SrsDistribution(state.allCards)
                     }
                 }
+                items(state.decks, key = { it.id }) { deck ->
+                    SectionCard(deck.name) { CardStatsBar(deck.stats) }
+                }
             }
-            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }
 
-/** Siatka aktywności: HEATMAP_DAYS dni w kolumnach po 7; intensywność wg liczby ocen; dziś wyróżnione. */
 @Composable
-private fun ActivityHeatmap(heatmap: Map<String, Int>) {
-    val today = remember { LocalDate.now() }
-    val weeks = HEATMAP_DAYS / 7
-    val start = remember(today) { today.minusDays((HEATMAP_DAYS - 1).toLong()) }
-    val base = MaterialTheme.colorScheme.primary
-    val empty = MaterialTheme.colorScheme.surfaceVariant
-
-    Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        for (week in 0 until weeks) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                for (dayOfWeek in 0 until 7) {
-                    val date = start.plusDays((week * 7 + dayOfWeek).toLong())
-                    if (date.isAfter(today)) continue
-                    val count = heatmap[date.toString()] ?: 0
-                    val color = when {
-                        count <= 0 -> empty
-                        count <= 2 -> base.copy(alpha = 0.35f)
-                        count <= 5 -> base.copy(alpha = 0.65f)
-                        else -> base
-                    }
-                    val cell = Modifier
-                        .size(14.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(color)
-                    androidx.compose.foundation.layout.Box(
-                        if (date == today) cell.border(1.5.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(3.dp)) else cell
+private fun StreakCard(streak: Int) {
+    RayCollCard(Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.primaryContainer) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.l),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    stringResource(R.string.stats_streak),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    pluralStringResource(R.plurals.stats_streak_days, streak, streak),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                modifier = Modifier.size(52.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.LocalFireDepartment,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SectionCard(title: String, content: @Composable () -> Unit) {
+    RayCollCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SrsDistribution(stats: CardStats) {
+    val srs = LocalSrsColors.current
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        SrsStatItem(stringResource(R.string.srs_badge_new), stats.newCount, srs.newFg, srs.newBg)
+        SrsStatItem(stringResource(R.string.srs_badge_learning), stats.learning, srs.learningFg, srs.learningBg)
+        SrsStatItem(stringResource(R.string.srs_badge_review), stats.review, srs.reviewFg, srs.reviewBg)
+        SrsStatItem(stringResource(R.string.srs_badge_mastered), stats.mastered, srs.masteredFg, srs.masteredBg)
+    }
+}
+
+@Composable
+private fun SrsStatItem(label: String, count: Int, foreground: Color, background: Color) {
+    Surface(shape = MaterialTheme.shapes.small, color = background, contentColor = foreground) {
+        Column(
+            modifier = Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(count.toString(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

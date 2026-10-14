@@ -1,5 +1,6 @@
 *.iml
 .gradle
+.kotlin/
 /local.properties
 /.idea
 .DS_Store
@@ -7,5 +8,8 @@ build/
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 /app/google-services.json
+
+# Lokalne ustawienia narzędzi i wygenerowane kopie kodu
+/.claude/settings.local.json
+/repomix*.xml

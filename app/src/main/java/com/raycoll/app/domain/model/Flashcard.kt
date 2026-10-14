@@ -9,5 +9,5 @@ data class Flashcard(
     val srsState: SrsState,
     val contentUpdatedAt: Long = 0,
     val srsUpdatedAt: Long = 0,
-    val deletedAt: Long? = null,
+    val deletedAt: Long? = null
 )

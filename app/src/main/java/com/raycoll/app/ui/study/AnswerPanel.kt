@@ -1,0 +1,165 @@
+package com.raycoll.app.ui.study
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.raycoll.app.R
+import com.raycoll.app.domain.model.Ratings
+import com.raycoll.app.domain.session.AnswerStatus
+import com.raycoll.app.domain.session.LastAnswerResult
+import com.raycoll.app.ui.theme.LocalSrsColors
+import com.raycoll.app.ui.theme.Spacing
+
+/** Wynik odpowiedzi głosowej: co usłyszano, dopasowanie i proponowana ocena. Dotknięcie = pominięcie czekania. */
+@Composable
+fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.m),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
+        ) {
+            if (answer.text.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.study_recognized_text, answer.text),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            when (answer.status) {
+                AnswerStatus.CORRECT -> CorrectResult(answer)
+
+                AnswerStatus.INCORRECT -> if (listening) RetryHint() else IncorrectResult(answer)
+
+                AnswerStatus.SKIPPED -> Text(
+                    stringResource(R.string.study_answer_skipped),
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                AnswerStatus.ERROR -> Text(
+                    stringResource(R.string.study_answer_error),
+                    color = MaterialTheme.colorScheme.error
+                )
+
+                AnswerStatus.NONE -> Unit
+            }
+            if (listening) {
+                Icon(
+                    Icons.Filled.GraphicEq,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CorrectResult(answer: LastAnswerResult) {
+    val srs = LocalSrsColors.current
+    val rating = answer.suggestedRating ?: Ratings.GOOD
+    ResultChip(
+        icon = Icons.Filled.CheckCircle,
+        title =
+            answer.percent?.let { stringResource(R.string.study_answer_correct_percent, it) }
+                ?: stringResource(R.string.study_answer_correct),
+        badge = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(rating)), rating),
+        container = srs.masteredBg,
+        content = srs.masteredFg
+    )
+}
+
+@Composable
+private fun IncorrectResult(answer: LastAnswerResult) {
+    val colors = MaterialTheme.colorScheme
+    val percent = answer.percent
+    val threshold = answer.threshold
+    ResultChip(
+        icon = Icons.Filled.Refresh,
+        title = when {
+            percent != null && threshold != null -> stringResource(
+                R.string.study_answer_incorrect_threshold,
+                percent,
+                threshold
+            )
+
+            percent != null -> stringResource(R.string.study_answer_incorrect_percent, percent)
+
+            else -> stringResource(R.string.study_answer_incorrect)
+        },
+        badge = stringResource(
+            R.string.study_suggested_rating,
+            stringResource(ratingLabel(Ratings.AGAIN)),
+            Ratings.AGAIN
+        ),
+        container = colors.errorContainer,
+        content = colors.onErrorContainer
+    )
+}
+
+/** Błędna odpowiedź, ale tryb daje drugą szansę — mikrofon znów słucha. */
+@Composable
+private fun RetryHint() {
+    val colors = MaterialTheme.colorScheme
+    ResultChip(
+        Icons.Filled.Refresh,
+        stringResource(R.string.study_answer_retry),
+        badge = null,
+        container = colors.secondaryContainer,
+        content = colors.onSecondaryContainer
+    )
+}
+
+@Composable
+private fun ResultChip(icon: ImageVector, title: String, badge: String?, container: Color, content: Color) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = container,
+        contentColor = content,
+        border = BorderStroke(1.dp, content.copy(alpha = 0.35f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            if (badge != null) {
+                Surface(shape = MaterialTheme.shapes.extraSmall, color = content.copy(alpha = 0.15f)) {
+                    Text(
+                        badge,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xxs)
+                    )
+                }
+            }
+        }
+    }
+}

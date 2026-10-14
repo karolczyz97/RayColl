@@ -1,88 +1,140 @@
 package com.raycoll.app.data.sync
 
 import com.raycoll.app.domain.model.StudyConstants
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Polityka wysyłki do chmury (port persistenceQueue.ts + useStorePersistence.ts):
- * - debounced: zapis po [delayMs] od ostatniej mutacji (latest-wins — push czyta
- *   świeży snapshot z Room, więc nowsze mutacje same wygrywają),
- * - study: licznik ocen, flush natychmiast co [flushThreshold] ocen,
- * - immediate: flush od razu (import/usunięcie/archiwizacja/sign-out),
- * - single-in-flight (mutex) + retry: nieudany push zostawia flagę pending,
- *   następny trigger ponawia.
- *
- * Room jest zapisywany zawsze natychmiast niezależnie od tej polityki —
- * scheduler steruje wyłącznie zapisem do chmury.
+ * Kiedy wysyłać zmiany do chmury (Room zapisuje się zawsze od razu):
+ * - debounced: [delayMs] po ostatniej zmianie,
+ * - study: co [flushThreshold] ocen,
+ * - immediate: od razu.
+ * Naraz trwa najwyżej jedna wysyłka; nieudana zostaje do ponowienia przy następnej okazji.
+ * Wysyłka zawsze czyta aktualny stan, więc nowsze zmiany same "wygrywają".
  */
 class SyncScheduler(
     private val scope: CoroutineScope,
     private val push: suspend () -> Boolean,
     private val delayMs: Long = StudyConstants.PERSISTENCE_DEBOUNCE_MS,
-    private val flushThreshold: Int = StudyConstants.STUDY_REVIEW_FLUSH_THRESHOLD,
+    private val flushThreshold: Int = StudyConstants.STUDY_REVIEW_FLUSH_THRESHOLD
 ) {
-    private var timer: Job? = null
-    private var pending = false
-    private var studyReviewCount = 0
+    private val pending = AtomicBoolean(false)
+    private val studyReviewCount = AtomicInteger(0)
     private val inFlight = Mutex()
+    private var timer: Job? = null
+    private val running = AtomicReference<Job?>(null)
 
     fun enqueueDebounced() {
-        pending = true
+        pending.set(true)
+        restartTimer()
+    }
+
+    fun enqueueStudy() {
+        pending.set(true)
+        if (studyReviewCount.incrementAndGet() >= flushThreshold) flushNow()
+    }
+
+    fun enqueueImmediate() {
+        pending.set(true)
+        flushNow()
+    }
+
+    /**
+     * Wysyła zaległe zmiany (jeśli są). Zeruje licznik ocen — koniec sesji domyka wszystko.
+     * Zwraca false, gdy wysyłka się nie udała (zmiany czekają na ponowienie).
+     */
+    suspend fun flush(): Boolean {
+        cancelTimer()
+        return inFlight.withLock {
+            if (!pending.getAndSet(false)) return true
+            studyReviewCount.set(0)
+            var ok = false
+            // wysyłka w osobnym dziecku: [abort] przerywa tylko ją, nie korutynę wołającego
+            val aborted = try {
+                coroutineScope {
+                    val job = launch {
+                        ok = try {
+                            push()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            false
+                        }
+                    }
+                    running.set(job)
+                    job.join()
+                    job.isCancelled
+                }
+            } catch (e: CancellationException) {
+                pending.set(true)
+                throw e
+            } finally {
+                running.set(null)
+            }
+            // przerwana przez [abort] zostaje porzucona razem z resztą kolejki
+            if (!ok && !aborted) pending.set(true)
+            ok
+        }
+    }
+
+    /**
+     * Wysyłka w bieżącej korutynie, bez dodatkowej w tle — przerwanie wołającego
+     * (limit wylogowania) nie zostawia w kolejce drugiej wysyłki, która znowu by czekała.
+     */
+    suspend fun flushImmediately(): Boolean {
+        pending.set(true)
+        return flush()
+    }
+
+    /** Praca z chmurą, która nie może iść równolegle z wysyłką (uzgodnienie po powrocie do aplikacji). */
+    suspend fun <T> exclusive(block: suspend () -> T): T = inFlight.withLock { block() }
+
+    /** Porzuca zaplanowane wysyłki i przerywa trwającą (wylogowanie po limicie czasu). */
+    fun abort() {
+        cancel()
+        running.get()?.cancel()
+    }
+
+    /** Porzuca zaplanowane wysyłki (wylogowanie, rezygnacja z migracji). */
+    fun cancel() {
+        cancelTimer()
+        pending.set(false)
+        studyReviewCount.set(0)
+    }
+
+    private fun flushNow() {
+        cancelTimer()
+        scope.launch { flush() }
+    }
+
+    @Synchronized
+    private fun restartTimer() {
         timer?.cancel()
         timer = scope.launch {
             delay(delayMs)
-            timer = null // wyzeruj PRZED flush — flush anuluje timer, a to jest nasz własny job
+            // odłącz się, zanim flush anuluje timer — inaczej anulowałby samego siebie
+            detachTimer(coroutineContext[Job])
             flush()
         }
     }
 
-    /** Ocena w trybie study: bez debounce, flush dopiero co [flushThreshold] ocen. */
-    fun enqueueStudy() {
-        pending = true
-        studyReviewCount++
-        if (studyReviewCount >= flushThreshold) {
-            studyReviewCount = 0
-            timer?.cancel()
-            scope.launch { flush() }
-        }
+    @Synchronized
+    private fun detachTimer(job: Job?) {
+        if (timer === job) timer = null
     }
 
-    fun enqueueImmediate() {
-        pending = true
+    @Synchronized
+    private fun cancelTimer() {
         timer?.cancel()
-        scope.launch { flush() }
-    }
-
-    /**
-     * Wypycha pending snapshot (jeśli jest). Zeruje licznik study — granica sesji
-     * i przejście w tło zawsze domykają zaległe oceny.
-     */
-    suspend fun flush() {
-        timer?.cancel()
-        inFlight.withLock {
-            if (!pending) return
-            pending = false
-            studyReviewCount = 0
-            val ok = try {
-                push()
-            } catch (e: Exception) {
-                false
-            }
-            // nieudany push: zostaw do ponowienia przy następnym triggerze
-            // (chyba że w międzyczasie przyszła nowa mutacja — pending już true)
-            if (!ok) pending = true
-        }
-    }
-
-    /** Porzuca zaplanowane wysyłki (sign-out / porzucenie migracji). */
-    fun cancel() {
-        timer?.cancel()
-        pending = false
-        studyReviewCount = 0
+        timer = null
     }
 }

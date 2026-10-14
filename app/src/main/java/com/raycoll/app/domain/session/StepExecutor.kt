@@ -1,8 +1,10 @@
 package com.raycoll.app.domain.session
 
+import com.raycoll.app.core.Clock
 import com.raycoll.app.domain.model.AutoRateFixedStep
 import com.raycoll.app.domain.model.AutoRateFromAnswerStep
 import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.DEFAULT_PAGE_LANGUAGE
 import com.raycoll.app.domain.model.DynamicPauseStep
 import com.raycoll.app.domain.model.FeedbackErrorStep
 import com.raycoll.app.domain.model.FeedbackSuccessStep
@@ -25,161 +27,188 @@ import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.domain.srs.mapMatchToRating
 import com.raycoll.app.domain.srs.matchSpeech
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 
-class StepExecutor(
-    private val deps: SessionDeps,
-    private val state: MutableStateFlow<SessionState>,
-    private val group: FlashcardGroup,
-    private val ttsRate: Float,
+/** Wykonuje pojedyncze kroki atomowe dla jednej karty; przebieg kroków prowadzi [SessionEngine]. */
+internal class StepExecutor(
     private val engine: SessionEngine,
+    private val deps: SessionDeps,
+    private val group: FlashcardGroup,
+    private val clock: Clock,
+    private val ttsRate: Float
 ) {
     private var lastTtsDurationMs: Long = 0
 
-    suspend fun executeStep(step: ModeStep, card: Flashcard, stepIndex: Int) {
-        if (!checkCondition(step)) return
+    private val state: SessionState get() = engine.state.value
 
+    /**
+     * 'correct' pasuje tylko do poprawnej odpowiedzi, 'wrong' tylko do błędnej;
+     * pominięta/błąd/brak odpowiedzi nie pasuje do żadnego warunku.
+     */
+    fun isConditionMet(step: ModeStep): Boolean = when (step.condition) {
+        null -> true
+        StepCondition.CORRECT -> state.lastAnswerResult.status == AnswerStatus.CORRECT
+        StepCondition.WRONG -> state.lastAnswerResult.status == AnswerStatus.INCORRECT
+    }
+
+    /** Wykonuje krok o spełnionym warunku (sprawdza wołający przez [isConditionMet]). */
+    suspend fun execute(step: ModeStep, card: Flashcard, stepIndex: Int) {
         when (step) {
-            is ShowPageStep -> {
-                state.value = sessionReducer(state.value, SessionAction.RevealPage(stepIndex, step.pageIndex))
-            }
-            is ShowAllPagesStep -> {
-                val allPages = (0 until group.activePageCount).toList()
-                state.value = sessionReducer(state.value, SessionAction.RevealPages(allPages))
-            }
-            is WaitForTapToRevealNextStep -> {
-                val hiddenPages = (0 until group.activePageCount).filter { it !in state.value.revealedPages }
-                if (hiddenPages.isEmpty()) return
-                state.value = sessionReducer(state.value, SessionAction.StartTapRevealGate(stepIndex + 1, TapRevealMode.SINGLE))
-                return
-            }
-            is WaitForTapToRevealStep -> {
-                val hiddenPages = (0 until group.activePageCount).filter { it !in state.value.revealedPages }
-                if (hiddenPages.isEmpty()) return
-                state.value = sessionReducer(state.value, SessionAction.StartTapRevealGate(stepIndex + 1, TapRevealMode.REMAINING))
-                return
-            }
-            is ShowRatingsStep -> {
-                if (state.value.cardReviewed) return
-                state.value = sessionReducer(state.value, SessionAction.ShowRatings)
-                return
-            }
+            is ShowPageStep -> engine.dispatch(SessionAction.RevealPages(listOf(step.pageIndex)))
+
+            is ShowAllPagesStep -> engine.dispatch(SessionAction.RevealPages((0 until group.activePageCount).toList()))
+
+            is WaitForTapToRevealNextStep -> startRevealGate(stepIndex, TapRevealMode.SINGLE)
+
+            is WaitForTapToRevealStep -> startRevealGate(stepIndex, TapRevealMode.REMAINING)
+
+            is WaitForTapStep -> engine.dispatch(SessionAction.StartTapRevealGate(stepIndex + 1, TapRevealMode.NONE))
+
+            is ShowRatingsStep -> if (!state.cardReviewed) engine.dispatch(SessionAction.ShowRatings)
+
             is SpeakPageStep -> {
-                speakSinglePage(card, stepIndex, step.pageIndex)
+                engine.runSkippable { speakPage(card, step.pageIndex) }
+                engine.dispatch(SessionAction.EndSpeaking)
             }
+
             is SpeakAllPagesStep -> {
-                // tap przerywa i POMIJA pozostałe strony — jeden skippable dla całej pętli
+                // tap przerywa i pomija wszystkie pozostałe strony naraz
                 engine.runSkippable {
-                    for (pageIdx in 0 until group.activePageCount) {
-                        if (state.value.status == SessionStatus.FINISHED) break
-                        speakPageBody(card, stepIndex, pageIdx)
+                    for (pageIndex in 0 until group.activePageCount) {
+                        if (state.status == SessionStatus.FINISHED) break
+                        speakPage(card, pageIndex)
                     }
                 }
-                state.value = sessionReducer(state.value, SessionAction.EndSpeaking)
+                engine.dispatch(SessionAction.EndSpeaking)
             }
+
             is DynamicPauseStep -> {
-                val pageText = getPageText(card, step.nextPageIndex)
-                val pauseMs = (pageText.length * StudyConstants.DYNAMIC_PAUSE_MS_PER_CHAR * step.pauseMultiplier).toLong()
-                state.value = sessionReducer(state.value, SessionAction.SetCurrentStep(stepIndex))
-                engine.runSkippable { delay(pauseMs) }
+                val pauseMs = pageText(card, step.nextPageIndex).length *
+                    StudyConstants.DYNAMIC_PAUSE_MS_PER_CHAR * step.pauseMultiplier
+                engine.dispatch(SessionAction.PeekClear)
+                engine.runSkippable { delay(pauseMs.toLong()) }
             }
+
             is WaitStep -> {
-                state.value = sessionReducer(state.value, SessionAction.SetCurrentStep(stepIndex))
+                engine.dispatch(SessionAction.PeekClear)
                 engine.runSkippable { delay(step.ms) }
             }
-            is ListenAndCheckStep -> {
-                val pageText = getPageText(card, step.pageIndex)
-                val lang = group.pageLanguages.getOrElse(step.pageIndex) { "en-US" }
-                state.value = sessionReducer(state.value, SessionAction.StartListening(stepIndex, step.pageIndex))
-                val softTimeout = maxOf(StudyConstants.STT_SOFT_TIMEOUT_MS_BASE, lastTtsDurationMs * 3)
-                val hardTimeout = softTimeout + StudyConstants.STT_HARD_EXTRA_MS
-                var result: ListenResult? = null
-                val skipped = engine.runSkippable {
-                    result = deps.listen(lang, hardTimeout) { partial ->
-                        state.value = sessionReducer(state.value, SessionAction.UpdatePartialStt(partial))
-                    }
-                }
-                val listenResult = result
-                val answerResult = when {
-                    // tap podczas nasłuchu → 'skipped' BEZ liczenia dopasowania
-                    skipped || listenResult == null || listenResult.status == ListenStatus.SKIPPED ->
-                        LastAnswerResult(status = AnswerStatus.SKIPPED, text = "", pageIndex = step.pageIndex, threshold = step.successThreshold)
-                    listenResult.status == ListenStatus.ERROR -> {
-                        engine.onSttFailure()
-                        LastAnswerResult(status = AnswerStatus.ERROR, text = listenResult.text, pageIndex = step.pageIndex, threshold = step.successThreshold)
-                    }
-                    else -> {
-                        val percent = matchSpeech(listenResult.text, pageText)
-                        val status = if (percent >= step.successThreshold) AnswerStatus.CORRECT else AnswerStatus.INCORRECT
-                        val suggestedRating = mapMatchToRating(percent, step.successThreshold)
-                        LastAnswerResult(status = status, text = listenResult.text, percent = percent, threshold = step.successThreshold, pageIndex = step.pageIndex, suggestedRating = suggestedRating)
-                    }
-                }
-                state.value = sessionReducer(state.value, SessionAction.SetLastAnswerResult(answerResult))
-                state.value = sessionReducer(state.value, SessionAction.EndSpeaking)
-            }
-            is FeedbackSuccessStep -> { deps.feedbackSuccess() }
-            is FeedbackErrorStep -> { deps.feedbackError() }
+
+            is ListenAndCheckStep -> listenAndCheck(step, card)
+
+            is FeedbackSuccessStep -> deps.feedbackSuccess()
+
+            is FeedbackErrorStep -> deps.feedbackError()
+
             is AutoRateFromAnswerStep -> {
-                val result = state.value.lastAnswerResult
-                if (state.value.cardReviewed) return
-                if (result.status != AnswerStatus.CORRECT && result.status != AnswerStatus.INCORRECT) return
-                val rating = result.suggestedRating ?: mapMatchToRating(result.percent ?: 0, result.threshold)
-                engine.submitReview(rating)
+                val result = state.lastAnswerResult
+                val answered = result.status == AnswerStatus.CORRECT || result.status == AnswerStatus.INCORRECT
+                if (!state.cardReviewed && answered) {
+                    engine.submitReview(
+                        result.suggestedRating ?: mapMatchToRating(result.percent ?: 0, result.threshold)
+                    )
+                }
             }
-            is AutoRateFixedStep -> {
-                if (state.value.cardReviewed) return
-                engine.submitReview(step.rating)
-            }
-            is MarkFailedStep -> {
-                state.value = sessionReducer(state.value, SessionAction.AddFailedCard(card.id))
-            }
-            is WaitForTapStep -> {
-                state.value = sessionReducer(state.value, SessionAction.StartTapRevealGate(stepIndex + 1, TapRevealMode.NONE))
-                return
-            }
-            is NextCardStep -> {
-                return
-            }
-            is CompoundStep -> {
-                // Compound steps should already be expanded
-            }
+
+            is AutoRateFixedStep -> if (!state.cardReviewed) engine.submitReview(step.rating)
+
+            is MarkFailedStep -> engine.dispatch(SessionAction.AddFailedCard(card.id))
+
+            // przejście do następnej karty robi silnik — musi poczekać na puszczenie trzymanej karty
+            is NextCardStep -> Unit
+
+            // kroki złożone są rozwijane przed startem sesji
+            is CompoundStep -> Unit
         }
     }
 
-    private suspend fun speakSinglePage(card: Flashcard, stepIndex: Int, pageIndex: Int) {
-        engine.runSkippable { speakPageBody(card, stepIndex, pageIndex) }
-        state.value = sessionReducer(state.value, SessionAction.EndSpeaking)
+    private fun startRevealGate(stepIndex: Int, mode: TapRevealMode) {
+        val hasHiddenPages = (0 until group.activePageCount).any { it !in state.revealedPages }
+        if (hasHiddenPages) engine.dispatch(SessionAction.StartTapRevealGate(stepIndex + 1, mode))
     }
 
-    private suspend fun speakPageBody(card: Flashcard, stepIndex: Int, pageIndex: Int) {
-        val pageText = getPageText(card, pageIndex)
-        val lang = group.pageLanguages.getOrElse(pageIndex) { "en-US" }
-        state.value = sessionReducer(state.value, SessionAction.StartSpeaking(stepIndex, pageIndex))
-        val start = System.currentTimeMillis()
+    private suspend fun listenAndCheck(step: ListenAndCheckStep, card: Flashcard) {
+        val expected = pageText(card, step.pageIndex)
+        if (expected.isBlank()) {
+            engine.dispatch(
+                SessionAction.SetLastAnswerResult(
+                    LastAnswerResult(
+                        status = AnswerStatus.SKIPPED,
+                        pageIndex = step.pageIndex,
+                        threshold = step.successThreshold
+                    )
+                )
+            )
+            return
+        }
+        engine.dispatch(SessionAction.StartListening(step.pageIndex))
+        // czas nasłuchu skalowany długością ostatniej wypowiedzi TTS (dłuższa fraza = dłuższa odpowiedź)
+        val timeoutMs =
+            maxOf(StudyConstants.STT_SOFT_TIMEOUT_MS_BASE, lastTtsDurationMs * 3) + StudyConstants.STT_HARD_EXTRA_MS
+        var listenResult: ListenResult? = null
+        val tapped = engine.runSkippable {
+            listenResult = deps.listen(languageOf(step.pageIndex), timeoutMs) { partial ->
+                engine.dispatch(SessionAction.UpdatePartialStt(partial))
+            }
+        }
+        val result = listenResult
+        val answer = when {
+            // tap podczas nasłuchu = pominięcie, bez liczenia dopasowania
+            tapped || result == null || result.status == ListenStatus.SKIPPED ->
+                LastAnswerResult(
+                    status = AnswerStatus.SKIPPED,
+                    pageIndex = step.pageIndex,
+                    threshold = step.successThreshold
+                )
+
+            result.status == ListenStatus.ERROR -> {
+                engine.onSttFailure()
+                LastAnswerResult(
+                    status = AnswerStatus.ERROR,
+                    text = result.text,
+                    pageIndex = step.pageIndex,
+                    threshold = step.successThreshold
+                )
+            }
+
+            else -> {
+                val percent = matchSpeech(result.text, expected)
+                LastAnswerResult(
+                    status = if (percent >= step.successThreshold) AnswerStatus.CORRECT else AnswerStatus.INCORRECT,
+                    text = result.text,
+                    percent = percent,
+                    threshold = step.successThreshold,
+                    pageIndex = step.pageIndex,
+                    suggestedRating = mapMatchToRating(percent, step.successThreshold)
+                )
+            }
+        }
+        engine.dispatch(SessionAction.SetLastAnswerResult(answer))
+        engine.dispatch(SessionAction.EndSpeaking)
+    }
+
+    private suspend fun speakPage(card: Flashcard, pageIndex: Int) {
+        val text = pageText(card, pageIndex)
+        // pusta strona: krok mowy kończy się od razu (strona nadal może być pokazana innym krokiem)
+        if (text.isBlank()) {
+            lastTtsDurationMs = 0
+            return
+        }
+        engine.dispatch(SessionAction.StartSpeaking(pageIndex))
+        val start = clock.now()
         val result = try {
-            deps.speak(pageText, lang, ttsRate)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e // przerwanie tapem ≠ błąd
+            deps.speak(text, languageOf(pageIndex), ttsRate)
+        } catch (e: CancellationException) {
+            throw e // tap przerywający mowę to nie błąd
         } catch (_: Exception) {
             SpeakResult.ERROR
         }
-        lastTtsDurationMs = System.currentTimeMillis() - start
-        if (result != SpeakResult.SUCCESS) {
-            engine.onTtsFailure(result)
-        }
+        lastTtsDurationMs = clock.now() - start
+        if (result != SpeakResult.SUCCESS) engine.onTtsFailure(result)
     }
 
-    private fun checkCondition(step: ModeStep): Boolean {
-        val condition = step.condition ?: return true
-        val status = state.value.lastAnswerResult.status
-        return when (condition) {
-            StepCondition.CORRECT -> status == AnswerStatus.CORRECT
-            StepCondition.WRONG -> status == AnswerStatus.INCORRECT
-        }
-    }
+    private fun pageText(card: Flashcard, pageIndex: Int): String = card.pages.getOrElse(pageIndex) { "" }
 
-    private fun getPageText(card: Flashcard, pageIndex: Int): String =
-        card.pages.getOrElse(pageIndex) { "" }
+    private fun languageOf(pageIndex: Int): String = group.pageLanguages.getOrElse(pageIndex) { DEFAULT_PAGE_LANGUAGE }
 }

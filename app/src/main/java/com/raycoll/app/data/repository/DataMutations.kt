@@ -1,26 +1,31 @@
 package com.raycoll.app.data.repository
 
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 
-/**
- * Tryb wysyłki mutacji do chmury (polityka z planu T10 / useStorePersistence.ts):
- * - DEBOUNCED — zwykłe edycje (1200 ms debounce),
- * - STUDY — oceny w sesji nauki (flush co 10 ocen + na granicy sesji),
- * - IMMEDIATE — operacje krytyczne (import, usunięcie, archiwizacja, restore).
- */
-enum class CloudWriteMode { DEBOUNCED, STUDY, IMMEDIATE }
+/** Jak pilnie wysłać lokalną zmianę do chmury. */
+enum class CloudWriteMode {
+    /** Zwykła edycja — wysyłka chwilę po ostatniej zmianie. */
+    DEBOUNCED,
 
-/**
- * Wspólny sygnał "coś się zmieniło lokalnie" dla wszystkich repozytoriów danych.
- * Nasłuchuje go SyncLifecycle i wypycha zmiany do Firestore wg trybu.
- */
+    /** Ocena w sesji nauki — wysyłka co kilka ocen i na końcu sesji. */
+    STUDY,
+
+    /** Import, usunięcie, archiwizacja, przywrócenie — od razu. */
+    IMMEDIATE
+}
+
+/** Sygnał "dane lokalne się zmieniły" ze wszystkich repozytoriów; słucha go synchronizacja. */
 @Singleton
 class DataMutations @Inject constructor() {
-    private val _events = MutableSharedFlow<CloudWriteMode>(extraBufferCapacity = 64)
-    val events: SharedFlow<CloudWriteMode> = _events
+    // kanał bez limitu: żaden sygnał nie ginie, nawet gdy synchronizacja jeszcze nie słucha
+    private val channel = Channel<CloudWriteMode>(Channel.UNLIMITED)
+    val events: Flow<CloudWriteMode> = channel.receiveAsFlow()
 
-    fun signal(mode: CloudWriteMode = CloudWriteMode.DEBOUNCED) { _events.tryEmit(mode) }
+    fun signal(mode: CloudWriteMode) {
+        channel.trySend(mode)
+    }
 }

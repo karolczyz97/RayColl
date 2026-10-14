@@ -1,28 +1,19 @@
 package com.raycoll.app.domain.srs
 
 import com.raycoll.app.domain.model.MatchConstants
-import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.SrsConstants
+import com.raycoll.app.domain.model.SrsState
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-enum class SrsCardCategory { NEW, LEARNING, REVIEW, MASTERED }
-
-fun getCardCategory(state: SrsState): SrsCardCategory = when (state.state) {
-    0 -> SrsCardCategory.NEW
-    1, 3 -> SrsCardCategory.LEARNING
-    2 -> if (state.repetitions >= SrsConstants.MASTERED_MIN_REPS) SrsCardCategory.MASTERED else SrsCardCategory.REVIEW
-    else -> SrsCardCategory.NEW
-}
-
-fun normalizeText(text: String): String =
-    text.lowercase()
-        .replace(Regex("[^\\p{L}\\p{N}\\s]"), "")
-        .replace(Regex("\\s+"), " ")
-        .trim()
+fun normalizeText(text: String): String = text.lowercase()
+    .replace(Regex("[^\\p{L}\\p{N}\\s]"), "")
+    .replace(Regex("\\s+"), " ")
+    .trim()
 
 fun levenshteinDistance(a: String, b: String): Int {
     val m = a.length
@@ -37,7 +28,9 @@ fun levenshteinDistance(a: String, b: String): Int {
             val cost = if (a[i - 1] == b[j - 1]) 0 else 1
             curr[j] = minOf(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
         }
-        val tmp = prev; prev = curr; curr = tmp
+        val tmp = prev
+        prev = curr
+        curr = tmp
     }
     return prev[n]
 }
@@ -84,14 +77,14 @@ fun matchSpeech(recognized: String, original: String): Int {
 fun mapMatchToRating(matchPercent: Int, successThreshold: Int? = null): Int {
     if (successThreshold != null) {
         val threshold = successThreshold.coerceIn(0, 100)
-        if (matchPercent < threshold) return 1
+        if (matchPercent < threshold) return Ratings.AGAIN
         val easyThreshold = if (threshold >= 100) 100 else threshold + ceil((100 - threshold) / 2.0).toInt()
-        return if (matchPercent >= easyThreshold) 4 else 3
+        return if (matchPercent >= easyThreshold) Ratings.EASY else Ratings.GOOD
     }
     return when {
-        matchPercent >= MatchConstants.MATCH_EASY -> 4
-        matchPercent >= MatchConstants.MATCH_GOOD -> 3
-        matchPercent >= MatchConstants.MATCH_HARD -> 2
-        else -> 1
+        matchPercent >= MatchConstants.MATCH_EASY -> Ratings.EASY
+        matchPercent >= MatchConstants.MATCH_GOOD -> Ratings.GOOD
+        matchPercent >= MatchConstants.MATCH_HARD -> Ratings.HARD
+        else -> Ratings.AGAIN
     }
 }

@@ -1,16 +1,18 @@
 package com.raycoll.app.domain.normalize
 
+import com.raycoll.app.domain.model.BranchRating
+import com.raycoll.app.domain.model.CardOrder
+import com.raycoll.app.domain.model.CompoundBranch
+import com.raycoll.app.domain.model.CompoundParams
+import com.raycoll.app.domain.model.CompoundPause
+import com.raycoll.app.domain.model.CompoundStep
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StoreData
+import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.domain.model.CompoundStep
-import com.raycoll.app.domain.model.CompoundParams
-import com.raycoll.app.domain.model.CompoundBranch
-import com.raycoll.app.domain.model.CompoundPause
-import com.raycoll.app.domain.model.createNewSrsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -19,7 +21,7 @@ import org.junit.Test
 class DataNormalizerTest {
 
     private fun makeCard(id: String = "c1", pages: List<String> = listOf("hello", "back")): Flashcard =
-        Flashcard(id = id, pages = pages, srsState = createNewSrsState(), contentUpdatedAt = 0, srsUpdatedAt = 0)
+        Flashcard(id = id, pages = pages, srsState = SrsState(), contentUpdatedAt = 0, srsUpdatedAt = 0)
 
     private fun makeGroup(
         id: String = "g1",
@@ -27,21 +29,23 @@ class DataNormalizerTest {
         cards: List<Flashcard> = emptyList(),
         pageNames: List<String> = listOf("Front", "Back"),
         pageLanguages: List<String> = listOf("en-US", "pl-PL"),
-        activePageCount: Int = 2,
+        activePageCount: Int = 2
     ): FlashcardGroup = FlashcardGroup(
         id = id, name = name, cards = cards,
-        activeModeId = "classic", studyFilter = DEFAULT_STUDY_FILTER, cardOrder = DEFAULT_CARD_ORDER,
+        activeModeId = "classic", studyFilter = StudyFilter.DEFAULT, cardOrder = CardOrder.DEFAULT,
         pageNames = pageNames, pageLanguages = pageLanguages,
-        activePageCount = activePageCount, updatedAt = 0,
+        activePageCount = activePageCount, updatedAt = 0
     )
 
     @Test
-    fun `handles backup with NaN activePageCount and overflow pages`() {
+    fun `clamps an excessive active page count while preserving stored pages`() {
         val group = makeGroup(
-            id = "g2", name = "Unnormalized", cards = emptyList(),
+            id = "g2",
+            name = "Unnormalized",
+            cards = emptyList(),
             activePageCount = Int.MAX_VALUE,
             pageNames = listOf("Front", "Back", "Extra", "Overflow", "Too much", "Ignored"),
-            pageLanguages = listOf("en-US"),
+            pageLanguages = listOf("en-US")
         )
         val data = StoreData(groups = listOf(group), studyModes = emptyList(), activityHeatmap = emptyMap())
         val normalized = normalizeStoreData(data)
@@ -51,7 +55,7 @@ class DataNormalizerTest {
     }
 
     @Test
-    fun `does not crash when study mode has non-array steps`() {
+    fun `preserves a mode with an empty step list`() {
         val mode = StudyMode(id = "custom-broken", name = "Broken", steps = emptyList())
         val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
         val result = normalizeStoreData(data)
@@ -62,8 +66,12 @@ class DataNormalizerTest {
     @Test
     fun `preserves edited built-in mode name and properties`() {
         val mode = StudyMode(
-            id = "classic", builtInSourceId = "classic", isBuiltIn = true,
-            name = "Edited Classic", steps = listOf(WaitStep(ms = 250)), updatedAt = 1,
+            id = "classic",
+            builtInSourceId = "classic",
+            isBuiltIn = true,
+            name = "Edited Classic",
+            steps = listOf(WaitStep(ms = 250)),
+            updatedAt = 1
         )
         val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
         val result = normalizeStoreData(data)
@@ -76,8 +84,11 @@ class DataNormalizerTest {
     @Test
     fun `does not infer builtInSourceId for modes with built-in IDs but no sourceId`() {
         val mode = StudyMode(
-            id = "classic", isBuiltIn = true,
-            name = "Edited Classic", steps = emptyList(), updatedAt = 1,
+            id = "classic",
+            isBuiltIn = true,
+            name = "Edited Classic",
+            steps = emptyList(),
+            updatedAt = 1
         )
         val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
         val result = normalizeStoreData(data)
@@ -87,8 +98,9 @@ class DataNormalizerTest {
     @Test
     fun `normalizeCard with invalid srs state resets to 0`() {
         val card = Flashcard(
-            id = "c1", pages = listOf("a", "b"),
-            srsState = SrsState(state = 99),
+            id = "c1",
+            pages = listOf("a", "b"),
+            srsState = SrsState(state = 99)
         )
         val group = makeGroup(cards = listOf(card))
         val result = normalizeGroup(group)
@@ -111,40 +123,40 @@ class DataNormalizerTest {
                 onCorrect = CompoundBranch(
                     speakPage = -5,
                     fixedRating = 99,
-                    rate = "bogus",
-                    pause = CompoundPause.Dynamic(page = -2, multiplier = 42.0),
+                    rate = BranchRating.FROM_ANSWER,
+                    pause = CompoundPause.Dynamic(page = -2, multiplier = 42.0)
                 ),
                 onWrong = CompoundBranch(
                     speakPage = 7,
                     fixedRating = 0,
-                    rate = "nonsense",
-                    pause = CompoundPause.Fixed(ms = -100),
-                ),
-            ),
+                    rate = BranchRating.FIXED,
+                    pause = CompoundPause.Fixed(ms = -100)
+                )
+            )
         )
         val mode = StudyMode(id = "m-compound", name = "Compound", steps = listOf(corrupt))
         val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
         val result = normalizeStoreData(data)
         val params = (result.studyModes[0].steps[0] as CompoundStep).params as CompoundParams.ListenGrade
 
-        assertEquals(0, params.answerPage)          // page clamp >= 0
-        assertEquals(100, params.threshold)         // 0..100
+        assertEquals(0, params.answerPage) // page clamp >= 0
+        assertEquals(100, params.threshold) // 0..100
         // correct branch
-        assertEquals(0, params.onCorrect.speakPage)         // -5 → 0
-        assertEquals(4, params.onCorrect.fixedRating)       // 99 → 4
-        assertEquals("fromAnswer", params.onCorrect.rate)   // bogus → default (correct)
+        assertEquals(0, params.onCorrect.speakPage) // -5 → 0
+        assertEquals(4, params.onCorrect.fixedRating) // 99 → 4
+        assertEquals(BranchRating.FROM_ANSWER, params.onCorrect.rate)
         assertEquals(0, (params.onCorrect.pause as CompoundPause.Dynamic).page)
-        assertEquals(5.0, (params.onCorrect.pause as CompoundPause.Dynamic).multiplier, 0.0)
+        assertEquals(5.0, params.onCorrect.pause.multiplier, 0.0)
         // wrong branch
-        assertEquals(1, params.onWrong.fixedRating)         // 0 → 1
-        assertEquals("fixed", params.onWrong.rate)          // nonsense → default (wrong)
+        assertEquals(1, params.onWrong.fixedRating) // 0 → 1
+        assertEquals(BranchRating.FIXED, params.onWrong.rate)
         assertEquals(0L, (params.onWrong.pause as CompoundPause.Fixed).ms) // -100 → 0
     }
 
     @Test
-    fun `normalizeActivityHeatmap filters invalid entries`() {
-        val raw = mapOf("2024-01-01" to 5, "bad" to (-1), "nan" to Int.MAX_VALUE)
-        val result = normalizeActivityHeatmap(raw)
+    fun `heatmap removes negative counts while preserving nonnegative ones`() {
+        val raw = mapOf("2024-01-01" to 5, "bad" to (-1), "large-count" to Int.MAX_VALUE)
+        val result = normalizeStoreData(StoreData(activityHeatmap = raw)).activityHeatmap
         assertEquals(2, result.size)
         assertEquals(5, result["2024-01-01"])
     }

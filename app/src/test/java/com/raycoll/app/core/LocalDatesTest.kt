@@ -1,8 +1,8 @@
 package com.raycoll.app.core
 
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.ZoneId
 
 class LocalDatesTest {
     @Test

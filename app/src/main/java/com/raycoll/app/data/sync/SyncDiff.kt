@@ -17,58 +17,13 @@ sealed interface SyncOp {
     data class DeleteActivity(val dayKey: String) : SyncOp
 }
 
-/**
- * Czysta logika wyliczania operacji synchronizacji (port saveUserData z
- * firestorePersistence.ts i saveCloudData z firebasePersistence.ts).
- * `existing`/`previous` = znany stan chmury; `data` = docelowy stan lokalny.
- */
+/** Wyliczanie operacji zapisu do chmury: `previous` = znany stan chmury, `data` = stan lokalny. */
 object SyncDiff {
 
     /**
-     * Pełny zapis: wszystkie dokumenty z `data` + kasowanie osieroconych
-     * (obecnych w `existing`, nieobecnych w `data`). Używany, gdy nie ma
-     * cache'u diffowego — `existing` pochodzi wtedy ze świeżego loadu chmury.
-     */
-    fun fullSave(existing: StoreData, data: StoreData): List<SyncOp> {
-        val ops = mutableListOf<SyncOp>()
-
-        val existingGroups = existing.groups.associateBy { it.id }.toMutableMap()
-        for (group in data.groups) {
-            ops.add(SyncOp.PutDeck(group))
-            val existingCards = existingGroups[group.id]?.cards?.map { it.id }?.toMutableSet() ?: mutableSetOf()
-            for (card in group.cards) {
-                existingCards.remove(card.id)
-                ops.add(SyncOp.PutCard(group.id, card))
-            }
-            for (cardId in existingCards) ops.add(SyncOp.DeleteCard(group.id, cardId))
-            existingGroups.remove(group.id)
-        }
-        for (removed in existingGroups.values) {
-            for (card in removed.cards) ops.add(SyncOp.DeleteCard(removed.id, card.id))
-            ops.add(SyncOp.DeleteDeck(removed.id))
-        }
-
-        val existingModes = existing.studyModes.map { it.id }.toMutableSet()
-        for (mode in data.studyModes) {
-            existingModes.remove(mode.id)
-            ops.add(SyncOp.PutMode(mode))
-        }
-        for (modeId in existingModes) ops.add(SyncOp.DeleteMode(modeId))
-
-        val existingDays = existing.activityHeatmap.keys.toMutableSet()
-        for ((dayKey, count) in data.activityHeatmap) {
-            existingDays.remove(dayKey)
-            ops.add(SyncOp.PutActivity(dayKey, count))
-        }
-        for (dayKey in existingDays) ops.add(SyncOp.DeleteActivity(dayKey))
-
-        return ops
-    }
-
-    /**
-     * Zapis diffowy względem cache'u ostatniego znanego stanu chmury: pisze
-     * tylko dokumenty zmienione/nowe, kasuje usunięte. Talia porównywana BEZ
-     * kart (karty diffowane osobno per dokument).
+     * Operacje zapisu względem ostatniego znanego stanu chmury: tylko dokumenty
+     * nowe lub zmienione oraz usunięcie tych, których już nie ma. Talia porównywana
+     * bez kart — karty to osobne dokumenty.
      */
     fun diffSave(previous: StoreData, data: StoreData): List<SyncOp> {
         val ops = mutableListOf<SyncOp>()

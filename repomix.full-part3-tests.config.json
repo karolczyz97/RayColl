@@ -1,0 +1,42 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "repomix-full-part3-tests.xml",
+    "style": "xml",
+    "filePathStyle": "target-relative",
+    "compress": false,
+    "headerText": "RayColl - Część 3/3 (Testy): Kompletny zestaw testów jednostkowych i Robolectric (testy logiki domeny, bazy danych Room, synchronizacji, ViewModeli, semantyki sesji i reguł SRS).",
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": false,
+    "includeEmptyDirectories": false
+  },
+  "include": [
+    "app/src/test/**/*.kt",
+    "app/src/test/**/*.properties"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      ".agents/**",
+      "plan_*.txt",
+      "konkluzje_*.txt",
+      "**/build/**",
+      "**/.gradle/**",
+      "**/.kotlin/**",
+      "local.properties",
+      "**/google-services.json",
+      "repomix*.xml"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}

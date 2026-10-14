@@ -1,0 +1,62 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "filePathStyle": "target-relative",
+    "compress": false,
+    "headerText": "RayColl is a native Android flashcard app built with Kotlin and Jetpack Compose. The current working tree may contain uncommitted changes; packed file contents reflect the current working tree. README.md describes the project. Local environment files and agent scratch notes are intentionally excluded.",
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": false,
+    "includeEmptyDirectories": false,
+    "git": {
+      "sortByChanges": true,
+      "includeDiffs": false,
+      "includeLogs": false
+    }
+  },
+  "include": [
+    "README.md",
+    ".editorconfig",
+    ".gitignore",
+    "repomix.config.json",
+    "build.gradle.kts",
+    "settings.gradle.kts",
+    "gradle.properties",
+    "gradle/libs.versions.toml",
+    "gradle/wrapper/gradle-wrapper.properties",
+    "gradlew",
+    "gradlew.bat",
+    "app/**/*.kt",
+    "app/**/*.kts",
+    "app/**/*.xml",
+    "app/**/*.pro",
+    "app/**/*.json",
+    "app/**/*.properties"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      ".agents/**",
+      "plan_*.txt",
+      "konkluzje_*.txt",
+      "**/build/**",
+      "**/.gradle/**",
+      "**/.kotlin/**",
+      "local.properties",
+      "**/google-services.json",
+      "repomix*.xml"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}

@@ -3,12 +3,12 @@ package com.raycoll.app.domain.merge
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.domain.srs.createSeedModes
+import com.raycoll.app.domain.seed.SEED_MODES
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Port testów MigrationRules z "RayColl - Kopie" (spec = useStoreBootstrap.ts). */
+/** Decyzja o migracji danych gościa i wykrywanie własnych trybów. */
 class MigrationRulesTest {
 
     @Test
@@ -36,7 +36,7 @@ class MigrationRulesTest {
         assertFalse(getGuestHasData(emptyList(), mapOf("2026-05-27" to 0), emptyList()))
 
         // nietknięte tryby wbudowane (seed) → brak danych
-        val seedModes = createSeedModes()
+        val seedModes = SEED_MODES
         assertFalse(getGuestHasData(emptyList(), emptyMap(), seedModes))
 
         // własny tryb → dane
@@ -49,7 +49,7 @@ class MigrationRulesTest {
         val custom = StudyMode("c", name = "Custom", isBuiltIn = false)
         assertTrue(isUserAuthoredMode(custom))
 
-        val builtInValid = createSeedModes()[0]
+        val builtInValid = SEED_MODES[0]
         assertFalse(isUserAuthoredMode(builtInValid))
 
         val builtInNoSource = builtInValid.copy(builtInSourceId = null)

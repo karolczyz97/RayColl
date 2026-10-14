@@ -3,260 +3,288 @@ package com.raycoll.app.domain.session
 import com.raycoll.app.core.Clock
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.model.ListenAndCheckStep
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.NextCardStep
+import com.raycoll.app.domain.model.Ratings
+import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
+import com.raycoll.app.domain.model.pageIndex
 import com.raycoll.app.domain.steps.CompoundExpander
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * Sesja nauki jednej talii: przechodzi karta po karcie przez kroki trybu,
+ * obsługuje tapnięcia, podgląd strony (przytrzymanie), oceny i pracę w tle.
+ */
 class SessionEngine(
     private val group: FlashcardGroup,
-    private val steps: List<ModeStep>,
+    steps: List<ModeStep>,
     private val deps: SessionDeps,
     private val clock: Clock,
     private val ttsRate: Float,
-    private val scope: CoroutineScope,
+    private val scope: CoroutineScope
 ) {
-    companion object {
-        const val ERROR_TTS = "tts_error"
-        const val ERROR_TTS_MISSING_VOICE = "tts_missing_voice"
-        const val ERROR_STT = "stt_error"
-    }
-
     private val _state = MutableStateFlow(SessionState())
-    val state = _state.asStateFlow()
+    val state: StateFlow<SessionState> = _state.asStateFlow()
 
-    /** Callback dla serwisu tła: auto-pauza (błąd TTS w tle) → notyfikacja "wstrzymane". */
-    var onBackgroundAutoPause: (() -> Unit)? = null
+    private val _inBackground = MutableStateFlow(false)
+    val inBackground: StateFlow<Boolean> = _inBackground.asStateFlow()
 
-    private val reviewTracker = ReviewTracker()
-    // snapshot SRS sprzed pierwszej oceny w tej próbie — baza dla nadpisującej ponownej oceny
+    private val _isPaused = MutableStateFlow(false)
+    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
+
+    private val _autoPausedInBackground = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Sesja w tle stanęła i czeka na użytkownika (błąd mowy albo ręczna ocena) — serwis pokazuje "wstrzymane". */
+    val autoPausedInBackground: SharedFlow<Unit> = _autoPausedInBackground.asSharedFlow()
+
+    // kroki dotyczące stron, których talia nie pokazuje, są pomijane
+    private val expandedSteps: List<ModeStep> = CompoundExpander.expandModeSteps(steps).filter { step ->
+        val page = step.pageIndex
+        page == null || page < group.activePageCount
+    }
+    private val executor = StepExecutor(this, deps, group, clock, ttsRate)
+    val needsMicrophone: Boolean get() = expandedSteps.any { it is ListenAndCheckStep }
+    val canRunHandsFree: Boolean get() = BackgroundSubstitution.isModeHandsFreeCapable(expandedSteps)
+
+    private val reviewedCardIds = mutableSetOf<String>()
+    val reviewedCardCount: Int get() = reviewedCardIds.size
+
+    // stan SRS sprzed pierwszej oceny w tej próbie — baza dla ponownej (nadpisującej) oceny
     private val baseSrsStates = mutableMapOf<String, SrsState>()
-    private var expandedSteps: List<ModeStep> = emptyList()
-    private var cardJobs = mutableMapOf<Int, Job>()
+    private val cardJobs = mutableMapOf<Int, Job>()
     private var lastExecutedCardIndex = -1
     private val holding = MutableStateFlow(false)
-    private val inBackground = MutableStateFlow(false)
-    private var cardStartedAt: Long = 0L
-    private var holdStartedAt: Long = 0L
+    private var cardStartedAt = 0L
+    private var holdStartedAt = 0L
     private var peekTimerJob: Job? = null
     private var skippableJob: Job? = null
 
-    init {
-        expandedSteps = CompoundExpander.expandModeSteps(steps).filter { step ->
-            val pageIndex = com.raycoll.app.domain.steps.StepRegistry.getStepPageIndex(step)
-            pageIndex == null || pageIndex < group.activePageCount
-        }
-    }
+    internal fun dispatch(action: SessionAction) = _state.update { sessionReducer(it, action) }
 
     fun start(cards: List<Flashcard>) {
-        cardJobs.values.forEach { it.cancel() }
-        cardJobs.clear()
-        peekTimerJob?.cancel()
+        cancelCardJobs()
+        _isPaused.value = false
         holding.value = false
-        reviewTracker.newAttempt()
+        reviewedCardIds.clear()
         baseSrsStates.clear()
-        _state.value = sessionReducer(_state.value, SessionAction.SetCards(cards))
-        _state.value = sessionReducer(_state.value, SessionAction.StartSession)
+        dispatch(SessionAction.SetCards(cards))
+        dispatch(SessionAction.StartSession)
         if (cards.isEmpty()) {
-            _state.value = sessionReducer(_state.value, SessionAction.FinishSession)
+            dispatch(SessionAction.FinishSession)
             return
         }
         lastExecutedCardIndex = -1
         runCurrentCard()
     }
 
-    /** "Od nowa": świeże wersje wszystkich kart sesji (dostarcza VM z repozytorium). */
-    fun restart(freshCards: List<Flashcard>) = start(freshCards)
-
-    /** "Powtórz oblane": świeże wersje kart z listy failed. */
-    fun restartFailed(freshCards: List<Flashcard>) {
-        if (freshCards.isNotEmpty()) start(freshCards)
-    }
-
     private fun runCurrentCard() {
-        val cardIndex = _state.value.currentCardIndex
-        if (cardIndex < 0 || cardIndex >= _state.value.cards.size) return
-        // ta sama karta może być wznowiona tylko gdy czeka pending step (np. po gate)
-        if (cardIndex == lastExecutedCardIndex && _state.value.pendingStepIndexToRun == null) return
+        if (_isPaused.value) return
+        val s = _state.value
+        val cardIndex = s.currentCardIndex
+        if (cardIndex !in s.cards.indices) return
+        // tę samą kartę wznawiamy tylko, gdy czeka zaległy krok (po tapnięciu w bramkę)
+        if (cardIndex == lastExecutedCardIndex && s.pendingStepIndexToRun == null) return
         lastExecutedCardIndex = cardIndex
-        // Znacznik startu karty ustawiamy TYLKO przy wejściu od kroku 0 (świeży start).
-        // Wznowienie po tap-gate (pending != null) NIE resetuje go — inaczej okno
-        // "poprzednia = cofnij" liczyłoby się od tapnięcia w gate, nie od startu karty
-        // (parytet z executeStep: currentCardStartedAt tylko przy stepIndex === 0).
-        if (_state.value.pendingStepIndexToRun == null) {
-            cardStartedAt = clock.now()
-        }
+        // start karty liczy się od kroku 0; wznowienie po bramce nie przesuwa okna "cofnij do poprzedniej"
+        if (s.pendingStepIndexToRun == null) cardStartedAt = clock.now()
 
         cardJobs[cardIndex]?.cancel()
-        // LAZY: referencja musi trafić do mapy ZANIM łańcuch ruszy (immediate dispatcher
-        // wykonałby ciało przed przypisaniem i anulowanie trafiałoby w stary job)
-        val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-            val card = _state.value.cards[cardIndex]
-            val executor = StepExecutor(deps, _state, group, ttsRate, this@SessionEngine)
-            var stepIndex = 0
-            while (stepIndex < expandedSteps.size) {
-                ensureActive()
-                if (_state.value.status == SessionStatus.FINISHED) break
-                val pending = _state.value.pendingStepIndexToRun
-                if (pending != null) {
-                    _state.value = sessionReducer(_state.value, SessionAction.ConsumePendingStepIndex)
-                    stepIndex = pending
-                    continue
-                }
-                val step = expandedSteps[stepIndex]
-                if (inBackground.value && substituteInBackground(step, card)) {
-                    stepIndex++
-                    continue
-                }
-                executor.executeStep(step, card, stepIndex)
-                if (_state.value.status == SessionStatus.REVEALED) return@launch
-                if (_state.value.interactionGate.kind != InteractionGateKind.NONE) return@launch
-                if (step is NextCardStep) {
-                    holding.first { !it }
-                    advanceToNextCard()
-                    return@launch
-                }
-                stepIndex++
-            }
-        }
+        // LAZY: job musi trafić do mapy, zanim ruszy — przy natychmiastowym dispatcherze
+        // ciało wykonałoby się przed przypisaniem i anulowanie trafiałoby w stary job
+        val job = scope.launch(start = CoroutineStart.LAZY) { runSteps(_state.value.cards[cardIndex]) }
         cardJobs[cardIndex] = job
         job.start()
     }
 
+    private suspend fun CoroutineScope.runSteps(card: Flashcard) {
+        var stepIndex = 0
+        while (stepIndex < expandedSteps.size) {
+            ensureActive()
+            if (_state.value.status == SessionStatus.FINISHED) return
+            _state.value.pendingStepIndexToRun?.let { pending ->
+                dispatch(SessionAction.ConsumePendingStepIndex)
+                stepIndex = pending
+                continue
+            }
+            val step = expandedSteps[stepIndex]
+            // niespełniony warunek = krok pominięty, także "następna karta" z drugiej gałęzi
+            if (!executor.isConditionMet(step)) {
+                stepIndex++
+                continue
+            }
+            if (_inBackground.value && substituteInBackground(step, card)) {
+                if (_state.value.status == SessionStatus.REVEALED) return
+                stepIndex++
+                continue
+            }
+            executor.execute(step, card, stepIndex)
+            if (_state.value.status == SessionStatus.REVEALED) return
+            if (_state.value.interactionGate.kind != InteractionGateKind.NONE) return
+            if (step is NextCardStep) {
+                advanceToNextCard()
+                return
+            }
+            stepIndex++
+        }
+    }
+
     fun rate(rating: Int) {
-        if (_state.value.cardReviewed) return
+        if (_state.value.status != SessionStatus.REVEALED || _state.value.cardReviewed) return
+        interruptCurrentCard()
         submitReview(rating)
         scope.launch { advanceToNextCard() }
     }
 
     /**
-     * Zapis oceny (ręcznej i automatycznej) z pełną semantyką sekcji 6.5:
-     * haptyka; rating 1 → failed; ponowna ocena w tej samej próbie NADPISUJE
-     * (SRS liczony od bazy sprzed pierwszej oceny, heatmapa bez drugiego +1,
-     * członkostwo w failed od nowa).
+     * Zapis oceny (ręcznej i automatycznej): haptyka, ocena 1 = karta na liście
+     * nieudanych. Ponowna ocena tej samej karty w tej próbie nadpisuje poprzednią.
      */
     internal fun submitReview(rating: Int) {
         val s = _state.value
         if (s.cardReviewed) return
         val card = s.cards.getOrNull(s.currentCardIndex) ?: return
         deps.haptic(rating)
-        if (reviewTracker.isReviewed(card.id)) {
-            _state.value = sessionReducer(_state.value, SessionAction.RemoveFailedCard(card.id))
-            val base = baseSrsStates[card.id] ?: card.srsState
-            deps.onCardReviewed(group.id, card.id, rating, base)
+        if (card.id in reviewedCardIds) {
+            dispatch(SessionAction.RemoveFailedCard(card.id))
+            deps.onCardReviewed(group.id, card.id, rating, baseSrsStates[card.id] ?: card.srsState)
         } else {
             baseSrsStates[card.id] = card.srsState
-            reviewTracker.markReviewed(card.id)
+            reviewedCardIds += card.id
             deps.onCardReviewed(group.id, card.id, rating, null)
         }
-        if (rating == 1) {
-            _state.value = sessionReducer(_state.value, SessionAction.AddFailedCard(card.id))
-        }
-        _state.value = sessionReducer(_state.value, SessionAction.SetCardReviewed)
+        if (rating == Ratings.AGAIN) dispatch(SessionAction.AddFailedCard(card.id))
+        dispatch(SessionAction.SetCardReviewed)
     }
 
     private suspend fun advanceToNextCard() {
         holding.first { !it }
         val nextIndex = _state.value.currentCardIndex + 1
         if (nextIndex >= _state.value.cards.size) {
-            _state.value = sessionReducer(_state.value, SessionAction.FinishSession)
+            dispatch(SessionAction.FinishSession)
             return
         }
-        _state.value = sessionReducer(_state.value, SessionAction.AdvanceCard(nextIndex))
+        dispatch(SessionAction.AdvanceCard(nextIndex))
         runCurrentCard()
     }
 
     fun skipToNextCard() {
-        cardJobs[_state.value.currentCardIndex]?.cancel()
-        holding.value = false
+        if (_state.value.status == SessionStatus.FINISHED) return
+        interruptCurrentCard()
         scope.launch { advanceToNextCard() }
     }
 
+    /** Do 3 s od startu karty: powrót do poprzedniej; później: bieżąca od początku. */
     fun goToPreviousCard() {
         val s = _state.value
         if (s.status == SessionStatus.FINISHED) return
-        cardJobs[s.currentCardIndex]?.cancel()
-        holding.value = false
-        peekTimerJob?.cancel()
-        // <=3 s od startu karty: cofnij do poprzedniej; później: restart bieżącej od kroku 0
-        val targetIndex = if (clock.now() - cardStartedAt <= StudyConstants.PREVIOUS_GOES_BACK_WINDOW_MS && s.currentCardIndex > 0) {
-            s.currentCardIndex - 1
-        } else {
-            s.currentCardIndex
-        }
-        _state.value = sessionReducer(_state.value, SessionAction.AdvanceCard(targetIndex))
+        val withinWindow = clock.now() - cardStartedAt <= StudyConstants.PREVIOUS_GOES_BACK_WINDOW_MS
+        replayCard(if (withinWindow && s.currentCardIndex > 0) s.currentCardIndex - 1 else s.currentCardIndex)
+    }
+
+    fun restartCurrentCard() {
+        val s = _state.value
+        if (s.status == SessionStatus.FINISHED) return
+        replayCard(s.currentCardIndex)
+    }
+
+    private fun replayCard(index: Int) {
+        interruptCurrentCard()
+        dispatch(SessionAction.AdvanceCard(index))
         lastExecutedCardIndex = -1
         runCurrentCard()
     }
 
+    private fun interruptCurrentCard() {
+        cardJobs[_state.value.currentCardIndex]?.cancel()
+        holding.value = false
+        peekTimerJob?.cancel()
+        peekTimerJob = null
+    }
+
     /**
-     * Substytucje kroków interaktywnych w tle (sekcja 6.6 planu).
-     * Zwraca true gdy krok został obsłużony zastępczo.
+     * Zastępstwa kroków wymagających użytkownika, gdy sesja idzie w tle.
+     * Zwraca true, gdy krok został obsłużony zastępczo.
      */
     private suspend fun substituteInBackground(step: ModeStep, card: Flashcard): Boolean {
-        val activePages = card.pages.take(group.activePageCount)
+        val waitMs = BackgroundSubstitution.calculateBgWaitMs(card.pages.take(group.activePageCount))
         return when (step) {
             is WaitForTapStep -> {
-                delay(BackgroundSubstitution.calculateBgWaitMs(activePages))
+                runSkippable { delay(waitMs) }
                 true
             }
+
             is WaitForTapToRevealNextStep -> {
-                delay(BackgroundSubstitution.calculateBgWaitMs(activePages))
-                val hidden = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
-                hidden.firstOrNull()?.let {
-                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(it))
-                }
+                runSkippable { delay(waitMs) }
+                hiddenPages().firstOrNull()?.let { dispatch(SessionAction.RevealPages(listOf(it))) }
                 true
             }
+
             is WaitForTapToRevealStep -> {
-                delay(BackgroundSubstitution.calculateBgWaitMs(activePages))
-                val hidden = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
-                hidden.forEach {
-                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(it))
+                runSkippable { delay(waitMs) }
+                hiddenPages().forEach { dispatch(SessionAction.RevealPages(listOf(it))) }
+                true
+            }
+
+            // ocena wymaga użytkownika: pokaż oceny i wstrzymaj sesję do powrotu do aplikacji
+            is ShowRatingsStep -> {
+                if (!_state.value.cardReviewed) {
+                    dispatch(SessionAction.ShowRatings)
+                    _autoPausedInBackground.tryEmit(Unit)
                 }
                 true
             }
+
             else -> false
         }
     }
 
-    fun setBackground(value: Boolean) { inBackground.value = value }
+    private fun hiddenPages(): List<Int> = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
 
-    /** Obsługa błędu TTS z executora: w tle auto-pauza zamiast statusu ERROR. */
-    internal fun onTtsFailure(result: SpeakResult) {
-        if (inBackground.value) {
-            onBackgroundAutoPause?.invoke()
-            cardJobs[_state.value.currentCardIndex]?.cancel()
-        } else {
-            val key = if (result == SpeakResult.MISSING_VOICE) ERROR_TTS_MISSING_VOICE else ERROR_TTS
-            _state.value = sessionReducer(_state.value, SessionAction.SetError(key))
+    fun setBackground(value: Boolean) {
+        _inBackground.value = value
+        if (value && !_isPaused.value && _state.value.interactionGate.kind != InteractionGateKind.NONE) {
+            resume()
         }
     }
 
-    internal fun onSttFailure() {
-        _state.value = sessionReducer(_state.value, SessionAction.SetError(ERROR_STT))
+    /** Błąd TTS: w tle sesja staje (nikt nie zobaczy komunikatu), na ekranie — komunikat i dalej. */
+    internal fun onTtsFailure(result: SpeakResult) {
+        if (_inBackground.value) {
+            pause()
+            _autoPausedInBackground.tryEmit(Unit)
+        } else {
+            val error = if (result == SpeakResult.MISSING_VOICE) SessionError.TTS_MISSING_VOICE else SessionError.TTS
+            dispatch(SessionAction.SetError(error))
+        }
     }
 
-    fun clearError() {
-        _state.value = sessionReducer(_state.value, SessionAction.ClearError)
-    }
+    internal fun onSttFailure() = dispatch(SessionAction.SetError(SessionError.STT))
+
+    fun clearError() = dispatch(SessionAction.ClearError)
 
     /**
-     * Uruchamia przerywalne tapem ciało kroku (TTS / czekanie / nasłuch).
-     * Zwraca true, gdy krok został pominięty tapem.
+     * Uruchamia część kroku, którą tapnięcie może przerwać (mowa, pauza, nasłuch).
+     * Zwraca true, gdy przerwano ją tapnięciem.
      */
     internal suspend fun runSkippable(block: suspend () -> Unit): Boolean = coroutineScope {
         val inner = launch { block() }
@@ -269,124 +297,116 @@ class SessionEngine(
         inner.isCancelled
     }
 
-    /** Tap w kartę — tabela z sekcji 6.5 planu. */
+    /** Tapnięcie w kartę. */
     fun handleCardPress() {
+        if (_isPaused.value) return
         val s = _state.value
         when (s.status) {
-            SessionStatus.REVEALED, SessionStatus.FINISHED -> Unit // NIC
-            SessionStatus.LISTENING -> skippableJob?.cancel() // stop nasłuchu → wynik 'skipped'
-            else -> { // SPEAKING / IDLE / ERROR
-                if (s.interactionGate.kind == InteractionGateKind.TAP_TO_REVEAL) {
+            SessionStatus.REVEALED, SessionStatus.FINISHED -> Unit
+
+            SessionStatus.LISTENING -> skippableJob?.cancel()
+
+            // koniec nasłuchu = odpowiedź pominięta
+            SessionStatus.IDLE, SessionStatus.SPEAKING, SessionStatus.ERROR ->
+                if (s.interactionGate.kind ==
+                    InteractionGateKind.TAP_TO_REVEAL
+                ) {
                     handleGateTap()
                 } else {
-                    skippableJob?.cancel() // skip kroku (przerwij audio/czekanie, idź dalej)
+                    skippableJob?.cancel()
                 }
-            }
         }
     }
 
     private fun handleGateTap() {
         val gate = _state.value.interactionGate
         if (gate.kind != InteractionGateKind.TAP_TO_REVEAL) return
-        val hiddenPages = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
-        when (gate.revealMode) {
-            TapRevealMode.SINGLE -> {
-                if (hiddenPages.isNotEmpty()) {
-                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(hiddenPages.first()))
-                }
-                _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
-                runCurrentCard()
-            }
-            TapRevealMode.REMAINING -> {
-                if (hiddenPages.isNotEmpty()) {
-                    _state.value = sessionReducer(_state.value, SessionAction.RevealNextPageInGate(hiddenPages.first()))
-                    if (hiddenPages.size <= 1) {
-                        _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
-                        runCurrentCard()
-                    }
-                } else {
-                    _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
-                    runCurrentCard()
-                }
-            }
-            TapRevealMode.NONE, null -> {
-                _state.value = sessionReducer(_state.value, SessionAction.CompleteInteractionGate)
-                runCurrentCard()
-            }
+        val hidden = hiddenPages()
+        val reveals = gate.revealMode == TapRevealMode.SINGLE || gate.revealMode == TapRevealMode.REMAINING
+        if (reveals) hidden.firstOrNull()?.let { dispatch(SessionAction.RevealPages(listOf(it))) }
+        // "odsłaniaj pozostałe" czeka na kolejne tapnięcia, dopóki coś jest ukryte
+        val gateDone = gate.revealMode != TapRevealMode.REMAINING || hidden.size <= 1
+        if (gateDone) {
+            dispatch(SessionAction.CompleteInteractionGate)
+            runCurrentCard()
         }
     }
 
     /**
-     * Naciśnięcie karty (palec w dół). Po PEEK_HOLD_THRESHOLD_MS pokazuje podgląd
-     * następnej ukrytej strony; trzymanie blokuje przejście do następnej karty.
+     * Palec na karcie. Po [StudyConstants.PEEK_HOLD_THRESHOLD_MS] pokazuje podgląd
+     * następnej ukrytej strony; trzymanie wstrzymuje przejście do następnej karty.
      */
     fun pressDown() {
+        val s = _state.value
+        if (s.status == SessionStatus.REVEALED || s.status == SessionStatus.FINISHED) return
         holding.value = true
         holdStartedAt = clock.now()
         peekTimerJob?.cancel()
-        val s = _state.value
-        if (s.status == SessionStatus.REVEALED || s.status == SessionStatus.FINISHED) return
-        val nextHidden = (0 until group.activePageCount).firstOrNull { it !in s.revealedPages }
-        if (nextHidden != null) {
-            peekTimerJob = scope.launch {
-                delay(StudyConstants.PEEK_HOLD_THRESHOLD_MS)
-                _state.value = sessionReducer(_state.value, SessionAction.PeekSet(nextHidden))
-            }
+        val nextHidden = hiddenPages().firstOrNull() ?: return
+        peekTimerJob = scope.launch {
+            delay(StudyConstants.PEEK_HOLD_THRESHOLD_MS)
+            dispatch(SessionAction.PeekSet(nextHidden))
         }
     }
 
-    /**
-     * Puszczenie karty: <500 ms → zwykły tap (trwałe odsłonięcie w gate / skip);
-     * >=500 ms → schowanie podglądu (PEEK_CLEAR).
-     */
+    /** Puszczenie karty: krótkie = zwykłe tapnięcie, długie = schowanie podglądu. */
     fun pressUp() {
         holding.value = false
         peekTimerJob?.cancel()
         peekTimerJob = null
-        val heldMs = clock.now() - holdStartedAt
-        if (heldMs >= StudyConstants.PEEK_HOLD_THRESHOLD_MS) {
-            if (_state.value.peekedPageIndex != null) {
-                _state.value = sessionReducer(_state.value, SessionAction.PeekClear)
-            }
+        if (clock.now() - holdStartedAt >= StudyConstants.PEEK_HOLD_THRESHOLD_MS) {
+            clearPeek()
         } else {
             handleCardPress()
         }
     }
 
-    fun setHolding(value: Boolean) { holding.value = value }
+    /** Anulowanie naciśnięcia (np. przewijanie): chowa podgląd, nie działa jak tapnięcie. */
+    fun cancelPress() {
+        holding.value = false
+        peekTimerJob?.cancel()
+        peekTimerJob = null
+        clearPeek()
+    }
+
+    private fun clearPeek() {
+        if (_state.value.peekedPageIndex != null) dispatch(SessionAction.PeekClear)
+    }
 
     fun pause() {
-        // zawsze zwalnia hold (wiszący hold przy zejściu w tło — pułapka 5)
+        _isPaused.value = true
+        // zawsze puszcza trzymanie — inaczej po powrocie karta czekałaby na puszczenie palca
         holding.value = false
         peekTimerJob?.cancel()
         val s = _state.value
-        if (s.status == SessionStatus.FINISHED) return
-        // no-op gdy revealed/gate — czekamy na interakcję, nie ma czego pauzować
-        if (s.status == SessionStatus.REVEALED || s.interactionGate.kind != InteractionGateKind.NONE) return
+        // oceny/bramka czekają na użytkownika — nie ma czego pauzować
+        if (s.status == SessionStatus.FINISHED || s.status == SessionStatus.REVEALED) return
+        if (s.interactionGate.kind != InteractionGateKind.NONE) return
         cardJobs[s.currentCardIndex]?.cancel()
+        if (s.status == SessionStatus.SPEAKING || s.status == SessionStatus.LISTENING) {
+            dispatch(SessionAction.EndSpeaking)
+        }
     }
 
+    /** Wznawia przerwaną kartę od kroku 0 (mowy ani nasłuchu nie da się podjąć w połowie). */
     fun resume() {
-        // bieżąca karta wciąż leci → nic nie rób (idempotentne, wołane też przez autostart playera)
-        if (cardJobs[_state.value.currentCardIndex]?.isActive == true) return
-        if (_state.value.status == SessionStatus.FINISHED) return
-        // revealed/gate: czekamy na użytkownika, replay by zresetował stan karty
-        if (_state.value.status == SessionStatus.REVEALED) return
-        if (_state.value.interactionGate.kind != InteractionGateKind.NONE && !inBackground.value) return
-        // replay bieżącej karty od kroku 0 (TTS/STT nie da się wznowić od połowy)
-        _state.value = sessionReducer(_state.value, SessionAction.AdvanceCard(_state.value.currentCardIndex))
-        lastExecutedCardIndex = -1
-        runCurrentCard()
+        _isPaused.value = false
+        val s = _state.value
+        if (cardJobs[s.currentCardIndex]?.isActive == true) return
+        if (s.status == SessionStatus.FINISHED || s.status == SessionStatus.REVEALED) return
+        if (s.interactionGate.kind != InteractionGateKind.NONE && !_inBackground.value) return
+        replayCard(s.currentCardIndex)
     }
 
     fun stop() {
+        cancelCardJobs()
+        _isPaused.value = false
+        dispatch(SessionAction.FinishSession)
+    }
+
+    private fun cancelCardJobs() {
         cardJobs.values.forEach { it.cancel() }
         cardJobs.clear()
         peekTimerJob?.cancel()
-        _state.value = sessionReducer(_state.value, SessionAction.FinishSession)
-    }
-
-    fun end() {
-        stop()
     }
 }

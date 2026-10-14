@@ -1,128 +1,173 @@
 package com.raycoll.app.ui.modedetail
 
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.raycoll.app.core.Ids
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.seed.BuiltInMode
+import com.raycoll.app.domain.seed.seedModeFor
 import com.raycoll.app.domain.steps.ModeIssue
 import com.raycoll.app.domain.steps.ModeStepValidator
-import com.raycoll.app.domain.steps.ModeTemplates
+import com.raycoll.app.domain.steps.ModeTemplate
+import com.raycoll.app.ui.components.UiEvents
+import com.raycoll.app.ui.components.launchSaving
+import com.raycoll.app.ui.navigation.ModeDetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-/** Maks. liczba stron karty wg modelu danych (2..20) — walidacja indeksów stron w edytorze. */
-private const val MAX_PAGES = 20
+/** Krok na liście edytora; stałe [key] pozwala animować przestawianie. */
+@Immutable
+data class EditableStep(val step: ModeStep, val key: String = Ids.newId())
 
-enum class ModeTemplate { CLASSIC, AUDIO, BLANK }
+sealed interface ModeDetailUiState {
+    data object Loading : ModeDetailUiState
 
-data class ModeDetailUiState(
-    val loaded: Boolean = false,
-    val isNew: Boolean = false,
-    val templateChosen: Boolean = false,
-    val name: String = "",
-    val steps: List<ModeStep> = emptyList(),
-    val isBuiltIn: Boolean = false,
-    val issues: List<ModeIssue> = emptyList(),
-) {
-    // Tylko problemy blokujące (name/steps/page-out-of-range) wyłączają zapis —
-    // NoTerminalStep/AutoRateWithoutStt to ostrzeżenia (parytet z validateModeSteps.ts).
-    val saveEnabled: Boolean get() = loaded && issues.none { it.blocking }
+    /** Nowy tryb: najpierw wybór szablonu. */
+    data object ChoosingTemplate : ModeDetailUiState
+
+    data class Editing(
+        val isNew: Boolean,
+        val name: String,
+        val steps: List<EditableStep>,
+        /** Wbudowany tryb, z którego pochodzi edytowany (można go przywrócić). */
+        val builtIn: BuiltInMode?,
+        val issues: List<ModeIssue>,
+        val saving: Boolean = false
+    ) : ModeDetailUiState {
+        val canSave: Boolean get() = !saving && issues.none { it.blocking }
+
+        /** Przywracanie ma sens tylko, gdy edytowany stan różni się od wersji fabrycznej. */
+        val canReset: Boolean get() = !saving && seedModeFor(builtIn?.id)
+            ?.let { seed -> seed.name != name || seed.steps != steps.map { it.step } } == true
+    }
+}
+
+sealed interface ModeDetailEvent {
+    data object Closed : ModeDetailEvent
+
+    data object SaveFailed : ModeDetailEvent
 }
 
 @HiltViewModel
 class ModeDetailViewModel @Inject constructor(
-    private val modeRepository: StudyModeRepository,
+    savedStateHandle: SavedStateHandle,
+    private val modeRepository: StudyModeRepository
 ) : ViewModel() {
+    private val modeId: String? = savedStateHandle.toRoute<ModeDetailRoute>().modeId
+    private var existingMode: StudyMode? = null
 
-    private val _uiState = MutableStateFlow(ModeDetailUiState())
+    private val _uiState = MutableStateFlow<ModeDetailUiState>(ModeDetailUiState.Loading)
     val uiState: StateFlow<ModeDetailUiState> = _uiState.asStateFlow()
 
-    private var existingMode: StudyMode? = null
-    private var initialized = false
+    private val eventSink = UiEvents<ModeDetailEvent>()
+    val events: Flow<ModeDetailEvent> = eventSink.flow
 
-    fun init(modeId: String?) {
-        if (initialized) return
-        initialized = true
-        if (modeId == null) {
-            _uiState.value = ModeDetailUiState(loaded = true, isNew = true, templateChosen = false)
-            return
-        }
+    init {
         viewModelScope.launch {
-            val mode = modeRepository.getModes().find { it.id == modeId }
-            if (mode == null) {
-                _uiState.value = ModeDetailUiState(loaded = true, isNew = true, templateChosen = false)
+            val mode = modeId?.let { modeRepository.getMode(it) }?.takeIf { it.deletedAt == null }
+            existingMode = mode
+            _uiState.value = if (mode == null) {
+                ModeDetailUiState.ChoosingTemplate
             } else {
-                existingMode = mode
-                _uiState.value = validated(
-                    ModeDetailUiState(
-                        loaded = true, isNew = false, templateChosen = true,
-                        name = mode.name, steps = mode.steps, isBuiltIn = mode.isBuiltIn,
-                    )
+                editing(
+                    isNew = false,
+                    name = mode.name,
+                    steps = mode.steps.map(::EditableStep),
+                    builtIn = BuiltInMode.fromId(mode.builtInSourceId)?.takeIf { mode.isBuiltIn }
                 )
             }
         }
     }
 
     fun chooseTemplate(template: ModeTemplate) {
-        val steps = when (template) {
-            ModeTemplate.CLASSIC -> ModeTemplates.classicTemplate()
-            ModeTemplate.AUDIO -> ModeTemplates.audioTemplate()
-            ModeTemplate.BLANK -> ModeTemplates.blankTemplate()
-        }
-        _uiState.value = validated(_uiState.value.copy(templateChosen = true, steps = steps))
+        _uiState.value = editing(isNew = true, name = "", steps = template.steps.map(::EditableStep), builtIn = null)
     }
 
-    fun setName(name: String) {
-        _uiState.value = validated(_uiState.value.copy(name = name))
+    fun setName(name: String) = edit { it.copy(name = name) }
+
+    fun updateStep(index: Int, step: ModeStep) = editSteps { steps ->
+        if (index in steps.indices) steps[index] = steps[index].copy(step = step)
     }
 
-    fun updateStep(index: Int, step: ModeStep) {
-        val steps = _uiState.value.steps.toMutableList()
-        if (index !in steps.indices) return
-        steps[index] = step
-        _uiState.value = validated(_uiState.value.copy(steps = steps))
+    fun addStep(step: ModeStep) = editSteps { it += EditableStep(step) }
+
+    fun removeStep(index: Int) = editSteps { if (index in it.indices) it.removeAt(index) }
+
+    fun moveStep(from: Int, to: Int) = editSteps { steps ->
+        if (from in steps.indices && to in steps.indices) steps.add(to, steps.removeAt(from))
     }
 
-    fun addStep(step: ModeStep) {
-        _uiState.value = validated(_uiState.value.copy(steps = _uiState.value.steps + step))
-    }
-
-    fun removeStep(index: Int) {
-        val steps = _uiState.value.steps.toMutableList()
-        if (index !in steps.indices) return
-        steps.removeAt(index)
-        _uiState.value = validated(_uiState.value.copy(steps = steps))
-    }
-
-    fun moveStep(index: Int, delta: Int) {
-        val steps = _uiState.value.steps.toMutableList()
-        val target = index + delta
-        if (index !in steps.indices || target !in steps.indices) return
-        val tmp = steps[index]; steps[index] = steps[target]; steps[target] = tmp
-        _uiState.value = validated(_uiState.value.copy(steps = steps))
-    }
-
-    fun save(onDone: () -> Unit) {
-        val state = _uiState.value
-        if (!state.saveEnabled) return
-        viewModelScope.launch {
+    fun save() {
+        val state = _uiState.value as? ModeDetailUiState.Editing ?: return
+        if (!state.canSave) return
+        val steps = state.steps.map { it.step }
+        persist {
             val existing = existingMode
-            if (existing == null) {
-                modeRepository.addMode(state.name, state.steps)
-            } else {
-                modeRepository.updateMode(existing.copy(name = state.name, steps = state.steps))
+            when {
+                existing == null -> {
+                    val id = modeRepository.addMode(state.name, steps)
+                    existingMode = StudyMode(id = id, name = state.name, steps = steps)
+                }
+
+                // bez zmian: nie zapisujemy (wbudowany tryb zostaje „nieruszony” i dostaje nowe kroki)
+                existing.name == state.name && existing.steps == steps -> Unit
+
+                else -> {
+                    val updated = existing.copy(name = state.name, steps = steps)
+                    modeRepository.updateMode(updated)
+                    existingMode = updated
+                }
             }
-            onDone()
         }
     }
 
-    private fun validated(state: ModeDetailUiState): ModeDetailUiState {
-        val probe = StudyMode(id = "probe", name = state.name, steps = state.steps)
-        return state.copy(issues = ModeStepValidator.validate(probe, MAX_PAGES))
+    fun resetToBuiltIn() {
+        val existing = existingMode ?: return
+        persist { modeRepository.resetMode(existing.id) }
     }
+
+    private fun persist(write: suspend () -> Unit) {
+        val state = _uiState.value as? ModeDetailUiState.Editing ?: return
+        if (state.saving) return
+        _uiState.value = state.copy(saving = true)
+        viewModelScope.launchSaving(onFailure = { eventSink.send(ModeDetailEvent.SaveFailed) }) {
+            try {
+                write()
+                eventSink.send(ModeDetailEvent.Closed)
+            } finally {
+                edit { it.copy(saving = false) }
+            }
+        }
+    }
+
+    private fun editing(isNew: Boolean, name: String, steps: List<EditableStep>, builtIn: BuiltInMode?) =
+        ModeDetailUiState.Editing(isNew, name, steps, builtIn, issues = validate(name, steps))
+
+    private fun edit(transform: (ModeDetailUiState.Editing) -> ModeDetailUiState.Editing) = _uiState.update { state ->
+        if (state !is ModeDetailUiState.Editing) return@update state
+        val edited = transform(state)
+        edited.copy(issues = validate(edited.name, edited.steps))
+    }
+
+    private fun editSteps(change: (MutableList<EditableStep>) -> Unit) = edit { state ->
+        state.copy(steps = state.steps.toMutableList().apply(change))
+    }
+
+    private fun validate(name: String, steps: List<EditableStep>) = ModeStepValidator.validate(
+        name,
+        steps.map {
+            it.step
+        }
+    )
 }

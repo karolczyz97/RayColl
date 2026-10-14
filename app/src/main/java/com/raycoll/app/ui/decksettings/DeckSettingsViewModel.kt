@@ -1,84 +1,128 @@
 package com.raycoll.app.ui.decksettings
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.StudyModeRepository
+import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.FlashcardGroup
+import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.operations.resolveStudyMode
+import com.raycoll.app.ui.components.UiEvents
+import com.raycoll.app.ui.components.launchSaving
+import com.raycoll.app.ui.navigation.DeckSettingsRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+
+sealed interface DeckSettingsUiState {
+    data object Loading : DeckSettingsUiState
+
+    data object DeckMissing : DeckSettingsUiState
+
+    data class Ready(val deck: FlashcardGroup, val modes: List<StudyMode>) : DeckSettingsUiState {
+        /** Tryb, którym talia się uczy — zaznaczony na liście także wtedy, gdy przypisany usunięto. */
+        val activeMode: StudyMode get() = resolveStudyMode(modes, deck.activeModeId)
+    }
+}
+
+sealed interface DeckSettingsEvent {
+    /** Talia zarchiwizowana albo usunięta — ekran się zamyka. */
+    data object Closed : DeckSettingsEvent
+
+    data object DeleteFailed : DeckSettingsEvent
+
+    /** Zmiana ustawienia się nie zapisała. */
+    data object SaveFailed : DeckSettingsEvent
+}
 
 @HiltViewModel
 class DeckSettingsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val deckRepository: DeckRepository,
-    private val modeRepository: StudyModeRepository,
+    private val modeRepository: StudyModeRepository
 ) : ViewModel() {
-    private val _deck = MutableStateFlow<FlashcardGroup?>(null)
-    val deck: StateFlow<FlashcardGroup?> = _deck
+    val deckId: String = savedStateHandle.toRoute<DeckSettingsRoute>().deckId
 
-    val modes: StateFlow<List<StudyMode>> = modeRepository.liveModes()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    // po archiwizacji/usunięciu z tego ekranu zostaje ostatni widok, dopóki ekran się zamyka
+    private val closing = MutableStateFlow(false)
+    private var lastReady: DeckSettingsUiState.Ready? = null
 
-    fun setActiveMode(deckId: String, modeId: String) { viewModelScope.launch {
-        deckRepository.setActiveStudyMode(deckId, modeId)
-        _deck.value = _deck.value?.copy(activeModeId = modeId)
-    }}
-    fun deleteMode(modeId: String) { viewModelScope.launch { modeRepository.deleteMode(modeId) } }
-    fun resetMode(modeId: String) { viewModelScope.launch { modeRepository.resetMode(modeId) } }
+    val uiState: StateFlow<DeckSettingsUiState> = combine(
+        deckRepository.deck(deckId),
+        modeRepository.liveModes(),
+        closing
+    ) { deck, modes, closing ->
+        when {
+            deck != null -> DeckSettingsUiState.Ready(deck, modes).also { lastReady = it }
 
-    fun loadDeck(deckId: String) { viewModelScope.launch { _deck.value = deckRepository.getDeck(deckId) } }
-    fun updateName(deckId: String, name: String) { viewModelScope.launch {
-        val deck = _deck.value ?: return@launch
-        deckRepository.updateDeck(deck.copy(name = name))
-        _deck.value = deck.copy(name = name)
-    }}
-    fun setVisiblePageCount(deckId: String, count: Int) { viewModelScope.launch {
-        deckRepository.setVisiblePageCount(deckId, count)
-        // Odśwież _deck (jak movePage) — wiersze stron w UI renderują się z deck.activePageCount,
-        // więc bez tego zwiększenie liczby stron nie pokazywało nowych wierszy do konfiguracji.
-        _deck.value = deckRepository.getDeck(deckId)
-    }}
-    fun setStudyFilter(deckId: String, filter: String) { viewModelScope.launch { deckRepository.setStudyFilter(deckId, filter) } }
-    fun setCardOrder(deckId: String, order: String) { viewModelScope.launch { deckRepository.setCardOrder(deckId, order) } }
-    fun archive(deckId: String) { viewModelScope.launch { deckRepository.archiveDeck(deckId) } }
+            closing -> lastReady ?: DeckSettingsUiState.DeckMissing
 
-    fun updatePageName(deckId: String, pageIndex: Int, name: String) { viewModelScope.launch {
-        val deck = _deck.value ?: return@launch
-        val names = deck.pageNames.toMutableList()
-        while (names.size <= pageIndex) names.add("")
-        names[pageIndex] = name
-        deckRepository.updateDeck(deck.copy(pageNames = names))
-        _deck.value = deck.copy(pageNames = names)
-    }}
-
-    fun setPageLanguage(deckId: String, pageIndex: Int, lang: String) { viewModelScope.launch {
-        val deck = _deck.value ?: return@launch
-        val langs = deck.pageLanguages.toMutableList()
-        while (langs.size <= pageIndex) langs.add("en-US")
-        langs[pageIndex] = lang
-        deckRepository.updateDeck(deck.copy(pageLanguages = langs))
-        _deck.value = deck.copy(pageLanguages = langs)
-    }}
-
-    /** Zamiana stron miejscami: nazwy + języki + zawartość kart (transakcyjnie w repo). */
-    fun movePage(deckId: String, from: Int, to: Int) { viewModelScope.launch {
-        deckRepository.movePage(deckId, from, to)
-        _deck.value = deckRepository.getDeck(deckId)
-    }}
-
-    /** Usunięcie z await — błąd zapisu zostawia użytkownika na ekranie z komunikatem. */
-    fun delete(deckId: String, onDone: () -> Unit, onError: () -> Unit) { viewModelScope.launch {
-        try {
-            deckRepository.deleteDeck(deckId)
-            onDone()
-        } catch (_: Exception) {
-            onError()
+            // usunięta (np. na innym urządzeniu) albo nieistniejąca talia
+            else -> DeckSettingsUiState.DeckMissing
         }
-    }}
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DeckSettingsUiState.Loading)
+
+    private val eventSink = UiEvents<DeckSettingsEvent>()
+    val events: Flow<DeckSettingsEvent> = eventSink.flow
+
+    /** Pusta nazwa nie jest zapisywana — talia zostaje przy poprzedniej. */
+    fun rename(name: String) {
+        if (name.isBlank()) return
+        launch { deckRepository.renameDeck(deckId, name) }
+    }
+
+    fun setPageName(pageIndex: Int, name: String) = launch { deckRepository.setPageName(deckId, pageIndex, name) }
+
+    fun setPageLanguage(pageIndex: Int, language: String) = launch {
+        deckRepository.setPageLanguage(deckId, pageIndex, language)
+    }
+
+    fun swapPages(from: Int, to: Int) = launch { deckRepository.swapPages(deckId, from, to) }
+
+    fun setActivePageCount(count: Int) = launch { deckRepository.setActivePageCount(deckId, count) }
+
+    fun setStudyFilter(filter: StudyFilter) = launch { deckRepository.setStudyFilter(deckId, filter) }
+
+    fun setCardOrder(order: CardOrder) = launch { deckRepository.setCardOrder(deckId, order) }
+
+    fun setActiveMode(modeId: String) = launch { deckRepository.setActiveStudyMode(deckId, modeId) }
+
+    fun resetMode(modeId: String) = launch { modeRepository.resetMode(modeId) }
+
+    fun deleteMode(modeId: String) = launch { modeRepository.deleteMode(modeId) }
+
+    fun archive() {
+        closing.value = true
+        viewModelScope.launchSaving(onFailure = {
+            closing.value = false
+            eventSink.send(DeckSettingsEvent.SaveFailed)
+        }) {
+            deckRepository.archiveDeck(deckId)
+            eventSink.send(DeckSettingsEvent.Closed)
+        }
+    }
+
+    fun delete() {
+        closing.value = true
+        viewModelScope.launchSaving(onFailure = {
+            closing.value = false
+            eventSink.send(DeckSettingsEvent.DeleteFailed)
+        }) {
+            deckRepository.deleteDeck(deckId)
+            eventSink.send(DeckSettingsEvent.Closed)
+        }
+    }
+
+    private fun launch(block: suspend () -> Unit) {
+        viewModelScope.launchSaving(onFailure = { eventSink.send(DeckSettingsEvent.SaveFailed) }, block = block)
+    }
 }

@@ -1,39 +1,59 @@
 package com.raycoll.app.ui.stats
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
+import com.raycoll.app.core.LocalDates
+import com.raycoll.app.data.local.db.ActivityDayEntity
 import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
-import com.raycoll.app.ui.VmTestHarness
+import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.TestRepos
+import com.raycoll.app.testing.VmTestHarness
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(application = android.app.Application::class)
 class StatsViewModelTest {
 
-    @get:Rule val instantExecutorRule = InstantTaskExecutorRule()
+    @Test
+    fun `open statistics refresh the date without a database mutation`() = runTest(dispatcher) {
+        val vm = vm()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
+        val today = vm.ready().today
+        clock.advance(86_400_000L)
+        advanceTimeBy(60_000)
+        runCurrent()
+        assertEquals(today.plusDays(1), vm.ready { it.today == today.plusDays(1) }.today)
+        collector.cancel()
+    }
 
-    private val dispatcher = StandardTestDispatcher()
-    private lateinit var repos: com.raycoll.app.ui.TestRepos
+    private val viewModels = mutableListOf<StatsViewModel>()
+    private val dispatcher = UnconfinedTestDispatcher()
+    private lateinit var repos: TestRepos
 
-    private val clock = com.raycoll.app.ui.FakeClock()
+    private val clock = FakeClock()
 
     @Before
     fun setup() {
@@ -43,61 +63,82 @@ class StatsViewModelTest {
 
     @After
     fun teardown() {
+        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
         Dispatchers.resetMain()
         repos.db.close()
     }
 
-    private fun vm() = StatsViewModel(repos.deckRepository, clock)
+    private fun vm() = StatsViewModel(repos.deckRepository, clock).also { viewModels += it }
+
+    private suspend fun StatsViewModel.ready(predicate: (StatsUiState.Ready) -> Boolean = { true }) =
+        uiState.filterIsInstance<StatsUiState.Ready>().first(predicate)
+
+    private suspend fun seedDeck(
+        name: String,
+        languages: List<String>,
+        pageNames: List<String>,
+        cards: List<Flashcard>
+    ) {
+        val data = repos.localStore.snapshot()
+        val deck =
+            FlashcardGroup(id = name, name = name, cards = cards, pageLanguages = languages, pageNames = pageNames)
+        repos.localStore.replaceAll(data.copy(groups = data.groups + deck))
+    }
 
     @Test
     fun `pusty stan przy braku talii`() = runTest(dispatcher) {
         val vm = vm()
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        val s = vm.stats.first()
-        assertEquals(0, s.totalCards)
+        val s = vm.ready()
+        assertEquals(0, s.allCards.total)
         assertEquals(0, s.streak)
         assertTrue(s.decks.isEmpty())
     }
 
     @Test
     fun `stats liczy karty z wielu talii`() = runTest(dispatcher) {
-        repos.deckRepository.addDeckWithCards(
-            "A", listOf("en", "pl"), listOf("F", "B"),
+        seedDeck(
+            "A",
+            listOf("en", "pl"),
+            listOf("F", "B"),
             listOf(
                 Flashcard(id = "a1", pages = listOf("x", "y"), srsState = SrsState(state = 0)),
-                Flashcard(id = "a2", pages = listOf("x", "y"), srsState = SrsState(state = 2, repetitions = 3)),
+                Flashcard(id = "a2", pages = listOf("x", "y"), srsState = SrsState(state = 2, repetitions = 3))
             )
         )
-        repos.deckRepository.addDeckWithCards(
-            "B", listOf("en", "pl"), listOf("F", "B"),
+        seedDeck(
+            "B",
+            listOf("en", "pl"),
+            listOf("F", "B"),
             listOf(Flashcard(id = "b1", pages = listOf("x", "y"), srsState = SrsState(state = 1)))
         )
         val vm = vm()
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        val s = vm.stats.first { it.totalCards > 0 }
-        assertEquals(3, s.totalCards)
-        assertEquals(1, s.newCount) // a1
-        assertEquals(1, s.learningCount) // b1 (state=1)
-        assertEquals(1, s.masteredCount) // a2 (state=2, reps=3)
+        val s = vm.ready { it.allCards.total > 0 }
+        assertEquals(3, s.allCards.total)
+        assertEquals(1, s.allCards.newCount) // a1
+        assertEquals(1, s.allCards.learning) // b1 (state=1)
+        assertEquals(1, s.allCards.mastered) // a2 (state=2, reps=3)
         assertEquals(2, s.decks.size)
     }
 
     @Test
     fun `DeckSummary per talia z osobnymi statystykami`() = runTest(dispatcher) {
-        repos.deckRepository.addDeckWithCards(
-            "DeckA", listOf("en", "pl"), listOf("F", "B"),
+        seedDeck(
+            "DeckA",
+            listOf("en", "pl"),
+            listOf("F", "B"),
             listOf(Flashcard(id = "a1", pages = listOf("x", "y"), srsState = SrsState(state = 0)))
         )
-        repos.deckRepository.addDeckWithCards(
-            "DeckB", listOf("en", "pl"), listOf("F", "B"),
+        seedDeck(
+            "DeckB",
+            listOf("en", "pl"),
+            listOf("F", "B"),
             listOf(
                 Flashcard(id = "b1", pages = listOf("x", "y"), srsState = SrsState(state = 2, repetitions = 3)),
-                Flashcard(id = "b2", pages = listOf("x", "y"), srsState = SrsState(state = 2, repetitions = 2)),
+                Flashcard(id = "b2", pages = listOf("x", "y"), srsState = SrsState(state = 2, repetitions = 2))
             )
         )
         val vm = vm()
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        val decks = vm.stats.first { it.decks.size == 2 }.decks
+        val decks = vm.ready { it.decks.size == 2 }.decks
         val deckA = decks.find { it.name == "DeckA" }
         val deckB = decks.find { it.name == "DeckB" }
         assertEquals(1, deckA?.stats?.total)
@@ -109,32 +150,31 @@ class StatsViewModelTest {
 
     @Test
     fun `heatmapa pole istnieje w stanie`() = runTest(dispatcher) {
-        repos.deckRepository.addDeckWithCards(
-            "A", listOf("en", "pl"), listOf("F", "B"),
+        seedDeck(
+            "A",
+            listOf("en", "pl"),
+            listOf("F", "B"),
             listOf(Flashcard(id = "a1", pages = listOf("x", "y"), srsState = SrsState(state = 0)))
         )
         val vm = vm()
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
         // świeża talia bez ocen → heatmapa pusta (wcześniej asercja `is Map<*,*>` była zawsze prawdą)
-        assertTrue(vm.stats.first().heatmap.isEmpty())
+        assertTrue(vm.ready().heatmap.isEmpty())
     }
 
     @Test
     fun `streak zero przy pustej heatmapie`() = runTest(dispatcher) {
         val vm = vm()
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals(0, vm.stats.first().streak)
+        assertEquals(0, vm.ready().streak)
     }
 
     @Test
     fun `streak liczony od wstrzykniętego zegara, nie czasu systemowego`() = runTest(dispatcher) {
         // regresja: VM używał System.currentTimeMillis() zamiast Clock
-        val today = com.raycoll.app.core.LocalDates.dayKey(clock.current)
-        val yesterday = com.raycoll.app.core.LocalDates.dayKey(clock.current - 86_400_000L)
-        repos.db.activityDao().upsertActivity(com.raycoll.app.data.local.db.ActivityDayEntity(today, "", 2))
-        repos.db.activityDao().upsertActivity(com.raycoll.app.data.local.db.ActivityDayEntity(yesterday, "", 1))
+        val today = LocalDates.dayKey(clock.current)
+        val yesterday = LocalDates.dayKey(clock.current - 86_400_000L)
+        repos.db.activityDao().upsertActivity(listOf(ActivityDayEntity(today, "", 2)))
+        repos.db.activityDao().upsertActivity(listOf(ActivityDayEntity(yesterday, "", 1)))
         val vm = vm()
-        advanceUntilIdle(); com.raycoll.app.ui.VmTestHarness.flushMainLooper()
-        assertEquals(2, vm.stats.first { it.heatmap.isNotEmpty() }.streak)
+        assertEquals(2, vm.ready { it.heatmap.isNotEmpty() }.streak)
     }
 }

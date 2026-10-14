@@ -2,6 +2,7 @@ package com.raycoll.app.domain.model
 
 import kotlinx.serialization.Serializable
 
+/** Stan FSRS karty; `state`: 0 = nowa, 1 = nauka, 2 = powtórka, 3 = ponowna nauka. */
 @Serializable
 data class SrsState(
     val difficulty: Double = 5.0,
@@ -9,14 +10,5 @@ data class SrsState(
     val repetitions: Int = 0,
     val state: Int = 0,
     val lastReviewTimestamp: Long = 0,
-    val nextReviewTimestamp: Long = 0,
-)
-
-fun createNewSrsState(): SrsState = SrsState(
-    difficulty = 5.0,
-    stability = 0.0,
-    repetitions = 0,
-    state = 0,
-    lastReviewTimestamp = 0,
-    nextReviewTimestamp = 0,
+    val nextReviewTimestamp: Long = 0
 )

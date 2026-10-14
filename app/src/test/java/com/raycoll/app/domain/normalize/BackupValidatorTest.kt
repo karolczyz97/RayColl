@@ -1,11 +1,119 @@
 package com.raycoll.app.domain.normalize
 
+import com.raycoll.app.data.remote.firestore.FirestoreSchema
+import com.raycoll.app.domain.model.AutoRateFixedStep
+import com.raycoll.app.domain.model.AutoRateFromAnswerStep
+import com.raycoll.app.domain.model.CompoundParams
+import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.DynamicPauseStep
+import com.raycoll.app.domain.model.FeedbackErrorStep
+import com.raycoll.app.domain.model.FeedbackSuccessStep
+import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.ListenAndCheckStep
+import com.raycoll.app.domain.model.MarkFailedStep
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.NextCardStep
+import com.raycoll.app.domain.model.ShowAllPagesStep
+import com.raycoll.app.domain.model.ShowPageStep
+import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakAllPagesStep
+import com.raycoll.app.domain.model.SpeakPageStep
+import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.model.WaitForTapStep
+import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
+import com.raycoll.app.domain.model.WaitForTapToRevealStep
+import com.raycoll.app.domain.model.WaitStep
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Port testów BackupValidator z "RayColl - Kopie" (spec = backupValidation.ts). */
+/** Walidacja kopii zapasowych przed zastąpieniem danych użytkownika. */
 class BackupValidatorTest {
+
+    private fun group(id: String = "deck", cardId: String = "card") = mapOf(
+        "id" to id,
+        "name" to "Deck",
+        "cards" to
+            listOf(FirestoreSchema.cardToMap(Flashcard(id = cardId, pages = listOf("q", "a"), srsState = SrsState()))),
+        "pageNames" to listOf("A", "B"),
+        "pageLanguages" to listOf("en-US", "pl-PL"),
+        "activeModeId" to "classic"
+    )
+
+    private fun backup(
+        groups: List<Any> = listOf(group()),
+        modes: List<Any> = emptyList(),
+        days: Map<String, Int> = emptyMap()
+    ) = mapOf("groups" to groups, "studyModes" to modes, "activityHeatmap" to days)
+
+    @Test
+    fun `invalid document IDs are rejected at every backup boundary`() {
+        for (id in listOf("", "a/b", ".", "..")) {
+            val mode = FirestoreSchema.modeToMap(StudyMode(id = id, name = "Mode"))
+            for (data in listOf(
+                backup(groups = listOf(group(id))),
+                backup(groups = listOf(group(cardId = id))),
+                backup(modes = listOf(mode)),
+                backup(days = mapOf(id to 1))
+            )) {
+                assertThrows(BackupValidationException::class.java) { validateBackupData(data) }
+            }
+        }
+    }
+
+    @Test
+    fun `duplicate deck mode and globally duplicate card IDs reject the whole backup`() {
+        val mode = FirestoreSchema.modeToMap(StudyMode(id = "mode", name = "Mode"))
+        for (data in listOf(
+            backup(groups = listOf(group("deck", "a"), group("deck", "b"))),
+            backup(groups = listOf(group("a", "same-card"), group("b", "same-card"))),
+            backup(modes = listOf(mode, mode))
+        )) {
+            assertThrows(BackupValidationException::class.java) { validateBackupData(data) }
+        }
+    }
+
+    @Test
+    fun `all editable steps survive backup validation and cloud round trip`() {
+        val steps = listOf(
+            ShowPageStep(), ShowAllPagesStep(), WaitForTapToRevealNextStep(), WaitForTapToRevealStep(),
+            ShowRatingsStep(), SpeakPageStep(), SpeakAllPagesStep(), DynamicPauseStep(), WaitStep(),
+            ListenAndCheckStep(), FeedbackSuccessStep(), FeedbackErrorStep(), AutoRateFromAnswerStep(),
+            AutoRateFixedStep(), MarkFailedStep(), WaitForTapStep(), NextCardStep(),
+            CompoundStep(params = CompoundParams.PresentFront()),
+            CompoundStep(params = CompoundParams.FlipReveal()),
+            CompoundStep(params = CompoundParams.ShowAllGrade()),
+            CompoundStep(params = CompoundParams.SpeakPauseNext()),
+            CompoundStep(params = CompoundParams.AutoFlip()),
+            CompoundStep(params = CompoundParams.ListenGrade()),
+            CompoundStep(params = CompoundParams.GradeAfterListen()),
+            CompoundStep(params = CompoundParams.AutoPassNext()),
+            CompoundStep(params = CompoundParams.FailNext())
+        )
+        val mode = StudyMode(id = "all-steps", name = "All steps", steps = steps, updatedAt = 1L)
+        val plain = FirestoreSchema.modeToMap(mode)
+        val plainSteps = plain["steps"] as List<*>
+        val stepTypes = ModeStep.serializer().descriptor.getElementDescriptor(1)
+        assertEquals(
+            (0 until stepTypes.elementsCount).map { stepTypes.getElementName(it) }.toSet(),
+            plainSteps.map { (it as Map<*, *>)["type"] }.toSet()
+        )
+        val compoundTypes = CompoundParams.serializer().descriptor.getElementDescriptor(1)
+        assertEquals(
+            (0 until compoundTypes.elementsCount).map { compoundTypes.getElementName(it) }.toSet(),
+            plainSteps.mapNotNull { ((it as Map<*, *>)["params"] as? Map<*, *>)?.get("kind") }.toSet()
+        )
+        validateBackupData(
+            mapOf(
+                "groups" to emptyList<Any>(),
+                "studyModes" to listOf(plain),
+                "activityHeatmap" to emptyMap<String, Int>()
+            )
+        )
+        assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, plain))
+    }
 
     @Test
     fun `accepts valid backup`() {

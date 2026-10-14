@@ -4,84 +4,119 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
     is SessionAction.StartSession -> state.copy(
         status = SessionStatus.IDLE,
         currentCardIndex = 0,
-        currentStepIndex = 0,
         revealedPages = listOf(0),
         peekedPageIndex = null,
         lastAnswerResult = LastAnswerResult(),
+        previousAnswerResult = LastAnswerResult(),
         audioPageIndex = null,
         interactionGate = InteractionGate(),
         pendingStepIndexToRun = null,
-        errorMsg = null,
+        error = null,
         failedCardIds = emptySet(),
-        cardReviewed = false,
+        cardReviewed = false
     )
-    is SessionAction.SetCurrentStep -> state.copy(currentStepIndex = action.stepIndex, peekedPageIndex = null)
-    is SessionAction.StartSpeaking -> state.copy(status = SessionStatus.SPEAKING, audioPageIndex = action.pageIndex, currentStepIndex = action.stepIndex)
+
+    is SessionAction.StartSpeaking -> state.copy(
+        status = SessionStatus.SPEAKING,
+        audioPageIndex = action.pageIndex
+    )
+
     is SessionAction.EndSpeaking -> state.copy(status = SessionStatus.IDLE, audioPageIndex = null)
-    is SessionAction.StartListening -> state.copy(status = SessionStatus.LISTENING, audioPageIndex = action.pageIndex, currentStepIndex = action.stepIndex, lastAnswerResult = LastAnswerResult())
+
+    is SessionAction.StartListening -> state.copy(
+        status = SessionStatus.LISTENING,
+        audioPageIndex = action.pageIndex,
+        lastAnswerResult = LastAnswerResult()
+    )
+
     is SessionAction.UpdatePartialStt -> {
-        if (state.status != SessionStatus.LISTENING) state
-        else state.copy(lastAnswerResult = state.lastAnswerResult.copy(text = action.text))
+        if (state.status != SessionStatus.LISTENING) {
+            state
+        } else {
+            state.copy(lastAnswerResult = state.lastAnswerResult.copy(text = action.text))
+        }
     }
+
     is SessionAction.SetLastAnswerResult -> state.copy(lastAnswerResult = action.result)
+
     is SessionAction.RevealPages -> {
         val newRevealed = (state.revealedPages + action.revealedPages).distinct().sorted()
-        val clearedPeek = if (state.peekedPageIndex != null && state.peekedPageIndex in newRevealed) null else state.peekedPageIndex
+        val clearedPeek = if (state.peekedPageIndex != null &&
+            state.peekedPageIndex in newRevealed
+        ) {
+            null
+        } else {
+            state.peekedPageIndex
+        }
         state.copy(revealedPages = newRevealed, peekedPageIndex = clearedPeek)
     }
-    is SessionAction.RevealPage -> {
-        val newRevealed = (state.revealedPages + action.pageIndex).distinct().sorted()
-        val clearedPeek = if (state.peekedPageIndex == action.pageIndex) null else state.peekedPageIndex
-        state.copy(revealedPages = newRevealed, peekedPageIndex = clearedPeek, currentStepIndex = action.stepIndex)
+
+    is SessionAction.ShowRatings -> if (state.cardReviewed) {
+        state
+    } else {
+        state.copy(
+            status = SessionStatus.REVEALED,
+            peekedPageIndex = null
+        )
     }
-    is SessionAction.RevealNextPageInGate -> {
-        val newRevealed = (state.revealedPages + action.pageIndex).distinct().sorted()
-        val clearedPeek = if (state.peekedPageIndex == action.pageIndex) null else state.peekedPageIndex
-        state.copy(revealedPages = newRevealed, peekedPageIndex = clearedPeek)
-    }
-    is SessionAction.ShowRatings -> if (state.cardReviewed) state else state.copy(status = SessionStatus.REVEALED, peekedPageIndex = null)
+
     is SessionAction.FinishSession -> state.copy(
         status = SessionStatus.FINISHED,
         peekedPageIndex = null,
         interactionGate = InteractionGate(),
         pendingStepIndexToRun = null,
+        lastAnswerResult = LastAnswerResult(),
+        previousAnswerResult = LastAnswerResult()
     )
+
+    // nowa karta zaczyna bez wyniku; stary zostaje tylko do animacji znikania panelu
     is SessionAction.AdvanceCard -> state.copy(
         status = SessionStatus.IDLE,
         currentCardIndex = action.nextCardIndex,
-        currentStepIndex = 0,
+        lastAnswerResult = LastAnswerResult(),
+        previousAnswerResult = state.lastAnswerResult,
         revealedPages = listOf(0),
         peekedPageIndex = null,
-        lastAnswerResult = LastAnswerResult(),
         audioPageIndex = null,
         interactionGate = InteractionGate(),
         pendingStepIndexToRun = null,
-        errorMsg = null,
-        cardReviewed = false,
+        error = null,
+        cardReviewed = false
     )
-    is SessionAction.SetError -> state.copy(status = SessionStatus.ERROR, errorMsg = action.errorMsg)
-    is SessionAction.ClearError -> state.copy(errorMsg = null)
+
+    is SessionAction.SetError -> state.copy(status = SessionStatus.ERROR, error = action.error)
+
+    is SessionAction.ClearError -> state.copy(error = null)
+
     is SessionAction.PeekSet -> state.copy(peekedPageIndex = action.pageIndex)
+
     is SessionAction.PeekClear -> state.copy(peekedPageIndex = null)
+
     is SessionAction.StartTapRevealGate -> state.copy(
         status = SessionStatus.IDLE,
+        lastAnswerResult = LastAnswerResult(),
         interactionGate = InteractionGate(
             kind = InteractionGateKind.TAP_TO_REVEAL,
             revealMode = action.revealMode,
-            continueStepIndex = action.continueStepIndex,
+            continueStepIndex = action.continueStepIndex
         )
     )
+
     is SessionAction.CompleteInteractionGate -> {
         val continueIdx = state.interactionGate.continueStepIndex
         state.copy(
             interactionGate = InteractionGate(),
-            pendingStepIndexToRun = continueIdx,
+            pendingStepIndexToRun = continueIdx
         )
     }
-    is SessionAction.SetPendingStepIndex -> state.copy(pendingStepIndexToRun = action.stepIndex)
+
     is SessionAction.ConsumePendingStepIndex -> state.copy(pendingStepIndexToRun = null)
+
     is SessionAction.SetCards -> state.copy(cards = action.cards)
+
     is SessionAction.AddFailedCard -> state.copy(failedCardIds = state.failedCardIds + action.cardId)
+
     is SessionAction.RemoveFailedCard -> state.copy(failedCardIds = state.failedCardIds - action.cardId)
+
     is SessionAction.SetCardReviewed -> state.copy(cardReviewed = true)
 }

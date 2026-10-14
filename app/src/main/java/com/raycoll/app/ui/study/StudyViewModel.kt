@@ -1,185 +1,181 @@
 package com.raycoll.app.ui.study
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.data.repository.ReviewWriteQueue
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.model.FlashcardGroup
-import com.raycoll.app.domain.model.ListenAndCheckStep
 import com.raycoll.app.domain.selectors.getDueCards
-import com.raycoll.app.domain.session.BackgroundSubstitution
+import com.raycoll.app.domain.session.SessionDeps
 import com.raycoll.app.domain.session.SessionEngine
+import com.raycoll.app.domain.session.SessionError
 import com.raycoll.app.domain.session.SessionState
 import com.raycoll.app.domain.session.SessionStatus
-import com.raycoll.app.domain.steps.CompoundExpander
-import com.raycoll.app.playback.SessionDepsAdapter
 import com.raycoll.app.playback.StudySessionHolder
+import com.raycoll.app.ui.components.UiEvents
+import com.raycoll.app.ui.navigation.StudyRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
+import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-data class StudyUiState(
-    val status: SessionStatus = SessionStatus.IDLE,
-    val currentCard: Flashcard? = null,
-    val currentIndex: Int = 0,
-    val totalCards: Int = 0,
-    val sessionCards: List<Flashcard> = emptyList(),
-    val revealedPages: List<Int> = listOf(0),
-    val peekedPage: Int? = null,
-    val showRatings: Boolean = false,
-    val finished: Boolean = false,
-    val endedEarly: Boolean = false,
-    val errorMsg: String? = null,
-    val partialSttText: String = "",
-    val matchPercent: Int? = null,
-    val matchThreshold: Int? = null,
-    val answerStatus: String = "none",
-    val audioPageIndex: Int? = null,
-    val deckName: String = "",
-    val failedCount: Int = 0,
-    val backgroundEligible: Boolean = false,
-    val needsMicPermission: Boolean = false,
-    val loaded: Boolean = false,
-)
+sealed interface StudyUiState {
+    data object Loading : StudyUiState
 
+    data object DeckMissing : StudyUiState
+
+    data class NoDueCards(val deckName: String) : StudyUiState
+
+    data class Active(
+        val deckName: String,
+        val session: SessionState,
+        /** Ile stron talii jest aktywnych — pozostałe strony kart są ukryte (zostają w danych). */
+        val activePageCount: Int,
+        /** Sesja przejdzie w tryb "bez rąk" po zejściu aplikacji w tło (potrzebne powiadomienia). */
+        val runsInBackground: Boolean,
+        /** Tryb używa mikrofonu. */
+        val needsMicrophone: Boolean,
+        /** Użytkownik zakończył sesję przed ostatnią kartą. */
+        val endedEarly: Boolean,
+        val paused: Boolean = false,
+        val resultCards: List<Flashcard>? = null,
+        val reviewedCardCount: Int = 0,
+        /** Karty przerobione do końca: przy przerwaniu tylko te przed bieżącą. */
+        val completedCardCount: Int = 0
+    ) : StudyUiState {
+        val finished: Boolean get() = session.status == SessionStatus.FINISHED
+        val currentCard: Flashcard? get() = session.cards.getOrNull(session.currentCardIndex)
+        val inProgress: Boolean get() = !finished && currentCard != null
+    }
+}
+
+sealed interface StudyEvent {
+    data class SpeechError(val error: SessionError) : StudyEvent
+
+    /** Część ocen nie zapisała się w bazie — czekają w kolejce na ponowienie. */
+    data object ReviewSaveFailed : StudyEvent
+}
+
+/** Jedna sesja nauki talii; sesja żyje tyle co ten ViewModel (przetrwa obrót ekranu). */
 @HiltViewModel
 class StudyViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val deckRepository: DeckRepository,
     private val modeRepository: StudyModeRepository,
     private val prefsRepository: UserPreferencesRepository,
     private val sessionHolder: StudySessionHolder,
-    private val sessionDeps: SessionDepsAdapter,
-    private val clock: Clock,
+    private val sessionDeps: SessionDeps,
+    private val reviewWrites: ReviewWriteQueue,
+    private val clock: Clock
 ) : ViewModel() {
+    val deckId: String = savedStateHandle.toRoute<StudyRoute>().deckId
 
-    private val _uiState = MutableStateFlow(StudyUiState())
+    private val _uiState = MutableStateFlow<StudyUiState>(StudyUiState.Loading)
     val uiState: StateFlow<StudyUiState> = _uiState.asStateFlow()
 
+    private val eventSink = UiEvents<StudyEvent>()
+    val events: Flow<StudyEvent> = eventSink.flow
+
     private var engine: SessionEngine? = null
-    private var deck: FlashcardGroup? = null
-    private var deckId: String = ""
-    private var ttsRate: Float = 1.0f
-    private var backgroundEligible = false
-    private var pausedByLifecycle = false
-    private var endedEarlyFlag = false
-    private var needsMic = false
-    private var stateJob: Job? = null
+    private var deckName = ""
+    private var runsInBackground = false
+    private var pausedByAppBackground = false
+
+    // nasłuch nie wyszedł (np. brak zgody na mikrofon) — po udzieleniu zgody karta rusza od nowa
+    private var listeningFailed = false
+
+    // zejście całej aplikacji w tło (nie obrót ekranu): sesja idzie dalej "bez rąk" albo staje
+    private val appLifecycleObserver = object : DefaultLifecycleObserver {
+        override fun onStop(owner: LifecycleOwner) = onAppBackground()
+
+        override fun onStart(owner: LifecycleOwner) = onAppForeground()
+    }
 
     init {
+        viewModelScope.launch { startSession() }
+        // nieudany zapis oceny nie znika po cichu: komunikat z możliwością ponowienia
         viewModelScope.launch {
-            prefsRepository.preferences.collectLatest { prefs ->
-                ttsRate = prefs.ttsRate
+            reviewWrites.state.map { it.failed }.distinctUntilChanged().collect { failed ->
+                if (failed) eventSink.send(StudyEvent.ReviewSaveFailed)
             }
         }
     }
 
-    fun loadDeck(deckId: String) {
-        this.deckId = deckId
+    private suspend fun startSession() {
+        val deck = deckRepository.getDeck(deckId) ?: return _uiState.update { StudyUiState.DeckMissing }
+        val cards = getDueCards(deck.cards, deck.studyFilter, deck.cardOrder, clock.now())
+        if (cards.isEmpty()) return _uiState.update { StudyUiState.NoDueCards(deck.name) }
+
+        val steps = modeRepository.getModeOrDefault(deck.activeModeId).steps
+        val preferences = prefsRepository.preferences.first()
+        val engine = SessionEngine(deck, steps, sessionDeps, clock, preferences.ttsRate, viewModelScope)
+        val runsInBackground = preferences.backgroundPlayback && engine.canRunHandsFree
+        this.engine = engine
+        this.deckName = deck.name
+        this.runsInBackground = runsInBackground
+        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+
         viewModelScope.launch {
-            val group = deckRepository.getDeck(deckId) ?: return@launch
-            deck = group
-            val now = clock.now()
-            val due = getDueCards(group.cards, group.studyFilter, group.cardOrder, now)
-            _uiState.value = _uiState.value.copy(
-                totalCards = due.size,
-                deckName = group.name,
-                currentCard = due.firstOrNull(),
-                loaded = true,
-            )
-            if (due.isEmpty()) return@launch
-            startSession(due, group)
-        }
-    }
-
-    private suspend fun startSession(cards: List<Flashcard>, group: FlashcardGroup) {
-        engine?.stop()
-        endedEarlyFlag = false
-        // aktywny tryb z bazy (własne i edytowane wbudowane); fallback: seed classic
-        val steps = modeRepository.getModes()
-            .find { it.id == group.activeModeId && it.deletedAt == null }
-            ?.steps
-            ?: com.raycoll.app.domain.srs.createSeedModes().find { it.id == "classic" }?.steps
-            ?: emptyList()
-        val expanded = CompoundExpander.expandModeSteps(steps)
-        needsMic = expanded.any { it is ListenAndCheckStep }
-        val prefs = prefsRepository.preferences.first()
-        backgroundEligible = prefs.backgroundPlayback &&
-            BackgroundSubstitution.isModeHandsFreeCapable(expanded)
-        val eng = SessionEngine(
-            group = group,
-            steps = steps,
-            deps = sessionDeps,
-            clock = clock,
-            ttsRate = ttsRate,
-            scope = viewModelScope,
-        )
-        sessionHolder.create(eng, group.id, group.name)
-        engine = eng
-
-        stateJob?.cancel()
-        stateJob = viewModelScope.launch {
-            eng.state.collectLatest { state ->
-                _uiState.value = mapEngineState(state, group.name)
+            combine(engine.state, engine.isPaused, reviewWrites.state) { session, paused, _ ->
+                session to paused
+            }.collectLatest { (session, paused) ->
+                session.error?.let { error ->
+                    if (error == SessionError.STT) listeningFailed = true
+                    eventSink.send(StudyEvent.SpeechError(error))
+                    engine.clearError()
+                }
+                _uiState.update { current ->
+                    val endedEarly = (current as? StudyUiState.Active)?.endedEarly == true &&
+                        session.status == SessionStatus.FINISHED
+                    StudyUiState.Active(
+                        deckName = deck.name,
+                        session = session,
+                        paused = paused,
+                        activePageCount = deck.activePageCount,
+                        runsInBackground = runsInBackground,
+                        needsMicrophone = engine.needsMicrophone,
+                        reviewedCardCount = engine.reviewedCardCount,
+                        resultCards = (current as? StudyUiState.Active)?.resultCards.takeIf {
+                            session.status == SessionStatus.FINISHED
+                        },
+                        endedEarly = endedEarly,
+                        completedCardCount = if (endedEarly) {
+                            (current as StudyUiState.Active).completedCardCount
+                        } else {
+                            session.cards.size
+                        }
+                    )
+                }
+                if (session.status == SessionStatus.FINISHED) {
+                    reviewWrites.awaitIdle()
+                    val ids = session.cards.map { it.id }.toSet()
+                    val fresh = deckRepository.getDeck(deckId)?.cards?.filter { it.id in ids }.orEmpty()
+                    _uiState.update { current ->
+                        (current as? StudyUiState.Active)?.copy(resultCards = fresh) ?: current
+                    }
+                }
             }
         }
-        eng.start(cards)
-    }
-
-    private fun mapEngineState(state: SessionState, deckName: String): StudyUiState {
-        val card = state.cards.getOrNull(state.currentCardIndex)
-        return StudyUiState(
-            status = state.status,
-            currentCard = card,
-            currentIndex = state.currentCardIndex,
-            totalCards = state.cards.size,
-            sessionCards = state.cards,
-            revealedPages = state.revealedPages,
-            peekedPage = state.peekedPageIndex,
-            showRatings = state.status == SessionStatus.REVEALED,
-            finished = state.status == SessionStatus.FINISHED,
-            endedEarly = state.status == SessionStatus.FINISHED && endedEarlyFlag,
-            errorMsg = state.errorMsg,
-            partialSttText = state.lastAnswerResult.text,
-            matchPercent = state.lastAnswerResult.percent,
-            matchThreshold = state.lastAnswerResult.threshold,
-            answerStatus = state.lastAnswerResult.status.name.lowercase(),
-            audioPageIndex = state.audioPageIndex,
-            deckName = deckName,
-            failedCount = state.failedCardIds.size,
-            backgroundEligible = backgroundEligible,
-            needsMicPermission = needsMic,
-            loaded = true,
-        )
-    }
-
-    /** Apka schodzi w tło: hands-free + pref ON → tryb tła (substytucje); inaczej zwykła pauza. */
-    fun onAppBackground() {
-        val eng = engine ?: return
-        if (_uiState.value.finished) return
-        if (backgroundEligible) {
-            eng.setBackground(true)
-        } else {
-            pausedByLifecycle = true
-            eng.pause()
-        }
-    }
-
-    fun onAppForeground() {
-        val eng = engine ?: return
-        eng.setBackground(false)
-        if (pausedByLifecycle) {
-            pausedByLifecycle = false
-            eng.resume()
-        }
+        // przebieg musi już trwać, zanim serwis w tle zacznie go obserwować (zakończony by go zamknął)
+        engine.start(cards)
+        sessionHolder.register(engine, deck.name, runsInBackground)
     }
 
     fun rate(rating: Int) {
@@ -194,9 +190,11 @@ class StudyViewModel @Inject constructor(
         engine?.goToPreviousCard()
     }
 
-    fun handleCardPress() {
+    fun tapCard() {
         engine?.handleCardPress()
     }
+
+    fun resume() = sessionHolder.resume()
 
     fun pressDown() {
         engine?.pressDown()
@@ -206,52 +204,79 @@ class StudyViewModel @Inject constructor(
         engine?.pressUp()
     }
 
-    fun clearError() {
-        engine?.clearError()
+    fun cancelPress() {
+        engine?.cancelPress()
     }
 
-    /** "Od nowa": świeże wersje wszystkich kart sesji z repozytorium. */
-    fun restartSession() {
-        val eng = engine ?: return
-        val ids = eng.state.value.cards.map { it.id }
+    /** Po zgodzie na mikrofon karta, której nasłuch się nie udał, rusza od nowa. */
+    fun onMicrophoneGranted() {
+        if (!listeningFailed) return
+        listeningFailed = false
+        engine?.restartCurrentCard()
+    }
+
+    /** "Od nowa": wszystkie karty sesji w aktualnym stanie z bazy. */
+    fun restartSession() = restartWith { session -> session.cards.map { it.id } }
+
+    /** "Powtórz nieudane": tylko karty ocenione jako "jeszcze raz". */
+    fun restartFailed() = restartWith { session -> session.cards.map { it.id }.filter { it in session.failedCardIds } }
+
+    /** Ponowienie zapisu ocen, które się nie zapisały. */
+    fun retryReviewSave() = reviewWrites.retry()
+
+    private fun restartWith(selectIds: (SessionState) -> List<String>) {
+        val engine = engine ?: return
+        val ids = selectIds(engine.state.value)
         viewModelScope.launch {
-            endedEarlyFlag = false
-            eng.restart(freshCardsByIds(ids))
+            // nowa próba czyta karty z bazy — wszystkie oceny poprzedniej muszą już tam być
+            if (!reviewWrites.awaitIdle()) {
+                eventSink.send(StudyEvent.ReviewSaveFailed)
+                return@launch
+            }
+            val fresh = deckRepository.getDeck(deckId)?.cards?.associateBy { it.id } ?: return@launch
+            val cards = ids.mapNotNull(fresh::get)
+            if (cards.isEmpty()) return@launch
+            _uiState.update { (it as? StudyUiState.Active)?.copy(endedEarly = false) ?: it }
+            // Restart zachowuje ustawienia/kroki bieżącej sesji; zmiany talii obowiązują od nowej sesji.
+            // ten sam silnik: najpierw nowy przebieg, potem ponowne oddanie go serwisowi w tle
+            // (stary serwis zamknął się przy końcu poprzedniej próby razem z powiadomieniem)
+            engine.start(cards)
+            sessionHolder.register(engine, deckName, runsInBackground)
         }
     }
 
-    /** "Powtórz oblane": świeże wersje kart z listy failed. */
-    fun restartFailed() {
-        val eng = engine ?: return
-        val failedIds = eng.state.value.let { s -> s.cards.map { it.id }.filter { it in s.failedCardIds } }
-        viewModelScope.launch {
-            endedEarlyFlag = false
-            eng.restartFailed(freshCardsByIds(failedIds))
-        }
-    }
-
-    private suspend fun freshCardsByIds(ids: List<String>): List<Flashcard> {
-        val fresh = deckRepository.getDeck(deckId) ?: return emptyList()
-        val byId = fresh.cards.associateBy { it.id }
-        return ids.mapNotNull { byId[it] }
-    }
-
-    /** Potwierdzenie dialogu przerwania: sesja kończy się podsumowaniem endedEarly. */
+    /** Zakończenie przed ostatnią kartą — podsumowanie mówi wtedy "sesja przerwana". */
     fun endSessionEarly() {
-        endedEarlyFlag = true
-        engine?.end()
+        _uiState.update {
+            (it as? StudyUiState.Active)?.copy(endedEarly = true, completedCardCount = it.session.currentCardIndex)
+                ?: it
+        }
+        engine?.stop()
     }
 
-    /** Wyjście z ekranu — zwolnienie sesji i serwisu. */
-    fun exitSession() {
-        engine?.end()
-        sessionHolder.release()
-        engine = null
+    private fun onAppBackground() {
+        val engine = engine ?: return
+        val state = _uiState.value as? StudyUiState.Active ?: return
+        if (state.finished) return
+        if (state.runsInBackground) {
+            engine.setBackground(true)
+        } else {
+            pausedByAppBackground = true
+            engine.pause()
+        }
+    }
+
+    private fun onAppForeground() {
+        val engine = engine ?: return
+        engine.setBackground(false)
+        if (pausedByAppBackground) {
+            pausedByAppBackground = false
+            engine.resume()
+        }
     }
 
     override fun onCleared() {
-        engine?.stop()
-        sessionHolder.release()
-        super.onCleared()
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
+        engine?.let(sessionHolder::release)
     }
 }

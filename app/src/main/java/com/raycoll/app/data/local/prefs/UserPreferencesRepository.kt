@@ -8,56 +8,65 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.raycoll.app.domain.model.KeyedEnum
+import com.raycoll.app.domain.model.TtsRate
+import com.raycoll.app.domain.model.keyedEnumOrNull
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "raycoll_settings")
 
+enum class ThemePref(override val key: String) : KeyedEnum {
+    SYSTEM("system"),
+    LIGHT("light"),
+    DARK("dark");
+
+    companion object {
+        fun fromKey(key: String?): ThemePref = keyedEnumOrNull(entries, key) ?: SYSTEM
+    }
+}
+
+/** Ustawienia urządzenia (nie synchronizowane). Język interfejsu trzyma AppCompat (per-app locale). */
 data class UserPreferences(
-    val themePref: String = "system",
+    val theme: ThemePref = ThemePref.SYSTEM,
     val useSystemColors: Boolean = true,
-    val uiLanguage: String = "pl",
-    val ttsRate: Float = 1.0f,
-    val backgroundPlayback: Boolean = false,
+    val ttsRate: Float = TtsRate.DEFAULT,
+    val backgroundPlayback: Boolean = true
 )
 
-class UserPreferencesRepository(private val context: Context) {
+@Singleton
+class UserPreferencesRepository @Inject constructor(@ApplicationContext private val context: Context) {
 
     private object Keys {
         val THEME = stringPreferencesKey("theme_pref")
         val SYSTEM_COLORS = booleanPreferencesKey("use_system_colors")
-        val UI_LANGUAGE = stringPreferencesKey("ui_language")
         val TTS_RATE = floatPreferencesKey("tts_rate")
         val BACKGROUND_PLAYBACK = booleanPreferencesKey("background_playback")
     }
 
+    private val defaults = UserPreferences()
+
     val preferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
         UserPreferences(
-            themePref = prefs[Keys.THEME] ?: "system",
-            useSystemColors = prefs[Keys.SYSTEM_COLORS] ?: true,
-            uiLanguage = prefs[Keys.UI_LANGUAGE] ?: "pl",
-            ttsRate = (prefs[Keys.TTS_RATE] ?: 1.0f).coerceIn(0.5f, 2.0f),
-            backgroundPlayback = prefs[Keys.BACKGROUND_PLAYBACK] ?: false,
+            theme = ThemePref.fromKey(prefs[Keys.THEME]),
+            useSystemColors = prefs[Keys.SYSTEM_COLORS] ?: defaults.useSystemColors,
+            ttsRate = TtsRate.clamp(prefs[Keys.TTS_RATE] ?: defaults.ttsRate),
+            backgroundPlayback = prefs[Keys.BACKGROUND_PLAYBACK] ?: defaults.backgroundPlayback
         )
     }
 
-    suspend fun setThemePref(value: String) {
-        context.dataStore.edit { it[Keys.THEME] = value }
-    }
+    suspend fun setTheme(value: ThemePref) = set(Keys.THEME, value.key)
 
-    suspend fun setUseSystemColors(value: Boolean) {
-        context.dataStore.edit { it[Keys.SYSTEM_COLORS] = value }
-    }
+    suspend fun setUseSystemColors(value: Boolean) = set(Keys.SYSTEM_COLORS, value)
 
-    suspend fun setUiLanguage(value: String) {
-        context.dataStore.edit { it[Keys.UI_LANGUAGE] = value }
-    }
+    suspend fun setTtsRate(value: Float) = set(Keys.TTS_RATE, TtsRate.clamp(value))
 
-    suspend fun setTtsRate(value: Float) {
-        context.dataStore.edit { it[Keys.TTS_RATE] = value.coerceIn(0.5f, 2.0f) }
-    }
+    suspend fun setBackgroundPlayback(value: Boolean) = set(Keys.BACKGROUND_PLAYBACK, value)
 
-    suspend fun setBackgroundPlayback(value: Boolean) {
-        context.dataStore.edit { it[Keys.BACKGROUND_PLAYBACK] = value }
+    private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+        context.dataStore.edit { it[key] = value }
     }
 }

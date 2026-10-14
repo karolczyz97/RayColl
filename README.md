@@ -1,7 +1,7 @@
 # RayColl
 
 Natywna aplikacja Android do nauki fiszkami z powtórkami rozłożonymi w czasie
-(FSRS). Port aplikacji webowej (TensorDeck) na Kotlin/Compose. Talie z fiszkami
+(FSRS), napisana w Kotlin/Compose. Talie z fiszkami
 wielostronicowymi, w pełni konfigurowalne **tryby nauki** (sekwencje kroków:
 pokaż/wypowiedz stronę, słuchaj-i-sprawdź STT, oceny, auto-rating, pauzy),
 nauka w tle przez Media3 (odtwarzanie bez patrzenia w ekran), import CSV
@@ -12,16 +12,16 @@ backup JSON oraz synchronizacja w chmurze (Firestore + logowanie Google).
 
 | Warstwa | Technologia |
 |---|---|
-| Język | Kotlin 2.0.21 |
-| UI | Jetpack Compose (BOM 2024.12.01), single-activity, Material 3 |
-| DI | Hilt 2.54 |
-| Baza lokalna | Room 2.6.1 (źródło prawdy) |
+| Język | Kotlin 2.4.21 |
+| UI | Jetpack Compose (BOM 2026.09.00), single-activity, Material 3 |
+| DI | Hilt 2.60.1 |
+| Baza lokalna | Room 2.8.5 (źródło prawdy) |
 | Preferencje | DataStore |
-| Serializacja | kotlinx.serialization 1.7.3 (JSON) |
-| Async | kotlinx.coroutines 1.9.0 (StateFlow) |
-| Audio/tło | Media3 1.5.1 (MediaSessionService), Android TTS + SpeechRecognizer |
-| Chmura | Firebase (BOM 33.7.0): Firestore + Auth, Credential Manager (Google Sign-In) |
-| Build | AGP 8.7.3, `compileSdk`/`targetSdk` 36, `minSdk` 26 |
+| Serializacja | kotlinx.serialization 1.11.0 (JSON) |
+| Async | kotlinx.coroutines 1.11.0 (StateFlow) |
+| Audio/tło | Media3 1.11.1 (MediaSessionService), Android TTS + SpeechRecognizer |
+| Chmura | Firebase (BOM 35.0.0): Firestore + Auth, Credential Manager (Google Sign-In) |
+| Build | AGP 9.4.1, Gradle 9.8.1, `compileSdk`/`targetSdk` 37, `minSdk` 26 |
 
 - `applicationId`: `com.raycoll.app` (release), `com.raycoll.app.debug` (debug)
 - `versionName`: 1.0.0
@@ -51,13 +51,23 @@ Media3, Firebase, Hilt) są w [`app/proguard-rules.pro`](app/proguard-rules.pro)
 
 ```bat
 ./gradlew.bat :app:testDebugUnitTest
+./gradlew.bat :app:lint
 ```
 
 Testy jednostkowe (JUnit4; część na Robolectric z in-memory Room). Pokrywają
 silnik FSRS, dopasowanie mowy, normalizację/merge danych, operacje domenowe,
 sesję nauki, import, DAO oraz ViewModele (Dashboard, Browse, DeckSettings,
-Import, Stats). Czas jest zawsze wstrzykiwany przez `Clock`, więc testy
+Import, Stats, Archive, ModeDetail) oraz polecenia odtwarzacza Media3. Czas jest
+wstrzykiwany przez `Clock`, więc testy
 FSRS/streak/archiwum sterują czasem deterministycznie.
+
+Formatowanie Kotlin i skryptów Gradle: ktlint 1.8.0 z ustawieniami w `.editorconfig`.
+Po pobraniu oficjalnego wykonywalnego JAR ktlint można uruchomić:
+
+```powershell
+java -jar ktlint.jar -F 'app/src/**/*.kt' '*.gradle.kts' 'app/*.gradle.kts'
+java -jar ktlint.jar 'app/src/**/*.kt' '*.gradle.kts' 'app/*.gradle.kts'
+```
 
 ### Ręczna weryfikacja serializacji w release
 
@@ -84,28 +94,72 @@ Bez tego logowanie Google rzuci `DEVELOPER_ERROR`. **Reszta aplikacji działa
 lokalnie** (Room jest źródłem prawdy) — chmura jest warstwą synchronizacji, nie
 warunkiem uruchomienia.
 
+### Reguły dostępu Firestore — wdrożenie przez właściciela
+
+[`firestore.rules`](firestore.rules) pozwala zalogowanemu użytkownikowi czytać
+i zapisywać wyłącznie `users/{jego uid}` i dokumenty poniżej. Pozostałe ścieżki
+są zabronione. Plik w repo nie zmienia reguł działających w projekcie Firebase.
+
+1. Otwórz [reguły projektu raycoll-io](https://console.firebase.google.com/project/raycoll-io/firestore/rules).
+   Skopiuj obecne reguły i zapisz je z datą w opisie zmiany przed wdrożeniem.
+2. Zainstaluj [Firebase CLI](https://firebase.google.com/docs/cli), jeśli go nie masz.
+3. W katalogu repo zaloguj konto właściciela i sprawdź projekt:
+
+   ```powershell
+   firebase login
+   firebase projects:list
+   firebase use raycoll-io
+   ```
+
+4. W konsoli, w symulatorze reguł (Rules Playground), wklej treść `firestore.rules`
+   do edytora i sprawdź poniższą tabelę przed opublikowaniem. UID A i B zastąp
+   dwoma różnymi UID z Firebase Authentication. Testy symulują żądania klienta,
+   a nie uprawnienia administracyjne konsoli.
+
+   | Tożsamość | Ścieżka | Odczyt / zapis |
+   |---|---|---|
+   | bez logowania | `users/A` oraz `users/A/decks/x/cards/y` | zabronione |
+   | UID A | `users/B` oraz `users/B/decks/x/cards/y` | zabronione |
+   | UID A | `users/A` | dozwolone |
+   | UID A | `users/A/decks/x/cards/y` | dozwolone |
+   | UID A | `users/A/studyModes/m` oraz `users/A/activity/2026-10-14` | dozwolone |
+   | UID A | `other/document` | zabronione |
+
+5. Wdróż wyłącznie reguły do wskazanego projektu:
+
+   ```powershell
+   firebase deploy --only firestore:rules --project raycoll-io
+   ```
+
+6. Sprawdź logowanie, edycję i synchronizację własnej talii oraz jej odczyt
+   na drugim urządzeniu. Zapisz wynik i datę w opisie zmiany.
+
+Opis składni i wdrożenia: [dokumentacja Firebase](https://firebase.google.com/docs/firestore/security/get-started).
+Agent przygotowuje pliki i instrukcję; wdrożenie i weryfikacja aktywnych reguł
+pozostają po stronie właściciela.
+
 ## Struktura pakietów (skrót)
 
 ```
 com/raycoll/app/
 ├── RayCollApplication.kt      # @HiltAndroidApp
 ├── MainActivity.kt            # single-activity, edge-to-edge, splash
-├── di/                        # moduły Hilt (DB, Playback, Dispatchers, Clock)
+├── di/                        # moduły Hilt (baza, Firebase, zegar, dispatchery)
 ├── core/                      # Ids, LocalDates, Clock
 ├── domain/                    # CZYSTY Kotlin — zero importów Androida
 │   ├── model/                 # Deck, Card, StudyMode, ModeStep (sealed), enums
-│   ├── srs/                   # SrsEngine (FSRS), SpeechMatcher
+│   ├── srs/                   # SrsEngine (FSRS), SrsCardCategory, SpeechMatcher
 │   ├── normalize/  merge/     # DataNormalizer, MergeEngine, MigrationRules
 │   ├── operations/            # czyste funkcje-akcje (stan → stan)
 │   ├── selectors/             # DueCards, Streak, BrowseFilter, ...
-│   ├── steps/                 # StepRegistry, CompoundExpander, ModeTemplates
+│   ├── steps/                 # CompoundExpander, ModeTemplate, ModeStepValidator
 │   ├── session/               # SessionEngine, StepExecutor, reducer
 │   ├── imports/               # CsvParser, Separator/Header/LanguageDetector
-│   └── seed/                  # SeedData (2 talie + 2 tryby)
+│   └── seed/                  # SeedData (2 talie), SeedModes (2 tryby)
 ├── data/
 │   ├── local/                 # Room DB (encje z namespace), DAO, mappery, prefs
 │   ├── remote/                # AuthRepository, Firestore (schema, dataSource)
-│   ├── repository/            # Deck/StudyMode/Activity/Backup, ArchivePurger, Namespace
+│   ├── repository/            # Deck/StudyMode/Backup, LocalStore, NamespaceManager
 │   └── sync/                  # SyncEngine, BootstrapLoader, MigrationController, SyncLifecycle
 ├── playback/                  # TTS, STT, Media3 service, notyfikacja, audio focus
 └── ui/                        # theme, navigation, components + ekrany:
@@ -115,14 +169,5 @@ com/raycoll/app/
 
 Reguły architektury: Room = źródło prawdy (ekrany obserwują Flow → StateFlow);
 akcje domenowe to czyste funkcje wołane wewnątrz transakcji Room; `SessionEngine`
-żyje w `@Singleton` holderze i przeżywa rotację/tło; czas zawsze przez `Clock`.
-Pełny opis: [`docs/PORT_PLAN.md`](docs/PORT_PLAN.md) sekcja 7.
-
-## Status
-
-**v1 kompletne.** Cała logika (T1–T10 planu) i audyt UX zrealizowane. Chmura
-(Firestore + Auth) w zakresie v1: schemat dokumentów 1:1 z aplikacją webową
-(TensorDeck), zapis diffowy z chunkowaniem batchy, polityka schedulera
-(debounce 1200 ms / flush co 10 ocen w nauce / immediate dla operacji
-krytycznych / flush przy zejściu w tło). Historia audytów i znany dług:
-[`docs/REDTEAM_AUDIT.md`](docs/REDTEAM_AUDIT.md).
+żyje w ViewModelu sesji, a holder udostępnia go serwisowi; dzięki temu sesja
+przeżywa obrót ekranu. Czas jest wstrzykiwany przez `Clock`.

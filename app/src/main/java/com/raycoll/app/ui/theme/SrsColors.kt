@@ -12,19 +12,27 @@ data class SrsColors(
     val reviewFg: Color,
     val reviewBg: Color,
     val masteredFg: Color,
-    val masteredBg: Color,
+    val masteredBg: Color
 )
 
 val LightSrsColors = SrsColors(
-    newFg = SrsNewFg, newBg = SrsNewBg,
-    learningFg = SrsLearningFg, learningBg = SrsLearningBg,
-    reviewFg = SrsReviewFg, reviewBg = SrsReviewBg,
-    masteredFg = SrsMasteredFg, masteredBg = SrsMasteredBg,
+    newFg = SrsNewFgLight,
+    newBg = SrsNewBgLight,
+    learningFg = SrsLearningFgLight,
+    learningBg = SrsLearningBgLight,
+    reviewFg = SrsReviewFgLight,
+    reviewBg = SrsReviewBgLight,
+    masteredFg = SrsMasteredFgLight,
+    masteredBg = SrsMasteredBgLight
 )
 
 val DarkSrsColors = SrsColors(
-    newFg = SrsNewBg, newBg = SrsNewFg,
-    learningFg = SrsLearningBg, learningBg = SrsLearningFg,
-    reviewFg = SrsReviewBg, reviewBg = SrsReviewFg,
-    masteredFg = SrsMasteredBg, masteredBg = SrsMasteredFg,
+    newFg = SrsNewFgDark,
+    newBg = SrsNewBgDark,
+    learningFg = SrsLearningFgDark,
+    learningBg = SrsLearningBgDark,
+    reviewFg = SrsReviewFgDark,
+    reviewBg = SrsReviewBgDark,
+    masteredFg = SrsMasteredFgDark,
+    masteredBg = SrsMasteredBgDark
 )
