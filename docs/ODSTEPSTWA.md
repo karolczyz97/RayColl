@@ -9,6 +9,17 @@
 
 Nie zmienia to zakresu ani zachowania przewidzianego w planie.
 
+## Firestore — granice etapów 1–3 i 5
+
+- **Co:** etap 1 dodaje kontrakt magazynu, implementację Firestore i atrapę. Przełączenie
+  repozytoriów, usunięcie Room i zależnego kodu synchronizacji następuje razem z kontem
+  w etapie 2. Podstawowe operacje kopii potrzebne kontu są również w etapie 2; etap 3
+  domyka ich walidację i testy. Etap 5 kończy pozostałe porządki.
+- **Dlaczego:** obecne logowanie, kopie i synchronizacja współdzielą LocalStore oraz Room.
+  Usunięcie samego Room w etapie 1 pozostawiłoby niekompilujący się projekt, zamiast
+  wymaganego działającego commitu po każdym etapie.
+- **Gdzie:** `data/firestore`, `data/account`, `data/repository`, DI i testowy harness.
+
 ## Etap 3 — opcjonalna adnotacja Commons CSV
 
 - **Co:** dodano jedną regułę R8: `-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings`.
