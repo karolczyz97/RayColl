@@ -202,6 +202,8 @@
     <string name="mode_editor_issues_title">Issues in mode configuration:</string>
     <string name="mode_editor_steps_header">Mode steps (%1$d)</string>
     <string name="mode_editor_add_step">Add step</string>
+    <string name="mode_editor_expert_mode">Expert mode</string>
+    <string name="mode_editor_expert_mode_desc">Also shows individual steps in “Add step”</string>
     <string name="mode_editor_move_up">Move up</string>
     <string name="mode_editor_move_down">Move down</string>
     <string name="mode_editor_template_title">Choose a starting template</string>

@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.domain.steps.ModeTemplate
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import com.raycoll.app.testing.routeArgs
@@ -39,11 +40,13 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class SaveFailureTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
 
     @Test
     fun `browse mode editor and import report failed writes`() = runTest {
         val browse = BrowseViewModel(routeArgs("deckId" to "d1"), repos.deckRepository)
-        val mode = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository)
+        val mode =
+            ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository, testPreferences.repository)
         mode.chooseTemplate(ModeTemplate.CLASSIC)
         mode.setName("Custom")
         val imports = ImportViewModel(

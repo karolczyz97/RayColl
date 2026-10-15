@@ -11,6 +11,7 @@ import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.operations.isModifiedBuiltIn
 import com.raycoll.app.domain.seed.BuiltInMode
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import com.raycoll.app.testing.routeArgs
@@ -40,6 +41,7 @@ import org.robolectric.annotation.Config
 /** Tryb talii, nazwy trybów wbudowanych i potwierdzenie usunięcia — spójnie na wszystkich ekranach. */
 @RunWith(RobolectricTestRunner::class)
 class StudyModeConsistencyTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
 
     @get:Rule
     val compose = createComposeRule()
@@ -101,7 +103,12 @@ class StudyModeConsistencyTest {
 
     @Test
     fun `typing and erasing a letter in a built-in name keeps the canonical name and saves nothing`() {
-        val vm = ModeDetailViewModel(routeArgs("modeId" to DEFAULT_MODE_ID), repos.studyModeRepository)
+        val vm =
+            ModeDetailViewModel(
+                routeArgs("modeId" to DEFAULT_MODE_ID),
+                repos.studyModeRepository,
+                testPreferences.repository
+            )
         compose.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { vm.uiState.value is ModeDetailUiState.Editing }
 
@@ -124,7 +131,12 @@ class StudyModeConsistencyTest {
 
     @Test
     fun `a real custom name of a built-in mode is kept and marks the mode as modified`() {
-        val vm = ModeDetailViewModel(routeArgs("modeId" to DEFAULT_MODE_ID), repos.studyModeRepository)
+        val vm =
+            ModeDetailViewModel(
+                routeArgs("modeId" to DEFAULT_MODE_ID),
+                repos.studyModeRepository,
+                testPreferences.repository
+            )
         compose.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { vm.uiState.value is ModeDetailUiState.Editing }
 

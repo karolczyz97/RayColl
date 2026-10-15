@@ -211,6 +211,8 @@
     <string name="mode_editor_issues_title">Błędy w konfiguracji trybu:</string>
     <string name="mode_editor_steps_header">Kroki trybu (%1$d)</string>
     <string name="mode_editor_add_step">Dodaj krok</string>
+    <string name="mode_editor_expert_mode">Tryb eksperta</string>
+    <string name="mode_editor_expert_mode_desc">Pokazuje też pojedyncze kroki w „Dodaj krok”</string>
     <string name="mode_editor_move_up">Przenieś wyżej</string>
     <string name="mode_editor_move_down">Przenieś niżej</string>
     <string name="mode_editor_template_title">Wybierz szablon startowy</string>

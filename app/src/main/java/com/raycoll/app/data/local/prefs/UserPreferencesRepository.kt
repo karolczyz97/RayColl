@@ -44,7 +44,8 @@ data class UserPreferences(
     val theme: ThemePref = ThemePref.SYSTEM,
     val useSystemColors: Boolean = true,
     val ttsRate: Float = TtsRate.DEFAULT,
-    val backgroundPlayback: Boolean = true
+    val backgroundPlayback: Boolean = true,
+    val expertMode: Boolean = false
 )
 
 @Singleton
@@ -58,6 +59,7 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
         val SYSTEM_COLORS = booleanPreferencesKey("use_system_colors")
         val TTS_RATE = floatPreferencesKey("tts_rate")
         val BACKGROUND_PLAYBACK = booleanPreferencesKey("background_playback")
+        val EXPERT_MODE = booleanPreferencesKey("expert_mode")
     }
 
     private val defaults = UserPreferences()
@@ -69,7 +71,8 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
             theme = ThemePref.fromKey(prefs[Keys.THEME]),
             useSystemColors = prefs[Keys.SYSTEM_COLORS] ?: defaults.useSystemColors,
             ttsRate = TtsRate.clamp(prefs[Keys.TTS_RATE] ?: defaults.ttsRate),
-            backgroundPlayback = prefs[Keys.BACKGROUND_PLAYBACK] ?: defaults.backgroundPlayback
+            backgroundPlayback = prefs[Keys.BACKGROUND_PLAYBACK] ?: defaults.backgroundPlayback,
+            expertMode = prefs[Keys.EXPERT_MODE] ?: defaults.expertMode
         )
     }
 
@@ -80,6 +83,8 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
     suspend fun setTtsRate(value: Float) = set(Keys.TTS_RATE, TtsRate.clamp(value))
 
     suspend fun setBackgroundPlayback(value: Boolean) = set(Keys.BACKGROUND_PLAYBACK, value)
+
+    suspend fun setExpertMode(value: Boolean) = set(Keys.EXPERT_MODE, value)
 
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         dataStore.edit { it[key] = value }

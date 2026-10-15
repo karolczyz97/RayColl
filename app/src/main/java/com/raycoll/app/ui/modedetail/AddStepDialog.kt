@@ -103,7 +103,7 @@ private val STEP_CATALOG = listOf(
 )
 
 @Composable
-fun AddStepDialog(onDismiss: () -> Unit, onChoose: (ModeStep) -> Unit) {
+fun AddStepDialog(expert: Boolean, onDismiss: () -> Unit, onChoose: (ModeStep) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.mode_editor_add_step)) },
@@ -112,7 +112,7 @@ fun AddStepDialog(onDismiss: () -> Unit, onChoose: (ModeStep) -> Unit) {
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs)
             ) {
-                STEP_CATALOG.forEach { group ->
+                STEP_CATALOG.filter { expert || it.labelRes == R.string.step_category_compound }.forEach { group ->
                     Text(
                         stringResource(group.labelRes),
                         style = MaterialTheme.typography.labelLarge,

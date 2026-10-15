@@ -206,6 +206,8 @@
     <string name="mode_editor_issues_title">Errores en la configuración del modo:</string>
     <string name="mode_editor_steps_header">Pasos del modo (%1$d)</string>
     <string name="mode_editor_add_step">Añadir paso</string>
+    <string name="mode_editor_expert_mode">Modo experto</string>
+    <string name="mode_editor_expert_mode_desc">También muestra pasos individuales en «Añadir paso»</string>
     <string name="mode_editor_move_up">Mover arriba</string>
     <string name="mode_editor_move_down">Mover abajo</string>
     <string name="mode_editor_template_title">Elige una plantilla inicial</string>

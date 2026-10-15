@@ -284,7 +284,7 @@ fun FactoryResetSection(onReset: () -> Unit, enabled: Boolean = true) {
 }
 
 @Composable
-private fun SwitchRow(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()

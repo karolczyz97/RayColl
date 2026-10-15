@@ -201,6 +201,8 @@
     <string name="mode_editor_issues_title">Fehler in der Moduskonfiguration:</string>
     <string name="mode_editor_steps_header">Modusschritte (%1$d)</string>
     <string name="mode_editor_add_step">Schritt hinzufügen</string>
+    <string name="mode_editor_expert_mode">Expertenmodus</string>
+    <string name="mode_editor_expert_mode_desc">Zeigt auch einzelne Schritte unter „Schritt hinzufügen“</string>
     <string name="mode_editor_move_up">Nach oben</string>
     <string name="mode_editor_move_down">Nach unten</string>
     <string name="mode_editor_template_title">Startvorlage wählen</string>

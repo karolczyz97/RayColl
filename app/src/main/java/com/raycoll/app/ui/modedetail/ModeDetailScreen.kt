@@ -63,6 +63,7 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.steps.ModeIssue
 import com.raycoll.app.domain.steps.ModeTemplate
+import com.raycoll.app.ui.appsettings.SwitchRow
 import com.raycoll.app.ui.components.BuiltInBadge
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
@@ -81,6 +82,7 @@ fun ModeDetailScreen(
     onClosed: () -> Unit = onBack
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val expertMode by viewModel.expertMode.collectAsStateWithLifecycle()
     var showAddStep by rememberSaveable { mutableStateOf(false) }
     var addAfterKey by rememberSaveable { mutableStateOf<String?>(null) }
     var showResetConfirm by rememberSaveable { mutableStateOf(false) }
@@ -139,6 +141,8 @@ fun ModeDetailScreen(
 
             is ModeDetailUiState.Editing -> ModeEditor(
                 state = state,
+                expertMode = expertMode,
+                onExpertModeChange = viewModel::setExpertMode,
                 onNameChange = viewModel::setName,
                 onAddStep = {
                     addAfterKey = null
@@ -168,6 +172,7 @@ fun ModeDetailScreen(
 
     if (showAddStep) {
         AddStepDialog(
+            expert = expertMode,
             onDismiss = { showAddStep = false },
             onChoose = {
                 viewModel.addStep(it, addAfterKey)
@@ -202,6 +207,8 @@ fun ModeDetailScreen(
 @Composable
 private fun ModeEditor(
     state: ModeDetailUiState.Editing,
+    expertMode: Boolean,
+    onExpertModeChange: (Boolean) -> Unit,
     onNameChange: (String) -> Unit,
     onAddStep: () -> Unit,
     onAddBelow: (String) -> Unit,
@@ -299,6 +306,12 @@ private fun ModeEditor(
                             content = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
+                    SwitchRow(
+                        title = stringResource(R.string.mode_editor_expert_mode),
+                        description = stringResource(R.string.mode_editor_expert_mode_desc),
+                        checked = expertMode,
+                        onChange = onExpertModeChange
+                    )
                     Text(
                         stringResource(R.string.mode_editor_steps_header, state.steps.size),
                         style = MaterialTheme.typography.titleMedium,

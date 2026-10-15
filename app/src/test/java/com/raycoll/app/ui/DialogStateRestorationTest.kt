@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import com.raycoll.app.testing.routeArgs
@@ -43,6 +44,7 @@ import org.robolectric.RobolectricTestRunner
 /** Otwarte okna i niezapisany tekst przeżywają odtworzenie stanu (obrót ekranu). */
 @RunWith(RobolectricTestRunner::class)
 class DialogStateRestorationTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
 
     @Test
     fun `failed card save keeps the draft and allows a successful retry`() {
@@ -73,7 +75,8 @@ class DialogStateRestorationTest {
     @Test
     fun `mode reset confirmation stays open after state restoration`() {
         runBlocking { repos.localStore.seedIfEmpty("en") }
-        val vm = ModeDetailViewModel(routeArgs("modeId" to "classic"), repos.studyModeRepository)
+        val vm =
+            ModeDetailViewModel(routeArgs("modeId" to "classic"), repos.studyModeRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         waitForText("Classic")
@@ -90,7 +93,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `discard changes confirmation stays open after state restoration`() {
-        val vm = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository)
+        val vm = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.onNodeWithText("Empty mode").performClick()

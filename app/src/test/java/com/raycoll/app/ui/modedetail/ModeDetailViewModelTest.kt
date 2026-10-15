@@ -8,6 +8,7 @@ import com.raycoll.app.domain.model.RevealStyle
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.steps.ModeTemplate
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import com.raycoll.app.testing.routeArgs
@@ -31,6 +32,8 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class ModeDetailViewModelTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
+
     @Test
     fun `insert below follows the selected key after moving and undo retains the inserted key`() = runTest(dispatcher) {
         val vm = vm()
@@ -76,7 +79,7 @@ class ModeDetailViewModelTest {
     }
 
     private fun vm(modeId: String? = null) =
-        ModeDetailViewModel(routeArgs("modeId" to modeId), repos.studyModeRepository)
+        ModeDetailViewModel(routeArgs("modeId" to modeId), repos.studyModeRepository, testPreferences.repository)
 
     @Test
     fun `choosing a template creates steps with stable unique keys`() = runTest(dispatcher) {

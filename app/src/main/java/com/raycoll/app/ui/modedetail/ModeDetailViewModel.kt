@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.raycoll.app.core.Ids
+import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
@@ -21,8 +22,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -68,7 +72,8 @@ sealed interface ModeDetailEvent {
 @HiltViewModel
 class ModeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val modeRepository: StudyModeRepository
+    private val modeRepository: StudyModeRepository,
+    private val preferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
     private val modeId: String? = savedStateHandle.toRoute<ModeDetailRoute>().modeId
     private var existingMode: StudyMode? = null
@@ -78,6 +83,10 @@ class ModeDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<ModeDetailUiState>(ModeDetailUiState.Loading)
     val uiState: StateFlow<ModeDetailUiState> = _uiState.asStateFlow()
+
+    val expertMode: StateFlow<Boolean> = preferencesRepository.preferences
+        .map { it.expertMode }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val eventSink = UiEvents<ModeDetailEvent>()
     val events: Flow<ModeDetailEvent> = eventSink.flow
@@ -104,6 +113,12 @@ class ModeDetailViewModel @Inject constructor(
     }
 
     fun setName(name: String) = edit { it.copy(name = name) }
+
+    fun setExpertMode(value: Boolean) {
+        viewModelScope.launchSaving(onFailure = { eventSink.send(ModeDetailEvent.SaveFailed) }) {
+            preferencesRepository.setExpertMode(value)
+        }
+    }
 
     fun updateStep(index: Int, step: ModeStep) = editSteps { steps ->
         if (index in steps.indices) steps[index] = steps[index].copy(step = step)
@@ -144,7 +159,7 @@ class ModeDetailViewModel @Inject constructor(
                     existingMode = StudyMode(id = id, name = state.name, steps = steps)
                 }
 
-                // bez zmian: nie zapisujemy (wbudowany tryb zostaje „nieruszony” i dostaje nowe kroki)
+                // Bez zmian w nazwie i krokach nie wykonujemy zbędnego zapisu.
                 existing.name == state.name && existing.steps == steps -> Unit
 
                 else -> {

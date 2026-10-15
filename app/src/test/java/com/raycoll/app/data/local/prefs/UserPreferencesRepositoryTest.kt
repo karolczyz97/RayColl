@@ -82,17 +82,20 @@ class UserPreferencesRepositoryTest {
         assertTrue(defaults.useSystemColors)
         assertEquals(1.0f, defaults.ttsRate, 0.001f)
         assertTrue(defaults.backgroundPlayback)
+        assertFalse(defaults.expertMode)
 
         // zapisy
         repo.setTheme(ThemePref.DARK)
         repo.setUseSystemColors(false)
         repo.setBackgroundPlayback(false)
         repo.setTtsRate(1.5f)
+        repo.setExpertMode(true)
 
         var prefs = repo.preferences.first()
         assertEquals(ThemePref.DARK, prefs.theme)
         assertFalse(prefs.useSystemColors)
         assertFalse(prefs.backgroundPlayback)
+        assertTrue(prefs.expertMode)
         assertEquals(1.5f, prefs.ttsRate, 0.001f)
 
         // clamp 0.5..2.0
