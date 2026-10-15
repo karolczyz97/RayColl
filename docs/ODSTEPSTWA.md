@@ -60,3 +60,38 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
   regułę wygenerowaną przez R8, bez dodawania kolejnej zależności i bez wyłączania innych ostrzeżeń.
 - **Gdzie:** `app/proguard-rules.pro`; biblioteka w `gradle/libs.versions.toml`.
 - Problem opisany przez Apache: [CSV-320](https://issues.apache.org/jira/browse/CSV-320).
+
+## Firestore etap 6 — scenariusze na emulatorze
+
+- **Co:** scenariusze z §9.4 działają pod Robolectric na prawdziwym Firestore SDK i emulatorze
+  (plan awaryjny z `androidTest` nie był potrzebny). Uruchamia je `npm run test:android`
+  w `tools/firestore-tests`: `firebase emulators:exec` wokół
+  `gradlew :app:testDebugUnitTest --tests "*Emulator*"`, przez mały skrypt Node
+  (`run-android-tests.mjs`), bo na Windows `emulators:exec` nie uruchamia `gradlew.bat`
+  bezpośrednio. Bez emulatora zwykłe `test` pomija te scenariusze (`Assume`), jak w planie.
+- **Co:** każde „urządzenie” w teście ma własną pamięć Firestore w RAM z czyszczeniem LRU,
+  a nie trwałą pamięć na dysku jak aplikacja. Domyślne czyszczenie pamięci w RAM usuwa
+  potwierdzone dokumenty bez nasłuchu, więc odczyty z pamięci telefonu (`cachedDoc`) zwracałyby
+  pustkę, czego w aplikacji nie ma. LRU z dużym limitem zachowuje się jak pamięć aplikacji.
+- **Co:** test nie usuwa obiektów `FirebaseApp` po scenariuszu (tylko wylogowuje i zamyka
+  Firestore). Firebase Auth trzyma statyczne odwołanie do pierwszej aplikacji, więc jej
+  usunięcie psuło kolejne scenariusze w tym samym procesie testów.
+- **Co (narzędzie spoza planu):** `stop-stale-emulators.mjs` uruchamiany przed i po testach
+  npm. Na Windows emulator Firestore przeżywa zakończenie `emulators:exec` i blokuje port 8089
+  przy następnym uruchomieniu. Skrypt zatrzymuje wyłącznie procesy emulatora Firebase
+  nasłuchujące na portach 8089 i 9099.
+- **Poprawka w aplikacji wykryta przez scenariusze:** Firebase Auth zgłasza Firestore zmianę
+  użytkownika przez wątek główny, a konto zmienia się w tle (`Dispatchers.IO`). Zapis wysłany
+  zaraz po zmianie konta (talie przykładowe nowego gościa lub nowego konta Google, dane
+  przenoszone z gościa, dane odłożone przez „Zostaw”) mógł trafić do kolejki poprzedniego
+  użytkownika i nigdy nie dotrzeć na nowe konto. Scenariusz logowania padał przez to w 3 z 4
+  przebiegów. `AuthRepository.signInAnonymously` i `signInWithCredential` czekają teraz na
+  wątek główny, zanim zwrócą wynik; po poprawce 4 pełne przebiegi (32 scenariusze) zielone.
+  Plan tego nie przewidywał; publiczne API bez zmian.
+- **Co:** scenariusz logowania sprawdza dodatkowo zawartość konta Google po każdej opcji
+  (używane konto bez zmian, nowe konto z taliami przykładowymi), czego wcześniejszy szkic nie
+  sprawdzał. Przy przekroczeniu czasu test podaje ostatni osiągnięty krok.
+- **Testy reguł** w Node powstały już w etapie 4 (razem z regułami, zgodnie z §11 krok 4)
+  i pokrywają wszystkie przypadki z §9.4. W etapie 6 zostały ponownie uruchomione: 19/19.
+- **Gdzie:** `app/src/test/.../data/firestore/FirestoreEmulatorTest.kt`, `tools/firestore-tests/`,
+  `data/remote/auth/AuthRepository.kt`.

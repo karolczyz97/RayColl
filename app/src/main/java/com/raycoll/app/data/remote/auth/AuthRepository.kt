@@ -20,10 +20,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 data class Account(val uid: String, val email: String?)
 
@@ -82,7 +84,13 @@ class AuthRepository internal constructor(
     }
 
     val currentUser: FirebaseUser? get() = auth.currentUser
-    suspend fun signInAnonymously() = auth.signInAnonymously().await()
+    suspend fun signInAnonymously() = auth.signInAnonymously().await().also { awaitUserSwitch() }
+
+    /**
+     * Firebase Auth zgłasza zmianę użytkownika do Firestore przez wątek główny. Zapis wysłany przed tym
+     * zgłoszeniem trafiłby do kolejki poprzedniego użytkownika i nie dotarłby na nowe konto.
+     */
+    private suspend fun awaitUserSwitch() = withContext(Dispatchers.Main) { }
     suspend fun linkWithGoogle(idToken: String) = checkNotNull(auth.currentUser)
         .linkWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
     suspend fun deleteCurrentUser() {
@@ -96,6 +104,7 @@ class AuthRepository internal constructor(
     }
     suspend fun signInWithCredential(credential: com.google.firebase.auth.AuthCredential): SignInResult = try {
         val result = auth.signInWithCredential(credential).await()
+        awaitUserSwitch()
         val user = result.user
         if (user == null) {
             SignInResult.Failure(SignInError.LOGIN_FAILED)
