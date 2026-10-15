@@ -101,7 +101,9 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
 - **Co:** w konfiguracjach repomix zmieniono poza ścieżkami wyjściowymi tylko dwie rzeczy
   wynikające z przeniesienia: `all.json` pakuje `repomix/*.json` zamiast nieistniejącego już
   `repomix.config.json`, a wzorzec pomijania `repomix*.xml` zastąpiono `repomix/out/**`.
-  Treść paczek (opisy, wzmianki o Room) zostaje do Twojej aktualizacji, jak w planie.
+  Na Twoją późniejszą prośbę zaktualizowałem też treść paczek (plan zostawiał ją Tobie): opisy
+  mówią o Firestore zamiast Room, części obejmują `firestore.rules`, testy reguł w Node, plany
+  z `docs/` i ustawienia Javy 21, a usunięto nieużywane wzorce pomijania.
 - **Co:** `pack.ps1` dostał przełącznik `-All`, który pakuje `all.json`. Dawny skrypt pakował
   tylko trzy części, a całość wymagała ręcznego wywołania repomix.
 - **Gdzie:** `repomix/`, `.gitignore`, README.

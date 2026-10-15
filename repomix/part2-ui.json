@@ -3,33 +3,37 @@
   "output": {
     "filePath": "repomix/out/part2-ui.xml",
     "style": "xml",
-    "filePathStyle": "target-relative",
     "compress": false,
-    "headerText": "RayColl - Część 2/3 (Interfejs & Odtwarzanie): Ekrany Jetpack Compose, ViewModele, motyw, nawigacja, moduł Playback (TTS, STT, AudioFocus, StudySessionService) oraz zasoby aplikacji (strings.xml, layouty, style).",
+    "headerText": "RayColl - Część 2/3 (Interfejs i odtwarzanie): ekrany Jetpack Compose i ViewModele, motyw, nawigacja, komponenty (m.in. baner stanu połączenia), moduł playback (TTS, STT, audio focus, usługa Media3 do nauki w tle) oraz zasoby (teksty w 5 językach, reguły kopii Androida). Stos: Kotlin, Jetpack Compose (Material 3), Hilt, Cloud Firestore jako jedyne źródło danych z pamięcią podręczną na telefonie (praca offline), Firebase Auth (konto gościa albo Google), Media3, minSdk 33, Gradle na Javie 21. Room i własna synchronizacja zostały usunięte. Zawartość odpowiada bieżącemu stanowi katalogu roboczego (także niezacommitowanym zmianom); pliki lokalne (klucze, local.properties) są pominięte.",
     "fileSummary": true,
     "directoryStructure": true,
     "files": true,
     "removeComments": false,
     "removeEmptyLines": false,
     "showLineNumbers": false,
-    "includeEmptyDirectories": false
+    "includeEmptyDirectories": false,
+    "git": {
+      "sortByChanges": true,
+      "includeDiffs": false,
+      "includeLogs": false
+    }
   },
   "include": [
     "app/src/main/java/com/raycoll/app/playback/**/*.kt",
     "app/src/main/java/com/raycoll/app/ui/**/*.kt",
     "app/src/main/res/**/*.xml",
-    "app/src/main/res/**/*.properties"
+    "app/src/main/res/**/*.properties",
+    "app/src/debug/res/**/*.xml"
   ],
   "ignore": {
     "useGitignore": true,
     "useDefaultPatterns": true,
     "customPatterns": [
-      ".agents/**",
-      "plan_*.txt",
-      "konkluzje_*.txt",
       "**/build/**",
       "**/.gradle/**",
       "**/.kotlin/**",
+      "**/node_modules/**",
+      "**/package-lock.json",
       "local.properties",
       "**/google-services.json",
       "repomix/out/**"

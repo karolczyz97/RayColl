@@ -3,31 +3,36 @@
   "output": {
     "filePath": "repomix/out/part3-tests.xml",
     "style": "xml",
-    "filePathStyle": "target-relative",
     "compress": false,
-    "headerText": "RayColl - Część 3/3 (Testy): Kompletny zestaw testów jednostkowych i Robolectric (testy logiki domeny, bazy danych Room, synchronizacji, ViewModeli, semantyki sesji i reguł SRS).",
+    "headerText": "RayColl - Część 3/3 (Testy): testy jednostkowe i Robolectric na atrapie InMemoryDocumentStore (domena, FSRS, sesja, import, kopie, konto gościa, ViewModele, ekrany), scenariusze FirestoreEmulatorTest na prawdziwym emulatorze Firestore + Auth oraz testy reguł firestore.rules w Node (tools/firestore-tests). Stos: Kotlin, Jetpack Compose (Material 3), Hilt, Cloud Firestore jako jedyne źródło danych z pamięcią podręczną na telefonie (praca offline), Firebase Auth (konto gościa albo Google), Media3, minSdk 33, Gradle na Javie 21. Room i własna synchronizacja zostały usunięte. Zawartość odpowiada bieżącemu stanowi katalogu roboczego (także niezacommitowanym zmianom); pliki lokalne (klucze, local.properties) są pominięte.",
     "fileSummary": true,
     "directoryStructure": true,
     "files": true,
     "removeComments": false,
     "removeEmptyLines": false,
     "showLineNumbers": false,
-    "includeEmptyDirectories": false
+    "includeEmptyDirectories": false,
+    "git": {
+      "sortByChanges": true,
+      "includeDiffs": false,
+      "includeLogs": false
+    }
   },
   "include": [
     "app/src/test/**/*.kt",
-    "app/src/test/**/*.properties"
+    "app/src/test/resources/**/*.properties",
+    "tools/firestore-tests/*.mjs",
+    "tools/firestore-tests/package.json"
   ],
   "ignore": {
     "useGitignore": true,
     "useDefaultPatterns": true,
     "customPatterns": [
-      ".agents/**",
-      "plan_*.txt",
-      "konkluzje_*.txt",
       "**/build/**",
       "**/.gradle/**",
       "**/.kotlin/**",
+      "**/node_modules/**",
+      "**/package-lock.json",
       "local.properties",
       "**/google-services.json",
       "repomix/out/**"

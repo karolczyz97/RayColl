@@ -208,9 +208,18 @@ Konfiguracje i skrypt są w [`repomix/`](repomix). Uruchom z dowolnego miejsca:
 powershell -ExecutionPolicy Bypass -File repomix/pack.ps1
 ```
 
-Domyślnie powstają trzy części (`part1-logic.json`, `part2-ui.json`, `part3-tests.json`),
-a z przełącznikiem `-All` jedna paczka z całością (`all.json`). Paczki trafiają do
-`repomix/out/` (ignorowane przez git).
+Paczki trafiają do `repomix/out/` (ignorowane przez git). Domyślnie powstają trzy części,
+które razem obejmują każdy plik tekstowy repo dokładnie raz:
+
+| Konfiguracja | Zawartość | Rozmiar (ok.) |
+|---|---|---|
+| `part1-logic.json` | konfiguracja Gradle i Firebase, `firestore.rules`, manifest, `core`, `data`, `domain`, `di`, plany i odstępstwa z `docs/` | 85 tys. tokenów |
+| `part2-ui.json` | ekrany, ViewModele, motyw, nawigacja, `playback`, zasoby (teksty w 5 językach) | 130 tys. tokenów |
+| `part3-tests.json` | testy Kotlin (atrapa, Robolectric, scenariusze emulatora) i testy reguł w Node | 112 tys. tokenów |
+
+Z przełącznikiem `-All` powstaje jedna paczka z całością (`all.json`, ok. 330 tys. tokenów,
+także skrypty repomix). Pomijane są tylko pliki binarne (ikony, dźwięki, `gradle-wrapper.jar`)
+i `package-lock.json`.
 
 ## Struktura pakietów (skrót)
 
