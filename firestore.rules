@@ -1,9 +1,56 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // users/{uid} i wszystko poniżej — tylko właściciel (w wersji 2 {document=**} obejmuje też zero segmentów)
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function guest() { return request.auth.token.firebase.sign_in_provider == 'anonymous'; }
+    function nowMs() { return request.time.toMillis(); }
+    function notFuture(f) { return request.resource.data.get(f, 0) <= nowMs() + 600000; }
+    function notOlder(f) { return request.resource.data.get(f, 0) >= resource.data.get(f, 0); }
+    function changed(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasAny(keys); }
+    function alive() { return resource.data.get('deletedAt', null) == null; }
+    function restoring() { return request.resource.data.get('deletedAt', null) == null; }
+    function oldTombstone(d) { return d.get('deletedAt', null) != null && d.deletedAt < nowMs() - 2592000000; }
+
+    // Stara wersja aplikacji zapisuje ten dokument przy każdej wysyłce: odmowa blokuje całą jej transakcję.
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow write: if false;
+    }
+
+    match /users/{uid}/decks/{deckId} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && notFuture('updatedAt');
+      allow update: if owner(uid) && notFuture('updatedAt') && notOlder('updatedAt') && (alive() || restoring());
+      allow delete: if owner(uid) && (guest() || oldTombstone(resource.data));
+
+      match /cards/{cardId} {
+        allow read: if owner(uid);
+        allow create: if owner(uid) && notFuture('srsUpdatedAt') && notFuture('contentUpdatedAt');
+        allow update: if owner(uid)
+          && notFuture('srsUpdatedAt') && notFuture('contentUpdatedAt')
+          && (alive() || restoring())
+          && (!changed(['srsState', 'srsUpdatedAt']) || notOlder('srsUpdatedAt'))
+          && (!changed(['pages', 'contentUpdatedAt']) || notOlder('contentUpdatedAt'))
+          && (!changed(['deletedAt']) || restoring()
+              || (request.resource.data.deletedAt >= resource.data.get('srsUpdatedAt', 0)
+                  && request.resource.data.deletedAt >= resource.data.get('contentUpdatedAt', 0)));
+        allow delete: if owner(uid) && (guest() || oldTombstone(resource.data)
+          || oldTombstone(get(/databases/$(database)/documents/users/$(uid)/decks/$(deckId)).data));
+      }
+    }
+
+    match /users/{uid}/studyModes/{modeId} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && notFuture('updatedAt');
+      allow update: if owner(uid) && notFuture('updatedAt') && notOlder('updatedAt') && (alive() || restoring());
+      allow delete: if owner(uid) && (guest() || oldTombstone(resource.data));
+    }
+
+    match /users/{uid}/activity/{day} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && request.resource.data.updatedAt == request.time;
+      allow delete: if owner(uid) && guest();
     }
   }
 }

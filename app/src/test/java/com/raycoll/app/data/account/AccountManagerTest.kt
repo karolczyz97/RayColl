@@ -69,7 +69,17 @@ class AccountManagerTest {
         configure(true)
         repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
         val before = repos.snapshot()
-        val manager = AccountManager(auth, repos.store, Provider { repos.backupRepository }, context, backgroundScope)
+        val manager =
+            AccountManager(
+                auth,
+                repos.store,
+                Provider {
+                    repos.backupRepository
+                },
+                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
+                context,
+                backgroundScope
+            )
         manager.retryStart()
         assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
         assertTrue(manager.resolveChoice(GuestDataChoice.CANCEL))
@@ -89,7 +99,17 @@ class AccountManagerTest {
         val card = repos.deckRepository.getDeck(id)!!.cards.single()
         repos.deckRepository.reviewCard(id, card.id, 3)
         val before = repos.snapshot()
-        val manager = AccountManager(auth, repos.store, Provider { repos.backupRepository }, context, backgroundScope)
+        val manager =
+            AccountManager(
+                auth,
+                repos.store,
+                Provider {
+                    repos.backupRepository
+                },
+                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
+                context,
+                backgroundScope
+            )
         manager.retryStart()
         assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
         assertTrue(manager.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT))
@@ -103,7 +123,17 @@ class AccountManagerTest {
         configure(false)
         repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
         val before = repos.snapshot()
-        val manager = AccountManager(auth, repos.store, Provider { repos.backupRepository }, context, backgroundScope)
+        val manager =
+            AccountManager(
+                auth,
+                repos.store,
+                Provider {
+                    repos.backupRepository
+                },
+                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
+                context,
+                backgroundScope
+            )
         manager.retryStart()
         manager.signInWithGoogle("token")
         assertTrue(manager.resolveChoice(GuestDataChoice.KEEP_ON_DEVICE))
@@ -118,7 +148,17 @@ class AccountManagerTest {
         configure(false)
         repos.seed()
         val before = repos.snapshot()
-        val manager = AccountManager(auth, repos.store, Provider { repos.backupRepository }, context, backgroundScope)
+        val manager =
+            AccountManager(
+                auth,
+                repos.store,
+                Provider {
+                    repos.backupRepository
+                },
+                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
+                context,
+                backgroundScope
+            )
         manager.retryStart()
         assertTrue(manager.signInWithGoogle("token") is SignInResult.Success)
         assertFalse(manager.choiceRequired.value)

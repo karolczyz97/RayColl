@@ -19,7 +19,7 @@
     <string name="auth_error_invalid_token">Ungültiges Anmeldetoken. Bitte erneut versuchen.</string>
     <string name="auth_error_login_failed">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</string>
     <string name="sync_status_syncing">Änderungen werden synchronisiert…</string>
-    <string name="sync_status_offline">Offline-Modus — Änderungen werden auf diesem Gerät gespeichert und synchronisiert, sobald du wieder online bist.</string>
+    <string name="sync_status_offline">Offline — Änderungen werden nach dem Verbinden gesendet</string>
     <string name="dialog_delete_desc">Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="dialog_delete_permanent_title">Endgültig löschen?</string>
     <string name="dialog_delete_permanent_desc">Das Deck „%1$s“ wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
@@ -285,8 +285,8 @@
     <string name="study_summary_ratings">Bewertet: %1$d • Fehlgeschlagen: %2$d</string>
     <string name="study_session_ended_no_ratings">Es wurde nichts bewertet, dein Wiederholungsplan bleibt unverändert.</string>
     <string name="dashboard_browse">Durchsuchen</string>
-    <string name="sync_now_success">Synchronisiert</string>
-    <string name="sync_now_failed">Synchronisierung fehlgeschlagen. Änderungen sind auf dem Gerät gespeichert und werden später gesendet.</string>
+    <string name="sync_now_success">Alle Änderungen gesendet</string>
+    <string name="sync_now_failed">Änderungen warten auf Internet</string>
     <string name="study_a11y_tap_card">Weiter</string>
     <string name="browse_empty_deck">Dieses Deck hat noch keine Karten.</string>
     <string name="a11y_deck_menu_named">Optionen für %1$s</string>
@@ -332,5 +332,9 @@
     <string name="auth_from_phone_suffix">" (vom Telefon)"</string>
     <string name="auth_start_internet">Verbinde dich mit dem Internet, um zu beginnen</string>
     <string name="auth_retry_start">Erneut versuchen</string>
+    <string name="sync_changes_rejected">%1$d Änderungen von diesem Telefon waren älter als die Cloud-Daten und wurden nicht gespeichert</string>
+    <string name="auth_loading_data">Kontodaten werden geladen…</string>
+    <string name="auth_data_when_online">Kontodaten erscheinen nach dem Verbinden</string>
+    <string name="auth_sign_out_offline">Zum Abmelden mit dem Internet verbinden</string>
 </resources>
 

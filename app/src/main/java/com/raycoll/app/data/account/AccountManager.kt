@@ -13,6 +13,7 @@ import com.raycoll.app.data.remote.auth.AuthRepository
 import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
 import com.raycoll.app.data.repository.BackupRepository
+import com.raycoll.app.data.repository.Cleanup
 import com.raycoll.app.di.ApplicationScope
 import com.raycoll.app.domain.merge.getGuestHasData
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,6 +23,7 @@ import javax.inject.Provider
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -40,6 +42,7 @@ class AccountManager @Inject constructor(
     private val auth: AuthRepository,
     private val store: DocumentStore,
     private val backups: Provider<BackupRepository>,
+    private val cleanup: Cleanup,
     @ApplicationContext private val context: Context,
     @ApplicationScope private val scope: CoroutineScope
 ) : CurrentAccount {
@@ -49,6 +52,8 @@ class AccountManager @Inject constructor(
     val busy = MutableStateFlow(false)
     private val operations = Mutex()
     private var token: String? = null
+    private var cleanupUid: String? = null
+    private var cleanupJob: Job? = null
     private val backup get() = backups.get()
 
     fun start() {
@@ -98,6 +103,11 @@ class AccountManager @Inject constructor(
         val user = checkNotNull(auth.currentUser)
         uid.value = user.uid
         state.value = AccountState.Ready(user.uid, user.isAnonymous, user.email)
+        if (cleanupUid != user.uid) {
+            cleanupJob?.cancel()
+            cleanupUid = user.uid
+            cleanupJob = scope.launch { cleanup.run(user.uid) }
+        }
     }
 
     suspend fun signInWithGoogle(idToken: String): SignInResult = operation {
@@ -151,10 +161,12 @@ class AccountManager @Inject constructor(
                 GuestDataChoice.KEEP_ON_DEVICE -> backup.savePrivate(STASH, data)
                 else -> Unit
             }
+            cleanupJob?.cancel()
             backup.deleteGuest(guestUid)
             store.awaitPendingWrites(15_000)
             auth.deleteCurrentUser()
             // Nawet gdy usunięcie Auth odmówiło, stary gość nie może pozostać aktywny.
+            cleanupJob?.cancel()
             auth.signOut()
             uid.value = null
             state.value = AccountState.Starting
@@ -197,6 +209,7 @@ class AccountManager @Inject constructor(
             return@operation false
         }
         try {
+            cleanupJob?.cancel()
             auth.signOut()
             uid.value = null
             state.value = AccountState.Starting

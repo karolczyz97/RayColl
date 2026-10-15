@@ -19,7 +19,7 @@
     <string name="auth_error_invalid_token">Token logowania nieprawidłowy. Spróbuj ponownie.</string>
     <string name="auth_error_login_failed">Logowanie nie powiodło się. Spróbuj ponownie.</string>
     <string name="sync_status_syncing">Synchronizowanie zmian…</string>
-    <string name="sync_status_offline">Tryb offline — zmiany są zapisywane na tym urządzeniu i zsynchronizują się po odzyskaniu połączenia.</string>
+    <string name="sync_status_offline">Offline — zmiany wyślą się po połączeniu</string>
     <string name="dialog_delete_desc">Tej operacji nie można cofnąć.</string>
     <string name="dialog_delete_permanent_title">Usunąć trwale?</string>
     <string name="dialog_delete_permanent_desc">Talia „%1$s” zostanie bezpowrotnie usunięta. Tej operacji nie można cofnąć.</string>
@@ -295,8 +295,8 @@
     <string name="study_summary_ratings">Ocenione: %1$d • Błędne: %2$d</string>
     <string name="study_session_ended_no_ratings">Nic nie zostało ocenione, więc harmonogram powtórek się nie zmienił.</string>
     <string name="dashboard_browse">Przeglądaj</string>
-    <string name="sync_now_success">Zsynchronizowano</string>
-    <string name="sync_now_failed">Nie udało się zsynchronizować. Zmiany są zapisane na telefonie i wyślą się później.</string>
+    <string name="sync_now_success">Wszystko wysłane</string>
+    <string name="sync_now_failed">Zmiany czekają na internet</string>
     <string name="study_a11y_tap_card">Dalej</string>
     <string name="browse_empty_deck">Ta talia nie ma jeszcze fiszek.</string>
     <string name="a11y_deck_menu_named">Opcje talii: %1$s</string>
@@ -342,5 +342,9 @@
     <string name="auth_from_phone_suffix">" (z telefonu)"</string>
     <string name="auth_start_internet">Połącz się z internetem, żeby zacząć</string>
     <string name="auth_retry_start">Spróbuj ponownie</string>
+    <string name="sync_changes_rejected">%1$d zmian z tego telefonu było starszych niż dane w chmurze i nie zostało zapisanych</string>
+    <string name="auth_loading_data">Pobieranie danych konta…</string>
+    <string name="auth_data_when_online">Dane konta pojawią się po połączeniu</string>
+    <string name="auth_sign_out_offline">Połącz się z internetem, żeby się wylogować</string>
 </resources>
 

@@ -77,6 +77,14 @@ class AppSettingsViewModel @Inject constructor(
     private val store: DocumentStore,
     private val clock: Clock
 ) : ViewModel() {
+    private val syncing = MutableStateFlow(false)
+    private val syncStatus = combine(store.offline, syncing) { offline, syncing ->
+        when {
+            syncing -> SyncStatus.SYNCING
+            offline -> SyncStatus.ERROR
+            else -> SyncStatus.IDLE
+        }
+    }
     private val signingIn = MutableStateFlow(false)
     private val signingOut = MutableStateFlow(false)
     private val backupOperation = MutableStateFlow<BackupOperation?>(null)
@@ -86,7 +94,7 @@ class AppSettingsViewModel @Inject constructor(
         prefsRepository.preferences,
         authRepository.account,
         work,
-        store.offline.map { if (it) SyncStatus.ERROR else SyncStatus.IDLE }
+        syncStatus
     ) { preferences, account, work, syncStatus ->
         AppSettingsUiState(
             preferences = preferences,
@@ -162,8 +170,15 @@ class AppSettingsViewModel @Inject constructor(
 
     /** Ręczna synchronizacja kończy się komunikatem — inaczej nie widać, czy coś się stało. */
     fun syncNow() {
-        if (signingOut.value || backupOperation.value != null) return
-        launch { eventSink.send(AppSettingsEvent.SyncFinished(store.awaitPendingWrites(15_000))) }
+        if (syncing.value || signingOut.value || backupOperation.value != null) return
+        syncing.value = true
+        launch {
+            try {
+                eventSink.send(AppSettingsEvent.SyncFinished(store.awaitPendingWrites(15_000)))
+            } finally {
+                syncing.value = false
+            }
+        }
     }
 
     fun setTheme(value: ThemePref) = launch { prefsRepository.setTheme(value) }

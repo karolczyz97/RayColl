@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
@@ -27,6 +28,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.data.account.AccountState
 import com.raycoll.app.ui.components.MigrationDialog
+import com.raycoll.app.ui.components.RejectedChangesMessage
 import com.raycoll.app.ui.main.MainViewModel
 import com.raycoll.app.ui.navigation.RayCollNavHost
 import com.raycoll.app.ui.theme.RayCollTheme
@@ -47,6 +49,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+            val waitingForData by viewModel.waitingForData.collectAsStateWithLifecycle()
+            val offline by viewModel.offline.collectAsStateWithLifecycle()
             val accountState by viewModel.accountState.collectAsStateWithLifecycle()
             val migrationRequired by viewModel.migrationRequired.collectAsStateWithLifecycle()
             val migrating by viewModel.migrating.collectAsStateWithLifecycle()
@@ -69,25 +73,49 @@ class MainActivity : ComponentActivity() {
                     onDispose {}
                 }
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    when (accountState) {
-                        AccountState.Starting -> Column(
-                            Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                        }
+                    Box(Modifier.fillMaxSize()) {
+                        when (val account = accountState) {
+                            AccountState.Starting -> Column(
+                                Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator()
+                            }
 
-                        AccountState.NeedsInternet -> Column(
-                            Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(stringResource(R.string.auth_start_internet))
-                            Button(onClick = viewModel::retryStart) { Text(stringResource(R.string.auth_retry_start)) }
-                        }
+                            AccountState.NeedsInternet -> Column(
+                                Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(stringResource(R.string.auth_start_internet))
+                                Button(onClick = viewModel::retryStart) {
+                                    Text(stringResource(R.string.auth_retry_start))
+                                }
+                            }
 
-                        is AccountState.Ready -> RayCollNavHost()
+                            is AccountState.Ready -> if (!account.isGuest && waitingForData) {
+                                Column(
+                                    Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            if (offline) {
+                                                R.string.auth_data_when_online
+                                            } else {
+                                                R.string.auth_loading_data
+                                            }
+                                        )
+                                    )
+                                    if (!offline) CircularProgressIndicator()
+                                }
+                            } else {
+                                RayCollNavHost()
+                            }
+                        }
+                        RejectedChangesMessage(viewModel.store, Modifier.align(Alignment.BottomCenter))
                     }
                     if (migrationRequired) {
                         MigrationDialog(

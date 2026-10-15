@@ -38,7 +38,12 @@ class MainViewModelTest {
         Dispatchers.setMain(main)
         `when`(sync.choiceRequired).thenReturn(MutableStateFlow(true))
         `when`(sync.state).thenReturn(MutableStateFlow(com.raycoll.app.data.account.AccountState.Starting))
-        vm = MainViewModel(preferences.repository, sync)
+        vm =
+            MainViewModel(
+                preferences.repository,
+                sync,
+                com.raycoll.app.testing.InMemoryDocumentStore(com.raycoll.app.testing.FakeClock())
+            )
     }
 
     @After fun close() {

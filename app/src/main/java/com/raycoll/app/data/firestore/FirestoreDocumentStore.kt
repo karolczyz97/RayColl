@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -106,13 +107,18 @@ class FirestoreDocumentStore @Inject constructor(
         task.addOnFailureListener { error ->
             Log.w("DocumentStore", "Write rejected: ${ops.map { it.path }}", error)
             if ((error as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
-                rejections.tryEmit(ops.size)
+                scope.launch { rejections.emit(ops.size) }
             }
         }
     }
 
-    override suspend fun awaitPendingWrites(timeoutMs: Long): Boolean = withTimeoutOrNull(timeoutMs) {
-        firestore.waitForPendingWrites().await()
-        true
-    } ?: false
+    override suspend fun awaitPendingWrites(timeoutMs: Long): Boolean = try {
+        withTimeoutOrNull(timeoutMs) {
+            firestore.waitForPendingWrites().await()
+            true
+        } ?: false
+    } catch (error: FirebaseFirestoreException) {
+        Log.w("DocumentStore", "Could not confirm pending writes", error)
+        false
+    }
 }

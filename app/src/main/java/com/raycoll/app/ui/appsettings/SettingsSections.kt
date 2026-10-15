@@ -82,7 +82,8 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                 }
                 OutlinedButton(
                     onClick = onSignOut,
-                    enabled = !state.signingOut && state.backupOperation == null,
+                    enabled = !state.signingOut && state.backupOperation == null &&
+                        state.syncStatus != SyncStatus.ERROR,
                     shape = MaterialTheme.shapes.small
                 ) {
                     if (state.signingOut) {
@@ -90,6 +91,11 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                     }
                     Text(stringResource(R.string.auth_sign_out))
                 }
+            }
+            if (state.syncStatus ==
+                SyncStatus.ERROR
+            ) {
+                Text(stringResource(R.string.auth_sign_out_offline), style = MaterialTheme.typography.bodySmall)
             }
         } else {
             Text(

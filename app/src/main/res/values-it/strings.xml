@@ -19,7 +19,7 @@
     <string name="auth_error_invalid_token">Token di accesso non valido. Riprova.</string>
     <string name="auth_error_login_failed">Accesso fallito. Riprova.</string>
     <string name="sync_status_syncing">Sincronizzazione delle modifiche…</string>
-    <string name="sync_status_offline">Modalità offline — le modifiche vengono salvate su questo dispositivo e verranno sincronizzate quando tornerai online.</string>
+    <string name="sync_status_offline">Offline — le modifiche saranno inviate dopo la connessione</string>
     <string name="dialog_delete_desc">Questa azione non può essere annullata.</string>
     <string name="dialog_delete_permanent_title">Eliminare permanentemente?</string>
     <string name="dialog_delete_permanent_desc">Il mazzo «%1$s» verrà eliminato definitivamente. Questa operazione non può essere annullata.</string>
@@ -290,8 +290,8 @@
     <string name="study_summary_ratings">Valutate: %1$d • Fallite: %2$d</string>
     <string name="study_session_ended_no_ratings">Non è stato valutato nulla, quindi il programma di ripasso non è cambiato.</string>
     <string name="dashboard_browse">Sfoglia</string>
-    <string name="sync_now_success">Sincronizzato</string>
-    <string name="sync_now_failed">Sincronizzazione non riuscita. Le modifiche sono salvate sul dispositivo e verranno inviate più tardi.</string>
+    <string name="sync_now_success">Tutte le modifiche inviate</string>
+    <string name="sync_now_failed">Le modifiche attendono una connessione internet</string>
     <string name="study_a11y_tap_card">Continua</string>
     <string name="browse_empty_deck">Questo mazzo non ha ancora carte.</string>
     <string name="a11y_deck_menu_named">Opzioni per %1$s</string>
@@ -337,5 +337,9 @@
     <string name="auth_from_phone_suffix">" (dal telefono)"</string>
     <string name="auth_start_internet">Connettiti a internet per iniziare</string>
     <string name="auth_retry_start">Riprova</string>
+    <string name="sync_changes_rejected">%1$d modifiche da questo telefono erano precedenti ai dati nel cloud e non sono state salvate</string>
+    <string name="auth_loading_data">Caricamento dei dati del tuo account…</string>
+    <string name="auth_data_when_online">I dati appariranno dopo la connessione</string>
+    <string name="auth_sign_out_offline">Connettiti a internet per disconnetterti</string>
 </resources>
 
