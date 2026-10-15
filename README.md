@@ -57,20 +57,22 @@ dostarczają własne reguły konsumenckie.
 
 ### Podpis release
 
-Klucz podpisu nie jest w repozytorium. Żeby zainstalować release na telefonie,
-dopisz do `local.properties` (ścieżka względem katalogu repo albo bezwzględna):
+Klucz podpisu nie jest w repozytorium. To klucz z czasów wersji Expo (EAS, projekt
+`@karolczyz97/raycoll-io`), ten sam, którego SHA-1 jest zarejestrowany w Firebase dla
+`com.raycoll.app`. Kopia leży w `C:\Users\Karol\klucze\raycoll-release.jks`, a hasła i alias są
+na koncie Expo (`eas credentials -p android`). Do budowania dopisz je do `local.properties`:
 
 ```
-release.storeFile=C:/Users/<ty>/klucze/raycoll-release.jks
+release.storeFile=C:/Users/Karol/klucze/raycoll-release.jks
 release.storePassword=...
-release.keyAlias=raycoll
+release.keyAlias=...
 release.keyPassword=...
 ```
 
-Bez tych wpisów release zostaje niepodpisany. Raz wybranego klucza nie zmieniaj —
-Android nie zaktualizuje aplikacji podpisanej innym kluczem bez odinstalowania.
-SHA-1 nowego klucza (`keytool -list -v -keystore <plik>`) trzeba dodać w Firebase
-Console do aplikacji `com.raycoll.app` (sekcja „wymagany SHA-1”).
+Bez tych wpisów release zostaje niepodpisany. Klucza nie zmieniaj — Android nie zaktualizuje
+aplikacji podpisanej innym kluczem bez odinstalowania. Przy nowym kluczu jego SHA-1
+(`keytool -list -v -keystore <plik>`) trzeba dodać w Firebase Console przy `com.raycoll.app`
+(sekcja „Firebase — logowanie”).
 
 ## Testy
 
