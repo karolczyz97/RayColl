@@ -58,7 +58,10 @@ class FirestoreDocumentStore @Inject constructor(
                     }
                 }
                 awaitClose { registration.remove() }
-            }.shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+            }
+                // Po odłączeniu nasłuchu ostatni wynik znika: fromCache = false ma znaczyć świeżą odpowiedź
+                // serwera, a nie tę sprzed kilku minut (sprzątanie i wygasanie archiwów działają na aktualnych danych).
+                .shareIn(scope, SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), replay = 1)
         }
     }
 
