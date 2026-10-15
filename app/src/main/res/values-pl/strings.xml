@@ -11,9 +11,6 @@
     <string name="btn_back">Wstecz</string>
     <string name="auth_local">Tryb lokalny</string>
     <string name="auth_migration_title">Dane lokalne</string>
-    <string name="auth_migration_desc">Masz lokalne talie z poprzedniej sesji. Przenieś je na konto albo zacznij konto od talii przykładowych. Lokalne talie w obu przypadkach zostaną na tym urządzeniu.</string>
-    <string name="auth_migration_migrate_btn">Przenieś na konto</string>
-    <string name="auth_migration_fresh_btn">Zacznij od talii przykładowych</string>
     <string name="auth_error_play_services">Usługi Google Play są niedostępne lub nieaktualne. Zaktualizuj je i spróbuj ponownie.</string>
     <string name="auth_error_no_token">Nie udało się znaleźć dostępnego konta Google. Sprawdź konto na urządzeniu i spróbuj zalogować się ponownie.</string>
     <string name="auth_error_invalid_token">Token logowania nieprawidłowy. Spróbuj ponownie.</string>
@@ -49,7 +46,6 @@
     <string name="study_prev_card">Poprzednia fiszka</string>
     <string name="study_next_card">Następna fiszka</string>
     <string name="study_error_stt">Rozpoznawanie mowy nie powiodło się. Sprawdź dostęp do mikrofonu.</string>
-    <string name="study_review_save_failed">Nie udało się zapisać części ocen.</string>
     <string name="study_error_tts">Nie udało się odtworzyć dźwięku.</string>
     <string name="study_exit_confirm_title">Opuścić tryb nauki?</string>
     <string name="study_exit_confirm_message">Dotychczasowe oceny są zapisane. Opuścić sesję nauki?</string>

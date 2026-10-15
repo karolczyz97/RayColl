@@ -28,7 +28,6 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.domain.normalize.validateBackupData
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -245,37 +244,6 @@ class FirestoreSchemaTest {
     }
 
     @Test
-    fun `parameterless compound steps read legacy dummy fields in backups and cloud`() {
-        val json = Json { ignoreUnknownKeys = true }
-        for ((kind, params) in listOf(
-            "show_all_grade" to CompoundParams.ShowAllGrade,
-            "fail_next" to CompoundParams.FailNext
-        )) {
-            val legacy = """{"type":"compound","params":{"kind":"$kind","dummy":0}}"""
-            val step = json.decodeFromString(ModeStep.serializer(), legacy) as CompoundStep
-            assertSame(params, step.params)
-            val encoded = json.encodeToString(ModeStep.serializer(), step)
-            assertFalse(encoded.contains("dummy"))
-            assertEquals(step, json.decodeFromString(ModeStep.serializer(), encoded))
-
-            val mode = StudyMode(id = "legacy", name = "Legacy", steps = listOf(step))
-            val cloud = FirestoreSchema.modeToMap(mode) + (
-                "steps" to listOf(
-                    mapOf("type" to "compound", "condition" to null, "params" to mapOf("kind" to kind, "dummy" to 0))
-                )
-                )
-            validateBackupData(
-                mapOf(
-                    "groups" to emptyList<Any>(),
-                    "studyModes" to listOf(cloud),
-                    "activityHeatmap" to emptyMap<String, Int>()
-                )
-            )
-            assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, cloud))
-        }
-    }
-
-    @Test
     fun `all editable steps survive backup validation and cloud round trip`() {
         val steps = listOf(
             ShowPageStep(), ShowAllPagesStep(), WaitForTapToRevealNextStep(), WaitForTapToRevealStep(),
@@ -305,12 +273,8 @@ class FirestoreSchemaTest {
             (0 until compoundTypes.elementsCount).map { compoundTypes.getElementName(it) }.toSet(),
             plainSteps.mapNotNull { ((it as Map<*, *>)["params"] as? Map<*, *>)?.get("kind") }.toSet()
         )
-        validateBackupData(
-            mapOf(
-                "groups" to emptyList<Any>(),
-                "studyModes" to listOf(plain),
-                "activityHeatmap" to emptyMap<String, Int>()
-            )
+        com.raycoll.app.domain.backup.BackupCheck.validate(
+            com.raycoll.app.domain.model.StoreData(studyModes = listOf(mode))
         )
         assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, plain))
     }

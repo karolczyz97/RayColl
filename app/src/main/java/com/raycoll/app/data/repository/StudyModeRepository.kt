@@ -8,6 +8,7 @@ import com.raycoll.app.data.firestore.WriteOp
 import com.raycoll.app.data.remote.firestore.FirestoreSchema as Schema
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.operations.edited
 import com.raycoll.app.domain.operations.newStudyMode
 import com.raycoll.app.domain.operations.resetToBuiltIn
 import com.raycoll.app.domain.operations.resolveStudyMode
@@ -52,7 +53,7 @@ class StudyModeRepository @Inject constructor(
         store.write(
             WriteOp.Update(
                 paths().mode(mode.id),
-                Schema.modeToMap(mode.copy(updatedAt = clock.now())).filterKeys {
+                Schema.modeToMap(mode.edited(clock.now())).filterKeys {
                     it !=
                         "deletedAt"
                 }

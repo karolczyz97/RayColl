@@ -7,8 +7,6 @@ import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.domain.model.keyedEnumOrNull
-import com.raycoll.app.domain.normalize.jsonElementToPlain
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlinx.serialization.builtins.ListSerializer
@@ -53,8 +51,6 @@ object FirestoreSchema {
     const val PATH_ACTIVITY = "activity"
 
     const val FIELD_UPDATED_AT = "updatedAt"
-    const val FIELD_REPLACEMENT_AT = "replacementAt"
-    const val FIELD_REPLACEMENT_ID = "replacementId"
     private const val FIELD_POSITION = "position"
 
     private val json = Json {
@@ -117,9 +113,9 @@ object FirestoreSchema {
 
     fun deckFromMap(docId: String, data: Map<String, Any?>): FlashcardGroup {
         val id = (data["id"] as? String)?.takeIf { it.isNotBlank() } ?: docId
-        val studyFilter = keyedEnumOrNull(StudyFilter.entries, data["studyFilter"] as? String)
+        val studyFilter = StudyFilter.entries.firstOrNull { it.key == data["studyFilter"] }
             ?: throw FirestoreDocException("Firestore deck $docId has invalid studyFilter.")
-        val cardOrder = keyedEnumOrNull(CardOrder.entries, data["cardOrder"] as? String)
+        val cardOrder = CardOrder.entries.firstOrNull { it.key == data["cardOrder"] }
             ?: throw FirestoreDocException("Firestore deck $docId has invalid cardOrder.")
         return FlashcardGroup(
             id = id,
@@ -194,20 +190,6 @@ object FirestoreSchema {
     /** Miejsce dokumentu talii/karty na liście; null w starszych dokumentach. */
     fun positionFromMap(data: Map<String, Any?>): Long? = optionalLong(data[FIELD_POSITION])
 
-    /** Brak znacznika oznacza konto utworzone przed wprowadzeniem zastępowania danych. */
-    fun replacementFromMap(data: Map<String, Any?>): Pair<Long, String> {
-        if (FIELD_REPLACEMENT_AT !in data && FIELD_REPLACEMENT_ID !in data) return 0L to ""
-        val at = data[FIELD_REPLACEMENT_AT]
-        val id = data[FIELD_REPLACEMENT_ID]
-        if (at !is Number || !at.toDouble().isFinite() || at.toDouble() < 0 ||
-            at.toDouble() >= Long.MAX_VALUE.toDouble() ||
-            at.toDouble() != at.toLong().toDouble() || id !is String || (at.toLong() > 0 && id.isBlank())
-        ) {
-            throw FirestoreDocException("Firestore account has an invalid replacement marker.")
-        }
-        return at.toLong() to id
-    }
-
     fun activityCountFromMap(docId: String, data: Map<String, Any?>): Int {
         val count = data["count"]
         if (count !is Number || !count.toDouble().isFinite()) {
@@ -246,6 +228,21 @@ object FirestoreSchema {
     internal fun stepsToPlain(steps: List<ModeStep>): List<Any?> {
         val element = json.encodeToJsonElement(stepsSerializer, steps)
         return dropNulls(jsonElementToPlain(element)) as List<Any?>
+    }
+
+    private fun jsonElementToPlain(element: JsonElement): Any? = when (element) {
+        is JsonNull -> null
+
+        is JsonPrimitive -> when {
+            element.isString -> element.content
+            element.content == "true" -> true
+            element.content == "false" -> false
+            else -> element.content.toLongOrNull() ?: element.content.toDoubleOrNull() ?: element.content
+        }
+
+        is JsonArray -> element.map(::jsonElementToPlain)
+
+        is JsonObject -> element.mapValues { jsonElementToPlain(it.value) }
     }
 
     private fun dropNulls(value: Any?): Any? = when (value) {

@@ -41,6 +41,16 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
   generowania. Żadna kontrola nie została wyłączona.
 - **Gdzie:** `app/build.gradle.kts`, zależności `lintAnalyze…UnitTest`.
 
+## Firestore — test nieznanej wartości enum
+
+- **Co:** zachowano przypadek `flip_reveal` w `CompoundExpanderTest`, dodając oczekiwanie
+  odrzucenia nieznanego `revealStyle`. Dotychczasowe asercje rozwinięcia do trzech kroków
+  i oczekiwania na dotknięcie zostały zachowane dla wariantu domyślnego.
+- **Dlaczego:** §9.3 każe zachować testy sesji, ale ten przypadek sprawdzał usuwaną cichą
+  zamianę nieznanych enumów na wartości domyślne. Kontrakt z §14 i opis z §8.5 wymagają
+  zwykłej serializacji oraz odrzucania nieznanych wartości; test nie został usunięty.
+- **Gdzie:** `domain/steps/CompoundExpanderTest.kt`.
+
 ## Etap 3 — opcjonalna adnotacja Commons CSV
 
 - **Co:** dodano jedną regułę R8: `-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings`.

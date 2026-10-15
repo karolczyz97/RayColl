@@ -11,9 +11,6 @@
     <string name="btn_back">Atrás</string>
     <string name="auth_local">Modo local</string>
     <string name="auth_migration_title">Datos locales encontrados</string>
-    <string name="auth_migration_desc">Tienes mazos locales de una sesión anterior. Transfiérelos a tu cuenta o empieza la cuenta con los mazos de ejemplo. Tus mazos locales se quedan en este dispositivo en ambos casos.</string>
-    <string name="auth_migration_migrate_btn">Transferir a la cuenta</string>
-    <string name="auth_migration_fresh_btn">Empezar con mazos de ejemplo</string>
     <string name="auth_error_play_services">Los servicios de Google Play no están disponibles o están desactualizados. Actualízalos e inténtalo de nuevo.</string>
     <string name="auth_error_no_token">No se encontró una cuenta de Google disponible. Comprueba tu cuenta en este dispositivo e intenta iniciar sesión de nuevo.</string>
     <string name="auth_error_invalid_token">Token de inicio de sesión no válido. Inténtalo de nuevo.</string>
@@ -48,7 +45,6 @@
     <string name="study_prev_card">Tarjeta anterior</string>
     <string name="study_next_card">Tarjeta siguiente</string>
     <string name="study_error_stt">Error de reconocimiento de voz. Verifica el acceso al micrófono.</string>
-    <string name="study_review_save_failed">No se pudieron guardar algunas valoraciones.</string>
     <string name="study_error_tts">Error al reproducir el audio.</string>
     <string name="study_exit_confirm_title">¿Salir del modo estudio?</string>
     <string name="study_exit_confirm_message">Tus valoraciones hasta ahora están guardadas. ¿Salir de la sesión de estudio?</string>

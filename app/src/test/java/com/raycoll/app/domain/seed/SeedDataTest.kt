@@ -121,26 +121,4 @@ class SeedDataTest {
         assertEquals("en-US", deck.pageLanguages[1])
         assertEquals("Good morning", deck.cards.first().pages[1])
     }
-
-    @Test
-    fun `account seeds get the same uuid ids on every device, guests get random ones`() {
-        val first = SeedData.createSeedGroups("pl", idScope = "uid-1")
-        val second = SeedData.createSeedGroups("pl", idScope = "uid-1")
-        assertEquals(first.map { it.id }, second.map { it.id })
-        assertEquals(first.flatMap { d -> d.cards.map { it.id } }, second.flatMap { d -> d.cards.map { it.id } })
-        val allIds = first.map { it.id } + first.flatMap { d -> d.cards.map { it.id } }
-        assertEquals("id unikalne", allIds.size, allIds.toSet().size)
-        assertTrue(
-            "format UUID zgodny z zapisanymi danymi",
-            allIds.all {
-                java.util.UUID.fromString(it).toString() == it
-            }
-        )
-
-        val otherAccount = SeedData.createSeedGroups("pl", idScope = "uid-2")
-        assertTrue(otherAccount.map { it.id }.none { it in first.map { d -> d.id } })
-        val guestA = SeedData.createSeedGroups("pl")
-        val guestB = SeedData.createSeedGroups("pl")
-        assertTrue(guestA.map { it.id }.none { it in guestB.map { d -> d.id } })
-    }
 }

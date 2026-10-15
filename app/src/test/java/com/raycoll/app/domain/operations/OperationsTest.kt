@@ -7,7 +7,6 @@ import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.domain.normalize.normalizeGroup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -65,11 +64,11 @@ class OperationsTest {
     }
 
     @Test
-    fun `increasing active page count pads metadata and survives normalization`() {
+    fun `increasing active page count pads metadata`() {
         val deck = group().withActivePageCount(4, now)
         assertEquals(4, deck.pageNames.size)
         assertEquals(4, deck.pageLanguages.size)
-        assertEquals(4, normalizeGroup(deck).activePageCount)
+        assertEquals(4, deck.activePageCount)
     }
 
     @Test

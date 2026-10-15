@@ -10,9 +10,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.raycoll.app.domain.model.KeyedEnum
 import com.raycoll.app.domain.model.TtsRate
-import com.raycoll.app.domain.model.keyedEnumOrNull
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import javax.inject.Inject
@@ -29,13 +27,13 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     corruptionHandler = settingsCorruptionHandler
 )
 
-enum class ThemePref(override val key: String) : KeyedEnum {
+enum class ThemePref(val key: String) {
     SYSTEM("system"),
     LIGHT("light"),
     DARK("dark");
 
     companion object {
-        fun fromKey(key: String?): ThemePref = keyedEnumOrNull(entries, key) ?: SYSTEM
+        fun fromKey(key: String?): ThemePref = entries.firstOrNull { it.key == key } ?: SYSTEM
     }
 }
 

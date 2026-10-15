@@ -11,9 +11,6 @@
     <string name="btn_back">Indietro</string>
     <string name="auth_local">Modalità locale</string>
     <string name="auth_migration_title">Dati locali trovati</string>
-    <string name="auth_migration_desc">Hai mazzi locali da una sessione precedente. Trasferiscili sul tuo account oppure inizia l\'account con i mazzi di esempio. I tuoi mazzi locali restano su questo dispositivo in entrambi i casi.</string>
-    <string name="auth_migration_migrate_btn">Trasferisci sull\'account</string>
-    <string name="auth_migration_fresh_btn">Inizia con mazzi di esempio</string>
     <string name="auth_error_play_services">I servizi Google Play non sono disponibili o non sono aggiornati. Aggiornali e riprova.</string>
     <string name="auth_error_no_token">Non è stato possibile trovare un account Google disponibile. Controlla l’account sul dispositivo e prova ad accedere di nuovo.</string>
     <string name="auth_error_invalid_token">Token di accesso non valido. Riprova.</string>
@@ -48,7 +45,6 @@
     <string name="study_prev_card">Scheda precedente</string>
     <string name="study_next_card">Scheda successiva</string>
     <string name="study_error_stt">Riconoscimento vocale non riuscito. Controlla l\'accesso al microfono.</string>
-    <string name="study_review_save_failed">Non è stato possibile salvare alcune valutazioni.</string>
     <string name="study_error_tts">Riproduzione audio non riuscita.</string>
     <string name="study_exit_confirm_title">Uscire dalla modalità studio?</string>
     <string name="study_exit_confirm_message">Le tue valutazioni finora sono salvate. Uscire dalla sessione di studio?</string>

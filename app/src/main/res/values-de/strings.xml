@@ -11,9 +11,6 @@
     <string name="btn_back">Zurück</string>
     <string name="auth_local">Lokaler Modus</string>
     <string name="auth_migration_title">Lokale Daten gefunden</string>
-    <string name="auth_migration_desc">Du hast lokale Decks aus einer früheren Sitzung. Übertrage sie auf dein Konto oder starte das Konto mit den Beispiel-Decks. Deine lokalen Decks bleiben in beiden Fällen auf diesem Gerät.</string>
-    <string name="auth_migration_migrate_btn">Auf Konto übertragen</string>
-    <string name="auth_migration_fresh_btn">Mit Beispiel-Decks starten</string>
     <string name="auth_error_play_services">Google Play-Dienste sind nicht verfügbar oder veraltet. Bitte aktualisieren und erneut versuchen.</string>
     <string name="auth_error_no_token">Es konnte kein verfügbares Google-Konto gefunden werden. Prüfe dein Konto auf diesem Gerät und versuche die Anmeldung erneut.</string>
     <string name="auth_error_invalid_token">Ungültiges Anmeldetoken. Bitte erneut versuchen.</string>
@@ -48,7 +45,6 @@
     <string name="study_prev_card">Vorherige Karte</string>
     <string name="study_next_card">Nächste Karte</string>
     <string name="study_error_stt">Spracherkennung fehlgeschlagen. Mikrofonzugriff prüfen.</string>
-    <string name="study_review_save_failed">Einige Bewertungen konnten nicht gespeichert werden.</string>
     <string name="study_error_tts">Audiowiedergabe fehlgeschlagen.</string>
     <string name="study_exit_confirm_title">Lernmodus verlassen?</string>
     <string name="study_exit_confirm_message">Deine bisherigen Bewertungen sind gespeichert. Lernsitzung verlassen?</string>

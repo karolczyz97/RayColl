@@ -34,8 +34,7 @@ import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.seed.isBuiltInModeSourceId
 
-// Normalizacja danych z zewnątrz (backup, chmura, merge): przycina wartości do
-// dozwolonych zakresów, żeby uszkodzone dane nie dotarły do sesji ani UI.
+// Sanityzacja edytora trybow i metadane stron.
 
 /** Dopełnia nazwy i języki stron do [count]; istniejące metadane zostają. */
 fun padPageMetadata(
@@ -47,30 +46,6 @@ fun padPageMetadata(
     val names = pageNames + (pageNames.size until count).map(defaultName)
     val languages = pageLanguages + List((count - pageLanguages.size).coerceAtLeast(0)) { DEFAULT_PAGE_LANGUAGE }
     return names to languages
-}
-
-private fun getStoredPageCount(group: FlashcardGroup): Int {
-    val maxCardPages = group.cards.maxOfOrNull { it.pages.size } ?: 0
-    val rawStored = maxOf(group.pageNames.size, group.pageLanguages.size, maxCardPages, PageLimits.MIN_PAGE_COUNT)
-    return minOf(rawStored, PageLimits.MAX_STORED_PAGE_COUNT)
-}
-
-private fun normalizeCard(card: Flashcard): Flashcard = if (card.srsState.state in SrsStates.VALID) {
-    card
-} else {
-    card.copy(srsState = card.srsState.copy(state = SrsStates.NEW))
-}
-
-fun normalizeGroup(group: FlashcardGroup): FlashcardGroup {
-    val storedPageCount = getStoredPageCount(group)
-    val (pageNames, pageLanguages) = padPageMetadata(group.pageNames, group.pageLanguages, storedPageCount)
-    val maxVisible = minOf(PageLimits.MAX_VISIBLE_PAGE_COUNT, storedPageCount)
-    return group.copy(
-        activePageCount = PageLimits.clampActivePageCount(group.activePageCount, maxVisible),
-        pageNames = pageNames.take(storedPageCount),
-        pageLanguages = pageLanguages.take(storedPageCount),
-        cards = group.cards.map(::normalizeCard)
-    )
 }
 
 private fun Int.asPageIndex(): Int = coerceAtLeast(0)
@@ -165,9 +140,3 @@ fun normalizeStudyMode(mode: StudyMode): StudyMode {
         builtInSourceId = sourceId
     )
 }
-
-fun normalizeStoreData(data: StoreData): StoreData = data.copy(
-    groups = data.groups.map(::normalizeGroup),
-    studyModes = data.studyModes.map(::normalizeStudyMode),
-    activityHeatmap = data.activityHeatmap.filterValues { it >= 0 }
-)

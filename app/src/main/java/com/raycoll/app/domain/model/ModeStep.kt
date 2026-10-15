@@ -185,22 +185,26 @@ data class CompoundBranch(
 }
 
 /** Sposób oceny karty w gałęzi kroku z nasłuchem. */
-@Serializable(with = BranchRating.Serializer::class)
-enum class BranchRating(override val key: String) : KeyedEnum {
+@Serializable
+enum class BranchRating(val key: String) {
+    @SerialName("fromAnswer")
     FROM_ANSWER("fromAnswer"),
-    FIXED("fixed"),
-    NONE("none");
 
-    object Serializer : KeyedEnumSerializer<BranchRating>("BranchRating", entries, FROM_ANSWER)
+    @SerialName("fixed")
+    FIXED("fixed"),
+
+    @SerialName("none")
+    NONE("none")
 }
 
 /** Odsłanianie stron w kroku "odwróć kartę": jedna następna albo wszystkie naraz. */
-@Serializable(with = RevealStyle.Serializer::class)
-enum class RevealStyle(override val key: String) : KeyedEnum {
+@Serializable
+enum class RevealStyle(val key: String) {
+    @SerialName("all")
     ALL("all"),
-    NEXT("next");
 
-    object Serializer : KeyedEnumSerializer<RevealStyle>("RevealStyle", entries, ALL)
+    @SerialName("next")
+    NEXT("next")
 }
 
 @OptIn(ExperimentalSerializationApi::class)

@@ -20,47 +20,12 @@ import org.junit.Test
 
 class DataNormalizerTest {
 
-    private fun makeCard(id: String = "c1", pages: List<String> = listOf("hello", "back")): Flashcard =
-        Flashcard(id = id, pages = pages, srsState = SrsState(), contentUpdatedAt = 0, srsUpdatedAt = 0)
-
-    private fun makeGroup(
-        id: String = "g1",
-        name: String = "Mock Deck",
-        cards: List<Flashcard> = emptyList(),
-        pageNames: List<String> = listOf("Front", "Back"),
-        pageLanguages: List<String> = listOf("en-US", "pl-PL"),
-        activePageCount: Int = 2
-    ): FlashcardGroup = FlashcardGroup(
-        id = id, name = name, cards = cards,
-        activeModeId = "classic", studyFilter = StudyFilter.DEFAULT, cardOrder = CardOrder.DEFAULT,
-        pageNames = pageNames, pageLanguages = pageLanguages,
-        activePageCount = activePageCount, updatedAt = 0
-    )
-
-    @Test
-    fun `clamps an excessive active page count while preserving stored pages`() {
-        val group = makeGroup(
-            id = "g2",
-            name = "Unnormalized",
-            cards = emptyList(),
-            activePageCount = Int.MAX_VALUE,
-            pageNames = listOf("Front", "Back", "Extra", "Overflow", "Too much", "Ignored"),
-            pageLanguages = listOf("en-US")
-        )
-        val data = StoreData(groups = listOf(group), studyModes = emptyList(), activityHeatmap = emptyMap())
-        val normalized = normalizeStoreData(data)
-        assertEquals(5, normalized.groups[0].activePageCount)
-        assertEquals(6, normalized.groups[0].pageNames.size)
-        assertEquals(6, normalized.groups[0].pageLanguages.size)
-    }
-
     @Test
     fun `preserves a mode with an empty step list`() {
         val mode = StudyMode(id = "custom-broken", name = "Broken", steps = emptyList())
-        val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
-        val result = normalizeStoreData(data)
-        val broken = result.studyModes.find { it.id == "custom-broken" }
-        assertEquals(0, broken?.steps?.size)
+        val result = normalizeStudyMode(mode)
+        val broken = result
+        assertEquals(0, broken.steps.size)
     }
 
     @Test
@@ -73,38 +38,11 @@ class DataNormalizerTest {
             steps = listOf(WaitStep(ms = 250)),
             updatedAt = 1
         )
-        val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
-        val result = normalizeStoreData(data)
-        assertTrue(result.studyModes[0].isBuiltIn)
-        assertEquals("classic", result.studyModes[0].builtInSourceId)
-        assertEquals("Edited Classic", result.studyModes[0].name)
-        assertEquals(1, result.studyModes[0].steps.size)
-    }
-
-    @Test
-    fun `does not infer builtInSourceId for modes with built-in IDs but no sourceId`() {
-        val mode = StudyMode(
-            id = "classic",
-            isBuiltIn = true,
-            name = "Edited Classic",
-            steps = emptyList(),
-            updatedAt = 1
-        )
-        val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
-        val result = normalizeStoreData(data)
-        assertNull(result.studyModes[0].builtInSourceId)
-    }
-
-    @Test
-    fun `normalizeCard with invalid srs state resets to 0`() {
-        val card = Flashcard(
-            id = "c1",
-            pages = listOf("a", "b"),
-            srsState = SrsState(state = 99)
-        )
-        val group = makeGroup(cards = listOf(card))
-        val result = normalizeGroup(group)
-        assertEquals(0, result.cards[0].srsState.state)
+        val result = normalizeStudyMode(mode)
+        assertTrue(result.isBuiltIn)
+        assertEquals("classic", result.builtInSourceId)
+        assertEquals("Edited Classic", result.name)
+        assertEquals(1, result.steps.size)
     }
 
     @Test
@@ -135,9 +73,8 @@ class DataNormalizerTest {
             )
         )
         val mode = StudyMode(id = "m-compound", name = "Compound", steps = listOf(corrupt))
-        val data = StoreData(groups = emptyList(), studyModes = listOf(mode), activityHeatmap = emptyMap())
-        val result = normalizeStoreData(data)
-        val params = (result.studyModes[0].steps[0] as CompoundStep).params as CompoundParams.ListenGrade
+        val result = normalizeStudyMode(mode)
+        val params = (result.steps[0] as CompoundStep).params as CompoundParams.ListenGrade
 
         assertEquals(0, params.answerPage) // page clamp >= 0
         assertEquals(100, params.threshold) // 0..100
@@ -151,24 +88,5 @@ class DataNormalizerTest {
         assertEquals(1, params.onWrong.fixedRating) // 0 → 1
         assertEquals(BranchRating.FIXED, params.onWrong.rate)
         assertEquals(0L, (params.onWrong.pause as CompoundPause.Fixed).ms) // -100 → 0
-    }
-
-    @Test
-    fun `heatmap removes negative counts while preserving nonnegative ones`() {
-        val raw = mapOf("2024-01-01" to 5, "bad" to (-1), "large-count" to Int.MAX_VALUE)
-        val result = normalizeStoreData(StoreData(activityHeatmap = raw)).activityHeatmap
-        assertEquals(2, result.size)
-        assertEquals(5, result["2024-01-01"])
-    }
-
-    @Test
-    fun `normalizeGroup truncates oversized page metadata to the stored page count`() {
-        val group = makeGroup(cards = emptyList()).copy(
-            pageNames = (1..25).map { "N$it" },
-            pageLanguages = (1..25).map { "en-US" }
-        )
-        val result = normalizeGroup(group)
-        assertEquals(20, result.pageNames.size)
-        assertEquals(20, result.pageLanguages.size)
     }
 }

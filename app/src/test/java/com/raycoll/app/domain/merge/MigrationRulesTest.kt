@@ -21,14 +21,6 @@ class MigrationRulesTest {
     }
 
     @Test
-    fun `shouldTriggerMigration only when user cache fresh and guest has data`() {
-        assertTrue(shouldTriggerMigration(hasUserLocalCache = false, guestHasData = true))
-        assertFalse(shouldTriggerMigration(hasUserLocalCache = true, guestHasData = true))
-        assertFalse(shouldTriggerMigration(hasUserLocalCache = false, guestHasData = false))
-        assertFalse(shouldTriggerMigration(hasUserLocalCache = true, guestHasData = false))
-    }
-
-    @Test
     fun `getGuestHasData detects groups heatmap and user-authored modes`() {
         // pusto → brak danych
         assertFalse(getGuestHasData(emptyList(), emptyMap(), emptyList()))

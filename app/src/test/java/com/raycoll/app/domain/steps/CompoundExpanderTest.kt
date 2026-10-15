@@ -97,15 +97,13 @@ class CompoundExpanderTest {
     }
 
     @Test
-    fun `flip_reveal unknown style falls back to all variant`() {
-        // Nieznany klucz w backupie przywraca domyślny sposób odsłaniania.
-        val expanded = CompoundExpander.expandStep(
-            CompoundStep(
-                params = kotlinx.serialization.json.Json.decodeFromString<CompoundParams.FlipReveal>(
-                    """{"revealStyle":"garbage"}"""
-                )
+    fun `flip_reveal rejects unknown style and defaults to all when omitted`() {
+        org.junit.Assert.assertThrows(kotlinx.serialization.SerializationException::class.java) {
+            kotlinx.serialization.json.Json.decodeFromString<CompoundParams.FlipReveal>(
+                """{"revealStyle":"garbage"}"""
             )
-        )
+        }
+        val expanded = CompoundExpander.expandStep(CompoundStep(params = CompoundParams.FlipReveal()))
         assertEquals(3, expanded.size)
         assertTrue(expanded[0] is WaitForTapStep)
     }

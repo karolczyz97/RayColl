@@ -5,13 +5,6 @@ import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.operations.isModifiedBuiltIn
 import com.raycoll.app.domain.seed.seedModeFor
 
-/**
- * Dialog migracji danych gościa pokazujemy tylko, gdy konto jest na tym urządzeniu
- * nowe (brak lokalnej kopii) i gość ma realne dane.
- */
-fun shouldTriggerMigration(hasUserLocalCache: Boolean, guestHasData: Boolean): Boolean =
-    !hasUserLocalCache && guestHasData
-
 /** Realne dane gościa: talia ruszona przez użytkownika, jakakolwiek aktywność albo własny tryb. */
 fun getGuestHasData(groups: List<FlashcardGroup>, heatmap: Map<String, Int>, modes: List<StudyMode>): Boolean =
     groups.any { it.deletedAt == null && !it.isUntouchedSeed() } ||

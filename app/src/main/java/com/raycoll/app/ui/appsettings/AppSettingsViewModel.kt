@@ -80,8 +80,8 @@ class AppSettingsViewModel @Inject constructor(
     private val syncing = MutableStateFlow(false)
     private val syncStatus = combine(store.offline, syncing) { offline, syncing ->
         when {
-            syncing -> SyncStatus.SYNCING
             offline -> SyncStatus.ERROR
+            syncing -> SyncStatus.SYNCING
             else -> SyncStatus.IDLE
         }
     }

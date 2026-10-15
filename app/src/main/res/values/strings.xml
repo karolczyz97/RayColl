@@ -12,9 +12,6 @@
     <string name="btn_back">Back</string>
     <string name="auth_local">Local mode</string>
     <string name="auth_migration_title">Local data found</string>
-    <string name="auth_migration_desc">You have local decks from a previous session. Transfer them to your account, or start the account with the sample decks. Your local decks stay on this device either way.</string>
-    <string name="auth_migration_migrate_btn">Transfer to account</string>
-    <string name="auth_migration_fresh_btn">Start with sample decks</string>
     <string name="auth_error_play_services">Google Play Services are unavailable or outdated. Please update them and try again.</string>
     <string name="auth_error_no_token">Could not find an available Google account. Check your account on this device and try signing in again.</string>
     <string name="auth_error_invalid_token">Invalid login token. Please try again.</string>
@@ -48,7 +45,6 @@
     <string name="study_prev_card">Previous card</string>
     <string name="study_next_card">Next card</string>
     <string name="study_error_stt">Speech recognition failed. Check microphone access.</string>
-    <string name="study_review_save_failed">Some ratings could not be saved.</string>
     <string name="study_error_tts">Audio playback failed.</string>
     <string name="study_exit_confirm_title">Leave study mode?</string>
     <string name="study_exit_confirm_message">Your ratings so far are saved. Leave this study session?</string>

@@ -1,5 +1,6 @@
 package com.raycoll.app.domain.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -19,32 +20,40 @@ data class FlashcardGroup(
 )
 
 /** Które karty trafiają do sesji nauki. */
-@Serializable(with = StudyFilter.Serializer::class)
-enum class StudyFilter(override val key: String) : KeyedEnum {
+@Serializable
+enum class StudyFilter(val key: String) {
+    @SerialName("new+review")
     NEW_AND_REVIEW("new+review"),
+
+    @SerialName("all")
     ALL("all"),
+
+    @SerialName("new")
     NEW("new"),
+
+    @SerialName("review")
     REVIEW("review");
 
     companion object {
         val DEFAULT = NEW_AND_REVIEW
-        fun fromKey(key: String?): StudyFilter = keyedEnumOrNull(entries, key) ?: DEFAULT
+        fun fromKey(key: String?): StudyFilter = entries.firstOrNull { it.key == key } ?: DEFAULT
     }
-
-    object Serializer : KeyedEnumSerializer<StudyFilter>("StudyFilter", entries, DEFAULT)
 }
 
 /** Kolejność kart w sesji. */
-@Serializable(with = CardOrder.Serializer::class)
-enum class CardOrder(override val key: String) : KeyedEnum {
+@Serializable
+enum class CardOrder(val key: String) {
+    @SerialName("sequential")
     SEQUENTIAL("sequential"),
+
+    @SerialName("random")
     RANDOM("random"),
+
+    @SerialName("hardest")
     HARDEST("hardest");
 
     companion object {
         val DEFAULT = SEQUENTIAL
-        fun fromKey(key: String?): CardOrder = keyedEnumOrNull(entries, key) ?: DEFAULT
+        fun fromKey(key: String?): CardOrder = entries.firstOrNull { it.key == key } ?: DEFAULT
     }
-
-    object Serializer : KeyedEnumSerializer<CardOrder>("CardOrder", entries, DEFAULT)
 }

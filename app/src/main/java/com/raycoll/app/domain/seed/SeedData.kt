@@ -5,50 +5,36 @@ import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StoreData
-import java.util.UUID
 
-/**
- * Startowe dane nowego użytkownika: dwie małe talie z podstawowymi zwrotami
- * w obcych językach, z tłumaczeniem w języku aplikacji.
- *
- * [idScope] (uid konta) daje stałe id talii i kart: dwa urządzenia, które jednocześnie
- * zaczną nowe konto z pustą chmurą, utworzą te same dokumenty, a scalenie ich nie zdubluje.
- * Id to zwykłe UUID zgodne z zapisanymi danymi. Gość (null) dostaje losowe id.
- */
+/** Przykladowe talie z losowymi identyfikatorami i tlumaczeniami w jezyku interfejsu. */
 object SeedData {
 
-    fun createSeedData(uiLanguage: String, idScope: String? = null): StoreData = StoreData(
-        groups = createSeedGroups(uiLanguage, idScope),
+    fun createSeedData(uiLanguage: String): StoreData = StoreData(
+        groups = createSeedGroups(uiLanguage),
         studyModes = SEED_MODES
     )
 
-    fun createSeedGroups(uiLanguage: String, idScope: String? = null): List<FlashcardGroup> {
+    fun createSeedGroups(uiLanguage: String): List<FlashcardGroup> {
         val native = SeedLanguage.fromCode(uiLanguage)
         return SeedLanguage.entries
             .filter { it != native }
             .take(DECK_COUNT)
-            .map { foreign -> phraseDeck(foreign, native, idScope) }
+            .map { foreign -> phraseDeck(foreign, native) }
     }
 
-    private fun phraseDeck(foreign: SeedLanguage, native: SeedLanguage, idScope: String?): FlashcardGroup {
-        val deckKey = "raycoll-seed:$idScope:${foreign.locale}:${native.locale}"
-        return FlashcardGroup(
-            id = seedId(idScope, deckKey),
-            name = native.deckName(foreign),
-            pageLanguages = listOf(foreign.locale, native.locale),
-            pageNames = listOf(native.languageNames.getValue(foreign), native.languageNames.getValue(native)),
-            cards = foreign.phrases.zip(native.phrases).mapIndexed { index, (phrase, translation) ->
-                Flashcard(
-                    id = seedId(idScope, "$deckKey:card:$index"),
-                    pages = listOf(phrase, translation),
-                    srsState = SrsState()
-                )
-            }
-        )
-    }
-
-    private fun seedId(idScope: String?, key: String): String =
-        if (idScope == null) Ids.newId() else UUID.nameUUIDFromBytes(key.toByteArray(Charsets.UTF_8)).toString()
+    private fun phraseDeck(foreign: SeedLanguage, native: SeedLanguage): FlashcardGroup = FlashcardGroup(
+        id = Ids.newId(),
+        name = native.deckName(foreign),
+        pageLanguages = listOf(foreign.locale, native.locale),
+        pageNames = listOf(native.languageNames.getValue(foreign), native.languageNames.getValue(native)),
+        cards = foreign.phrases.zip(native.phrases).map { (phrase, translation) ->
+            Flashcard(
+                id = Ids.newId(),
+                pages = listOf(phrase, translation),
+                srsState = SrsState()
+            )
+        }
+    )
 
     private const val DECK_COUNT = 2
 }
