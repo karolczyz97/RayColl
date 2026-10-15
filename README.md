@@ -127,38 +127,37 @@ potwierdzić ręcznie na buildzie release: utwórz własny tryb nauki z krokami
 złożonymi (compound), zamknij i otwórz aplikację — jeśli kroki wczytują się
 poprawnie, serializacja przeżywa minifikację.
 
-## Firebase — klucz API
+## Firebase — aplikacje i klucz API
 
-Klucz Firebase API nie jest w repozytorium. Przed pierwszym buildem dopisz go
-do `local.properties` (plik jest ignorowany przez git):
+W projekcie **raycoll-io** są zarejestrowane dwie aplikacje Android (wersji webowej już nie ma):
+
+| Wariant | Pakiet | Firebase App ID | SHA-1 w konsoli |
+|---|---|---|---|
+| debug | `com.raycoll.app.debug` | `1:328078920834:android:466b072e1524b9e442789b` | `35:80:D2:75:83:68:BB:CB:8C:3F:CD:B5:CF:01:BC:24:3B:F8:23:7C` (debug keystore) |
+| release | `com.raycoll.app` | `1:328078920834:android:f37e190bbecf360542789b` | `00:DC:BD:8A:C8:1D:61:01:CA:C7:22:53:AD:6E:15:0F:F6:74:BF:94` |
+
+Identyfikatory aplikacji są w `app/build.gradle.kts` (osobno dla debug i release). Klucz API
+nie jest w repozytorium. Przed pierwszym buildem dopisz do `local.properties` (plik jest
+ignorowany przez git) klucz **„Android key (auto created by Firebase)”** z
+[Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials?project=raycoll-io):
 
 ```
 firebase.apiKey=AIza...
 ```
 
-Klucz znajdziesz w [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials?project=raycoll-io).
-W CI ustaw zamiast tego zmienną środowiskową `FIREBASE_API_KEY` (np. z GitHub Secrets).
-Bez klucza budowanie APK (debug i release) kończy się czytelnym błędem. Klucz można
-dodatkowo ograniczyć w Google Cloud Console do aplikacji Android (nazwa pakietu + SHA-1),
-według [dokumentacji Firebase](https://firebase.google.com/docs/projects/api-keys);
-po takiej zmianie sprawdź logowanie i synchronizację na obu wariantach.
+W CI ustaw zamiast tego zmienną środowiskową `FIREBASE_API_KEY`. Bez klucza budowanie APK
+kończy się czytelnym błędem; testy i lint budują się bez niego.
 
-## Firebase — wymagany SHA-1 i logowanie
+Uwaga: Firebase zapamiętuje zalogowanie osobno dla każdego App ID. Zmiana App ID (np. przejście
+z dawnego identyfikatora web na Android) wylogowuje telefon jeden raz.
 
-Logowanie Google działa dopiero po zarejestrowaniu aplikacji w Firebase Console
-(projekt **raycoll-io**) z odciskiem SHA-1 debug keystore. Dodaj **obie** aplikacje
-Android: `com.raycoll.app` oraz `com.raycoll.app.debug`, każdą z SHA-1:
+## Firebase — logowanie
 
-```
-35:80:D2:75:83:68:BB:CB:8C:3F:CD:B5:CF:01:BC:24:3B:F8:23:7C
-```
-
-Release podpisany własnym kluczem (sekcja „Podpis release”) potrzebuje dodatkowo SHA-1
-tego klucza przy `com.raycoll.app`. Bez tego logowanie Google rzuci `DEVELOPER_ERROR`.
-
-W Firebase Console musi być też włączone **logowanie anonimowe** (Authentication →
-Sign-in method → Anonymous). Bez niego aplikacja nie utworzy konta gościa przy
-pierwszym uruchomieniu.
+- **Google:** działa, gdy w konsoli aplikacja danego wariantu ma SHA-1 klucza, którym podpisano
+  APK (tabela wyżej). Release podpisany innym kluczem (sekcja „Podpis release”) wymaga dopisania
+  jego SHA-1 przy `com.raycoll.app`, inaczej logowanie rzuci `DEVELOPER_ERROR`.
+- **Gość:** w konsoli musi być włączone logowanie anonimowe (Authentication → Sign-in method →
+  Anonymous). Bez niego aplikacja nie utworzy konta gościa przy pierwszym uruchomieniu.
 
 ## Dane w chmurze: jak to działa
 
@@ -177,28 +176,20 @@ pierwszym uruchomieniu.
 Szczegóły i decyzje: [`docs/PLAN_SYNC_FIRESTORE.md`](docs/PLAN_SYNC_FIRESTORE.md).
 Odstępstwa od planów: [`docs/ODSTEPSTWA.md`](docs/ODSTEPSTWA.md).
 
-### Wdrożenie reguł Firestore (właściciel)
+### Wdrożenie reguł Firestore
 
-Plik w repo nie zmienia reguł działających w projekcie Firebase. Nowe reguły blokują
-każdy zapis starej wersji aplikacji (opartej na Room), dlatego w dniu przesiadki
-kolejność jest ważna:
+Plik w repo nie zmienia sam reguł działających w projekcie Firebase. Obecne reguły wdrożono
+15.10.2026 (razem z włączeniem logowania anonimowego). Poprzednie reguły są zapisane w
+[`docs/firestore-rules-backup/`](docs/firestore-rules-backup). Po zmianie `firestore.rules`:
 
-1. W Firebase Console włącz logowanie anonimowe (sekcja wyżej).
-2. Na każdym urządzeniu ze starą wersją: „Synchronizuj teraz” i poczekaj na sukces.
-3. Zapisz obecne reguły z [konsoli](https://console.firebase.google.com/project/raycoll-io/firestore/rules)
-   (kopia na wypadek wycofania), potem wdróż nowe:
+```powershell
+npm test --prefix tools/firestore-tests
+firebase deploy --only firestore:rules --project raycoll-io
+```
 
-   ```powershell
-   firebase login
-   firebase use raycoll-io
-   firebase deploy --only firestore:rules --project raycoll-io
-   ```
-
-4. Odinstaluj starą wersję aplikacji i zainstaluj nową.
-
-Opis składni i wdrożenia: [dokumentacja Firebase](https://firebase.google.com/docs/firestore/security/get-started).
-Agent przygotowuje pliki i instrukcję; wdrożenie i weryfikacja aktywnych reguł
-pozostają po stronie właściciela.
+Nowe reguły odrzucają każdy zapis starej wersji aplikacji (opartej na Room), więc stara
+wersja nie może już niczego zmienić w chmurze. Opis składni:
+[dokumentacja Firebase](https://firebase.google.com/docs/firestore/security/get-started).
 
 ## Paczki repomix (kod dla modeli AI)
 

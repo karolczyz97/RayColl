@@ -107,3 +107,21 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
 - **Co:** `pack.ps1` dostał przełącznik `-All`, który pakuje `all.json`. Dawny skrypt pakował
   tylko trzy części, a całość wymagała ręcznego wywołania repomix.
 - **Gdzie:** `repomix/`, `.gitignore`, README.
+
+## Po wdrożeniu — porządki w projekcie Firebase (15.10.2026, na Twoją prośbę)
+
+- **Kroki z §11.0 wykonane:** włączone logowanie anonimowe, wdrożone `firestore.rules`.
+  Poprzednie reguły zapisane w `docs/firestore-rules-backup/`. Krok „Synchronizuj teraz na starej
+  wersji” pominięty: telefon miał już nową wersję, a dane lokalne uznałeś za nieważne.
+- **Aplikacja przedstawia się jako Android, nie web:** dotąd używała identyfikatora i klucza
+  aplikacji webowej. Teraz debug i release mają własne Firebase App ID (`app/build.gradle.kts`),
+  a `local.properties` zawiera „Android key”. Zmiana App ID jednorazowo wylogowuje telefon,
+  bo Firebase zapamiętuje logowanie osobno dla każdego App ID.
+- **Usunięte resztki wersji webowej:** wyłączony Hosting `raycoll-io.web.app`, zdjęta rejestracja
+  aplikacji Web i usunięty klucz przeglądarkowy (był w publicznej historii gita). Oba usunięcia
+  można cofnąć w konsoli przez 30 dni; historia wdrożeń Hostingu zostaje.
+- **Firestore:** usunięte testowe dane agentów (talie `RayColl-device-test`, `Codex_Test_20261013`,
+  tryb `Codex_Background_Test`), stary dokument `users/{uid}` z polami dawnej synchronizacji
+  oraz martwe znaczniki generacji. Wszystkie dokumenty były w generacji 0, więc nic ukrytego
+  nie wróciło. Kopia konta sprzed porządków została w pliku poza repozytorium.
+- **Usunięte z `FirebaseConfig`:** nieistniejący zasobnik Storage z konfiguracji webowej.

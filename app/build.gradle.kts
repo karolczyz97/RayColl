@@ -12,7 +12,7 @@ val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
 }
 
-// klucz Firebase spoza repozytorium: local.properties (lokalnie) albo zmienna środowiskowa (CI / GitHub Secrets);
+// klucz Firebase („Android key” z Google Cloud Console) spoza repozytorium: local.properties (lokalnie) albo zmienna środowiskowa (CI / GitHub Secrets);
 // bez klucza kompilują się testy i lint, ale APK (debug i release) się nie zbuduje — aplikacja bez klucza
 // wywraca się przy starcie na inicjalizacji Firebase
 val firebaseApiKey: String = providers.gradleProperty("firebase.apiKey").orNull ?: (
@@ -67,10 +67,13 @@ android {
     }
 
     buildTypes {
+        // każdy wariant to osobna aplikacja Android zarejestrowana w projekcie Firebase raycoll-io
         debug {
             applicationIdSuffix = ".debug"
+            buildConfigField("String", "FIREBASE_APP_ID", "\"1:328078920834:android:466b072e1524b9e442789b\"")
         }
         release {
+            buildConfigField("String", "FIREBASE_APP_ID", "\"1:328078920834:android:f37e190bbecf360542789b\"")
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
