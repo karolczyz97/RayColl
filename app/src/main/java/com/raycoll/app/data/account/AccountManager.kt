@@ -16,6 +16,7 @@ import com.raycoll.app.data.repository.BackupRepository
 import com.raycoll.app.data.repository.Cleanup
 import com.raycoll.app.di.ApplicationScope
 import com.raycoll.app.domain.merge.getGuestHasData
+import com.raycoll.app.domain.model.StoreData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import javax.inject.Inject
@@ -80,12 +81,12 @@ class AccountManager @Inject constructor(
         if (pending != null) {
             if (user.isAnonymous) {
                 backup.restoreGuest(pending, user.uid)
+                // Plik znika dopiero po potwierdzeniu wysłania. Po przerwaniu pozostaje do odzyskania.
+                check(store.awaitPendingWrites(15_000)) { "Pending import has not reached server" }
+                backup.deletePrivate(PENDING)
             } else {
-                backup.joinGuest(pending, user.uid, context.getString(R.string.auth_from_phone_suffix))
+                joinPending(pending, user.uid)
             }
-            // Plik znika dopiero po potwierdzeniu wysłania. Po przerwaniu pozostaje do odzyskania.
-            check(store.awaitPendingWrites(15_000)) { "Pending import has not reached server" }
-            backup.deletePrivate(PENDING)
         } else if (previous == null) {
             val stash = backup.loadPrivate(STASH)
             if (stash != null) {
@@ -97,6 +98,16 @@ class AccountManager @Inject constructor(
             }
         }
         ready()
+    }
+
+    /**
+     * Dołączenie dodaje aktywność gościa do dni konta, więc nie może wykonać się drugi raz. Po limicie
+     * czasu zapisy czekają w trwałej kolejce Firestore tego konta i wyślą się same, a plik i tak znika.
+     */
+    private suspend fun joinPending(data: StoreData, uid: String) {
+        backup.joinGuest(data, uid, context.getString(R.string.auth_from_phone_suffix))
+        store.awaitPendingWrites(15_000)
+        backup.deletePrivate(PENDING)
     }
 
     private fun ready() {
@@ -173,9 +184,7 @@ class AccountManager @Inject constructor(
             val result = auth.signInWithCredential(credential)
             if (result is SignInResult.Success) {
                 if (choice == GuestDataChoice.MOVE_TO_ACCOUNT) {
-                    backup.joinGuest(data, result.account.uid, context.getString(R.string.auth_from_phone_suffix))
-                    check(store.awaitPendingWrites(15_000)) { "Guest import is waiting for internet" }
-                    backup.deletePrivate(PENDING)
+                    joinPending(data, result.account.uid)
                 } else if (result.isNewUser) {
                     backup.writeSeed(result.account.uid, Locale.getDefault().language)
                 }

@@ -6,6 +6,7 @@ import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
+import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.data.remote.auth.Account
 import com.raycoll.app.data.remote.auth.AuthRepository
 import com.raycoll.app.data.remote.auth.SignInResult
@@ -117,6 +118,33 @@ class AccountManagerTest {
         assertEquals(before, repos.backupRepository.snapshot("google"))
         assertNull(repos.backupRepository.loadPrivate(AccountManager.PENDING))
         assertEquals("google", manager.uid.value)
+    }
+
+    @Test fun `move finishes once when the upload is still waiting for internet`() = runTest {
+        configure(true)
+        repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
+        repos.setActivity("2026-10-15", 2)
+        val waiting = object : DocumentStore by repos.store {
+            override suspend fun awaitPendingWrites(timeoutMs: Long) = false
+        }
+        val manager =
+            AccountManager(
+                auth,
+                waiting,
+                Provider {
+                    repos.backupRepository
+                },
+                com.raycoll.app.data.repository.Cleanup(waiting, FakeClock()),
+                context,
+                backgroundScope
+            )
+        manager.retryStart()
+        assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
+        assertTrue(manager.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT))
+        assertFalse(manager.choiceRequired.value)
+        assertNull(repos.backupRepository.loadPrivate(AccountManager.PENDING))
+        manager.retryStart()
+        assertEquals(2, repos.backupRepository.snapshot("google").activityHeatmap["2026-10-15"])
     }
 
     @Test fun `keep writes stash before guest is deleted and seeds a new Google account`() = runTest {

@@ -155,7 +155,7 @@ class AppSettingsViewModel @Inject constructor(
         }
     }
 
-    /** Najpierw wysyła zaległe zmiany (błąd chmury nie blokuje wylogowania), potem przechodzi na dane gościa. */
+    /** Wymaga internetu; po wylogowaniu nowy gość dostaje odłożone dane albo talie przykładowe. */
     fun signOut() {
         if (signingOut.value || signingIn.value || backupOperation.value != null) return
         signingOut.value = true
