@@ -128,3 +128,12 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
   oraz martwe znaczniki generacji. Wszystkie dokumenty były w generacji 0, więc nic ukrytego
   nie wróciło. Kopia konta sprzed porządków została w pliku poza repozytorium.
 - **Usunięte z `FirebaseConfig`:** nieistniejący zasobnik Storage z konfiguracji webowej.
+
+## Po przeglądzie — kolejność talii po „Przenieś na konto” (16.10.2026, Twoja decyzja)
+
+- **Co:** talie gościa dołączane do używanego konta trafiają na koniec listy, za talie konta.
+  Plan tego nie określał; dotąd dostawały pozycje od zera i mieszały się z taliami konta.
+- **Jak:** przed dołączeniem aplikacja bierze pozycje talii konta z odpowiedzi serwera (konta może
+  jeszcze nie być w pamięci telefonu), z limitem 15 s jak reszta logowania; bez sieci z tego, co
+  jest na telefonie. Format dokumentów bez zmian (to samo pole `position`).
+- **Gdzie:** `BackupRepository.joinGuest`.

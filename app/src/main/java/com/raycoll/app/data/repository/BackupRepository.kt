@@ -19,7 +19,9 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
@@ -118,11 +120,11 @@ class BackupRepository @Inject constructor(
         }
         store.writeAll(operations(stamped, uid) + missing)
     }
-    private fun operations(data: StoreData, uid: String): List<WriteOp> {
+    private fun operations(data: StoreData, uid: String, firstPosition: Int = 0): List<WriteOp> {
         val paths = UserPaths(uid)
         return buildList {
-            data.groups.forEachIndexed { position, deck ->
-                add(WriteOp.Set(paths.deck(deck.id), Schema.deckToMap(deck, position)))
+            data.groups.forEachIndexed { index, deck ->
+                add(WriteOp.Set(paths.deck(deck.id), Schema.deckToMap(deck, firstPosition + index)))
                 deck.cards.forEachIndexed { index, card ->
                     add(WriteOp.Set(paths.card(deck.id, card.id), Schema.cardToMap(card, index)))
                 }
@@ -173,9 +175,15 @@ class BackupRepository @Inject constructor(
             )
         }
         val paths = UserPaths(uid)
+        // Talie gościa trafiają za talie konta. Konta może jeszcze nie być w pamięci telefonu,
+        // więc pozycje bierzemy z odpowiedzi serwera (bez sieci: z tego, co jest na telefonie).
+        val accountDecks = withTimeoutOrNull(15_000) {
+            store.observe(paths.decks()).first { !it.fromCache }.docs
+        } ?: store.cached(paths.decks())
+        val firstPosition = (accountDecks.mapNotNull { Schema.positionFromMap(it.data) }.maxOrNull() ?: -1L) + 1
         // Aktywność jest dodawana osobno; pozostałe dokumenty zachowują swoje daty.
         store.writeAll(
-            operations(StoreData(groups, modes), uid) + own.activityHeatmap.map { (day, count) ->
+            operations(StoreData(groups, modes), uid, firstPosition.toInt()) + own.activityHeatmap.map { (day, count) ->
                 WriteOp.Set(
                     paths.activityDay(day),
                     mapOf(

@@ -4,12 +4,14 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.account.AccountManager
+import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.seed.SEED_MODES
 import com.raycoll.app.domain.seed.SeedData
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.VmTestHarness
 import java.io.File
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -166,6 +168,23 @@ class BackupDocumentStoreTest {
             setOf("First (from phone)", "Second (from phone)"),
             repos.snapshot().studyModes.filter { !it.isBuiltIn }.map { it.name }.toSet()
         )
+    }
+
+    @Test fun `moved guest decks go after the account decks`() = runTest {
+        fun deck(id: String) = FlashcardGroup(
+            id,
+            "Deck $id",
+            emptyList(),
+            pageNames = listOf("A", "B"),
+            pageLanguages = listOf("en", "pl"),
+            updatedAt = 1
+        )
+        repos.put(StoreData(groups = listOf(deck("a"), deck("c"))))
+        val guest = repos.snapshot()
+        repos.account.signIn("google")
+        repos.put(StoreData(groups = listOf(deck("b"), deck("d"))))
+        backup.joinGuest(guest, "google", " (from phone)")
+        assertEquals(listOf("b", "d", "a", "c"), repos.deckRepository.activeDecks().first().map { it.id })
     }
 
     @Test fun `same deck names remain separate and guest activity is added`() = runTest {
