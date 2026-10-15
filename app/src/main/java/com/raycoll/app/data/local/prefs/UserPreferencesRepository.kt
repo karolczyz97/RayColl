@@ -39,7 +39,7 @@ enum class ThemePref(override val key: String) : KeyedEnum {
     }
 }
 
-/** Ustawienia urządzenia (nie synchronizowane). Język interfejsu trzyma AppCompat (per-app locale). */
+/** Ustawienia urządzenia (nie synchronizowane). Język interfejsu trzyma system (per-app locale). */
 data class UserPreferences(
     val theme: ThemePref = ThemePref.SYSTEM,
     val useSystemColors: Boolean = true,

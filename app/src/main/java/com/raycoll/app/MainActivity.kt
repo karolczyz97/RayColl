@@ -2,11 +2,11 @@ package com.raycoll.app
 
 import android.graphics.Color
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -29,9 +29,8 @@ import dagger.hilt.android.AndroidEntryPoint
 private val LightNavigationScrim = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
 private val DarkNavigationScrim = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
 
-// AppCompatActivity: język aplikacji wybrany w ustawieniach (AppCompatDelegate) działa też przed Androidem 13
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,6 +1,5 @@
 package com.raycoll.app.ui.appsettings
 
-import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -117,15 +116,12 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
 @Composable
 fun AppearanceSection(preferences: UserPreferences, onTheme: (ThemePref) -> Unit, onSystemColors: (Boolean) -> Unit) {
     SectionCard(title = stringResource(R.string.app_settings_section_appearance)) {
-        // kolory z tapety są dostępne od Androida 12
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            SwitchRow(
-                title = stringResource(R.string.app_settings_dynamic_colors_title),
-                description = stringResource(R.string.app_settings_dynamic_colors_desc),
-                checked = preferences.useSystemColors,
-                onChange = onSystemColors
-            )
-        }
+        SwitchRow(
+            title = stringResource(R.string.app_settings_dynamic_colors_title),
+            description = stringResource(R.string.app_settings_dynamic_colors_desc),
+            checked = preferences.useSystemColors,
+            onChange = onSystemColors
+        )
         Text(stringResource(R.string.app_settings_theme), style = MaterialTheme.typography.labelLarge)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),

@@ -5,6 +5,5 @@
     <include domain="database" path="raycoll.db-wal" />
         <include domain="database" path="raycoll.db-shm" />
         <include domain="database" path="raycoll.db-journal" />
-    <include domain="file" path="androidx.appcompat.app.AppCompatDelegate.application_locales_record_file" />
     <include domain="file" path="datastore/" />
 </full-backup-content>

@@ -1,14 +1,14 @@
 package com.raycoll.app.ui.appsettings
 
 import android.Manifest
+import android.app.LocaleManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.os.LocaleList
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
@@ -51,6 +50,7 @@ private const val BACKUP_MIME_TYPE = "application/json"
 fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: AppSettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val localeManager = remember(context) { context.getSystemService(LocaleManager::class.java) }
     val scope = rememberCoroutineScope()
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -136,23 +136,15 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
                 )
                 LanguageSpeechSection(
                     preferences = preferences,
-                    currentLanguage = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-'),
+                    currentLanguage = localeManager.applicationLocales.toLanguageTags().substringBefore('-'),
                     onLanguage = { tag ->
-                        AppCompatDelegate.setApplicationLocales(
-                            if (tag.isEmpty()) {
-                                LocaleListCompat.getEmptyLocaleList()
-                            } else {
-                                LocaleListCompat.forLanguageTags(
-                                    tag
-                                )
-                            }
-                        )
+                        localeManager.applicationLocales = LocaleList.forLanguageTags(tag)
                     },
                     onTtsRate = viewModel::setTtsRate,
                     onBackgroundPlayback = { enabled ->
                         viewModel.setBackgroundPlayback(enabled)
                         // kontrolki nauki w tle są w powiadomieniu
-                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (enabled) {
                             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     }

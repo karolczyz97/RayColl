@@ -3,7 +3,6 @@ package com.raycoll.app.playback
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
-import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -38,12 +37,8 @@ class HapticAndSoundPlayer @Inject constructor(@ApplicationContext context: Cont
         )
         .build()
 
-    private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    private val vibrator: Vibrator? =
         context.getSystemService(VibratorManager::class.java)?.defaultVibrator
-    } else {
-        @Suppress("DEPRECATION")
-        context.getSystemService(Vibrator::class.java)
-    }
 
     // dźwięk zamówiony, zanim skończył się ładować, gra zaraz po załadowaniu
     private val loaded = mutableSetOf<Int>()

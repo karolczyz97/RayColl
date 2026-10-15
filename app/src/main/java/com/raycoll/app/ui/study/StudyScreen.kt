@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import androidx.activity.BackEventCompat
@@ -325,7 +324,6 @@ internal fun SessionPermissions(state: StudyUiState.Active?, onMicrophoneGranted
     }
     LaunchedEffect(runsInBackground) {
         val needsNotificationPermission = runsInBackground &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             !hasPermission(context, Manifest.permission.POST_NOTIFICATIONS)
         if (needsNotificationPermission && !notificationsAttempted) {
             notificationsAttempted = true

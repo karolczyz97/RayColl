@@ -14,7 +14,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [32, 33])
+@Config(sdk = [33])
 class PlatformAudioFocusTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val platform = shadowOf(context.getSystemService(AudioManager::class.java))
