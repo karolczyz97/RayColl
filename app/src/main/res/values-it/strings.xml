@@ -330,5 +330,12 @@
     <string name="study_progress_description">Scheda %1$d di %2$d</string>
     <string name="study_modes_shared_hint">Le modalità sono condivise da tutti i mazzi. Modificandone una, cambierà per ogni mazzo che la usa.</string>
     <string name="auth_sign_out_failed">Impossibile uscire dall’account. Riprova.</string>
+    <string name="auth_choice_move">Sposta nel tuo account</string>
+    <string name="auth_choice_keep">Conserva su questo telefono</string>
+    <string name="auth_choice_delete">Elimina i dati dal telefono</string>
+    <string name="auth_choice_desc">Scegli cosa fare con i dati ospite prima di accedere. I dati conservati torneranno dopo la disconnessione.</string>
+    <string name="auth_from_phone_suffix">" (dal telefono)"</string>
+    <string name="auth_start_internet">Connettiti a internet per iniziare</string>
+    <string name="auth_retry_start">Riprova</string>
 </resources>
 

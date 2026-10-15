@@ -60,7 +60,6 @@ class BrowseViewModelTest {
     fun teardown() {
         runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
         Dispatchers.resetMain()
-        repos.db.close()
     }
 
     private suspend fun seedDeck(cards: Int): String = repos.deckRepository.addDeckWithCards(
@@ -102,7 +101,7 @@ class BrowseViewModelTest {
         repos.deckRepository.deleteDeck(id)
         assertEquals(BrowseUiState.DeckMissing, vm.uiState.first { it == BrowseUiState.DeckMissing })
         // synchronizacja nadal zna usunięcie
-        assertTrue(repos.localStore.snapshot().groups.single().deletedAt != null)
+        assertTrue(repos.snapshot().groups.single().deletedAt != null)
     }
 
     @Test

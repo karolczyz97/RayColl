@@ -49,7 +49,6 @@ class DeckSettingsScreenTest {
     fun teardown() {
         vm.viewModelScope.cancel()
         compose.waitForIdle()
-        repos.db.close()
     }
 
     @Test

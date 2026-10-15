@@ -8,7 +8,6 @@ import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.keyedEnumOrNull
-import com.raycoll.app.domain.normalize.assertStudyModeStep
 import com.raycoll.app.domain.normalize.jsonElementToPlain
 import kotlin.math.abs
 import kotlin.math.floor
@@ -34,6 +33,19 @@ class FirestoreDocException(message: String) : Exception(message)
  *   Pola opcjonalne (deletedAt, archivedAt, position) są łagodne: zły typ = brak.
  */
 object FirestoreSchema {
+    fun sorted(docs: List<com.raycoll.app.data.firestore.Doc>) = docs.sortedWith(
+        compareBy<com.raycoll.app.data.firestore.Doc> { positionFromMap(it.data) ?: Long.MAX_VALUE }.thenBy { it.id }
+    )
+    fun readDeck(doc: com.raycoll.app.data.firestore.Doc) = read(doc) { deckFromMap(doc.id, doc.data) }
+    fun readCard(doc: com.raycoll.app.data.firestore.Doc) = read(doc) { cardFromMap(doc.id, doc.data) }
+    fun readMode(doc: com.raycoll.app.data.firestore.Doc) = read(doc) { modeFromMap(doc.id, doc.data) }
+    private fun <T> read(doc: com.raycoll.app.data.firestore.Doc, decode: () -> T): T? = try {
+        decode()
+    } catch (error: Exception) {
+        android.util.Log.w("FirestoreSchema", "Skipping invalid document ${doc.id}", error)
+        null
+    }
+
     const val PATH_USERS = "users"
     const val PATH_DECKS = "decks"
     const val PATH_CARDS = "cards"
@@ -159,7 +171,6 @@ object FirestoreSchema {
         val id = (data["id"] as? String)?.takeIf { it.isNotBlank() } ?: docId
         val rawSteps = data["steps"] as? List<*>
             ?: throw FirestoreDocException("Firestore study mode $docId is missing steps.")
-        rawSteps.forEachIndexed { index, step -> assertStudyModeStep(step, id, index) }
         val isBuiltIn = data["isBuiltIn"] as? Boolean
             ?: throw FirestoreDocException("Firestore study mode $id has an invalid isBuiltIn flag.")
         val builtInSourceId = data["builtInSourceId"]

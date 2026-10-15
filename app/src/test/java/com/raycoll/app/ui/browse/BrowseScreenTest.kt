@@ -53,7 +53,6 @@ class BrowseScreenTest {
 
     @After
     fun teardown() {
-        repos.db.close()
     }
 
     private fun deck(cards: List<List<String>>) = runBlocking {

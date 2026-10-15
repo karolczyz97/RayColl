@@ -23,5 +23,5 @@ fun isUserAuthoredMode(mode: StudyMode): Boolean =
     !mode.isBuiltIn || seedModeFor(mode.builtInSourceId) == null || mode.isModifiedBuiltIn()
 
 // Talie startowe mają znaczniki czasu 0; każda edycja talii/karty albo powtórka je podbija.
-private fun FlashcardGroup.isUntouchedSeed(): Boolean =
+fun FlashcardGroup.isUntouchedSeed(): Boolean =
     updatedAt == 0L && cards.isNotEmpty() && cards.all { it.contentUpdatedAt == 0L && it.srsUpdatedAt == 0L }

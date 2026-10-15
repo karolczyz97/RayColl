@@ -1,67 +1,70 @@
 package com.raycoll.app.data.repository
 
 import com.raycoll.app.core.Clock
-import com.raycoll.app.data.local.db.RayCollDatabase
-import com.raycoll.app.data.local.mappers.toDomain
-import com.raycoll.app.data.local.mappers.toEntity
+import com.raycoll.app.data.account.CurrentAccount
+import com.raycoll.app.data.firestore.DocumentStore
+import com.raycoll.app.data.firestore.UserPaths
+import com.raycoll.app.data.firestore.WriteOp
+import com.raycoll.app.data.remote.firestore.FirestoreSchema as Schema
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.domain.operations.edited
 import com.raycoll.app.domain.operations.newStudyMode
 import com.raycoll.app.domain.operations.resetToBuiltIn
 import com.raycoll.app.domain.operations.resolveStudyMode
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
-/** Tryby nauki w aktywnej przestrzeni danych. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class StudyModeRepository @Inject constructor(
-    db: RayCollDatabase,
-    private val clock: Clock,
-    private val namespaceManager: NamespaceManager,
-    private val dataMutations: DataMutations
+    private val store: DocumentStore,
+    private val account: CurrentAccount,
+    private val clock: Clock
 ) {
-    private val modeDao = db.studyModeDao()
-
-    private val ns: String get() = namespaceManager.current()
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun liveModes(): Flow<List<StudyMode>> = namespaceManager.active.flatMapLatest { ns ->
-        modeDao.liveModes(ns).map { entities -> entities.map { it.toDomain() } }
+    private fun paths() = UserPaths(checkNotNull(account.uid.value))
+    fun liveModes() = account.uid.filterNotNull().flatMapLatest { uid ->
+        store.observe(UserPaths(uid).modes()).map {
+            it.docs.mapNotNull(Schema::readMode).filter { it.deletedAt == null }
+        }
     }
-
-    suspend fun getMode(modeId: String): StudyMode? = modeDao.getMode(ns, modeId)?.toDomain()
-
-    /** Tryb sesji: przypisany albo — gdy go brak — ten sam domyślny, który pokazują ekrany. */
-    suspend fun getModeOrDefault(modeId: String): StudyMode = resolveStudyMode(
-        modeDao.allModes(ns).map { it.toDomain() }.filter { it.deletedAt == null },
+    suspend fun getMode(modeId: String) = store.cachedDoc(paths().mode(modeId))?.let(Schema::readMode)?.takeIf {
+        it.deletedAt ==
+            null
+    }
+    suspend fun getModeOrDefault(modeId: String) = resolveStudyMode(
+        store.cached(paths().modes()).mapNotNull(Schema::readMode).filter {
+            it.deletedAt ==
+                null
+        },
         modeId
     )
-
     suspend fun addMode(name: String, steps: List<ModeStep>): String {
         val mode = newStudyMode(name, steps, clock.now())
-        modeDao.upsertMode(mode.toEntity(ns))
-        dataMutations.signal(CloudWriteMode.DEBOUNCED)
+        store.write(WriteOp.Set(paths().mode(mode.id), Schema.modeToMap(mode)))
         return mode.id
     }
-
     suspend fun updateMode(mode: StudyMode) {
-        modeDao.upsertMode(mode.edited(clock.now()).toEntity(ns))
-        dataMutations.signal(CloudWriteMode.DEBOUNCED)
+        if (getMode(mode.id) == null) return
+        store.write(
+            WriteOp.Update(
+                paths().mode(mode.id),
+                Schema.modeToMap(mode.copy(updatedAt = clock.now())).filterKeys {
+                    it !=
+                        "deletedAt"
+                }
+            )
+        )
     }
-
     suspend fun deleteMode(modeId: String) {
-        modeDao.softDeleteMode(ns, modeId, clock.now())
-        dataMutations.signal(CloudWriteMode.IMMEDIATE)
+        if (getMode(modeId) == null) return
+        store.write(WriteOp.Update(paths().mode(modeId), mapOf("deletedAt" to clock.now(), "updatedAt" to clock.now())))
     }
-
     suspend fun resetMode(modeId: String) {
         val mode = getMode(modeId) ?: return
-        modeDao.upsertMode(mode.resetToBuiltIn(clock.now()).toEntity(ns))
-        dataMutations.signal(CloudWriteMode.DEBOUNCED)
+        updateMode(mode.resetToBuiltIn(clock.now()))
     }
 }

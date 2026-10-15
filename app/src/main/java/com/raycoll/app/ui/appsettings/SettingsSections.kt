@@ -40,9 +40,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
+import com.raycoll.app.data.firestore.SyncStatus
 import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
-import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.domain.model.TtsRate
 import com.raycoll.app.ui.components.ChoiceChip
 import com.raycoll.app.ui.components.DropdownChip

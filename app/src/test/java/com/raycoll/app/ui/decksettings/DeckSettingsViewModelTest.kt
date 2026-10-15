@@ -41,7 +41,6 @@ class DeckSettingsViewModelTest {
     @After
     fun teardown() {
         runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
-        repos.db.close()
         Dispatchers.resetMain()
     }
 
@@ -139,7 +138,7 @@ class DeckSettingsViewModelTest {
         val vm = vm(id)
         vm.delete()
         assertEquals(DeckSettingsEvent.Closed, vm.events.first())
-        assertTrue(repos.localStore.snapshot().groups.single().deletedAt != null)
+        assertTrue(repos.snapshot().groups.single().deletedAt != null)
         org.junit.Assert.assertNull(repos.deckRepository.getDeck(id))
     }
 
@@ -167,6 +166,6 @@ class DeckSettingsViewModelTest {
         val vm = vm("nonexistent")
         vm.delete()
         assertEquals(DeckSettingsEvent.Closed, vm.events.first())
-        assertTrue(repos.localStore.snapshot().groups.isEmpty())
+        assertTrue(repos.snapshot().groups.isEmpty())
     }
 }

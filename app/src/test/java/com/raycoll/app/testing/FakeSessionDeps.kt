@@ -1,7 +1,6 @@
 package com.raycoll.app.testing
 
-import com.raycoll.app.data.repository.PendingReview
-import com.raycoll.app.data.repository.ReviewWriteQueue
+import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.session.ListenResult
 import com.raycoll.app.domain.session.ListenStatus
@@ -17,7 +16,7 @@ class FakeSessionDeps(
     var listenHangs: Boolean = false,
     var transcript: String = "",
     var listenStatus: ListenStatus = ListenStatus.COMPLETED,
-    private val reviewWrites: ReviewWriteQueue? = null,
+    private val deckRepository: DeckRepository? = null,
     var listenThrows: Boolean = false
 ) : SessionDeps {
     val reviews = mutableListOf<ReviewRecord>()
@@ -36,6 +35,8 @@ class FakeSessionDeps(
     override fun haptic(rating: Int) {}
     override fun onCardReviewed(deckId: String, cardId: String, rating: Int, replaceFromBase: SrsState?) {
         reviews += ReviewRecord(cardId, rating, replaceFromBase)
-        reviewWrites?.submit(PendingReview(deckId, cardId, rating, replaceFromBase))
+        deckRepository?.let {
+            kotlinx.coroutines.runBlocking { it.reviewCard(deckId, cardId, rating, replaceFromBase) }
+        }
     }
 }

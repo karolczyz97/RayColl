@@ -326,5 +326,12 @@
     <string name="study_progress_description">Flashcard %1$d of %2$d</string>
     <string name="study_modes_shared_hint">Modes are shared by all decks. Editing a mode changes it for every deck that uses it.</string>
     <string name="auth_sign_out_failed">Could not sign out. Please try again.</string>
+    <string name="auth_choice_move">Move to account</string>
+    <string name="auth_choice_keep">Keep on this phone</string>
+    <string name="auth_choice_delete">Delete data from phone</string>
+    <string name="auth_choice_desc">Choose what to do with the guest data before signing in. Kept data will return after signing out.</string>
+    <string name="auth_from_phone_suffix">" (from phone)"</string>
+    <string name="auth_start_internet">Connect to the internet to get started</string>
+    <string name="auth_retry_start">Try again</string>
 </resources>
 

@@ -20,6 +20,14 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
   wymaganego działającego commitu po każdym etapie.
 - **Gdzie:** `data/firestore`, `data/account`, `data/repository`, DI i testowy harness.
 
+## Firestore — zachowany test akcji komunikatu
+
+- **Co:** test w `StudyPresentationTest` sprawdza teraz trwałą dostępność akcji banera offline,
+  zamiast akcji usuniętego banera kolejki ocen; zachowuje sprawdzenie kliknięcia po minucie.
+- **Dlaczego:** plan usuwa komponent `ReviewWriteError`, ale nie wymienia tego pliku testowego
+  na liście usuwanych testów. Test został dostosowany, a nie usunięty.
+- **Gdzie:** `ui/study/StudyPresentationTest.kt`.
+
 ## Etap 3 — opcjonalna adnotacja Commons CSV
 
 - **Co:** dodano jedną regułę R8: `-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings`.

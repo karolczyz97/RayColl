@@ -54,8 +54,6 @@ class ImportDraftTest {
         vm.setDeckName("Draft")
     }
 
-    @After fun close() = repos.db.close()
-
     @Test
     fun `toolbar and system back both confirm before discarding and dialog restores`() {
         var finished = false

@@ -58,7 +58,7 @@ class ImportViewModelTest {
         vm.runImport(pageNames)
         advanceUntilIdle()
         assertEquals(ImportEvent.Imported, vm.events.first())
-        assertEquals(listOf("one", "two", ""), repos.localStore.snapshot().groups.single().cards.first().pages)
+        assertEquals(listOf("one", "two", ""), repos.snapshot().groups.single().cards.first().pages)
     }
 
     @Test
@@ -75,7 +75,7 @@ class ImportViewModelTest {
         vm.runImport(pageNames)
         advanceUntilIdle()
         assertEquals(ImportEvent.Invalid(ImportProblem.InvalidPageCount), vm.events.first())
-        assertTrue(repos.localStore.snapshot().groups.isEmpty())
+        assertTrue(repos.snapshot().groups.isEmpty())
     }
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repos: TestRepos
@@ -92,7 +92,6 @@ class ImportViewModelTest {
 
     @After
     fun teardown() {
-        repos.db.close()
         Dispatchers.resetMain()
     }
 
@@ -194,7 +193,7 @@ class ImportViewModelTest {
         vm.runImport(pageNames)
         assertEquals(ImportEvent.Invalid(ImportProblem.DeckNameRequired), vm.events.first())
         assertFalse(vm.uiState.value.importing)
-        assertTrue(repos.localStore.snapshot().groups.isEmpty())
+        assertTrue(repos.snapshot().groups.isEmpty())
     }
 
     @Test
@@ -215,7 +214,7 @@ class ImportViewModelTest {
         assertEquals(ImportEvent.Imported, vm.events.first())
         // po udanym imporcie flaga zostaje: zdarzenie może czekać za komunikatem, a drugi klik nie doda talii
         assertTrue(vm.uiState.value.importing)
-        val deck = repos.localStore.snapshot().groups.single()
+        val deck = repos.snapshot().groups.single()
         assertEquals("Angielski", deck.name)
         assertEquals(listOf(listOf("hello", "cześć"), listOf("thanks", "dzięki")), deck.cards.map { it.pages })
     }
@@ -300,7 +299,7 @@ class ImportViewModelTest {
         vm.runImport(pageNames)
         advanceUntilIdle()
         assertEquals(ImportEvent.Imported, vm.events.first())
-        assertEquals(listOf("cat", "kot"), repos.localStore.snapshot().groups.single().cards.single().pages)
+        assertEquals(listOf("cat", "kot"), repos.snapshot().groups.single().cards.single().pages)
     }
 
     @Test
@@ -326,7 +325,7 @@ class ImportViewModelTest {
         vm.runImport(listOf("Strona 1", "Strona 2"))
         advanceUntilIdle()
         assertEquals(ImportEvent.Imported, vm.events.first())
-        val deck = repos.localStore.snapshot().groups.single()
+        val deck = repos.snapshot().groups.single()
         assertEquals("Talia", deck.name)
         assertEquals(listOf("Pytanie", "Strona 2"), deck.pageNames)
     }
@@ -335,7 +334,7 @@ class ImportViewModelTest {
         vm.runImport(pageNames)
         advanceUntilIdle()
         assertEquals(ImportEvent.Imported, vm.events.first())
-        return repos.localStore.snapshot().groups.single()
+        return repos.snapshot().groups.single()
     }
 
     @Test
@@ -452,8 +451,8 @@ class ImportViewModelTest {
         assertTrue(vm.uiState.value.rows.isEmpty())
         advanceUntilIdle()
         assertEquals(ImportEvent.Imported, vm.events.first())
-        assertEquals(1, repos.localStore.snapshot().groups.size)
-        assertEquals(listOf("cat", "kot"), repos.localStore.snapshot().groups.single().cards.single().pages)
+        assertEquals(1, repos.snapshot().groups.size)
+        assertEquals(listOf("cat", "kot"), repos.snapshot().groups.single().cards.single().pages)
         assertTrue(vm.uiState.value.importing)
     }
 
@@ -468,7 +467,7 @@ class ImportViewModelTest {
         assertFalse(vm.uiState.value.canImport)
         vm.runImport(pageNames)
         advanceUntilIdle()
-        assertEquals(1, repos.localStore.snapshot().groups.size)
+        assertEquals(1, repos.snapshot().groups.size)
     }
 
     @Test

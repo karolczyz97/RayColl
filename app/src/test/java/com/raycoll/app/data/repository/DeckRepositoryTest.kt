@@ -63,12 +63,12 @@ class DeckRepositoryTest {
     fun `archive restore and repeated deletion cannot revive or advance a tombstone`() = runTest {
         val id = seedDeckWithCard()
         repos.deckRepository.deleteDeck(id)
-        val before = repos.localStore.snapshot().groups.single()
+        val before = repos.snapshot().groups.single()
         clock.advance(1_000)
         repos.deckRepository.archiveDeck(id)
         repos.deckRepository.restoreDeck(id)
         repos.deckRepository.deleteDeck(id)
-        assertEquals(before, repos.localStore.snapshot().groups.single())
+        assertEquals(before, repos.snapshot().groups.single())
     }
 
     @Test
@@ -76,10 +76,10 @@ class DeckRepositoryTest {
         val deckId = seedDeckWithCard()
         val cardId = repos.deckRepository.getDeck(deckId)!!.cards.single().id
         repos.deckRepository.deleteCard(cardId)
-        val before = repos.localStore.snapshot().groups.single().cards.single()
+        val before = repos.snapshot().groups.single().cards.single()
         clock.advance(1_000)
         repos.deckRepository.reviewCard(deckId, cardId, 3)
-        val after = repos.localStore.snapshot()
+        val after = repos.snapshot()
         assertEquals(before, after.groups.single().cards.single())
         assertTrue(after.activityHeatmap.isEmpty())
     }
@@ -108,7 +108,6 @@ class DeckRepositoryTest {
     @After
     fun teardown() {
         Dispatchers.resetMain()
-        repos.db.close()
     }
 
     private suspend fun seedDeckWithCard(): String = repos.deckRepository.addDeckWithCards(
@@ -125,11 +124,11 @@ class DeckRepositoryTest {
 
         // Regresja: incrementActivity to UPDATE — bez utworzenia wiersza pierwsza ocena dnia
         // gubiłaby się i heatmapa/streak zostałyby puste na urządzeniu.
-        assertNull(repos.localStore.snapshot().activityHeatmap[today])
+        assertNull(repos.snapshot().activityHeatmap[today])
         repos.deckRepository.reviewCard(deckId, repos.deckRepository.getDeck(deckId)!!.cards.single().id, 3)
-        assertEquals(1, repos.localStore.snapshot().activityHeatmap[today])
+        assertEquals(1, repos.snapshot().activityHeatmap[today])
         repos.deckRepository.reviewCard(deckId, repos.deckRepository.getDeck(deckId)!!.cards.single().id, 3)
-        assertEquals(2, repos.localStore.snapshot().activityHeatmap[today])
+        assertEquals(2, repos.snapshot().activityHeatmap[today])
     }
 
     @Test
@@ -139,18 +138,6 @@ class DeckRepositoryTest {
         val card = repos.deckRepository.getDeck(deckId)!!.cards.single()
         assertEquals(1, card.srsState.repetitions)
         assertEquals(clock.now(), card.srsUpdatedAt)
-    }
-
-    @Test
-    fun `snapshot do synchronizacji zawiera tombstone usuniętej karty`() = runTest(dispatcher) {
-        val deckId = seedDeckWithCard()
-        repos.deckRepository.deleteCard(repos.deckRepository.getDeck(deckId)!!.cards.single().id)
-
-        // Regresja: bez tombstone'a usunięcie nie trafia do chmury, a inne urządzenie
-        // przy merge'u przywraca kartę. Ekrany nadal widzą tylko żywe karty.
-        val synced = repos.localStore.snapshot().groups.single().cards.single()
-        assertNotNull(synced.deletedAt)
-        assertEquals(emptyList<Flashcard>(), repos.deckRepository.getDeck(deckId)!!.cards)
     }
 
     @Test
@@ -164,27 +151,15 @@ class DeckRepositoryTest {
     }
 
     @Test
-    fun `activeDecks przełącza się na dane nowego konta`() = runTest(dispatcher) {
-        seedDeckWithCard()
-        awaitEmissions(repos.deckRepository.activeDecks()) { emissions ->
-            awaitValue(emissions) { decks -> decks.size == 1 }
-            repos.namespaceManager.switchTo("uid-1")
-            awaitValue(emissions) { decks -> decks.isEmpty() }
-            repos.namespaceManager.switchToGuest()
-            awaitValue(emissions) { decks -> decks.size == 1 }
-        }
-    }
-
-    @Test
     fun `rename preserves live and tombstoned cards without rewriting them`() = runTest(dispatcher) {
         val id = seedDeckWithCard()
         repos.deckRepository.addCard(id, listOf("deleted", "usunięta"))
         val deletedId = repos.deckRepository.getDeck(id)!!.cards.last().id
         repos.deckRepository.deleteCard(deletedId)
-        val before = repos.localStore.snapshot().groups.single().cards
+        val before = repos.snapshot().groups.single().cards
         clock.advance(1_000)
         repos.deckRepository.renameDeck(id, " Renamed ")
-        val after = repos.localStore.snapshot().groups.single()
+        val after = repos.snapshot().groups.single()
         assertEquals("Renamed", after.name)
         assertEquals(clock.now(), after.updatedAt)
         assertEquals(before, after.cards)
@@ -243,7 +218,7 @@ class DeckRepositoryTest {
         repos.deckRepository.setActivePageCount(id, 2)
         val card = repos.deckRepository.getDeck(id)!!.cards.single()
         repos.deckRepository.updateCardPages(card.id, listOf("A!", "B!"))
-        val stored = repos.localStore.snapshot().groups.single().cards.single()
+        val stored = repos.snapshot().groups.single().cards.single()
         assertEquals(listOf("A!", "B!", "hidden"), stored.pages)
         assertNull(stored.deletedAt)
     }
@@ -255,35 +230,14 @@ class DeckRepositoryTest {
         repos.deckRepository.deleteCard(card.id)
         org.junit.Assert.assertFalse(repos.deckRepository.updateCardPages(card.id, listOf("x", "y")))
         org.junit.Assert.assertFalse(repos.deckRepository.updateCardPages("no-such-card", listOf("x", "y")))
-        val tombstone = repos.localStore.snapshot().groups.single().cards.single()
+        val tombstone = repos.snapshot().groups.single().cards.single()
         assertEquals(listOf("hi", "cześć"), tombstone.pages)
         assertNotNull(tombstone.deletedAt)
     }
 
     @Test
-    fun `overlapping name and mode edits keep both values`() = runTest(dispatcher) {
+    fun `settings edits stamp updatedAt`() = runTest(dispatcher) {
         val id = seedDeckWithCard()
-        repeat(20) { i ->
-            coroutineScope {
-                launch(Dispatchers.Default) { repos.deckRepository.renameDeck(id, "Name $i") }
-                launch(Dispatchers.Default) { repos.deckRepository.setActiveStudyMode(id, "mode-$i") }
-                launch(Dispatchers.Default) { repos.deckRepository.setPageName(id, i % 2, "Page $i") }
-                launch(Dispatchers.Default) { repos.deckRepository.setPageLanguage(id, (i + 1) % 2, "de-DE") }
-            }
-            val deck = repos.deckRepository.getDeck(id)!!
-            assertEquals("Name $i", deck.name)
-            assertEquals("mode-$i", deck.activeModeId)
-            assertEquals("Page $i", deck.pageNames[i % 2])
-            assertEquals("de-DE", deck.pageLanguages[(i + 1) % 2])
-        }
-        // karty i ich postęp nietknięte
-        assertEquals(listOf("hi", "cześć"), repos.deckRepository.getDeck(id)!!.cards.single().pages)
-    }
-
-    @Test
-    fun `settings edits stamp updatedAt and signal sync once per change`() = runTest(dispatcher) {
-        val id = seedDeckWithCard()
-        assertEquals(CloudWriteMode.IMMEDIATE, repos.mutations.events.first())
         clock.advance(5_000)
         repos.deckRepository.setCardOrder(id, CardOrder.RANDOM)
         repos.deckRepository.setStudyFilter(id, StudyFilter.ALL)
@@ -291,10 +245,6 @@ class DeckRepositoryTest {
         assertEquals(CardOrder.RANDOM, deck.cardOrder)
         assertEquals(StudyFilter.ALL, deck.studyFilter)
         assertEquals(clock.now(), deck.updatedAt)
-        assertEquals(
-            listOf(CloudWriteMode.DEBOUNCED, CloudWriteMode.DEBOUNCED),
-            repos.mutations.events.take(2).toList()
-        )
     }
 
     @Test
@@ -303,7 +253,7 @@ class DeckRepositoryTest {
         repos.deckRepository.deleteDeck(id)
         repos.deckRepository.renameDeck(id, "Ghost")
         repos.deckRepository.setPageName(id, 0, "Ghost")
-        val tombstone = repos.localStore.snapshot().groups.single()
+        val tombstone = repos.snapshot().groups.single()
         assertEquals("Deck", tombstone.name)
         assertEquals(listOf("Front", "Back"), tombstone.pageNames)
     }
@@ -334,7 +284,7 @@ class DeckRepositoryTest {
         repos.deckRepository.reviewCard(id, original.id, 4, baseState = original.srsState)
         val reviewed = repos.deckRepository.getDeck(id)!!.cards.single()
         assertEquals(calculateFsrs(original.srsState, 4, clock.now()), reviewed.srsState)
-        assertEquals(1, repos.localStore.snapshot().activityHeatmap[LocalDates.dayKey(clock.now())])
+        assertEquals(1, repos.snapshot().activityHeatmap[LocalDates.dayKey(clock.now())])
     }
 
     @Test
@@ -357,7 +307,7 @@ class DeckRepositoryTest {
         val recentId = seedDeckWithCard()
         repos.deckRepository.archiveDeck(recentId)
         repos.deckRepository.purgeExpiredArchives()
-        val stored = repos.localStore.snapshot().groups.associateBy { it.id }
+        val stored = repos.snapshot().groups.associateBy { it.id }
         assertEquals(clock.now(), stored.getValue(expiredId).deletedAt)
         assertNull(repos.deckRepository.getDeck(expiredId))
         assertNull(repos.deckRepository.getDeck(activeId)!!.deletedAt)
@@ -378,17 +328,6 @@ class DeckRepositoryTest {
         val restored = repos.deckRepository.getDeck(id)!!
         assertEquals(3, restored.activePageCount)
         assertEquals(listOf("A", "B", "C"), restored.pageNames)
-    }
-
-    @Test
-    fun `merging an empty local store preserves remote cards before upload`() = runTest(dispatcher) {
-        val id = seedDeckWithCard()
-        val cloud = repos.localStore.snapshot()
-        repos.localStore.replaceAll(StoreData(), notifySync = false)
-        val merged = repos.localStore.mergeWithCloud(cloud)
-        assertEquals(cloud, merged)
-        assertEquals(cloud, repos.localStore.snapshot())
-        assertTrue(repos.deckRepository.getDeck(id)!!.cards.isNotEmpty())
     }
 
     // Room emituje z własnych wątków — czekamy na wartości w realnym czasie (z limitem)

@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.room)
 }
 
 val localProperties = Properties().apply {
@@ -99,16 +98,11 @@ android {
             isIncludeAndroidResources = true
         }
     }
-    sourceSets.getByName("test").resources.srcDir("schemas")
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-}
-
-room {
-    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
@@ -139,9 +133,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.commons.csv)
     implementation(libs.commons.text)
-
-    implementation(libs.room.runtime)
-    ksp(libs.room.compiler)
 
     implementation(libs.media3.session)
 

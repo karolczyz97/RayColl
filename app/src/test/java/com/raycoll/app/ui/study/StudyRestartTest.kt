@@ -6,8 +6,6 @@ import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
-import com.raycoll.app.data.repository.PendingReview
-import com.raycoll.app.data.repository.ReviewWriteQueue
 import com.raycoll.app.domain.model.ListenAndCheckStep
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.NextCardStep
@@ -55,26 +53,6 @@ import org.robolectric.Shadows.shadowOf
 class StudyRestartTest {
     @get:org.junit.Rule val testPreferences = PreferencesRule()
 
-    @Test
-    fun `failed reviews block restart and retry refreshes the finished summary`() {
-        val vm = studyVm(listOf(ShowPageStep(), ShowRatingsStep()))
-        waitFor { vm.uiState.value is StudyUiState.Active }
-        repos.db.openHelper.writableDatabase.execSQL(
-            "CREATE TRIGGER fail_review BEFORE INSERT ON cards BEGIN SELECT RAISE(ABORT, 'test review failure'); END"
-        )
-        vm.rate(3)
-        idle()
-        vm.rate(3)
-        waitFor { (vm.uiState.value as? StudyUiState.Active)?.finished == true }
-        assertNull((vm.uiState.value as StudyUiState.Active).resultCards)
-        vm.restartSession()
-        idle()
-        assertTrue((vm.uiState.value as StudyUiState.Active).finished)
-        repos.db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_review")
-        vm.retryReviewSave()
-        waitFor { (vm.uiState.value as StudyUiState.Active).resultCards?.all { it.srsState.repetitions == 1 } == true }
-    }
-
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val clock = FakeClock()
     private lateinit var repos: TestRepos
@@ -104,7 +82,6 @@ class StudyRestartTest {
     @After
     fun teardown() {
         holder.current()?.let(holder::release)
-        repos.db.close()
     }
 
     private fun idle(ms: Long = 0) {
@@ -139,20 +116,13 @@ class StudyRestartTest {
             repos.deckRepository.setActiveStudyMode(id, modeId)
             id
         }
-        val writes =
-            ReviewWriteQueue(
-                repos.deckRepository,
-                CoroutineScope(SupervisorJob() + Dispatchers.IO),
-                repos.namespaceManager
-            )
         return StudyViewModel(
             routeArgs("deckId" to deckId),
             repos.deckRepository,
             repos.studyModeRepository,
             prefs,
             holder,
-            FakeSessionDeps(reviewWrites = writes),
-            writes,
+            FakeSessionDeps(deckRepository = repos.deckRepository),
             clock
         )
     }

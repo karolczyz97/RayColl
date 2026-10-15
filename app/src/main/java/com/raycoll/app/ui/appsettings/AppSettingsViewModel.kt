@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.BuildConfig
 import com.raycoll.app.core.Clock
+import com.raycoll.app.data.account.AccountManager
+import com.raycoll.app.data.firestore.DocumentStore
+import com.raycoll.app.data.firestore.SyncStatus
 import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
@@ -16,8 +19,6 @@ import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
 import com.raycoll.app.data.repository.BackupRepository
 import com.raycoll.app.data.repository.BackupResult
-import com.raycoll.app.data.sync.SyncLifecycle
-import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -71,7 +73,8 @@ class AppSettingsViewModel @Inject constructor(
     private val prefsRepository: UserPreferencesRepository,
     private val backupRepository: BackupRepository,
     private val authRepository: GoogleSignIn,
-    private val syncLifecycle: SyncLifecycle,
+    private val accountManager: AccountManager,
+    private val store: DocumentStore,
     private val clock: Clock
 ) : ViewModel() {
     private val signingIn = MutableStateFlow(false)
@@ -83,7 +86,7 @@ class AppSettingsViewModel @Inject constructor(
         prefsRepository.preferences,
         authRepository.account,
         work,
-        syncLifecycle.syncStatus
+        store.offline.map { if (it) SyncStatus.ERROR else SyncStatus.IDLE }
     ) { preferences, account, work, syncStatus ->
         AppSettingsUiState(
             preferences = preferences,
@@ -122,11 +125,11 @@ class AppSettingsViewModel @Inject constructor(
         }
         when (token) {
             is IdTokenResult.Token -> {
-                val signIn = syncLifecycle.signIn(token.idToken)
-                viewModelScope.launch {
+                val signIn = token.idToken
+                viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
                     try {
-                        when (val result = signIn.await()) {
-                            is SignInResult.Success -> Unit
+                        when (val result = accountManager.signInWithGoogle(signIn)) {
+                            is SignInResult.Success, SignInResult.ChoiceRequired -> Unit
                             is SignInResult.Failure -> eventSink.send(AppSettingsEvent.SignInFailed(result.error))
                         }
                     } finally {
@@ -148,10 +151,9 @@ class AppSettingsViewModel @Inject constructor(
     fun signOut() {
         if (signingOut.value || signingIn.value || backupOperation.value != null) return
         signingOut.value = true
-        val result = syncLifecycle.signOut()
-        viewModelScope.launch {
+        viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             try {
-                if (!result.await()) eventSink.send(AppSettingsEvent.SignOutFailed)
+                if (!accountManager.signOut()) eventSink.send(AppSettingsEvent.SignOutFailed)
             } finally {
                 signingOut.value = false
             }
@@ -161,7 +163,7 @@ class AppSettingsViewModel @Inject constructor(
     /** Ręczna synchronizacja kończy się komunikatem — inaczej nie widać, czy coś się stało. */
     fun syncNow() {
         if (signingOut.value || backupOperation.value != null) return
-        launch { eventSink.send(AppSettingsEvent.SyncFinished(syncLifecycle.pushNow())) }
+        launch { eventSink.send(AppSettingsEvent.SyncFinished(store.awaitPendingWrites(15_000))) }
     }
 
     fun setTheme(value: ThemePref) = launch { prefsRepository.setTheme(value) }

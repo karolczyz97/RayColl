@@ -330,5 +330,12 @@
     <string name="study_progress_description">Tarjeta %1$d de %2$d</string>
     <string name="study_modes_shared_hint">Los modos se comparten entre todos los mazos. Al editar un modo, cambia en todos los mazos que lo usan.</string>
     <string name="auth_sign_out_failed">No se pudo cerrar sesión. Inténtalo de nuevo.</string>
+    <string name="auth_choice_move">Mover a la cuenta</string>
+    <string name="auth_choice_keep">Guardar en este teléfono</string>
+    <string name="auth_choice_delete">Eliminar datos del teléfono</string>
+    <string name="auth_choice_desc">Elige qué hacer con los datos de invitado antes de iniciar sesión. Los datos guardados volverán al cerrar sesión.</string>
+    <string name="auth_from_phone_suffix">" (del teléfono)"</string>
+    <string name="auth_start_internet">Conéctate a internet para empezar</string>
+    <string name="auth_retry_start">Intentar de nuevo</string>
 </resources>
 

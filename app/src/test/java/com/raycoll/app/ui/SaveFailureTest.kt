@@ -71,18 +71,26 @@ class SaveFailureTest {
     fun setup() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), FakeClock())
+        kotlinx.coroutines.runBlocking {
+            repos.put(
+                com.raycoll.app.domain.model.StoreData(
+                    groups = listOf(
+                        com.raycoll.app.domain.model.FlashcardGroup("d1", "Deck", emptyList(), archivedAt = 1L)
+                    ),
+                    studyModes = listOf(com.raycoll.app.domain.model.StudyMode("m1", "Mode"))
+                )
+            )
+        }
     }
 
     @After
     fun teardown() {
-        repos.db.close()
         Dispatchers.resetMain()
     }
 
     /** Uszkodzona baza — każdy zapis kończy się wyjątkiem SQLite. */
     private fun breakDatabase() {
-        val sql = repos.db.openHelper.writableDatabase
-        listOf("cards", "decks", "study_modes").forEach { sql.execSQL("DROP TABLE $it") }
+        repos.store.failWhen = { true }
     }
 
     @Test

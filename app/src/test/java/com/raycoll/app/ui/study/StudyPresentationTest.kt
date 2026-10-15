@@ -145,9 +145,13 @@ class StudyPresentationTest {
         }
     }
 
-    @Test fun `failed write action remains reachable after time passes`() {
+    @Test fun `offline action remains reachable after time passes`() {
         var retries = 0
-        compose.setContent { ReviewWriteError { retries++ } }
+        compose.setContent {
+            com.raycoll.app.ui.components.SyncStatusBanner(com.raycoll.app.data.firestore.SyncStatus.ERROR, {
+                retries++
+            })
+        }
         compose.mainClock.advanceTimeBy(60_000)
         compose.onNodeWithText(context.getString(R.string.errors_retry)).performClick()
         assertEquals(1, retries)

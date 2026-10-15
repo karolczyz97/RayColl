@@ -1,8 +1,8 @@
 package com.raycoll.app.ui.main
 
 import androidx.lifecycle.viewModelScope
-import com.raycoll.app.data.sync.MigrationOption
-import com.raycoll.app.data.sync.SyncLifecycle
+import com.raycoll.app.data.account.AccountManager
+import com.raycoll.app.data.account.GuestDataChoice
 import com.raycoll.app.testing.PreferencesRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,12 +31,13 @@ import org.robolectric.RobolectricTestRunner
 class MainViewModelTest {
     @get:Rule val preferences = PreferencesRule()
     private val main = StandardTestDispatcher()
-    private val sync = mock(SyncLifecycle::class.java)
+    private val sync = mock(AccountManager::class.java)
     private lateinit var vm: MainViewModel
 
     @Before fun setup() {
         Dispatchers.setMain(main)
-        `when`(sync.migrationRequired).thenReturn(MutableStateFlow(true))
+        `when`(sync.choiceRequired).thenReturn(MutableStateFlow(true))
+        `when`(sync.state).thenReturn(MutableStateFlow(com.raycoll.app.data.account.AccountState.Starting))
         vm = MainViewModel(preferences.repository, sync)
     }
 
@@ -46,17 +47,17 @@ class MainViewModelTest {
     }
 
     @Test fun `double click starts one migration and a failed migration can be retried`() = runTest(main) {
-        `when`(sync.resolveMigration(MigrationOption.MIGRATE)).thenReturn(false)
-        vm.resolveMigration(MigrationOption.MIGRATE)
-        vm.resolveMigration(MigrationOption.FRESH)
+        `when`(sync.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT)).thenReturn(false)
+        vm.resolveMigration(GuestDataChoice.MOVE_TO_ACCOUNT)
+        vm.resolveMigration(GuestDataChoice.KEEP_ON_DEVICE)
         assertTrue(vm.migrating.value)
         runCurrent()
         assertFalse(vm.migrating.value)
         assertTrue(vm.migrationFailed.value)
-        verify(sync).resolveMigration(MigrationOption.MIGRATE)
-        verify(sync, never()).resolveMigration(MigrationOption.FRESH)
-        `when`(sync.resolveMigration(MigrationOption.MIGRATE)).thenReturn(true)
-        vm.resolveMigration(MigrationOption.MIGRATE)
+        verify(sync).resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT)
+        verify(sync, never()).resolveChoice(GuestDataChoice.KEEP_ON_DEVICE)
+        `when`(sync.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT)).thenReturn(true)
+        vm.resolveMigration(GuestDataChoice.MOVE_TO_ACCOUNT)
         runCurrent()
         assertFalse(vm.migrationFailed.value)
     }

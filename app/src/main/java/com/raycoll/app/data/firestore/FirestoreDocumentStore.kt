@@ -64,9 +64,11 @@ class FirestoreDocumentStore @Inject constructor(
     override suspend fun cached(collectionPath: String): List<Doc> =
         firestore.collection(collectionPath).get(Source.CACHE).await().documents.map { Doc(it.id, it.data.orEmpty()) }
 
-    override suspend fun cachedDoc(path: String): Doc? {
+    override suspend fun cachedDoc(path: String): Doc? = try {
         val snapshot = firestore.document(path).get(Source.CACHE).await()
-        return if (snapshot.exists()) Doc(snapshot.id, snapshot.data.orEmpty()) else null
+        if (snapshot.exists()) Doc(snapshot.id, snapshot.data.orEmpty()) else null
+    } catch (error: FirebaseFirestoreException) {
+        if (error.code == FirebaseFirestoreException.Code.UNAVAILABLE) null else throw error
     }
 
     override fun write(op: WriteOp) {

@@ -51,7 +51,6 @@ class ImportScreenTest {
 
     @After
     fun teardown() {
-        repos.db.close()
     }
 
     /** Opóźnienia przetwarzania (150/300 ms) biegną na zegarze głównego wątku Robolectric. */
@@ -90,7 +89,7 @@ class ImportScreenTest {
             finished
         }
 
-        val deck = runBlocking { repos.localStore.snapshot() }.groups.single()
+        val deck = runBlocking { repos.snapshot() }.groups.single()
         assertEquals("Imported", deck.name)
         assertEquals(listOf("Word", "Translation"), deck.pageNames)
         assertEquals(listOf(listOf("hello", "cześć"), listOf("kitten", "kot")), deck.cards.map { it.pages })

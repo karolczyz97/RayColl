@@ -19,6 +19,30 @@ private const val READ_BUFFER_BYTES = 8 * 1024
 /** Pliki wskazane przez użytkownika w systemowym oknie wyboru (tekst UTF-8). */
 @Singleton
 class DocumentFiles @Inject constructor(@ApplicationContext private val context: Context) {
+    suspend fun readPrivate(name: String): String? = io {
+        val file = android.util.AtomicFile(java.io.File(context.filesDir, name))
+        if (file.baseFile.exists() ||
+            java.io.File(file.baseFile.path + ".bak").exists()
+        ) {
+            file.openRead().use { it.readAtMost(MAX_TEXT_BYTES)?.decodeToString() }
+        } else {
+            null
+        }
+    }
+    suspend fun writePrivate(name: String, text: String) = withContext(Dispatchers.IO) {
+        val file = android.util.AtomicFile(java.io.File(context.filesDir, name))
+        val stream = file.startWrite()
+        try {
+            stream.write(text.toByteArray(Charsets.UTF_8))
+            file.finishWrite(stream)
+        } catch (error: Exception) {
+            file.failWrite(stream)
+            throw error
+        }
+    }
+    suspend fun deletePrivate(name: String) = withContext(Dispatchers.IO) {
+        android.util.AtomicFile(java.io.File(context.filesDir, name)).delete()
+    }
 
     /**
      * Treść pliku (bez BOM) albo null, gdy nie da się go otworzyć ani przeczytać

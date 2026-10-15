@@ -80,7 +80,6 @@ class ModeDetailScreenTest {
     fun teardown() {
         vm.viewModelScope.cancel()
         compose.waitForIdle()
-        repos.db.close()
     }
 
     private fun nameField() = compose.onNode(hasSetTextAction() and hasText("Mode name"))

@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
 import com.raycoll.app.R
-import com.raycoll.app.data.sync.MigrationOption
+import com.raycoll.app.data.account.GuestDataChoice
 import com.raycoll.app.ui.theme.Spacing
 
 /**
@@ -24,14 +24,14 @@ import com.raycoll.app.ui.theme.Spacing
  * Okna nie da się zamknąć przypadkiem — rezygnacja z logowania to osobny przycisk.
  */
 @Composable
-fun MigrationDialog(busy: Boolean = false, failed: Boolean = false, onChoose: (MigrationOption) -> Unit) {
+fun MigrationDialog(busy: Boolean = false, failed: Boolean = false, onChoose: (GuestDataChoice) -> Unit) {
     AlertDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.auth_migration_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Text(stringResource(R.string.auth_migration_desc))
+                Text(stringResource(R.string.auth_choice_desc))
                 if (failed) {
                     Text(
                         stringResource(R.string.auth_migration_failed),
@@ -43,14 +43,17 @@ fun MigrationDialog(busy: Boolean = false, failed: Boolean = false, onChoose: (M
         },
         confirmButton = {
             Column(horizontalAlignment = Alignment.End) {
-                Button(enabled = !busy, onClick = { onChoose(MigrationOption.MIGRATE) }) {
-                    Text(stringResource(R.string.auth_migration_migrate_btn))
+                Button(enabled = !busy, onClick = { onChoose(GuestDataChoice.MOVE_TO_ACCOUNT) }) {
+                    Text(stringResource(R.string.auth_choice_move))
                 }
-                TextButton(enabled = !busy, onClick = { onChoose(MigrationOption.FRESH) }) {
-                    Text(stringResource(R.string.auth_migration_fresh_btn))
+                TextButton(enabled = !busy, onClick = { onChoose(GuestDataChoice.KEEP_ON_DEVICE) }) {
+                    Text(stringResource(R.string.auth_choice_keep))
+                }
+                TextButton(enabled = !busy, onClick = { onChoose(GuestDataChoice.DELETE) }) {
+                    Text(stringResource(R.string.auth_choice_delete))
                 }
                 Spacer(Modifier.height(Spacing.s))
-                TextButton(enabled = !busy, onClick = { onChoose(MigrationOption.CANCEL) }) {
+                TextButton(enabled = !busy, onClick = { onChoose(GuestDataChoice.CANCEL) }) {
                     Text(stringResource(R.string.auth_migration_cancel_btn))
                 }
             }

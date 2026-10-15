@@ -325,5 +325,12 @@
     <string name="study_progress_description">Karte %1$d von %2$d</string>
     <string name="study_modes_shared_hint">Lernmodi gelten für alle Decks. Änderungen wirken sich auf jedes Deck aus, das den Modus verwendet.</string>
     <string name="auth_sign_out_failed">Abmelden fehlgeschlagen. Bitte versuche es erneut.</string>
+    <string name="auth_choice_move">Auf das Konto übertragen</string>
+    <string name="auth_choice_keep">Auf diesem Telefon behalten</string>
+    <string name="auth_choice_delete">Daten vom Telefon löschen</string>
+    <string name="auth_choice_desc">Wähle vor der Anmeldung, was mit den Gastdaten passieren soll. Behaltene Daten kehren nach der Abmeldung zurück.</string>
+    <string name="auth_from_phone_suffix">" (vom Telefon)"</string>
+    <string name="auth_start_internet">Verbinde dich mit dem Internet, um zu beginnen</string>
+    <string name="auth_retry_start">Erneut versuchen</string>
 </resources>
 

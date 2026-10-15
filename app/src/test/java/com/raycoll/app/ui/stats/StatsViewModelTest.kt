@@ -3,7 +3,6 @@ package com.raycoll.app.ui.stats
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.core.LocalDates
-import com.raycoll.app.data.local.db.ActivityDayEntity
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
@@ -65,7 +64,6 @@ class StatsViewModelTest {
     fun teardown() {
         runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
         Dispatchers.resetMain()
-        repos.db.close()
     }
 
     private fun vm() = StatsViewModel(repos.deckRepository, clock).also { viewModels += it }
@@ -79,10 +77,10 @@ class StatsViewModelTest {
         pageNames: List<String>,
         cards: List<Flashcard>
     ) {
-        val data = repos.localStore.snapshot()
+        val data = repos.snapshot()
         val deck =
             FlashcardGroup(id = name, name = name, cards = cards, pageLanguages = languages, pageNames = pageNames)
-        repos.localStore.replaceAll(data.copy(groups = data.groups + deck))
+        repos.put(data.copy(groups = data.groups + deck))
     }
 
     @Test
@@ -172,8 +170,8 @@ class StatsViewModelTest {
         // regresja: VM używał System.currentTimeMillis() zamiast Clock
         val today = LocalDates.dayKey(clock.current)
         val yesterday = LocalDates.dayKey(clock.current - 86_400_000L)
-        repos.db.activityDao().upsertActivity(listOf(ActivityDayEntity(today, "", 2)))
-        repos.db.activityDao().upsertActivity(listOf(ActivityDayEntity(yesterday, "", 1)))
+        repos.setActivity(today, 2)
+        repos.setActivity(yesterday, 1)
         val vm = vm()
         assertEquals(2, vm.ready { it.heatmap.isNotEmpty() }.streak)
     }

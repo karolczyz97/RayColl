@@ -2,56 +2,52 @@ package com.raycoll.app.testing
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
-import androidx.room.Room
 import com.raycoll.app.core.Clock
-import com.raycoll.app.data.local.db.RayCollDatabase
-import com.raycoll.app.data.repository.DataMutations
+import com.raycoll.app.data.files.DocumentFiles
+import com.raycoll.app.data.firestore.FieldOp
+import com.raycoll.app.data.firestore.UserPaths
+import com.raycoll.app.data.firestore.WriteOp
+import com.raycoll.app.data.repository.BackupRepository
 import com.raycoll.app.data.repository.DeckRepository
-import com.raycoll.app.data.repository.LocalStore
-import com.raycoll.app.data.repository.NamespaceManager
 import com.raycoll.app.data.repository.StudyModeRepository
-import java.util.concurrent.Executor
+import com.raycoll.app.domain.model.StoreData
+import kotlinx.coroutines.Dispatchers
 
-/** Zegar sterowany z testu. */
 class FakeClock(var current: Long = 1_700_000_000_000L) : Clock {
     override fun now(): Long = current
-
     fun advance(deltaMs: Long) {
         current += deltaMs
     }
 }
 
-/** Repozytoria na bazie w pamięci — wspólne dla testów ViewModeli i repozytoriów. */
 data class TestRepos(
-    val db: RayCollDatabase,
-    val namespaceManager: NamespaceManager,
+    val store: InMemoryDocumentStore,
+    val account: FakeAccount,
     val deckRepository: DeckRepository,
     val studyModeRepository: StudyModeRepository,
-    val localStore: LocalStore,
-    val mutations: DataMutations
-)
-
+    val backupRepository: BackupRepository
+) {
+    suspend fun seed(language: String = "en") = backupRepository.writeSeed(checkNotNull(account.uid.value), language)
+    suspend fun snapshot(): StoreData = backupRepository.snapshot()
+    suspend fun put(data: StoreData) = backupRepository.restoreGuest(data, checkNotNull(account.uid.value))
+    fun setActivity(day: String, count: Int) = store.write(
+        WriteOp.Set(
+            UserPaths(checkNotNull(account.uid.value)).activityDay(day),
+            mapOf("count" to count, "updatedAt" to FieldOp.ServerTime)
+        )
+    )
+}
 object VmTestHarness {
     fun create(context: Context, clock: Clock): TestRepos {
-        // synchroniczne wykonawcy: zapytania Room nie zostają w tle po db.close() w teardown
-        val direct = Executor { it.run() }
-        val db = Room.inMemoryDatabaseBuilder(context, RayCollDatabase::class.java)
-            .allowMainThreadQueries()
-            .setTransactionExecutor(direct)
-            .setQueryExecutor(direct)
-            .build()
-        val namespace = NamespaceManager()
-        val mutations = DataMutations()
+        val store = InMemoryDocumentStore(clock)
+        val account = FakeAccount()
         return TestRepos(
-            db = db,
-            namespaceManager = namespace,
-            deckRepository = DeckRepository(db, clock, namespace, mutations),
-            studyModeRepository = StudyModeRepository(db, clock, namespace, mutations),
-            localStore = LocalStore(db, namespace, mutations, clock),
-            mutations = mutations
+            store,
+            account,
+            DeckRepository(store, account, clock),
+            StudyModeRepository(store, account, clock),
+            BackupRepository(store, account, DocumentFiles(context), clock, Dispatchers.Unconfined)
         )
     }
 }
-
-/** Argumenty trasy nawigacji tak, jak przekazuje je NavHost. */
 fun routeArgs(vararg args: Pair<String, Any?>): SavedStateHandle = SavedStateHandle(mapOf(*args))

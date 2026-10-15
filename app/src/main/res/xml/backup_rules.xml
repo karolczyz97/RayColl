@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- tylko baza aplikacji (z dziennikiem WAL); pamięć podręczna Firestore odtworzy się z chmury -->
-    <include domain="database" path="raycoll.db" />
-    <include domain="database" path="raycoll.db-wal" />
-        <include domain="database" path="raycoll.db-shm" />
-        <include domain="database" path="raycoll.db-journal" />
+    <!-- Ustawienia urządzenia i odłożone dane gościa; Firebase Auth i cache są wyłączone. -->
     <include domain="file" path="datastore/" />
+        <include domain="file" path="guest_stash.json" />
 </full-backup-content>

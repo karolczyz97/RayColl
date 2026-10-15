@@ -64,7 +64,6 @@ class ArchiveViewModelTest {
     fun teardown() {
         runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
         Dispatchers.resetMain()
-        repos.db.close()
     }
 
     private fun vm() = ArchiveViewModel(repos.deckRepository, clock, dispatcher).also { viewModels += it }

@@ -54,9 +54,7 @@ class DialogStateRestorationTest {
         compose.onNodeWithContentDescription("Add card").performClick()
         field("Front").performTextInput("new question")
         field("Back").performTextInput("new answer")
-        repos.db.openHelper.writableDatabase.execSQL(
-            "CREATE TRIGGER fail_new_card BEFORE INSERT ON cards BEGIN SELECT RAISE(ABORT, 'test save failure'); END"
-        )
+        repos.store.failWhen = { it is com.raycoll.app.data.firestore.WriteOp.Set && "/cards/" in it.path }
         compose.onNodeWithText("Save").performClick()
         compose.waitUntil(5_000) {
             compose.onNodeWithText("Save").fetchSemanticsNode().config.contains(SemanticsProperties.Disabled).not()
@@ -64,7 +62,7 @@ class DialogStateRestorationTest {
         assertEquals("new question", fieldText("Front"))
         assertEquals("new answer", fieldText("Back"))
         compose.onNodeWithText("Save").assertIsEnabled()
-        repos.db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_new_card")
+        repos.store.failWhen = { false }
         compose.onNodeWithText("Save").performClick()
         compose.waitUntil(5_000) { cards().size == 3 }
         assertEquals(listOf("new question", "new answer"), cards().last().pages)
@@ -74,7 +72,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `mode reset confirmation stays open after state restoration`() {
-        runBlocking { repos.localStore.seedIfEmpty("en") }
+        runBlocking { repos.seed("en") }
         val vm =
             ModeDetailViewModel(routeArgs("modeId" to "classic"), repos.studyModeRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
@@ -128,7 +126,6 @@ class DialogStateRestorationTest {
 
     @After
     fun teardown() {
-        repos.db.close()
     }
 
     private fun waitForText(text: String) = compose.waitUntil(5_000) {
@@ -209,6 +206,6 @@ class DialogStateRestorationTest {
         assertEquals("dopisanie po obrocie trafia na koniec", "delete", fieldText("DELETE"))
         compose.onAllNodesWithText("Delete").onLast().performClick()
         compose.waitUntil(5_000) { closed }
-        assertNotNull(runBlocking { repos.localStore.snapshot() }.groups.single().deletedAt)
+        assertNotNull(runBlocking { repos.snapshot() }.groups.single().deletedAt)
     }
 }

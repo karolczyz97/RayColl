@@ -335,5 +335,12 @@
     <string name="study_progress_description">Fiszka %1$d z %2$d</string>
     <string name="study_modes_shared_hint">Tryby są wspólne dla wszystkich talii. Edycja trybu zmienia go w każdej talii, która go używa.</string>
     <string name="auth_sign_out_failed">Nie udało się wylogować. Spróbuj ponownie.</string>
+    <string name="auth_choice_move">Przenieś na konto</string>
+    <string name="auth_choice_keep">Zostaw na tym telefonie</string>
+    <string name="auth_choice_delete">Usuń dane z telefonu</string>
+    <string name="auth_choice_desc">Wybierz, co zrobić z danymi gościa przed logowaniem. Odłożone dane wrócą po wylogowaniu.</string>
+    <string name="auth_from_phone_suffix">" (z telefonu)"</string>
+    <string name="auth_start_internet">Połącz się z internetem, żeby zacząć</string>
+    <string name="auth_retry_start">Spróbuj ponownie</string>
 </resources>
 

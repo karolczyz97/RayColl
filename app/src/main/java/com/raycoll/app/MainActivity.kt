@@ -8,16 +8,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.raycoll.app.data.account.AccountState
 import com.raycoll.app.ui.components.MigrationDialog
 import com.raycoll.app.ui.main.MainViewModel
 import com.raycoll.app.ui.navigation.RayCollNavHost
@@ -39,6 +47,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+            val accountState by viewModel.accountState.collectAsStateWithLifecycle()
             val migrationRequired by viewModel.migrationRequired.collectAsStateWithLifecycle()
             val migrating by viewModel.migrating.collectAsStateWithLifecycle()
             val migrationFailed by viewModel.migrationFailed.collectAsStateWithLifecycle()
@@ -60,7 +69,26 @@ class MainActivity : ComponentActivity() {
                     onDispose {}
                 }
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    RayCollNavHost()
+                    when (accountState) {
+                        AccountState.Starting -> Column(
+                            Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                        }
+
+                        AccountState.NeedsInternet -> Column(
+                            Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(stringResource(R.string.auth_start_internet))
+                            Button(onClick = viewModel::retryStart) { Text(stringResource(R.string.auth_retry_start)) }
+                        }
+
+                        is AccountState.Ready -> RayCollNavHost()
+                    }
                     if (migrationRequired) {
                         MigrationDialog(
                             busy = migrating,

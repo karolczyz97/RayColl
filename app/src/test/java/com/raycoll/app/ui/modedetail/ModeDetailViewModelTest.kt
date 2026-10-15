@@ -60,7 +60,7 @@ class ModeDetailViewModelTest {
         vm.save()
         vm.save()
         advanceUntilIdle()
-        assertEquals(1, repos.localStore.snapshot().studyModes.size)
+        assertEquals(1, repos.snapshot().studyModes.size)
     }
 
     private val dispatcher = UnconfinedTestDispatcher()
@@ -75,7 +75,6 @@ class ModeDetailViewModelTest {
     @After
     fun teardown() {
         Dispatchers.resetMain()
-        repos.db.close()
     }
 
     private fun vm(modeId: String? = null) =
@@ -182,12 +181,12 @@ class ModeDetailViewModelTest {
         vm.chooseTemplate(ModeTemplate.CLASSIC)
         vm.save()
         advanceUntilIdle()
-        assertTrue(repos.localStore.snapshot().studyModes.isEmpty())
+        assertTrue(repos.snapshot().studyModes.isEmpty())
         vm.setName("My mode")
         vm.save()
         advanceUntilIdle()
         assertEquals(ModeDetailEvent.Closed, vm.events.first())
-        val saved = repos.localStore.snapshot().studyModes.single()
+        val saved = repos.snapshot().studyModes.single()
         assertEquals("My mode", saved.name)
         assertEquals(ModeTemplate.CLASSIC.steps, saved.steps)
         assertFalse(saved.isBuiltIn)
@@ -203,7 +202,7 @@ class ModeDetailViewModelTest {
         vm.save()
         advanceUntilIdle()
         assertEquals(ModeDetailEvent.Closed, vm.events.first())
-        assertEquals(id, repos.localStore.snapshot().studyModes.single().id)
+        assertEquals(id, repos.snapshot().studyModes.single().id)
         assertEquals("Renamed", repos.studyModeRepository.getMode(id)!!.name)
     }
 
@@ -227,13 +226,13 @@ class ModeDetailViewModelTest {
             // synchronizacja (Firestore) i kopia zapasowa niosą wybrany wariant
             val cloud = FirestoreSchema.modeFromMap(id, FirestoreSchema.modeToMap(saved))
             assertEquals(saved.steps, cloud.steps)
-            val backupSteps = repos.localStore.snapshot().studyModes.single { it.id == id }.steps
+            val backupSteps = repos.snapshot().studyModes.single { it.id == id }.steps
             assertEquals(CompoundParams.FlipReveal(RevealStyle.NEXT), (backupSteps[flipIndex] as CompoundStep).params)
         }
 
     @Test
     fun `reset built-in restores its original name and steps`() = runTest(dispatcher) {
-        repos.localStore.seedIfEmpty("en")
+        repos.seed("en")
         val original = repos.studyModeRepository.getMode("classic")!!
         repos.studyModeRepository.updateMode(original.copy(name = "Edited", steps = listOf(ShowPageStep())))
         val vm = vm("classic")
@@ -272,7 +271,7 @@ class ModeDetailViewModelTest {
 
     @Test
     fun `an existing mode is clean until edited`() = runTest(dispatcher) {
-        repos.localStore.seedIfEmpty("en")
+        repos.seed("en")
         val vm = vm("classic")
         advanceUntilIdle()
         assertFalse(editing(vm).dirty)

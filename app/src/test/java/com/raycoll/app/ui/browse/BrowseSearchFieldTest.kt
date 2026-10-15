@@ -49,7 +49,6 @@ class BrowseSearchFieldTest {
     @After
     fun teardown() {
         filterExecutor.shutdownNow()
-        repos.db.close()
     }
 
     @Test

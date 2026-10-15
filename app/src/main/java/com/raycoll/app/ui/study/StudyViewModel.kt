@@ -10,7 +10,6 @@ import androidx.navigation.toRoute
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
-import com.raycoll.app.data.repository.ReviewWriteQueue
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.selectors.getDueCards
@@ -41,7 +40,6 @@ sealed interface StudyUiState {
     data object Loading : StudyUiState
 
     data object DeckMissing : StudyUiState
-    data object ReviewSaveBlocked : StudyUiState
 
     data class NoDueCards(val deckName: String) : StudyUiState
 
@@ -71,8 +69,6 @@ sealed interface StudyUiState {
 sealed interface StudyEvent {
     data class SpeechError(val error: SessionError) : StudyEvent
 
-    /** Część ocen nie zapisała się w bazie — czekają w kolejce na ponowienie. */
-    data object ReviewSaveFailed : StudyEvent
     data object AudioFocusDenied : StudyEvent
 }
 
@@ -85,7 +81,6 @@ class StudyViewModel @Inject constructor(
     private val prefsRepository: UserPreferencesRepository,
     private val sessionHolder: StudySessionHolder,
     private val sessionDeps: SessionDeps,
-    private val reviewWrites: ReviewWriteQueue,
     private val clock: Clock
 ) : ViewModel() {
     val deckId: String = savedStateHandle.toRoute<StudyRoute>().deckId
@@ -95,7 +90,6 @@ class StudyViewModel @Inject constructor(
 
     private val eventSink = UiEvents<StudyEvent>()
     val events: Flow<StudyEvent> = eventSink.flow
-    val reviewWriteState = reviewWrites.state
 
     private var engine: SessionEngine? = null
     private var deckName = ""
@@ -126,21 +120,9 @@ class StudyViewModel @Inject constructor(
             }
         }
         viewModelScope.launch { startSession() }
-        // nieudany zapis oceny nie znika po cichu: komunikat z możliwością ponowienia
-        viewModelScope.launch {
-            reviewWrites.state.map { it.failed }.distinctUntilChanged().collect { failed ->
-                if (failed) eventSink.send(StudyEvent.ReviewSaveFailed)
-            }
-        }
     }
 
     private suspend fun startSession() {
-        // Nie otwieramy nowej sesji na danych sprzed poprzedniej oceny. Błąd ma akcję
-        // ponowienia w komunikacie; po udanym ponowieniu oczekiwanie kończy się samo.
-        if (!reviewWrites.awaitIdle()) {
-            _uiState.value = StudyUiState.ReviewSaveBlocked
-            reviewWrites.state.first { it.pending == 0 && !it.failed }
-        }
         val deck = deckRepository.getDeck(deckId)
         if (deck == null) {
             _uiState.value = StudyUiState.DeckMissing
@@ -152,6 +134,7 @@ class StudyViewModel @Inject constructor(
             return
         }
 
+        deckRepository.markStudied(deckId)
         val steps = modeRepository.getModeOrDefault(deck.activeModeId).steps
         val preferences = prefsRepository.preferences.first()
         val engine = SessionEngine(deck, steps, sessionDeps, clock, preferences.ttsRate, viewModelScope)
@@ -163,7 +146,7 @@ class StudyViewModel @Inject constructor(
 
         viewModelScope.launch {
             // zmiana stanu kolejki zapisów (np. ponowienie po błędzie) przelicza też podsumowanie końca sesji
-            combine(engine.state, engine.isPaused, reviewWrites.state) { session, paused, _ ->
+            combine(engine.state, engine.isPaused) { session, paused ->
                 session to paused
             }.collectLatest { (session, paused) ->
                 session.error?.let { error ->
@@ -208,7 +191,6 @@ class StudyViewModel @Inject constructor(
 
     /** Karty podsumowania czytane z bazy dopiero po zapisie wszystkich ocen. */
     private suspend fun refreshResultCards(session: SessionState) {
-        if (!reviewWrites.awaitIdle()) return
         val ids = session.cards.map { it.id }.toSet()
         val fresh = deckRepository.getDeck(deckId)?.cards?.filter { it.id in ids }.orEmpty()
         _uiState.update { current ->
@@ -272,19 +254,11 @@ class StudyViewModel @Inject constructor(
     /** "Powtórz nieudane": tylko karty ocenione jako "jeszcze raz". */
     fun restartFailed() = restartWith { session -> session.cards.map { it.id }.filter { it in session.failedCardIds } }
 
-    /** Ponowienie zapisu ocen, które się nie zapisały. */
-    fun retryReviewSave() = reviewWrites.retry()
-
     private fun restartWith(selectIds: (SessionState) -> List<String>) {
         val engine = engine ?: return
         if (restartJob?.isActive == true) return
         val ids = selectIds(engine.state.value)
         restartJob = viewModelScope.launch {
-            // nowa próba czyta karty z bazy — wszystkie oceny poprzedniej muszą już tam być
-            if (!reviewWrites.awaitIdle()) {
-                eventSink.send(StudyEvent.ReviewSaveFailed)
-                return@launch
-            }
             val fresh = deckRepository.getDeck(deckId)?.cards?.associateBy { it.id } ?: return@launch
             val cards = ids.mapNotNull(fresh::get)
             if (cards.isEmpty()) return@launch

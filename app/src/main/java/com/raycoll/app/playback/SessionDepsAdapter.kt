@@ -1,14 +1,17 @@
 package com.raycoll.app.playback
 
 import android.util.Log
-import com.raycoll.app.data.repository.PendingReview
-import com.raycoll.app.data.repository.ReviewWriteQueue
+import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.di.ApplicationScope
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.session.ListenResult
 import com.raycoll.app.domain.session.SessionDeps
 import com.raycoll.app.domain.session.SpeakResult
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 
 private const val TAG = "SessionDeps"
 
@@ -18,7 +21,8 @@ class SessionDepsAdapter @Inject constructor(
     private val ttsPlayer: TtsPlayer,
     private val sttRecognizer: SttRecognizer,
     private val hapticPlayer: HapticAndSoundPlayer,
-    private val reviewWrites: ReviewWriteQueue,
+    private val deckRepository: DeckRepository,
+    @ApplicationScope private val scope: CoroutineScope,
     private val sessionHolder: StudySessionHolder
 ) : SessionDeps {
 
@@ -55,7 +59,10 @@ class SessionDepsAdapter @Inject constructor(
 
     override fun haptic(rating: Int) = hapticPlayer.haptic(rating)
 
-    /** Zapis poza zakresem ekranu (kolejka z potwierdzeniem): wyjście z sesji zaraz po ocenie jej nie gubi. */
-    override fun onCardReviewed(deckId: String, cardId: String, rating: Int, replaceFromBase: SrsState?) =
-        reviewWrites.submit(PendingReview(deckId, cardId, rating, replaceFromBase))
+    /** Zapis żyje z aplikacją; Firestore sam utrwala oczekujące zmiany. */
+    override fun onCardReviewed(deckId: String, cardId: String, rating: Int, replaceFromBase: SrsState?) {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            deckRepository.reviewCard(deckId, cardId, rating, replaceFromBase)
+        }
+    }
 }

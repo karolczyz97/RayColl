@@ -19,7 +19,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.raycoll.app.R
-import com.raycoll.app.data.sync.SyncStatus
+import com.raycoll.app.data.firestore.SyncStatus
 import com.raycoll.app.ui.theme.Spacing
 
 /** Stan synchronizacji z chmurą; nic nie pokazuje, gdy wszystko jest wysłane. */

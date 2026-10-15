@@ -44,7 +44,6 @@ class DashboardViewModelTest {
     fun teardown() {
         runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
         Dispatchers.resetMain()
-        repos.db.close()
     }
 
     private fun vm() =
@@ -58,7 +57,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `seeded decks and modes are listed`() = runTest {
-        repos.localStore.seedIfEmpty("pl")
+        repos.seed("pl")
         val state = vm().ready { it.decks.size == 2 }
         assertEquals(2, state.modes.size)
     }
@@ -86,7 +85,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `archived deck leaves the list`() = runTest {
-        repos.localStore.seedIfEmpty("en")
+        repos.seed("en")
         val vm = vm()
         val deckId = vm.ready { it.decks.size == 2 }.decks.first().id
         vm.archiveDeck(deckId)

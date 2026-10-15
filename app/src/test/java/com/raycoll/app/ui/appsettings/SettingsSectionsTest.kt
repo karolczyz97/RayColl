@@ -14,9 +14,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import com.raycoll.app.data.firestore.SyncStatus
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.remote.auth.Account
-import com.raycoll.app.data.sync.SyncStatus
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

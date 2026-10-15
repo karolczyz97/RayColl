@@ -73,7 +73,6 @@ import kotlinx.coroutines.withContext
 @Composable
 fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val reviewWrites by viewModel.reviewWriteState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -126,15 +125,6 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel())
                 }
             }
 
-            StudyEvent.ReviewSaveFailed -> {
-                val result = messages.showAction(
-                    message = resources.getString(R.string.study_review_save_failed),
-                    actionLabel = resources.getString(R.string.errors_retry),
-                    duration = SnackbarDuration.Long
-                )
-                if (result == SnackbarResult.ActionPerformed) viewModel.retryReviewSave()
-            }
-
             StudyEvent.AudioFocusDenied -> messages.showLatest(resources.getString(R.string.study_audio_focus_denied))
         }
     }
@@ -179,9 +169,6 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel())
             }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (reviewWrites.failed) {
-                ReviewWriteError(onRetry = viewModel::retryReviewSave)
-            }
             AnimatedContent(
                 targetState = uiState,
                 contentKey = { it.screenPhase() },
@@ -192,8 +179,6 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel())
                 val contentModifier = Modifier.fillMaxSize()
                 when (state) {
                     StudyUiState.Loading -> LoadingState(contentModifier)
-
-                    StudyUiState.ReviewSaveBlocked -> if (!reviewWrites.failed) LoadingState(contentModifier)
 
                     StudyUiState.DeckMissing -> ErrorState(
                         stringResource(R.string.errors_deck_missing),
@@ -336,6 +321,6 @@ internal enum class StudyScreenPhase { LOADING, EMPTY, ACTIVE, SUMMARY }
 
 internal fun StudyUiState.screenPhase(): StudyScreenPhase = when (this) {
     StudyUiState.Loading -> StudyScreenPhase.LOADING
-    StudyUiState.DeckMissing, StudyUiState.ReviewSaveBlocked, is StudyUiState.NoDueCards -> StudyScreenPhase.EMPTY
+    StudyUiState.DeckMissing, is StudyUiState.NoDueCards -> StudyScreenPhase.EMPTY
     is StudyUiState.Active -> if (finished) StudyScreenPhase.SUMMARY else StudyScreenPhase.ACTIVE
 }

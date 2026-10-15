@@ -16,7 +16,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.raycoll.app.data.remote.FirebaseConfig
-import com.raycoll.app.data.sync.CurrentUser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,7 +34,8 @@ private fun FirebaseUser.toAccount() = Account(uid, email)
 enum class SignInError { PLAY_SERVICES, NO_TOKEN, INVALID_TOKEN, LOGIN_FAILED, LOCAL_DATA }
 
 sealed interface SignInResult {
-    data class Success(val account: Account) : SignInResult
+    data class Success(val account: Account, val isNewUser: Boolean = false) : SignInResult
+    data object ChoiceRequired : SignInResult
     data class Failure(val error: SignInError) : SignInResult
 }
 
@@ -66,20 +66,48 @@ interface GoogleSignIn {
 class AuthRepository internal constructor(
     private val auth: FirebaseAuth,
     private val credentialManager: CredentialManager
-) : CurrentUser,
-    GoogleSignIn {
+) : GoogleSignIn {
     @Inject constructor(auth: FirebaseAuth, @ApplicationContext context: Context) :
         this(auth, CredentialManager.create(context))
 
-    private val _account = MutableStateFlow(auth.currentUser?.toAccount())
+    private val _account = MutableStateFlow(auth.currentUser?.takeUnless { it.isAnonymous }?.toAccount())
 
     override val account: StateFlow<Account?> = _account.asStateFlow()
 
     init {
-        auth.addAuthStateListener { _account.value = it.currentUser?.toAccount() }
+        auth.addAuthStateListener {
+            _account.value =
+                it.currentUser?.takeUnless { user -> user.isAnonymous }?.toAccount()
+        }
     }
 
-    override fun currentUid(): String? = auth.currentUser?.uid
+    val currentUser: FirebaseUser? get() = auth.currentUser
+    suspend fun signInAnonymously() = auth.signInAnonymously().await()
+    suspend fun linkWithGoogle(idToken: String) = checkNotNull(auth.currentUser)
+        .linkWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+    suspend fun deleteCurrentUser() {
+        try {
+            auth.currentUser?.delete()?.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not delete empty guest account", e)
+        }
+    }
+    suspend fun signInWithCredential(credential: com.google.firebase.auth.AuthCredential): SignInResult = try {
+        val result = auth.signInWithCredential(credential).await()
+        val user = result.user
+        if (user == null) {
+            SignInResult.Failure(SignInError.LOGIN_FAILED)
+        } else {
+            SignInResult.Success(user.toAccount(), result.additionalUserInfo?.isNewUser == true)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Firebase sign-in failed", e)
+        SignInResult.Failure(SignInError.LOGIN_FAILED)
+    }
 
     /** Wymaga kontekstu Activity — Credential Manager pokazuje własny arkusz wyboru konta. */
     override suspend fun requestGoogleIdToken(activityContext: Context): IdTokenResult {
@@ -111,18 +139,8 @@ class AuthRepository internal constructor(
         }
     }
 
-    override suspend fun signInWithIdToken(idToken: String): SignInResult {
-        return try {
-            val user = auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await().user
-                ?: return SignInResult.Failure(SignInError.LOGIN_FAILED)
-            SignInResult.Success(user.toAccount())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Firebase sign-in failed", e)
-            SignInResult.Failure(SignInError.LOGIN_FAILED)
-        }
-    }
+    override suspend fun signInWithIdToken(idToken: String): SignInResult =
+        signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))
 
     override suspend fun signOut() {
         auth.signOut()

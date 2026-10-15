@@ -52,12 +52,11 @@ class StudyModeConsistencyTest {
     @Before
     fun setup() {
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), clock)
-        runBlocking { repos.localStore.seedIfEmpty("en") }
+        runBlocking { repos.seed("en") }
     }
 
     @After
     fun teardown() {
-        repos.db.close()
     }
 
     @Test

@@ -56,7 +56,6 @@ class DashboardScrollTest {
         } finally {
             vm.viewModelScope.cancel()
             compose.waitForIdle()
-            repos.db.close()
         }
     }
 
@@ -89,7 +88,6 @@ class DashboardScrollTest {
         } finally {
             vm.viewModelScope.cancel()
             compose.waitForIdle()
-            repos.db.close()
         }
     }
 }
