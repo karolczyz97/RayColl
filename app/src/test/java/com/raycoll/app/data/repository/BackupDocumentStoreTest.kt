@@ -148,6 +148,26 @@ class BackupDocumentStoreTest {
         assertEquals(builtIn.steps, copy.steps)
     }
 
+    @Test fun `modified built in mode copies from two guests stay separate on one account`() = runTest {
+        val builtIn = SEED_MODES.first()
+        repos.seed()
+        repos.studyModeRepository.updateMode(builtIn.copy(name = "First"))
+        val first = repos.snapshot()
+        repos.account.signIn("second-guest")
+        repos.seed()
+        clock.advance(1_000)
+        repos.studyModeRepository.updateMode(builtIn.copy(name = "Second"))
+        val second = repos.snapshot()
+        repos.account.signIn("google")
+        repos.seed()
+        backup.joinGuest(first, "google", " (from phone)")
+        backup.joinGuest(second, "google", " (from phone)")
+        assertEquals(
+            setOf("First (from phone)", "Second (from phone)"),
+            repos.snapshot().studyModes.filter { !it.isBuiltIn }.map { it.name }.toSet()
+        )
+    }
+
     @Test fun `same deck names remain separate and guest activity is added`() = runTest {
         val guestId = own("Same")
         repos.setActivity("2026-10-15", 2)

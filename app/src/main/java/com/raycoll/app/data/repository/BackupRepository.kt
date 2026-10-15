@@ -150,9 +150,12 @@ class BackupRepository @Inject constructor(
     }
     suspend fun joinGuest(data: StoreData, uid: String, modeSuffix: String) {
         val own = live(data)
+        // Id kopii zależy też od chwili zmiany trybu: ponowienie z pending_join trafia w tę samą kopię,
+        // a przeniesienie innego gościa na to samo konto nie nadpisuje poprzedniej.
         val remap = own.studyModes.filter { it.isBuiltIn && it.isModifiedBuiltIn() }.associate {
-            it.id to
-                java.util.UUID.nameUUIDFromBytes(("guest-mode:" + it.id).toByteArray(Charsets.UTF_8)).toString()
+            it.id to java.util.UUID.nameUUIDFromBytes(
+                "guest-mode:${it.id}:${it.updatedAt}".toByteArray(Charsets.UTF_8)
+            ).toString()
         }
         val modes = own.studyModes.mapNotNull { mode ->
             if (!mode.isBuiltIn) {
