@@ -184,7 +184,7 @@ tasks.named("check") { dependsOn("ktlintCheck") }
 // zanim lint testów je otworzy (AGP 9.4 + Hilt 2.60, inaczej FileNotFoundException).
 tasks.configureEach {
     if (name.startsWith("lintAnalyze") && name.endsWith("UnitTest")) {
-        dependsOn(tasks.matching { it.name.startsWith("hiltJavaCompile") && !it.name.endsWith("UnitTest") })
+        dependsOn(tasks.matching { it.name.startsWith("hiltJavaCompile") })
     }
 }
 

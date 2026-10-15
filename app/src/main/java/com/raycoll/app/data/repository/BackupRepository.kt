@@ -2,7 +2,6 @@ package com.raycoll.app.data.repository
 
 import android.net.Uri
 import com.raycoll.app.core.Clock
-import com.raycoll.app.core.Ids
 import com.raycoll.app.data.account.CurrentAccount
 import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.data.firestore.DocumentStore
@@ -11,6 +10,7 @@ import com.raycoll.app.data.firestore.UserPaths
 import com.raycoll.app.data.firestore.WriteOp
 import com.raycoll.app.data.remote.firestore.FirestoreSchema as Schema
 import com.raycoll.app.di.DefaultDispatcher
+import com.raycoll.app.domain.backup.BackupCheck
 import com.raycoll.app.domain.merge.isUntouchedSeed
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.operations.isModifiedBuiltIn
@@ -72,6 +72,8 @@ class BackupRepository @Inject constructor(
         val data = try {
             decode(text)
         } catch (_: SerializationException) {
+            return BackupResult.INVALID_BACKUP
+        } catch (_: IllegalArgumentException) {
             return BackupResult.INVALID_BACKUP
         }
         replace(live(data))
@@ -136,18 +138,22 @@ class BackupRepository @Inject constructor(
             }
         }
     }
-    suspend fun writeSeed(uid: String, language: String) {
-        store.writeAll(operations(SeedData.createSeedData(language), uid))
+    suspend fun writeSeed(uid: String, language: String, reset: Boolean = false) {
+        val seed = SeedData.createSeedData(language)
+        if (reset) replace(seed, uid) else store.writeAll(operations(seed, uid))
     }
     suspend fun factoryReset() {
-        replace(SeedData.createSeedData(Locale.getDefault().language))
+        writeSeed(uid(), Locale.getDefault().language, reset = true)
     }
     suspend fun restoreGuest(data: StoreData, uid: String) {
         store.writeAll(operations(live(data), uid))
     }
     suspend fun joinGuest(data: StoreData, uid: String, modeSuffix: String) {
         val own = live(data)
-        val remap = own.studyModes.filter { it.isBuiltIn && it.isModifiedBuiltIn() }.associate { it.id to Ids.newId() }
+        val remap = own.studyModes.filter { it.isBuiltIn && it.isModifiedBuiltIn() }.associate {
+            it.id to
+                java.util.UUID.nameUUIDFromBytes(("guest-mode:" + it.id).toByteArray(Charsets.UTF_8)).toString()
+        }
         val modes = own.studyModes.mapNotNull { mode ->
             if (!mode.isBuiltIn) {
                 mode
@@ -195,6 +201,9 @@ class BackupRepository @Inject constructor(
     suspend fun deletePrivate(name: String) = documentFiles.deletePrivate(name)
     private suspend fun encode(data: StoreData) =
         withContext(dispatcher) { json.encodeToString(StoreData.serializer(), data) }
-    private suspend fun decode(text: String) =
-        withContext(dispatcher) { json.decodeFromString(StoreData.serializer(), text) }
+    private suspend fun decode(text: String) = withContext(dispatcher) {
+        val root = json.parseToJsonElement(text) as? kotlinx.serialization.json.JsonObject
+        require(root != null && listOf("groups", "studyModes", "activityHeatmap").all { it in root })
+        json.decodeFromJsonElement(StoreData.serializer(), root).also(BackupCheck::validate)
+    }
 }

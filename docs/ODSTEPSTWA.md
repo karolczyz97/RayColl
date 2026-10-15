@@ -28,6 +28,19 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
   na liście usuwanych testów. Test został dostosowany, a nie usunięty.
 - **Gdzie:** `ui/study/StudyPresentationTest.kt`.
 
+## Firestore — dane startowe i kontrola budowania
+
+- **Co:** wspólne `writeSeed` ma opcjonalny argument `reset`, żeby reset używał tej samej
+  funkcji co nowe konta, ale oznaczał stare dane jako usunięte i stemplował daty bieżącym czasem.
+  Nieruszone przykłady nowego gościa zachowują daty 0, których wymaga istniejące rozpoznawanie
+  własnych danych gościa; reguły z 14.5 przyjmują takie dane startowe.
+- **Gdzie:** `BackupRepository.writeSeed`, `MigrationRules.isUntouchedSeed`.
+- **Co i dlaczego:** rozszerzono istniejącą zależność lint od kompilacji Hilt również na
+  źródła testów. Rzeczywisty wspólny przebieg `test lint` ujawnił błąd narzędzi: lint otwierał
+  plik `StudySessionServiceTest_TestComponentDataSupplier.java` w czasie jego ponownego
+  generowania. Żadna kontrola nie została wyłączona.
+- **Gdzie:** `app/build.gradle.kts`, zależności `lintAnalyze…UnitTest`.
+
 ## Etap 3 — opcjonalna adnotacja Commons CSV
 
 - **Co:** dodano jedną regułę R8: `-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings`.

@@ -29,7 +29,24 @@ data class TestRepos(
 ) {
     suspend fun seed(language: String = "en") = backupRepository.writeSeed(checkNotNull(account.uid.value), language)
     suspend fun snapshot(): StoreData = backupRepository.snapshot()
-    suspend fun put(data: StoreData) = backupRepository.restoreGuest(data, checkNotNull(account.uid.value))
+    suspend fun put(data: StoreData) {
+        val paths = UserPaths(checkNotNull(account.uid.value))
+        val schema = com.raycoll.app.data.remote.firestore.FirestoreSchema
+        store.writeAll(
+            buildList {
+                data.groups.forEachIndexed { position, deck ->
+                    add(WriteOp.Set(paths.deck(deck.id), schema.deckToMap(deck, position)))
+                    deck.cards.forEachIndexed { index, card ->
+                        add(WriteOp.Set(paths.card(deck.id, card.id), schema.cardToMap(card, index)))
+                    }
+                }
+                data.studyModes.forEach { add(WriteOp.Set(paths.mode(it.id), schema.modeToMap(it))) }
+                data.activityHeatmap.forEach { (day, count) ->
+                    add(WriteOp.Set(paths.activityDay(day), mapOf("count" to count, "updatedAt" to FieldOp.ServerTime)))
+                }
+            }
+        )
+    }
     fun setActivity(day: String, count: Int) = store.write(
         WriteOp.Set(
             UserPaths(checkNotNull(account.uid.value)).activityDay(day),
