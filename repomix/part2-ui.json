@@ -1,7 +1,7 @@
 {
   "$schema": "https://repomix.com/schemas/latest/schema.json",
   "output": {
-    "filePath": "repomix-full-part2-ui.xml",
+    "filePath": "repomix/out/part2-ui.xml",
     "style": "xml",
     "filePathStyle": "target-relative",
     "compress": false,
@@ -32,7 +32,7 @@
       "**/.kotlin/**",
       "local.properties",
       "**/google-services.json",
-      "repomix*.xml"
+      "repomix/out/**"
     ]
   },
   "security": {

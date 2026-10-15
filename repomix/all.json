@@ -1,40 +1,42 @@
 {
   "$schema": "https://repomix.com/schemas/latest/schema.json",
   "output": {
-    "filePath": "repomix-full-part1-logic.xml",
+    "filePath": "repomix/out/all.xml",
     "style": "xml",
     "filePathStyle": "target-relative",
     "compress": false,
-    "headerText": "RayColl - Część 1/3 (Architektura & Logika): Konfiguracja projektu, Gradle, manifest, moduły Core, Data (Room, Repozytoria, Sync), Domain (SRS, SessionEngine, Importy, Reguły) i Dependency Injection (DI).",
+    "headerText": "RayColl is a native Android flashcard app built with Kotlin and Jetpack Compose. The current working tree may contain uncommitted changes; packed file contents reflect the current working tree. README.md describes the project. Local environment files and agent scratch notes are intentionally excluded.",
     "fileSummary": true,
     "directoryStructure": true,
     "files": true,
     "removeComments": false,
     "removeEmptyLines": false,
     "showLineNumbers": false,
-    "includeEmptyDirectories": false
+    "includeEmptyDirectories": false,
+    "git": {
+      "sortByChanges": true,
+      "includeDiffs": false,
+      "includeLogs": false
+    }
   },
   "include": [
     "README.md",
     ".editorconfig",
     ".gitignore",
+    "repomix/*.json",
     "build.gradle.kts",
     "settings.gradle.kts",
     "gradle.properties",
     "gradle/libs.versions.toml",
     "gradle/wrapper/gradle-wrapper.properties",
-    "firebase.json",
-    "firestore.rules",
     "gradlew",
     "gradlew.bat",
-    "app/build.gradle.kts",
-    "app/proguard-rules.pro",
-    "app/src/main/AndroidManifest.xml",
-    "app/src/main/java/com/raycoll/app/*.kt",
-    "app/src/main/java/com/raycoll/app/core/**/*.kt",
-    "app/src/main/java/com/raycoll/app/data/**/*.kt",
-    "app/src/main/java/com/raycoll/app/domain/**/*.kt",
-    "app/src/main/java/com/raycoll/app/di/**/*.kt"
+    "app/**/*.kt",
+    "app/**/*.kts",
+    "app/**/*.xml",
+    "app/**/*.pro",
+    "app/**/*.json",
+    "app/**/*.properties"
   ],
   "ignore": {
     "useGitignore": true,
@@ -48,7 +50,7 @@
       "**/.kotlin/**",
       "local.properties",
       "**/google-services.json",
-      "repomix*.xml"
+      "repomix/out/**"
     ]
   },
   "security": {

@@ -95,3 +95,13 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
   i pokrywają wszystkie przypadki z §9.4. W etapie 6 zostały ponownie uruchomione: 19/19.
 - **Gdzie:** `app/src/test/.../data/firestore/FirestoreEmulatorTest.kt`, `tools/firestore-tests/`,
   `data/remote/auth/AuthRepository.kt`.
+
+## Etap 5 porządków — repomix
+
+- **Co:** w konfiguracjach repomix zmieniono poza ścieżkami wyjściowymi tylko dwie rzeczy
+  wynikające z przeniesienia: `all.json` pakuje `repomix/*.json` zamiast nieistniejącego już
+  `repomix.config.json`, a wzorzec pomijania `repomix*.xml` zastąpiono `repomix/out/**`.
+  Treść paczek (opisy, wzmianki o Room) zostaje do Twojej aktualizacji, jak w planie.
+- **Co:** `pack.ps1` dostał przełącznik `-All`, który pakuje `all.json`. Dawny skrypt pakował
+  tylko trzy części, a całość wymagała ręcznego wywołania repomix.
+- **Gdzie:** `repomix/`, `.gitignore`, README.

@@ -13,7 +13,7 @@ build/
 # Lokalne ustawienia narzędzi i wygenerowane kopie kodu
 /.claude/settings.local.json
 /.claude/worktrees/
-/repomix*.xml
+/repomix/out/
 
 # Klucze podpisu i logi narzędzi
 *.jks
