@@ -91,7 +91,9 @@ class AccountManager @Inject constructor(
             val stash = backup.loadPrivate(STASH)
             if (stash != null) {
                 backup.restoreGuest(stash, user.uid)
-                check(store.awaitPendingWrites(15_000)) { "Guest restore has not reached server" }
+                // Po limicie czasu dane czekają w trwałej kolejce Firestore nowego gościa i wyślą się same.
+                // Plik i tak znika: zostawiony wróciłby przy kolejnym wylogowaniu, także po „Usuń”.
+                store.awaitPendingWrites(15_000)
                 backup.deletePrivate(STASH)
             } else {
                 backup.writeSeed(user.uid, Locale.getDefault().language)

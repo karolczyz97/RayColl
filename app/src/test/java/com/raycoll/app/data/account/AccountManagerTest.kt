@@ -147,6 +147,36 @@ class AccountManagerTest {
         assertEquals(2, repos.backupRepository.snapshot("google").activityHeatmap["2026-10-15"])
     }
 
+    @Test fun `kept guest data returns once when the upload is still waiting for internet`() = runTest {
+        configure(false)
+        repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
+        val kept = repos.snapshot()
+        repos.backupRepository.savePrivate(AccountManager.STASH, kept)
+        current = null
+        `when`(auth.signInAnonymously()).thenAnswer {
+            current = user("new-guest", true)
+            mock(AuthResult::class.java).also { `when`(it.user).thenReturn(current) }
+        }
+        val waiting = object : DocumentStore by repos.store {
+            override suspend fun awaitPendingWrites(timeoutMs: Long) = false
+        }
+        val manager =
+            AccountManager(
+                auth,
+                waiting,
+                Provider {
+                    repos.backupRepository
+                },
+                com.raycoll.app.data.repository.Cleanup(waiting, FakeClock()),
+                context,
+                backgroundScope
+            )
+        manager.retryStart()
+        assertTrue(manager.state.value is AccountState.Ready)
+        assertNull(repos.backupRepository.loadPrivate(AccountManager.STASH))
+        assertEquals(kept, repos.backupRepository.snapshot("new-guest"))
+    }
+
     @Test fun `keep writes stash before guest is deleted and seeds a new Google account`() = runTest {
         configure(false)
         repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
