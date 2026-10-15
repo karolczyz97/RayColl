@@ -329,7 +329,10 @@
     <string name="auth_from_phone_suffix">" (from phone)"</string>
     <string name="auth_start_internet">Connect to the internet to get started</string>
     <string name="auth_retry_start">Try again</string>
-    <string name="sync_changes_rejected">%1$d changes from this phone were older than the cloud data and were not saved</string>
+    <plurals name="sync_changes_rejected">
+        <item quantity="one">%1$d change from this phone was older than the cloud data and was not saved</item>
+        <item quantity="other">%1$d changes from this phone were older than the cloud data and were not saved</item>
+    </plurals>
     <string name="auth_loading_data">Loading account data…</string>
     <string name="auth_data_when_online">Account data will appear when connected</string>
     <string name="auth_sign_out_offline">Connect to the internet to sign out</string>

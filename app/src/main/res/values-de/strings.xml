@@ -328,7 +328,10 @@
     <string name="auth_from_phone_suffix">" (vom Telefon)"</string>
     <string name="auth_start_internet">Verbinde dich mit dem Internet, um zu beginnen</string>
     <string name="auth_retry_start">Erneut versuchen</string>
-    <string name="sync_changes_rejected">%1$d Änderungen von diesem Telefon waren älter als die Cloud-Daten und wurden nicht gespeichert</string>
+    <plurals name="sync_changes_rejected">
+        <item quantity="one">%1$d Änderung von diesem Telefon war älter als die Cloud-Daten und wurde nicht gespeichert</item>
+        <item quantity="other">%1$d Änderungen von diesem Telefon waren älter als die Cloud-Daten und wurden nicht gespeichert</item>
+    </plurals>
     <string name="auth_loading_data">Kontodaten werden geladen…</string>
     <string name="auth_data_when_online">Kontodaten erscheinen nach dem Verbinden</string>
     <string name="auth_sign_out_offline">Zum Abmelden mit dem Internet verbinden</string>

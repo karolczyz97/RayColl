@@ -30,7 +30,7 @@ fun RejectedChangesMessage(store: DocumentStore, modifier: Modifier = Modifier) 
                     val rejected = total
                     total = 0
                     window = null
-                    host.showSnackbar(resources.getString(R.string.sync_changes_rejected, rejected))
+                    host.showSnackbar(resources.getQuantityString(R.plurals.sync_changes_rejected, rejected, rejected))
                 }
             }
         }

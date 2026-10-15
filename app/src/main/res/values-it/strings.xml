@@ -333,7 +333,11 @@
     <string name="auth_from_phone_suffix">" (dal telefono)"</string>
     <string name="auth_start_internet">Connettiti a internet per iniziare</string>
     <string name="auth_retry_start">Riprova</string>
-    <string name="sync_changes_rejected">%1$d modifiche da questo telefono erano precedenti ai dati nel cloud e non sono state salvate</string>
+    <plurals name="sync_changes_rejected">
+        <item quantity="one">%1$d modifica da questo telefono era precedente ai dati nel cloud e non è stata salvata</item>
+        <item quantity="many">%1$d modifiche da questo telefono erano precedenti ai dati nel cloud e non sono state salvate</item>
+        <item quantity="other">%1$d modifiche da questo telefono erano precedenti ai dati nel cloud e non sono state salvate</item>
+    </plurals>
     <string name="auth_loading_data">Caricamento dei dati del tuo account…</string>
     <string name="auth_data_when_online">I dati appariranno dopo la connessione</string>
     <string name="auth_sign_out_offline">Connettiti a internet per disconnetterti</string>

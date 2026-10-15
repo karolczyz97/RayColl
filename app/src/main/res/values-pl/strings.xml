@@ -338,7 +338,12 @@
     <string name="auth_from_phone_suffix">" (z telefonu)"</string>
     <string name="auth_start_internet">Połącz się z internetem, żeby zacząć</string>
     <string name="auth_retry_start">Spróbuj ponownie</string>
-    <string name="sync_changes_rejected">%1$d zmian z tego telefonu było starszych niż dane w chmurze i nie zostało zapisanych</string>
+    <plurals name="sync_changes_rejected">
+        <item quantity="one">%1$d zmiana z tego telefonu była starsza niż dane w chmurze i nie została zapisana</item>
+        <item quantity="few">%1$d zmiany z tego telefonu były starsze niż dane w chmurze i nie zostały zapisane</item>
+        <item quantity="many">%1$d zmian z tego telefonu było starszych niż dane w chmurze i nie zostało zapisanych</item>
+        <item quantity="other">%1$d zmiany z tego telefonu były starsze niż dane w chmurze i nie zostały zapisane</item>
+    </plurals>
     <string name="auth_loading_data">Pobieranie danych konta…</string>
     <string name="auth_data_when_online">Dane konta pojawią się po połączeniu</string>
     <string name="auth_sign_out_offline">Połącz się z internetem, żeby się wylogować</string>
