@@ -80,6 +80,9 @@ class DeckRepository @Inject constructor(
     }
 
     suspend fun getDeck(deckId: String): FlashcardGroup? {
+        // Ocena najpierw czyta kartę, dopiero potem zapisuje. Czekamy, aż wcześniejsze oceny oddadzą
+        // zapis Firestore, które wykonuje operacje po kolei, więc odczyt poniżej widzi ich wynik.
+        reviews.withLock { }
         val paths = paths()
         val deck =
             store.cachedDoc(paths.deck(deckId))?.let(Schema::readDeck)?.takeIf { it.deletedAt == null } ?: return null

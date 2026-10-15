@@ -2,6 +2,8 @@ package com.raycoll.app.data.repository
 
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.core.LocalDates
+import com.raycoll.app.data.firestore.Doc
+import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.SrsState
@@ -11,8 +13,11 @@ import com.raycoll.app.domain.srs.calculateFsrs
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -295,6 +300,25 @@ class DeckRepositoryTest {
         val restored = repos.deckRepository.getDeck(id)!!
         assertNull(restored.archivedAt)
         assertEquals(1, restored.cards.size)
+    }
+
+    @Test
+    fun `reading a deck waits for a review that is still reading its card`() = runTest(dispatcher) {
+        val id = seedDeckWithCard()
+        val card = repos.deckRepository.getDeck(id)!!.cards.single()
+        val gate = CompletableDeferred<Unit>()
+        val slow = object : DocumentStore by repos.store {
+            override suspend fun cachedDoc(path: String): Doc? {
+                if (path.endsWith("/cards/${card.id}")) gate.await()
+                return repos.store.cachedDoc(path)
+            }
+        }
+        val decks = DeckRepository(slow, repos.account, clock)
+        launch(start = CoroutineStart.UNDISPATCHED) { decks.reviewCard(id, card.id, 3) }
+        val read = async(start = CoroutineStart.UNDISPATCHED) { decks.getDeck(id) }
+        assertTrue(read.isActive)
+        gate.complete(Unit)
+        assertEquals(1, read.await()!!.cards.single().srsState.repetitions)
     }
 
     @Test
