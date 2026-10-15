@@ -13,7 +13,6 @@ import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.defaultPageName
-import com.raycoll.app.domain.operations.isArchiveExpired
 import com.raycoll.app.domain.operations.newCard
 import com.raycoll.app.domain.operations.newGroup
 import com.raycoll.app.domain.operations.reviewed
@@ -25,7 +24,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -200,14 +198,6 @@ class DeckRepository @Inject constructor(
     suspend fun deleteDeck(deckId: String) = updateDeck(deckId, mapOf("deletedAt" to clock.now()))
     suspend fun archiveDeck(deckId: String) = updateDeck(deckId, mapOf("archivedAt" to clock.now()))
     suspend fun restoreDeck(deckId: String) = updateDeck(deckId, mapOf("archivedAt" to null))
-
-    suspend fun purgeExpiredArchives() {
-        val paths = paths()
-        val fresh = store.observe(paths.decks()).first { !it.fromCache }
-        fresh.docs.mapNotNull(Schema::readDeck).filter {
-            it.isArchiveExpired(clock.now())
-        }.forEach { deleteDeck(it.id) }
-    }
 
     suspend fun addCard(deckId: String, pages: List<String>) {
         val card = newCard(pages, clock.now())

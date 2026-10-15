@@ -2,7 +2,6 @@ package com.raycoll.app.data.repository
 
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.core.LocalDates
-import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.SrsState
@@ -296,22 +295,6 @@ class DeckRepositoryTest {
         val restored = repos.deckRepository.getDeck(id)!!
         assertNull(restored.archivedAt)
         assertEquals(1, restored.cards.size)
-    }
-
-    @Test
-    fun `purge only deletes archives past the retention period`() = runTest(dispatcher) {
-        val expiredId = seedDeckWithCard()
-        repos.deckRepository.archiveDeck(expiredId)
-        clock.advance(ArchiveConstants.RETENTION_MS)
-        val activeId = seedDeckWithCard()
-        val recentId = seedDeckWithCard()
-        repos.deckRepository.archiveDeck(recentId)
-        repos.deckRepository.purgeExpiredArchives()
-        val stored = repos.snapshot().groups.associateBy { it.id }
-        assertEquals(clock.now(), stored.getValue(expiredId).deletedAt)
-        assertNull(repos.deckRepository.getDeck(expiredId))
-        assertNull(repos.deckRepository.getDeck(activeId)!!.deletedAt)
-        assertNull(repos.deckRepository.getDeck(recentId)!!.deletedAt)
     }
 
     @Test

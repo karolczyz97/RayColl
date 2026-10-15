@@ -27,6 +27,9 @@ Nie zmienia to zakresu ani zachowania przewidzianego w planie.
 - **Dlaczego:** plan usuwa komponent `ReviewWriteError`, ale nie wymienia tego pliku testowego
   na liście usuwanych testów. Test został dostosowany, a nie usunięty.
 - **Gdzie:** `ui/study/StudyPresentationTest.kt`.
+- **Cofnięte w przeglądzie (16.10.2026):** test usunięty. To był test znikającego komponentu
+  przepisany na inny, a zasada z §9 każe takie testy usuwać bez przepisywania. Baner offline jest
+  stały, więc sprawdzanie go „po minucie” niczego nie chroni.
 
 ## Firestore — dane startowe i kontrola budowania
 

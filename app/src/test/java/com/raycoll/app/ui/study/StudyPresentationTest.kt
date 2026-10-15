@@ -144,16 +144,4 @@ class StudyPresentationTest {
             org.junit.Assert.assertTrue(bounds.toString(), bounds.right <= 360.dp && bounds.left >= 0.dp)
         }
     }
-
-    @Test fun `offline action remains reachable after time passes`() {
-        var retries = 0
-        compose.setContent {
-            com.raycoll.app.ui.components.SyncStatusBanner(com.raycoll.app.data.firestore.SyncStatus.ERROR, {
-                retries++
-            })
-        }
-        compose.mainClock.advanceTimeBy(60_000)
-        compose.onNodeWithText(context.getString(R.string.errors_retry)).performClick()
-        assertEquals(1, retries)
-    }
 }
