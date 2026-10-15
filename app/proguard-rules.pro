@@ -2,6 +2,9 @@
 # i kotlinx.serialization dostarczają własne reguły konsumenckie (META-INF/proguard,
 # META-INF/com.android.tools) — globalne -keep dla tych bibliotek tylko powiększały APK.
 
+# Commons CSV 1.14.1: opcjonalna adnotacja analizy SpotBugs, nieużywana podczas działania aplikacji.
+-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+
 # kotlinx.serialization: serializery klas aplikacji (kroki trybów, kopie zapasowe, schemat chmury)
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt

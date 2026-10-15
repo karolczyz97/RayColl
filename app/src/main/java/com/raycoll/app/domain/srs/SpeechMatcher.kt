@@ -5,6 +5,7 @@ import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.StudyConstants
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import org.apache.commons.text.similarity.LevenshteinDistance
 
 private val NON_WORD_CHARS = Regex("[^\\p{L}\\p{N}\\s]")
 private val WHITESPACE = Regex("\\s+")
@@ -14,25 +15,7 @@ private fun normalizeText(text: String): String = text.lowercase()
     .replace(WHITESPACE, " ")
     .trim()
 
-private fun levenshteinDistance(a: String, b: String): Int {
-    val m = a.length
-    val n = b.length
-    if (m == 0) return n
-    if (n == 0) return m
-    var prev = IntArray(n + 1) { it }
-    var curr = IntArray(n + 1)
-    for (i in 1..m) {
-        curr[0] = i
-        for (j in 1..n) {
-            val cost = if (a[i - 1] == b[j - 1]) 0 else 1
-            curr[j] = minOf(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
-        }
-        val tmp = prev
-        prev = curr
-        curr = tmp
-    }
-    return prev[n]
-}
+private val levenshteinDistance = LevenshteinDistance.getDefaultInstance()
 
 private fun wordSimilarity(recognized: String, original: String): Double {
     val recWords = recognized.split(" ").filter { it.isNotEmpty() }
@@ -47,7 +30,7 @@ private fun wordSimilarity(recognized: String, original: String): Double {
         for (i in recWords.indices) {
             if (used.contains(i)) continue
             val maxLen = maxOf(ow.length, recWords[i].length)
-            val score = 1.0 - levenshteinDistance(ow, recWords[i]).toDouble() / maxLen
+            val score = 1.0 - levenshteinDistance.apply(ow, recWords[i]).toDouble() / maxLen
             if (score > bestScore) {
                 bestScore = score
                 bestIdx = i
@@ -67,7 +50,7 @@ fun matchSpeech(recognized: String, original: String): Int {
     if (normOrig.isEmpty()) return if (normRec.isEmpty()) 100 else 0
 
     val maxLen = maxOf(normRec.length, normOrig.length)
-    val globalSim = (1 - levenshteinDistance(normRec, normOrig).toDouble() / maxLen) * 100
+    val globalSim = (1 - levenshteinDistance.apply(normRec, normOrig).toDouble() / maxLen) * 100
     val wordSim = wordSimilarity(normRec, normOrig)
     return maxOf(globalSim, wordSim).roundToInt()
 }

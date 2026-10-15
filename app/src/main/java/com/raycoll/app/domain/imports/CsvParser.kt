@@ -1,6 +1,7 @@
 package com.raycoll.app.domain.imports
 
 import com.raycoll.app.domain.model.ImportConstants
+import org.apache.commons.csv.CSVFormat
 
 /** Separator kolumn w imporcie tekstowym. */
 enum class CsvSeparator(val char: Char) {
@@ -20,46 +21,27 @@ private val LINE_BREAKS = Regex("\r\n?")
 /** Ujednolica tekst: bez znacznika BOM, końce linii jako "\n". */
 private fun normalizeCsvText(text: String): String = text.removePrefix("\uFEFF").replace(LINE_BREAKS, "\n")
 
+private fun csvFormat(separator: CsvSeparator): CSVFormat = CSVFormat.DEFAULT.builder()
+    .setDelimiter(separator.char)
+    .setIgnoreSurroundingSpaces(true)
+    .setIgnoreEmptyLines(true)
+    .setTrailingData(true)
+    .setLenientEof(true)
+    .get()
+
 /**
  * Dzieli tekst na wiersze i komórki (cudzysłowy jak w CSV: `"a;b"`, `""` = cudzysłów).
  * Komórki są przycięte, puste wiersze pominięte; parsowanie kończy się po [maxRows] wierszach.
  */
 fun parseRows(text: String, separator: CsvSeparator, maxRows: Int = Int.MAX_VALUE): List<List<String>> {
-    val rows = mutableListOf<List<String>>()
-    var row = mutableListOf<String>()
-    val cell = StringBuilder()
-    var inQuotes = false
-    fun endCell() {
-        row += cell.toString().trim()
-        cell.clear()
+    if (maxRows <= 0) return emptyList()
+    return csvFormat(separator).parse(normalizeCsvText(text).reader()).use { parser ->
+        parser.asSequence()
+            .map { row -> row.map { it.trim() } }
+            .filter { row -> row.any { it.isNotBlank() } }
+            .take(maxRows)
+            .toList()
     }
-    fun endRow() {
-        endCell()
-        if (row.any { it.isNotBlank() }) rows += row
-        row = mutableListOf()
-    }
-    val normalized = normalizeCsvText(text)
-    var i = 0
-    while (i < normalized.length && rows.size < maxRows) {
-        val char = normalized[i]
-        when {
-            char == '"' && inQuotes && normalized.getOrNull(i + 1) == '"' -> {
-                cell.append('"')
-                i++
-            }
-
-            char == '"' && (inQuotes || cell.isBlank()) -> inQuotes = !inQuotes
-
-            !inQuotes && char == separator.char -> endCell()
-
-            !inQuotes && char == '\n' -> endRow()
-
-            else -> cell.append(char)
-        }
-        i++
-    }
-    if (rows.size < maxRows) endRow()
-    return rows
 }
 
 private data class SeparatorCandidate(val separator: CsvSeparator, val consistency: Double, val width: Int)
@@ -86,7 +68,7 @@ fun detectSeparator(text: String): CsvSeparator {
  */
 fun encodeCell(cell: String, separator: CsvSeparator): String =
     if (cell.contains(separator.char) || cell.contains('\n') || cell.contains('\r') || cell.contains('"')) {
-        "\"" + cell.replace("\"", "\"\"") + "\""
+        csvFormat(separator).format(cell)
     } else {
         cell
     }

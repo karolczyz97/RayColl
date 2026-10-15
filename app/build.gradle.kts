@@ -137,6 +137,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.commons.csv)
+    implementation(libs.commons.text)
 
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
