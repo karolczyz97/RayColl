@@ -96,11 +96,7 @@ fun RayCollTheme(
     useSystemColors: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val isDark = when (theme) {
-        ThemePref.LIGHT -> false
-        ThemePref.DARK -> true
-        ThemePref.SYSTEM -> isSystemInDarkTheme()
-    }
+    val isDark = theme.resolveDarkMode(isSystemInDarkTheme())
     val context = LocalContext.current
     val colorScheme = remember(isDark, useSystemColors, context) {
         when {
@@ -113,7 +109,10 @@ fun RayCollTheme(
             else -> LightColors
         }
     }
-    CompositionLocalProvider(LocalSrsColors provides if (isDark) DarkSrsColors else LightSrsColors) {
+    CompositionLocalProvider(
+        LocalSrsColors provides if (isDark) DarkSrsColors else LightSrsColors,
+        LocalRatingColors provides if (isDark) DarkRatingColors else LightRatingColors
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = RayCollTypography,
@@ -121,4 +120,10 @@ fun RayCollTheme(
             content = content
         )
     }
+}
+
+fun ThemePref.resolveDarkMode(systemDark: Boolean): Boolean = when (this) {
+    ThemePref.LIGHT -> false
+    ThemePref.DARK -> true
+    ThemePref.SYSTEM -> systemDark
 }

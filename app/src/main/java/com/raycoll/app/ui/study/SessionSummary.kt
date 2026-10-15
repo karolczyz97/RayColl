@@ -23,6 +23,7 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.selectors.computeCardStats
 import com.raycoll.app.ui.components.CardStatsBar
 import com.raycoll.app.ui.components.RayCollCard
+import com.raycoll.app.ui.components.SegmentedBar
 import com.raycoll.app.ui.theme.Spacing
 
 /** Koniec sesji: wynik i co dalej. Przewijany, żeby w poziomie przyciski się nie ucinały. */
@@ -62,7 +63,8 @@ fun SessionSummary(
                         stringResource(
                             if (state.endedEarly) R.string.study_session_ended_title else R.string.study_bravo
                         ),
-                        style = MaterialTheme.typography.headlineLarge
+                        style = MaterialTheme.typography.headlineLarge,
+                        textAlign = TextAlign.Center
                     )
                     Text(
                         stringResource(description),
@@ -70,10 +72,11 @@ fun SessionSummary(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
-                    stats?.let { CardStatsBar(it) }
+                    if (stats != null) CardStatsBar(stats) else SegmentedBar(emptyList())
                     Text(
                         stringResource(R.string.study_summary_cards_done, state.completedCardCount, session.cards.size),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
                     )
                     if (state.reviewedCardCount > 0) {
                         Text(
@@ -82,7 +85,8 @@ fun SessionSummary(
                                 state.reviewedCardCount,
                                 session.failedCardIds.size
                             ),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
                         )
                     }
                     if (session.failedCardIds.isNotEmpty()) {

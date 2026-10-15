@@ -6,19 +6,20 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.Looper
 import androidx.annotation.OptIn
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.raycoll.app.MainActivity
 import com.raycoll.app.R
-import com.raycoll.app.domain.session.InteractionGateKind
 import com.raycoll.app.domain.session.SessionEngine
-import com.raycoll.app.domain.session.SessionState
 import com.raycoll.app.domain.session.SessionStatus
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -26,7 +27,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -46,44 +46,15 @@ private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 class StudySessionService : MediaSessionService() {
     @Inject lateinit var sessionHolder: StudySessionHolder
 
-    @Inject lateinit var audioFocusManager: AudioFocusManager
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var player: SessionPlayer
-    private lateinit var focus: SessionAudioFocus
 
     // dzięki niej przyciski słuchawek trafiają do tej sesji (patrz [SilentPlayback])
     private val silence = SilentPlayback()
     private var mediaSession: MediaSession? = null
     private val wakeLock = TimedWakeLock(this, scope, WAKE_LOCK_TAG, WAKE_LOCK_TIMEOUT_MS)
 
-    private val focusedSession = object : FocusedSession {
-        override fun resume() {
-            sessionHolder.current()?.resume()
-        }
-
-        override fun pause() {
-            sessionHolder.current()?.pause()
-        }
-    }
-
-    private val controls = object : SessionControls {
-        override fun play(): Boolean = focus.play()
-
-        override fun pause() = focus.pause()
-
-        override fun next() {
-            sessionHolder.current()?.skipToNextCard()
-        }
-
-        override fun previous() {
-            sessionHolder.current()?.goToPreviousCard()
-        }
-
-        override fun stop() {
-            sessionHolder.current()?.let(sessionHolder::release)
-        }
-    }
+    private val controls: SessionControls get() = sessionHolder.controls
 
     override fun onCreate() {
         super.onCreate()
@@ -97,9 +68,6 @@ class StudySessionService : MediaSessionService() {
                 .apply { setSmallIcon(R.drawable.ic_notification) }
         )
         player = SessionPlayer(Looper.getMainLooper(), controls)
-        // fokus audio idzie za stanem sesji (pauza go oddaje), utrata fokusu wstrzymuje sesję
-        focus = SessionAudioFocus(audioFocusManager, focusedSession)
-        sessionHolder.attachControls(controls)
         mediaSession = MediaSession.Builder(this, player.withCardNavigation())
             .setSessionActivity(openAppIntent())
             .build()
@@ -115,7 +83,7 @@ class StudySessionService : MediaSessionService() {
         }
     }
 
-    private suspend fun followSession(engine: SessionEngine, deckName: String) = coroutineScope {
+    private suspend fun followSession(engine: SessionEngine, deckName: String) {
         combine(engine.state, engine.inBackground, engine.isPaused) { state, background, paused ->
             Triple(state, background, paused)
         }.collect { (state, inBackground, manuallyPaused) ->
@@ -125,14 +93,12 @@ class StudySessionService : MediaSessionService() {
             }
             val idle = sessionAudioIdle(state, inBackground, manuallyPaused)
             if (idle) {
-                focus.onSessionPaused()
                 silence.stop()
             } else {
-                focus.onSessionPlaying()
                 silence.start()
             }
             holdCpuAwake(inBackground && !idle)
-            player.update(sessionPlayback(state, deckName, idle, getString(R.string.study_background_paused)))
+            player.update(sessionPlayback(state, deckName, idle, text(R.string.study_background_paused)))
         }
     }
 
@@ -149,11 +115,9 @@ class StudySessionService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        sessionHolder.detachControls(controls)
         scope.cancel()
         wakeLock.release()
         silence.release()
-        focus.release()
         mediaSession?.release()
         mediaSession = null
         player.release()
@@ -168,14 +132,20 @@ class StudySessionService : MediaSessionService() {
             this,
             NOTIFICATION_ID,
             buildNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            if (Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            } else {
+                0
+            }
         )
     }
 
     private fun buildNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_notification)
-        .setContentTitle(sessionHolder.session.value?.deckName ?: getString(R.string.app_name))
-        .setContentText(getString(R.string.study_notification_text))
+        .setContentTitle(sessionHolder.session.value?.deckName ?: text(R.string.app_name))
+        .setContentText(text(R.string.study_notification_text))
         .setContentIntent(openAppIntent())
         .setOngoing(true)
         .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -186,15 +156,17 @@ class StudySessionService : MediaSessionService() {
         val manager = getSystemService(NotificationManager::class.java) ?: return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            getString(R.string.study_notification_channel),
+            text(R.string.study_notification_channel),
             NotificationManager.IMPORTANCE_LOW
         )
             .apply {
-                description = getString(R.string.study_notification_channel_desc)
+                description = text(R.string.study_notification_channel_desc)
                 setShowBadge(false)
             }
         manager.createNotificationChannel(channel) // ponowne utworzenie aktualizuje nazwę po zmianie języka
     }
+
+    private fun text(@StringRes id: Int): String = ContextCompat.getString(this, id)
 
     private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(
         this,
@@ -206,27 +178,3 @@ class StudySessionService : MediaSessionService() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 }
-
-/** Co pokazać w powiadomieniu; w bezczynności [pausedText] zamiast postępu. */
-internal fun sessionPlayback(
-    state: SessionState,
-    deckName: String,
-    idle: Boolean,
-    pausedText: String
-): SessionPlayback = SessionPlayback(
-    title = state.cards.getOrNull(state.currentCardIndex)?.pages?.firstOrNull().orEmpty(),
-    deckName = deckName,
-    progress = if (idle) pausedText else "${state.currentCardIndex + 1}/${state.cards.size}",
-    playing = !idle
-)
-
-/**
- * Sesja nic nie odtwarza: pauza albo czekanie na użytkownika (błąd, odsłonięte oceny, tap na
- * pierwszym planie). Wtedy oddajemy fokus audio i wyłączamy ciszę, żeby nie trzymać muzyki/nawigacji.
- * W tle bramka tapu nie czeka — sesja bez rąk idzie dalej.
- */
-internal fun sessionAudioIdle(state: SessionState, inBackground: Boolean, manuallyPaused: Boolean): Boolean =
-    manuallyPaused ||
-        state.status == SessionStatus.ERROR ||
-        state.status == SessionStatus.REVEALED ||
-        (!inBackground && state.interactionGate.kind != InteractionGateKind.NONE)

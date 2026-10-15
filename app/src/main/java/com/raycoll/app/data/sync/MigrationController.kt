@@ -25,7 +25,7 @@ class MigrationController @Inject constructor(
     suspend fun execute(option: MigrationOption) {
         when (option) {
             MigrationOption.MIGRATE -> localStore.replaceAll(
-                localStore.snapshotOf(NamespaceManager.GUEST),
+                localStore.snapshotOf(NamespaceManager.GUEST).copy(replacementAt = 0, replacementId = ""),
                 notifySync = false
             )
 

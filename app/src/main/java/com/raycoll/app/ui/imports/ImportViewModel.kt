@@ -7,13 +7,9 @@ import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.imports.CsvSeparator
-import com.raycoll.app.domain.imports.HeaderDetector
 import com.raycoll.app.domain.imports.ImportPayload
 import com.raycoll.app.domain.imports.ImportProblem
 import com.raycoll.app.domain.imports.LanguageDetector
-import com.raycoll.app.domain.imports.detectSeparator
-import com.raycoll.app.domain.imports.encodeCell
-import com.raycoll.app.domain.imports.parseRows
 import com.raycoll.app.domain.imports.validateImportPayload
 import com.raycoll.app.domain.model.DEFAULT_PAGE_LANGUAGE
 import com.raycoll.app.domain.model.PageLimits
@@ -47,11 +43,18 @@ data class ImportUiState(
     val pageNames: List<String> = List(PageLimits.MIN_PAGE_COUNT) { "" },
     val pageLanguages: List<String> = List(PageLimits.MIN_PAGE_COUNT) { DEFAULT_PAGE_LANGUAGE },
     val rows: List<List<String>> = emptyList(),
-    val importing: Boolean = false
+    val importing: Boolean = false,
+    val loadingFile: Boolean = false,
+    val detectedPageCount: Int? = null
 ) {
-    val pageCount: Int get() = pageNames.size
+    val pageCount: Int get() = detectedPageCount ?: pageNames.size
+    val validPageCount: Boolean get() = pageCount in PageLimits.MIN_PAGE_COUNT..PageLimits.MAX_STORED_PAGE_COUNT
+    val hasDraft: Boolean get() = sourceText.isNotBlank() || deckName.isNotBlank() || rows.isNotEmpty() ||
+        pageNames.any { it.isNotBlank() } || pageLanguages.any { it != DEFAULT_PAGE_LANGUAGE } ||
+        separator != CsvSeparator.DEFAULT || hasHeader
+    val inputLocked: Boolean get() = importing || loadingFile
 
-    val canImport: Boolean get() = !importing && deckName.isNotBlank() &&
+    val canImport: Boolean get() = !inputLocked && validPageCount && deckName.isNotBlank() &&
         rows.any { row -> row.any { it.isNotBlank() } }
 }
 
@@ -67,20 +70,6 @@ sealed interface ImportEvent {
     /** Kolumny się zmieniły: ręczne nazwy/języki niepasujących kolumn wróciły do wykrytych. */
     data object ColumnSettingsReset : ImportEvent
 }
-
-/** Tekst i ustawienia, z którymi ma zostać przetworzony (null = wykryj automatycznie). */
-private data class ParseInput(val text: String, val separator: CsvSeparator?, val hasHeader: Boolean?)
-
-/** Wynik przetworzenia tekstu — bez ręcznych nazw i języków stron. */
-private data class ParsedSource(
-    val text: String,
-    val separator: CsvSeparator,
-    val hasHeader: Boolean,
-    /** Komórki nagłówka; null, gdy pierwszy wiersz nie jest nagłówkiem. */
-    val header: List<String>?,
-    val pageCount: Int,
-    val rows: List<List<String>>
-)
 
 /**
  * Ręczna nazwa albo język kolumny. [headerCell] — nagłówek kolumny w chwili zmiany: gdy
@@ -120,29 +109,40 @@ class ImportViewModel @Inject constructor(
      */
     private var rowsEdited = false
 
-    fun setDeckName(name: String) = _uiState.update { it.copy(deckName = name) }
+    fun setDeckName(name: String) {
+        if (_uiState.value.inputLocked) return
+        _uiState.update { it.copy(deckName = name) }
+    }
 
     /** Pisanie w polu: tekst od razu (kursor nie skacze), przetwarzanie chwilę później. */
     fun onSourceTextChanged(text: String) {
+        if (_uiState.value.inputLocked) return
         discardRowEdits()
         _uiState.update { it.copy(sourceText = text) }
         reparse(debounce = true)
     }
 
     fun loadFile(uri: Uri) {
-        viewModelScope.launch {
-            val text = documentFiles.readText(uri)
-            if (text == null) {
-                eventSink.send(ImportEvent.FileUnreadable)
-            } else {
-                discardRowEdits()
-                _uiState.update { it.copy(sourceText = text) }
-                reparse(debounce = false)
+        if (_uiState.value.inputLocked) return
+        _uiState.update { it.copy(loadingFile = true) }
+        viewModelScope.launchSaving(onFailure = { eventSink.send(ImportEvent.FileUnreadable) }) {
+            try {
+                val text = documentFiles.readText(uri)
+                if (text == null) {
+                    eventSink.send(ImportEvent.FileUnreadable)
+                } else {
+                    discardRowEdits()
+                    _uiState.update { it.copy(sourceText = text) }
+                    reparse(debounce = false)
+                }
+            } finally {
+                _uiState.update { it.copy(loadingFile = false) }
             }
         }
     }
 
     fun setSeparator(separator: CsvSeparator) {
+        if (_uiState.value.inputLocked) return
         separatorChosen = true
         flushRowEdits()
         _uiState.update { it.copy(separator = separator) }
@@ -150,6 +150,7 @@ class ImportViewModel @Inject constructor(
     }
 
     fun setHasHeader(value: Boolean) {
+        if (_uiState.value.inputLocked) return
         headerChosen = true
         flushRowEdits()
         _uiState.update { it.copy(hasHeader = value) }
@@ -157,6 +158,7 @@ class ImportViewModel @Inject constructor(
     }
 
     fun setPageName(index: Int, name: String) {
+        if (_uiState.value.inputLocked) return
         if (index !in 0 until _uiState.value.pageCount) return
         nameOverrides[index] = ColumnOverride(name, headerCell(index))
         _uiState.update { state ->
@@ -165,6 +167,7 @@ class ImportViewModel @Inject constructor(
     }
 
     fun setPageLanguage(index: Int, language: String) {
+        if (_uiState.value.inputLocked) return
         if (index !in 0 until _uiState.value.pageCount) return
         languageOverrides[index] = ColumnOverride(language, headerCell(index))
         _uiState.update { state ->
@@ -190,7 +193,7 @@ class ImportViewModel @Inject constructor(
      * [defaultPageNames] — nazwy (w języku aplikacji) dla stron, których użytkownik nie nazwał.
      */
     fun runImport(defaultPageNames: List<String>) {
-        if (_uiState.value.importing) return
+        if (_uiState.value.inputLocked) return
         parseJob?.cancel()
         _uiState.update { it.copy(importing = true) }
         viewModelScope.launchSaving(onFailure = { eventSink.send(ImportEvent.SaveFailed) }) {
@@ -201,6 +204,10 @@ class ImportViewModel @Inject constructor(
                     applyParsed(withContext(parseDispatcher) { parseSource(input) })
                 }
                 val state = _uiState.value
+                if (!state.validPageCount) {
+                    eventSink.send(ImportEvent.Invalid(ImportProblem.InvalidPageCount))
+                    return@launchSaving
+                }
                 val payload = ImportPayload(
                     deckName = state.deckName.trim(),
                     pageNames = state.pageNames.mapIndexed { i, name ->
@@ -252,7 +259,7 @@ class ImportViewModel @Inject constructor(
     private fun applyParsed(parsed: ParsedSource) {
         if (parsed.text.isBlank()) {
             // pusty tekst: nic do pokazania, ustawienia stron zostają do kolejnego wklejenia
-            _uiState.update { it.copy(sourceText = parsed.text, rows = emptyList()) }
+            _uiState.update { it.copy(sourceText = parsed.text, rows = emptyList(), detectedPageCount = null) }
             return
         }
         header = parsed.header
@@ -263,10 +270,11 @@ class ImportViewModel @Inject constructor(
                 sourceText = parsed.text,
                 separator = parsed.separator,
                 hasHeader = parsed.hasHeader,
-                pageNames = List(parsed.pageCount) { i ->
+                detectedPageCount = parsed.pageCount,
+                pageNames = List(parsed.pageCount.coerceAtMost(PageLimits.MAX_STORED_PAGE_COUNT)) { i ->
                     nameOverrides[i]?.value ?: parsed.header?.getOrNull(i)?.takeIf { it.isNotBlank() } ?: ""
                 },
-                pageLanguages = List(parsed.pageCount) { i ->
+                pageLanguages = List(parsed.pageCount.coerceAtMost(PageLimits.MAX_STORED_PAGE_COUNT)) { i ->
                     languageOverrides[i]?.value
                         ?: parsed.header?.getOrNull(i)?.let(LanguageDetector::detectLanguage)
                         ?: DEFAULT_PAGE_LANGUAGE
@@ -294,6 +302,7 @@ class ImportViewModel @Inject constructor(
     private fun headerCell(index: Int): String? = header?.takeIf { _uiState.value.hasHeader }?.getOrNull(index)
 
     private fun editRows(change: (MutableList<List<String>>) -> Unit) {
+        if (_uiState.value.inputLocked || !_uiState.value.validPageCount) return
         parseJob?.cancel()
         rowsEdited = true
         _uiState.update { it.copy(rows = it.rows.toMutableList().apply(change)) }
@@ -323,42 +332,4 @@ class ImportViewModel @Inject constructor(
         rebuildJob?.cancel()
         rowsEdited = false
     }
-}
-
-/** Tekst źródłowy odbudowany z wierszy podglądu (nagłówek — oryginalne komórki nagłówka). */
-private fun buildSource(state: ImportUiState, header: List<String>?): String {
-    val lines = buildList {
-        if (state.hasHeader && header != null) add(List(state.pageCount) { header.getOrElse(it) { "" } })
-        addAll(state.rows)
-    }
-    return lines.joinToString("\n") { row ->
-        row.joinToString(state.separator.char.toString()) { encodeCell(it, state.separator) }
-    }
-}
-
-/** Separator, nagłówek, liczba stron i wiersze dla tekstu — czysta funkcja, poza wątkiem UI. */
-private fun parseSource(input: ParseInput): ParsedSource {
-    val text = input.text
-    if (text.isBlank()) {
-        return ParsedSource(
-            text = text,
-            separator = input.separator ?: CsvSeparator.DEFAULT,
-            hasHeader = input.hasHeader ?: false,
-            header = null,
-            pageCount = PageLimits.MIN_PAGE_COUNT,
-            rows = emptyList()
-        )
-    }
-    val separator = input.separator ?: detectSeparator(text)
-    val allRows = parseRows(text, separator)
-    val hasHeader = input.hasHeader ?: HeaderDetector.looksLikeHeaderRow(allRows)
-    val pageCount = HeaderDetector.detectPageCount(allRows, skipFirstRow = hasHeader)
-    return ParsedSource(
-        text = text,
-        separator = separator,
-        hasHeader = hasHeader,
-        header = allRows.firstOrNull()?.takeIf { hasHeader },
-        pageCount = pageCount,
-        rows = (if (hasHeader) allRows.drop(1) else allRows).map { row -> List(pageCount) { row.getOrElse(it) { "" } } }
-    )
 }

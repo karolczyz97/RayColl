@@ -41,7 +41,8 @@ class I18nConsistencyTest {
     }
 
     private fun keysOf(file: File): Set<String> {
-        val content = file.readText()
+        // teksty `translatable="false"` są tylko w bazowym pliku — nie liczą się do parytetu
+        val content = file.readText().replace(notTranslatableTagRegex, "")
         val stringKeys = Regex("<string name=\"([^\"]+)\"").findAll(content).map { it.groupValues[1] }
         val pluralKeys = Regex("<plurals name=\"([^\"]+)\"").findAll(content).map { "plurals:" + it.groupValues[1] }
         return (stringKeys + pluralKeys).toSet()
@@ -61,6 +62,8 @@ class I18nConsistencyTest {
     private val nameAttrRegex = Regex("name=\"([^\"]*)\"")
     private val quantityAttrRegex = Regex("quantity=\"([^\"]*)\"")
     private val notTranslatableRegex = Regex("translatable=\"false\"")
+    private val notTranslatableTagRegex =
+        Regex("<string\\s+[^>]*translatable=\"false\"[^>]*>.*?</string>", RegexOption.DOT_MATCHES_ALL)
     private val entityRegex = Regex("&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);")
 
     private fun parse(file: File): StringsFile {

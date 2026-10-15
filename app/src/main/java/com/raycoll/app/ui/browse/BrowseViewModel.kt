@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.raycoll.app.data.repository.DeckRepository
+import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.domain.selectors.browseFilter
@@ -16,6 +17,7 @@ import com.raycoll.app.ui.navigation.BrowseRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +48,7 @@ sealed interface BrowseUiState {
 
 sealed interface BrowseEvent {
     data object Saved : BrowseEvent
+    data object CardAdded : BrowseEvent
 
     /** Edytowanej karty już nie ma (usunięta w międzyczasie) — nic nie zapisano. */
     data object CardMissing : BrowseEvent
@@ -60,8 +63,11 @@ class BrowseViewModel internal constructor(
     /** Gdzie liczy się filtr listy; testy podstawiają wstrzymywany wątek. */
     filterContext: CoroutineContext
 ) : ViewModel() {
-    @Inject constructor(savedStateHandle: SavedStateHandle, deckRepository: DeckRepository) :
-        this(savedStateHandle, deckRepository, Dispatchers.Default)
+    @Inject constructor(
+        savedStateHandle: SavedStateHandle,
+        deckRepository: DeckRepository,
+        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+    ) : this(savedStateHandle, deckRepository, defaultDispatcher as CoroutineContext)
 
     val deckId: String = savedStateHandle.toRoute<BrowseRoute>().deckId
 
@@ -101,7 +107,7 @@ class BrowseViewModel internal constructor(
 
     fun addCard(pages: List<String>) = write {
         deckRepository.addCard(deckId, pages)
-        eventSink.send(BrowseEvent.Saved)
+        eventSink.send(BrowseEvent.CardAdded)
     }
 
     /** [visiblePages] — nowe widoczne strony; ukryte strony i postęp nauki karty zostają. */

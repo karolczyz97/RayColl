@@ -1,18 +1,15 @@
 package com.raycoll.app.ui.decksettings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -21,14 +18,11 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,15 +31,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
@@ -53,19 +41,18 @@ import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.PageLimits
 import com.raycoll.app.domain.model.StudyFilter
-import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.ui.components.ChoiceChip
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
-import com.raycoll.app.ui.components.ModeActions
-import com.raycoll.app.ui.components.ModeBadges
 import com.raycoll.app.ui.components.ModeDeleteDialog
 import com.raycoll.app.ui.components.ModeResetDialog
 import com.raycoll.app.ui.components.PersistedTextField
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SectionCard
-import com.raycoll.app.ui.components.displayName
+import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.navigation.sharedDeckCard
 import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
@@ -74,18 +61,21 @@ import com.raycoll.app.ui.theme.Spacing
 fun DeckSettingsScreen(
     onBack: () -> Unit,
     onEditMode: (modeId: String?) -> Unit,
-    viewModel: DeckSettingsViewModel = hiltViewModel()
+    viewModel: DeckSettingsViewModel = hiltViewModel(),
+    onClosed: (ScreenResult?) -> Unit = { onBack() }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val messages = rememberSnackbarMessages(snackbarHostState)
     val deleteFailed = stringResource(R.string.settings_delete_error)
     val saveFailed = stringResource(R.string.errors_save_failed)
 
     CollectEvents(viewModel.events) { event ->
         when (event) {
-            DeckSettingsEvent.Closed -> onBack()
-            DeckSettingsEvent.DeleteFailed -> snackbarHostState.showSnackbar(deleteFailed)
-            DeckSettingsEvent.SaveFailed -> snackbarHostState.showSnackbar(saveFailed)
+            DeckSettingsEvent.Closed -> onClosed(null)
+            is DeckSettingsEvent.Archived -> onClosed(ScreenResult.Archived(event.deckId))
+            DeckSettingsEvent.DeleteFailed -> messages.showLatest(deleteFailed)
+            DeckSettingsEvent.SaveFailed -> messages.showLatest(saveFailed)
         }
     }
 
@@ -195,6 +185,7 @@ private fun DeckSettingsContent(
         }
         Button(
             onClick = { showDeleteDialog = true },
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -203,7 +194,7 @@ private fun DeckSettingsContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-            Text(stringResource(R.string.btn_delete), modifier = Modifier.padding(start = Spacing.s))
+            Text(stringResource(R.string.btn_delete), modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
         }
     }
 
@@ -283,78 +274,11 @@ private fun <T> ChoiceChips(options: List<Pair<T, Int>>, selected: T, onSelect: 
         verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         options.forEach { (value, label) ->
-            FilterChip(
+            ChoiceChip(
                 selected = selected == value,
                 onClick = { onSelect(value) },
-                label = { Text(stringResource(label)) },
-                // wybór jednej opcji, nie pole wyboru
-                modifier = Modifier.semantics { role = Role.RadioButton }
+                label = { Text(stringResource(label)) }
             )
-        }
-    }
-}
-
-@Composable
-private fun ModesSection(
-    activeModeId: String,
-    modes: List<StudyMode>,
-    onSelect: (String) -> Unit,
-    onEdit: (String?) -> Unit,
-    onReset: (StudyMode) -> Unit,
-    onDelete: (StudyMode) -> Unit
-) {
-    SectionCard(spacing = Spacing.s) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.study_modes_title),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { heading() }
-            )
-            TextButton(onClick = { onEdit(null) }) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Text(stringResource(R.string.mode_list_new), modifier = Modifier.padding(start = Spacing.xs))
-            }
-        }
-        modes.forEach { mode ->
-            val active = activeModeId == mode.id
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = if (active) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                        } else {
-                            Color.Transparent
-                        },
-                        shape = MaterialTheme.shapes.small
-                    )
-                    .padding(horizontal = Spacing.s, vertical = Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // wybór trybu obejmuje cały wiersz z nazwą; przyciski akcji zostają osobnymi elementami
-                Row(
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .selectable(selected = active, role = Role.RadioButton, onClick = { onSelect(mode.id) }),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.s)
-                ) {
-                    RadioButton(selected = active, onClick = null)
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                        Text(mode.displayName(), style = MaterialTheme.typography.bodyLarge)
-                        ModeBadges(mode)
-                    }
-                }
-                ModeActions(
-                    mode,
-                    onEdit = { onEdit(mode.id) },
-                    onReset = { onReset(mode) },
-                    onDelete = { onDelete(mode) }
-                )
-            }
         }
     }
 }

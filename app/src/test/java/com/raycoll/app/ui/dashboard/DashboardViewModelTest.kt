@@ -13,8 +13,10 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -45,10 +47,11 @@ class DashboardViewModelTest {
         repos.db.close()
     }
 
-    private fun vm() = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock).also {
-        viewModels +=
-            it
-    }
+    private fun vm() =
+        DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock, UnconfinedTestDispatcher()).also {
+            viewModels +=
+                it
+        }
 
     private suspend fun DashboardViewModel.ready(predicate: (DashboardUiState.Ready) -> Boolean = { true }) =
         uiState.filterIsInstance<DashboardUiState.Ready>().first(predicate)
@@ -70,7 +73,15 @@ class DashboardViewModelTest {
         )
         repos.deckRepository.setStudyFilter(deckId, StudyFilter.NEW_AND_REVIEW)
         val vm = vm()
+        val subscription = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         assertEquals(1, vm.ready { it.decks.isNotEmpty() }.decks.single().dueCount)
+        val card = repos.deckRepository.getDeck(deckId)!!.cards.single()
+        repos.deckRepository.reviewCard(deckId, card.id, 3)
+        vm.ready { it.decks.single().dueCount == 0 }
+        clock.current = repos.deckRepository.getDeck(deckId)!!.cards.single().srsState.nextReviewTimestamp + 1
+        advanceTimeBy(60_001)
+        assertEquals(1, vm.ready { it.decks.single().dueCount == 1 }.decks.single().dueCount)
+        subscription.cancel()
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.raycoll.app.domain.model.DEFAULT_PAGE_LANGUAGE
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.PageLimits
+import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.normalize.padPageMetadata
 
 fun newGroup(
@@ -28,7 +29,7 @@ fun newGroup(
 fun FlashcardGroup.withActivePageCount(
     count: Int,
     now: Long,
-    defaultName: (Int) -> String = { "Page ${it + 1}" }
+    defaultName: (Int) -> String = ::defaultPageName
 ): FlashcardGroup {
     val clamped = PageLimits.clampActivePageCount(count, PageLimits.MAX_VISIBLE_PAGE_COUNT)
     val (names, languages) = padPageMetadata(pageNames, pageLanguages, clamped, defaultName)

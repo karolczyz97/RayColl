@@ -1,5 +1,9 @@
 package com.raycoll.app.playback
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -108,5 +112,34 @@ class SessionAudioFocusTest {
         focus.grant = false
         audio.onSessionPlaying()
         assertEquals(listOf("pause"), session.calls)
+    }
+
+    @Test
+    fun `recognition owns focus without observer taking it back and next speech reacquires`() = runTest {
+        audio.onSessionPlaying()
+        audio.withRecognitionFocus {
+            assertFalse(focus.held)
+            val requests = focus.requests
+            repeat(3) { assertTrue(audio.onSessionPlaying()) }
+            assertEquals(requests, focus.requests)
+            focus.change(FocusChange.LOST_TRANSIENT)
+            assertTrue(session.calls.isEmpty())
+        }
+        assertTrue(audio.onSessionPlaying())
+        assertTrue(focus.held)
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test
+    fun `cancelled recognition releases delegation so resume can own focus again`() = runTest {
+        audio.onSessionPlaying()
+        val recognition = async { audio.withRecognitionFocus { awaitCancellation() } }
+        runCurrent()
+        assertFalse(focus.held)
+        recognition.cancel()
+        runCurrent()
+        assertTrue(audio.play())
+        assertTrue(focus.held)
+        assertEquals(listOf("resume"), session.calls)
     }
 }

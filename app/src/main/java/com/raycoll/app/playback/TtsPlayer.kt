@@ -96,7 +96,7 @@ class TtsPlayer @Inject constructor(@ApplicationContext private val context: Con
 
                 override fun onError(id: String?, errorCode: Int) = finish(id, TtsResult.Error("TTS error $errorCode"))
 
-                // przerwanie z zewnątrz kończy wypowiedź — pauzę przy utracie fokusu robi AudioFocusManager
+                // przerwanie z zewnątrz kończy wypowiedź — pauzę przy utracie fokusu robi SessionAudioFocus
                 override fun onStop(id: String?, interrupted: Boolean) = finish(id, TtsResult.Success)
             })
             if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId) == TextToSpeech.ERROR) {

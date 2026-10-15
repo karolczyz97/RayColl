@@ -9,7 +9,7 @@ fun interface Clock {
     fun now(): Long
 }
 
-object SystemClock : Clock {
+object WallClock : Clock {
     override fun now(): Long = System.currentTimeMillis()
 }
 

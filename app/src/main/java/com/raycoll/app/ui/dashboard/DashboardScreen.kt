@@ -38,9 +38,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,9 +68,12 @@ import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.EmptyState
 import com.raycoll.app.ui.components.LoadingState
+import com.raycoll.app.ui.components.Pill
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.displayName
+import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.navigation.sharedDeckCard
 import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.RayCollMotion
@@ -85,14 +93,37 @@ fun DashboardScreen(
     onArchive: () -> Unit,
     onAppSettings: () -> Unit,
     onManageModes: () -> Unit,
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: DashboardViewModel = hiltViewModel(),
+    result: ScreenResult? = null,
+    onResultConsumed: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // id talii czekającej na potwierdzenie archiwizacji — okno przeżywa obrót ekranu
     var archiveTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val saveFailed = stringResource(R.string.errors_save_failed)
-    CollectEvents(viewModel.events) { snackbarHostState.showSnackbar(saveFailed) }
+    val messages = rememberSnackbarMessages(snackbarHostState)
+    val imported = stringResource(R.string.import_success)
+    val archived = stringResource(R.string.archive_success)
+    val undo = stringResource(R.string.btn_undo)
+    suspend fun showArchived(deckId: String) {
+        if (messages.showAction(archived, undo) == SnackbarResult.ActionPerformed) viewModel.restoreDeck(deckId)
+    }
+    CollectEvents(viewModel.events) { event ->
+        when (event) {
+            DashboardEvent.SaveFailed -> messages.showLatest(saveFailed)
+            is DashboardEvent.Archived -> showArchived(event.deckId)
+        }
+    }
+    LaunchedEffect(result) {
+        if (result != null) {
+            when (result) {
+                ScreenResult.Imported -> messages.showLatest(imported)
+                is ScreenResult.Archived -> showArchived(result.deckId)
+            }
+            onResultConsumed()
+        }
+    }
 
     ScreenScaffold(
         title = stringResource(R.string.nav_dashboard),
@@ -126,7 +157,8 @@ fun DashboardScreen(
     ) { padding ->
         updateTransition(uiState, label = "dashboard_state").Crossfade(
             modifier = Modifier.padding(padding),
-            contentKey = { it::class }
+            contentKey = { it::class },
+            animationSpec = RayCollMotion.effects()
         ) { state ->
             when (state) {
                 DashboardUiState.Loading -> LoadingState()
@@ -134,7 +166,11 @@ fun DashboardScreen(
                 is DashboardUiState.Ready -> if (state.decks.isEmpty()) {
                     EmptyState(
                         message = stringResource(R.string.dashboard_no_groups),
-                        action = { Button(onClick = onImport) { Text(stringResource(R.string.import_title)) } }
+                        action = {
+                            Button(onClick = onImport, shape = MaterialTheme.shapes.small) {
+                                Text(stringResource(R.string.import_title))
+                            }
+                        }
                     )
                 } else {
                     LazyColumn(
@@ -155,7 +191,8 @@ fun DashboardScreen(
                                 onSettings = { onDeckSettings(deck.id) },
                                 onArchive = { archiveTargetId = deck.id },
                                 onSelectMode = { modeId -> viewModel.setActiveMode(deck.id, modeId) },
-                                onManageModes = onManageModes
+                                onManageModes = onManageModes,
+                                modifier = Modifier.animateItem()
                             )
                         }
                     }
@@ -191,10 +228,12 @@ private fun DeckCard(
     onSettings: () -> Unit,
     onArchive: () -> Unit,
     onSelectMode: (modeId: String) -> Unit,
-    onManageModes: () -> Unit
+    onManageModes: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val browseLabel = stringResource(R.string.a11y_item_action, stringResource(R.string.dashboard_browse), deck.name)
     RayCollCard(
-        Modifier
+        modifier
             .sharedDeckCard(deck.id)
             .fillMaxWidth()
     ) {
@@ -220,7 +259,8 @@ private fun DeckCard(
                     onClick = onBrowse,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = MinTouchTarget),
+                        .heightIn(min = MinTouchTarget)
+                        .semantics { contentDescription = browseLabel },
                     shape = MaterialTheme.shapes.small
                 ) {
                     Icon(
@@ -230,13 +270,14 @@ private fun DeckCard(
                     )
                     Text(
                         stringResource(R.string.dashboard_browse),
-                        modifier = Modifier.padding(start = ButtonDefaults.IconSpacing),
+                        modifier = Modifier.padding(start = ButtonDefaults.IconSpacing).clearAndSetSemantics {},
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 StudySplitButton(
                     modes = modes,
+                    deckName = deck.name,
                     activeModeId = deck.activeMode.id,
                     hasDue = deck.dueCount > 0,
                     onStudy = onStudy,
@@ -273,26 +314,20 @@ private fun DeckSubtitle(deck: DeckSummary) {
             modifier = Modifier.weight(1f, fill = false)
         )
         val hasDue = deck.dueCount > 0
-        Surface(
-            shape = MaterialTheme.shapes.extraSmall,
-            color = if (hasDue) {
+        Pill(
+            text = stringResource(R.string.dashboard_due_count, deck.dueCount),
+            container = if (hasDue) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceContainerHighest
             },
-            contentColor = if (hasDue) {
+            content = if (hasDue) {
                 MaterialTheme.colorScheme.onPrimaryContainer
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
-            }
-        ) {
-            Text(
-                stringResource(R.string.dashboard_due_count, deck.dueCount),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xxs)
-            )
-        }
+            },
+            textStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+        )
     }
 }
 

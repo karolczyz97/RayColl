@@ -1,12 +1,15 @@
 package com.raycoll.app.ui.browse
 
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
@@ -24,6 +27,19 @@ import org.robolectric.RobolectricTestRunner
 /** Puste stany przeglądania: pusta talia (z przyciskiem dodania) różni się od braku wyników filtra. */
 @RunWith(RobolectricTestRunner::class)
 class BrowseScreenTest {
+    @Test
+    fun `search action keeps the query and the clear button clears it`() {
+        val vm = BrowseViewModel(routeArgs("deckId" to deck(listOf(listOf("cat", "kot")))), repos.deckRepository)
+        compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("cat").fetchSemanticsNodes().isNotEmpty() }
+        val field = compose.onNode(hasSetTextAction())
+        field.performTextInput("cat")
+        field.performImeAction()
+        org.junit.Assert.assertEquals("cat", vm.search.value)
+        compose.onNodeWithContentDescription("Clear search").performClick()
+        org.junit.Assert.assertEquals("", vm.search.value)
+        org.junit.Assert.assertEquals("", field.fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+    }
 
     @get:Rule
     val compose = createComposeRule()

@@ -3,6 +3,8 @@ package com.raycoll.app.ui.decksettings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.raycoll.app.R
 import com.raycoll.app.ui.theme.Spacing
@@ -29,6 +32,8 @@ import java.text.Normalizer
 fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val token = stringResource(R.string.delete_confirm_token)
     var typed by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+    val confirmed = isDeleteConfirmed(typed.text, token)
+    val confirmIfValid = { if (confirmed) onConfirm() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_delete_permanent_title)) },
@@ -42,14 +47,16 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
                     supportingText = { Text(stringResource(R.string.delete_confirm_hint, token)) },
                     shape = MaterialTheme.shapes.small,
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { confirmIfValid() }),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = onConfirm,
-                enabled = isDeleteConfirmed(typed.text, token),
+                onClick = confirmIfValid,
+                enabled = confirmed,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) { Text(stringResource(R.string.btn_delete)) }
         },

@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +31,21 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class BrowseViewModelTest {
+    @Test
+    fun `adding a hidden card confirms the addition without clearing filters`() = runTest {
+        val vm = vm(seedDeck(cards = 1))
+        vm.ready()
+        vm.setSearch("front")
+        vm.setCategory(SrsCardCategory.REVIEW)
+        vm.ready { it.category == SrsCardCategory.REVIEW }
+        vm.addCard(listOf("hidden", "ukryta"))
+        assertEquals(BrowseEvent.CardAdded, vm.events.first())
+        val state = vm.ready { it.allCards.size == 2 }
+        assertEquals("front", vm.search.value)
+        assertEquals(SrsCardCategory.REVIEW, state.category)
+        assertTrue(state.cards.isEmpty())
+        assertFalse(state.allCards.isEmpty())
+    }
     private val clock = FakeClock()
     private val viewModels = mutableListOf<BrowseViewModel>()
     private lateinit var repos: TestRepos
@@ -120,7 +136,7 @@ class BrowseViewModelTest {
         vm.updateCard(card.id, listOf("NEW", "NOWE"))
 
         assertEquals(BrowseEvent.CardMissing, vm.events.first())
-        assertEquals(false, vm.ready { it.cards.size == 1 }.cards.any { it.pages == listOf("NEW", "NOWE") })
+        org.junit.Assert.assertFalse(vm.ready { it.cards.size == 1 }.cards.any { it.pages == listOf("NEW", "NOWE") })
     }
 
     @Test
@@ -131,7 +147,7 @@ class BrowseViewModelTest {
         vm.deleteCard(toDelete)
 
         val state = vm.ready { it.cards.size == 2 }
-        assertEquals(false, state.cards.any { it.id == toDelete })
+        org.junit.Assert.assertFalse(state.cards.any { it.id == toDelete })
     }
 
     @Test

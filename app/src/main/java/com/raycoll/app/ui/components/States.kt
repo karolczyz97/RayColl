@@ -2,10 +2,15 @@ package com.raycoll.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Inbox
@@ -56,31 +61,37 @@ private fun MessageState(
     modifier: Modifier,
     action: (@Composable () -> Unit)?
 ) {
-    Box(
-        modifier
-            .fillMaxSize()
-            .padding(Spacing.xl),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(
-                modifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.l)
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = iconTint.copy(alpha = 0.7f)
-                )
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                action?.invoke()
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val scrolling = if (constraints.hasBoundedHeight) {
+            Modifier.heightIn(min = maxHeight).verticalScroll(rememberScrollState())
+        } else {
+            Modifier
+        }
+        Column(
+            Modifier.fillMaxWidth().then(scrolling).padding(Spacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Column(
+                    modifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.l)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = iconTint.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    action?.invoke()
+                }
             }
         }
     }

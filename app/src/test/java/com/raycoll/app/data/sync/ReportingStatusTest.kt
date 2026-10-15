@@ -34,7 +34,7 @@ class ReportingStatusTest {
         val result = reportingStatus(status, onError = false) {
             cloudOperation { awaitCancellation() }
         }
-        assertEquals(false, result)
+        org.junit.Assert.assertFalse(result)
         assertEquals(SyncStatus.ERROR, status.value)
         assertEquals(CLOUD_OPERATION_TIMEOUT_MS, testScheduler.currentTime)
     }

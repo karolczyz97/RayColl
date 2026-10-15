@@ -41,6 +41,41 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 class StudyCardTest {
+    @Test
+    fun `reveal label retains its content until the exit animation finishes`() {
+        var state by mutableStateOf(active(SessionState(cards = listOf(twoPageCard)), 2))
+        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.onNodeWithText("Tap to reveal").assertExists()
+        compose.mainClock.autoAdvance = false
+        state = state.copy(session = state.session.copy(status = SessionStatus.LISTENING))
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("Tap to reveal").assertExists()
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.onNodeWithText("Tap to reveal").assertDoesNotExist()
+        compose.mainClock.autoAdvance = true
+    }
+
+    @Test
+    fun `a late answer panel never pulls a manually scrolled card back down`() {
+        val front = "Question"
+        val card = twoPageCard.copy(pages = listOf(front, (1..40).joinToString("\n") { "Definition line $it" }))
+        var state by mutableStateOf(active(SessionState(cards = listOf(card), revealedPages = listOf(0, 1)), 2))
+        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.onNodeWithText(front, useUnmergedTree = true).performScrollTo()
+        fun position(): Float = compose.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
+            useUnmergedTree = true
+        ).fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        val before = position()
+        state = state.copy(
+            session = state.session.copy(
+                lastAnswerResult = LastAnswerResult(AnswerStatus.ERROR, text = "Recognized text ".repeat(100))
+            )
+        )
+        compose.mainClock.advanceTimeBy(2_000)
+        assertEquals(before, position(), 1f)
+    }
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -174,25 +209,25 @@ class StudyCardTest {
     fun `audio indicator is exposed to TalkBack`() {
         var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
         compose.setContent { StudyCardContent("deck", state, noActions) }
-        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Speaking").assertExists()
 
         state = audioState(SessionStatus.LISTENING, 1)
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("Listening", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Listening").assertExists()
     }
 
     @Test
     fun `audio indicator is held briefly and then removed`() {
         var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
         compose.setContent { StudyCardContent("deck", state, noActions) }
-        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Speaking").assertExists()
 
         compose.mainClock.autoAdvance = false
         state = audioState(SessionStatus.IDLE, null)
         compose.mainClock.advanceTimeBy(100)
-        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Speaking").assertExists()
         compose.mainClock.advanceTimeBy(600)
-        compose.onNodeWithContentDescription("Speaking", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("Speaking").assertDoesNotExist()
     }
 
     @Test

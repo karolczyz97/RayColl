@@ -8,8 +8,10 @@ import com.raycoll.app.data.sync.MigrationOption
 import com.raycoll.app.data.sync.SyncLifecycle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -24,8 +26,21 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val migrationRequired: StateFlow<Boolean> = syncLifecycle.migrationRequired
+    private val _migrating = MutableStateFlow(false)
+    val migrating = _migrating.asStateFlow()
+    private val _migrationFailed = MutableStateFlow(false)
+    val migrationFailed = _migrationFailed.asStateFlow()
 
     fun resolveMigration(option: MigrationOption) {
-        viewModelScope.launch { syncLifecycle.resolveMigration(option) }
+        if (_migrating.value) return
+        _migrating.value = true
+        _migrationFailed.value = false
+        viewModelScope.launch {
+            try {
+                _migrationFailed.value = !syncLifecycle.resolveMigration(option)
+            } finally {
+                _migrating.value = false
+            }
+        }
     }
 }

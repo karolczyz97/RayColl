@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.appsettings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.files.DocumentFiles
@@ -24,8 +25,10 @@ import com.raycoll.app.data.sync.SyncLifecycle
 import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
+import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +51,9 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -56,6 +61,9 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class AppSettingsSignInTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
+
+    @get:Rule val folder = TemporaryFolder()
 
     private class FakeGoogle : GoogleSignIn {
         val tokenRequest = CompletableDeferred<IdTokenResult>()
@@ -101,6 +109,7 @@ class AppSettingsSignInTest {
     private lateinit var repos: TestRepos
     private lateinit var vm: AppSettingsViewModel
     private lateinit var sync: SyncLifecycle
+    private lateinit var appScope: CoroutineScope
 
     private val main = StandardTestDispatcher()
 
@@ -108,9 +117,10 @@ class AppSettingsSignInTest {
     fun setup() {
         Dispatchers.setMain(main)
         repos = VmTestHarness.create(context, FakeClock())
-        sync = newSync(CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
+        appScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        sync = newSync(appScope)
         vm = AppSettingsViewModel(
-            UserPreferencesRepository(context),
+            testPreferences.repository,
             BackupRepository(repos.localStore, DocumentFiles(context), Dispatchers.Unconfined),
             google,
             sync,
@@ -139,15 +149,54 @@ class AppSettingsSignInTest {
 
     @After
     fun teardown() {
+        vm.viewModelScope.cancel()
+        appScope.cancel()
         repos.db.close()
         Dispatchers.resetMain()
     }
 
     @Test
+    fun `backup commands cannot overlap and unlock after completion`() = runTest(main) {
+        val file = File(folder.root, "should-not-exist.json")
+        vm.factoryReset()
+        vm.factoryReset()
+        vm.exportBackup(Uri.fromFile(file))
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.FactoryResetDone, vm.events.first())
+        assertEquals(FakeClock().now(), repos.localStore.snapshot().replacementAt)
+        assertTrue(!file.exists())
+        vm.exportBackup(Uri.fromFile(file))
+        advanceUntilIdle()
+        assertEquals(
+            AppSettingsEvent.BackupExported(com.raycoll.app.data.repository.BackupResult.SUCCESS),
+            vm.events.first()
+        )
+        assertTrue(file.exists())
+    }
+
+    @Test
+    fun `backup failure unlocks the next operation`() = runTest(main) {
+        repos.db.openHelper.writableDatabase.execSQL(
+            "CREATE TRIGGER fail_reset BEFORE INSERT ON decks BEGIN SELECT RAISE(ABORT, 'test failure'); END"
+        )
+        vm.factoryReset()
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.SaveFailed, vm.events.first())
+        repos.db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_reset")
+        vm.factoryReset()
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.FactoryResetDone, vm.events.first())
+    }
+
+    @Test
+    fun `preferences are loading until the first stored value arrives`() {
+        org.junit.Assert.assertNull(vm.uiState.value.preferences)
+    }
+
+    @Test
     fun `screen recreated during account choice cancels it without signing in`() = runTest(main) {
         val collector = launch { vm.uiState.collect {} }
-        val screen = Job()
-        launch(screen) { vm.chooseGoogleAccount(context) }
+        val screen = launch { vm.chooseGoogleAccount(context) }
         vm.uiState.first { it.signingIn }
 
         screen.cancel() // obrót: zakres korutyn ekranu znika razem z Activity
@@ -161,8 +210,7 @@ class AppSettingsSignInTest {
     @Test
     fun `chosen account signs in with the token and starts syncing in the application`() = runTest(main) {
         val collector = launch { vm.uiState.collect {} }
-        val screen = Job()
-        launch(screen) { vm.chooseGoogleAccount(context) }
+        val screen = launch { vm.chooseGoogleAccount(context) }
         vm.uiState.first { it.signingIn }
         google.tokenRequest.complete(IdTokenResult.Token("token-1"))
         runCurrent() // ekran odebrał token

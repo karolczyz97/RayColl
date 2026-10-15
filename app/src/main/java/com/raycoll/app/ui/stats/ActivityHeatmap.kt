@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
+import com.raycoll.app.core.LocalDates
 import com.raycoll.app.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -74,7 +75,7 @@ fun ActivityHeatmap(heatmap: Map<String, Int>, streak: Int, today: LocalDate) {
                 for (day in 0 until DAYS_PER_WEEK) {
                     val date = startMonday.plusDays((week * DAYS_PER_WEEK + day).toLong())
                     if (date.isAfter(today)) continue
-                    val count = heatmap[date.toString()] ?: 0
+                    val count = heatmap[LocalDates.dayKey(date)] ?: 0
                     val color = when {
                         count <= 0 -> empty
                         count <= 2 -> active.copy(alpha = 0.35f)

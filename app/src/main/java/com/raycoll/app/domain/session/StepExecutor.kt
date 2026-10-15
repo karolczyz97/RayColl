@@ -76,7 +76,8 @@ internal class StepExecutor(
                 // tap przerywa i pomija wszystkie pozostałe strony naraz
                 engine.runSkippable {
                     for (pageIndex in 0 until group.activePageCount) {
-                        if (state.status == SessionStatus.FINISHED) break
+                        // koniec sesji albo pauza (np. odmowa fokusu audio) — reszty stron nie czytamy
+                        if (state.status == SessionStatus.FINISHED || engine.isPaused.value) break
                         speakPage(card, pageIndex)
                     }
                 }
@@ -100,16 +101,17 @@ internal class StepExecutor(
                 val result = state.lastAnswerResult
                 val answered = result.status == AnswerStatus.CORRECT || result.status == AnswerStatus.INCORRECT
                 if (!state.cardReviewed && answered) {
-                    engine.submitReview(
-                        result.suggestedRating ?: mapMatchToRating(
-                            result.percent ?: 0,
-                            result.threshold ?: StudyConstants.STEP_DEFAULT_THRESHOLD
-                        )
-                    )
+                    result.suggestedRating?.let(engine::submitReview)
                 }
             }
 
-            is AutoRateFixedStep -> if (!state.cardReviewed) engine.submitReview(step.rating)
+            is AutoRateFixedStep -> if (!state.cardReviewed) {
+                val answer = state.lastAnswerResult
+                if (answer.status == AnswerStatus.CORRECT || answer.status == AnswerStatus.INCORRECT) {
+                    engine.dispatch(SessionAction.SetLastAnswerResult(answer.copy(suggestedRating = step.rating)))
+                }
+                engine.submitReview(step.rating)
+            }
 
             is MarkFailedStep -> engine.dispatch(SessionAction.AddFailedCard(card.id))
 
@@ -127,7 +129,7 @@ internal class StepExecutor(
     }
 
     private fun startRevealGate(stepIndex: Int, mode: TapRevealMode) {
-        val hasHiddenPages = (0 until group.activePageCount).any { it !in state.revealedPages }
+        val hasHiddenPages = engine.hiddenPages().isNotEmpty()
         if (hasHiddenPages) engine.dispatch(SessionAction.StartTapRevealGate(stepIndex + 1, mode))
     }
 
@@ -140,6 +142,7 @@ internal class StepExecutor(
             engine.dispatch(SessionAction.SetLastAnswerResult(answerOf(AnswerStatus.SKIPPED)))
             return
         }
+        if (!deps.acquireAudioFocus()) return
         engine.dispatch(SessionAction.StartListening(step.pageIndex))
         // czas nasłuchu skalowany długością ostatniej wypowiedzi TTS (dłuższa fraza = dłuższa odpowiedź)
         val timeoutMs = maxOf(
@@ -159,7 +162,7 @@ internal class StepExecutor(
         }
         val answer = when {
             // tap podczas nasłuchu = pominięcie, bez liczenia dopasowania
-            result == null || result.status == ListenStatus.SKIPPED -> answerOf(AnswerStatus.SKIPPED)
+            result == null -> answerOf(AnswerStatus.SKIPPED)
 
             result.status == ListenStatus.ERROR -> {
                 engine.onSttFailure()
@@ -187,6 +190,7 @@ internal class StepExecutor(
             lastTtsDurationMs = 0
             return
         }
+        if (!deps.acquireAudioFocus()) return
         engine.dispatch(SessionAction.StartSpeaking(pageIndex))
         val start = clock.now()
         val result = try {

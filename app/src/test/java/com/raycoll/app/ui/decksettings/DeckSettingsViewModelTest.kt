@@ -129,7 +129,7 @@ class DeckSettingsViewModelTest {
         val id = seedDeck()
         val vm = vm(id)
         vm.archive()
-        assertEquals(DeckSettingsEvent.Closed, vm.events.first())
+        assertEquals(DeckSettingsEvent.Archived(id), vm.events.first())
         assertTrue(repos.deckRepository.getDeck(id)!!.archivedAt != null)
     }
 
@@ -140,7 +140,7 @@ class DeckSettingsViewModelTest {
         vm.delete()
         assertEquals(DeckSettingsEvent.Closed, vm.events.first())
         assertTrue(repos.localStore.snapshot().groups.single().deletedAt != null)
-        assertEquals(null, repos.deckRepository.getDeck(id))
+        org.junit.Assert.assertNull(repos.deckRepository.getDeck(id))
     }
 
     @Test

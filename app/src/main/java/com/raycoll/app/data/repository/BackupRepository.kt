@@ -5,7 +5,8 @@ import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.normalize.BackupValidationException
-import com.raycoll.app.domain.normalize.validateBackupJson
+import com.raycoll.app.domain.normalize.jsonElementToPlain
+import com.raycoll.app.domain.normalize.validateBackupData
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -45,21 +46,23 @@ class BackupRepository @Inject constructor(
 
     /** Wczytuje kopię i ZASTĘPUJE nią wszystkie dane; błędny plik zostawia dane nietknięte. */
     suspend fun importFrom(uri: Uri): BackupResult {
+        val ns = localStore.currentNamespace()
         val text = documentFiles.readText(uri) ?: return BackupResult.FILE_ERROR
         val data = try {
             withContext(dispatcher) {
-                validateBackupJson(text)
-                json.decodeFromString(StoreData.serializer(), text)
+                val source = repairLegacyBuiltInNames(json.parseToJsonElement(text))
+                validateBackupData(jsonElementToPlain(source))
+                json.decodeFromJsonElement(StoreData.serializer(), source)
             }
         } catch (_: BackupValidationException) {
             return BackupResult.INVALID_BACKUP
         } catch (_: SerializationException) {
             return BackupResult.INVALID_BACKUP
         }
-        localStore.replaceAll(data)
+        localStore.replaceAccount(data, ns)
         return BackupResult.SUCCESS
     }
 
     /** Usuwa wszystkie dane aktywnego konta i wgrywa dane startowe. */
-    suspend fun factoryReset() = localStore.replaceAll(localStore.seedData())
+    suspend fun factoryReset() = localStore.replaceAccount(localStore.seedData())
 }

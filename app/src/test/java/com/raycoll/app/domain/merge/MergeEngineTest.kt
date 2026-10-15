@@ -354,4 +354,42 @@ class MergeEngineTest {
         )
         assertEquals(listOf("m2", "m1", "m3"), modes.map { it.id })
     }
+
+    @Test
+    fun `deck settings come from the newer side and cards from both`() {
+        val local = makeDeck("d", name = "Old name", cards = listOf(makeCard("a")), updatedAt = now)
+        val cloud = makeDeck("d", name = "New name", cards = listOf(makeCard("b")), updatedAt = now + 1)
+            .copy(activePageCount = 3)
+        val merged = mergeGroups(listOf(local), listOf(cloud)).single()
+        assertEquals("New name", merged.name)
+        assertEquals(3, merged.activePageCount)
+        assertEquals(now + 1, merged.updatedAt)
+        assertEquals(setOf("a", "b"), merged.cards.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `deck deletion wins over an older edit and keeps the deletion time`() {
+        val local = makeDeck("d", cards = listOf(makeCard("a")), updatedAt = now, deletedAt = now + 5)
+        val cloud = makeDeck("d", name = "Edited", cards = listOf(makeCard("a")), updatedAt = now + 1)
+        val merged = mergeGroups(listOf(local), listOf(cloud)).single()
+        assertEquals(now + 5, merged.deletedAt)
+        assertEquals(listOf("a"), merged.cards.map { it.id })
+    }
+
+    @Test
+    fun `deck edited after its deletion on the other device is revived`() {
+        val local = makeDeck("d", updatedAt = now, deletedAt = now + 5)
+        val cloud = makeDeck("d", name = "Edited later", updatedAt = now + 10)
+        val merged = mergeGroups(listOf(local), listOf(cloud)).single()
+        assertNull(merged.deletedAt)
+        assertEquals("Edited later", merged.name)
+    }
+
+    @Test
+    fun `deck present on one side only is kept with all its cards`() {
+        val cloudOnly = makeDeck("c", cards = listOf(makeCard("x"), makeCard("y")), updatedAt = now)
+        val merged = mergeGroups(emptyList(), listOf(cloudOnly))
+        assertEquals(listOf("c"), merged.map { it.id })
+        assertEquals(listOf("x", "y"), merged.single().cards.map { it.id })
+    }
 }

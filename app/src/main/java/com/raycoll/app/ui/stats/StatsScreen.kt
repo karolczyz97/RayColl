@@ -36,6 +36,7 @@ import com.raycoll.app.ui.components.CardStatsBar
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.SectionCard
 import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
 
@@ -58,17 +59,23 @@ fun StatsScreen(onBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel())
                 item(key = "streak") { StreakCard(state.streak) }
                 item(key = "heatmap") {
                     val days = heatmapDaysShown(state.today)
-                    SectionCard(pluralStringResource(R.plurals.stats_heatmap_title, days, days)) {
+                    SectionCard(
+                        title = pluralStringResource(R.plurals.stats_heatmap_title, days, days),
+                        spacing = Spacing.s
+                    ) {
                         ActivityHeatmap(state.heatmap, state.streak, state.today)
                     }
                 }
                 item(key = "distribution") {
-                    SectionCard(stringResource(R.string.stats_cards_total, state.allCards.total)) {
+                    SectionCard(
+                        title = stringResource(R.string.stats_cards_total, state.allCards.total),
+                        spacing = Spacing.s
+                    ) {
                         SrsDistribution(state.allCards)
                     }
                 }
                 items(state.decks, key = { it.id }) { deck ->
-                    SectionCard(deck.name) {
+                    SectionCard(title = deck.name, spacing = Spacing.s) {
                         CardStatsBar(deck.stats)
                         SrsDistribution(deck.stats)
                     }
@@ -114,16 +121,6 @@ private fun StreakCard(streak: Int) {
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
-    RayCollCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            content()
         }
     }
 }

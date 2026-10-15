@@ -14,7 +14,7 @@ object PageLimits {
     const val MAX_STORED_PAGE_COUNT = 20
 
     fun clampActivePageCount(candidate: Int, upperBound: Int): Int =
-        maxOf(MIN_PAGE_COUNT, minOf(upperBound, candidate.coerceAtLeast(0)))
+        candidate.coerceAtMost(upperBound).coerceAtLeast(MIN_PAGE_COUNT)
 }
 
 object SrsConstants {
@@ -60,7 +60,6 @@ object StudyConstants {
     const val BG_WAIT_SUBSTITUTE_MIN = 1500L
     const val BG_WAIT_SUBSTITUTE_MAX = 15_000L
     const val BG_WAIT_MS_PER_CHAR = 120
-    const val STREAK_MAX_DAYS = 365
     const val STEP_DEFAULT_THRESHOLD = 70
     const val STEP_DEFAULT_WAIT_MS = 500L
     const val MAX_PAUSE_MULTIPLIER = 5.0

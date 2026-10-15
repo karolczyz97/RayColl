@@ -60,7 +60,7 @@ class SaveFailureTest {
         assertEquals(ModeDetailEvent.SaveFailed, mode.events.first())
         imports.runImport(listOf("A", "B"))
         assertEquals(ImportEvent.SaveFailed, imports.events.first())
-        assertEquals(false, imports.uiState.value.importing)
+        org.junit.Assert.assertFalse(imports.uiState.value.importing)
     }
     private lateinit var repos: TestRepos
 

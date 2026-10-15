@@ -6,11 +6,11 @@ import com.google.firebase.FirebaseOptions
 import com.raycoll.app.BuildConfig
 
 /**
- * Konfiguracja aplikacji typu „web” w projekcie Firebase `raycoll-io`.
+ * Ręczna inicjalizacja projektu Firebase `raycoll-io` z istniejącym identyfikatorem web.
  * Klucz API spoza repozytorium (local.properties → BuildConfig).
- * Inicjalizacja ręczna zamiast google-services.json — plik
- * google-services.json (gdy user doda apkę Android w konsoli) ma pierwszeństwo:
- * wtedy FirebaseApp.getApps() nie będzie puste i ten init się nie wykona.
+ * Sam plik google-services.json nie inicjalizuje Firebase: rejestracja Android wymaga
+ * również wtyczki google-services, zgodnego applicationId i odcisków podpisów w konsoli.
+ * Jeżeli Firebase zostało już zainicjalizowane (np. przez tę wtyczkę), używamy tego stanu.
  */
 object FirebaseConfig {
     const val WEB_CLIENT_ID = "328078920834-t68panjarm0k3rva0e4r86jms78ren42.apps.googleusercontent.com"

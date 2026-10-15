@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -53,10 +55,16 @@ fun StudySplitButton(
     onSelectMode: (modeId: String) -> Unit,
     onManageModes: () -> Unit,
     modifier: Modifier = Modifier,
-    hasDue: Boolean = true
+    hasDue: Boolean = true,
+    deckName: String? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    val studyLabel = if (deckName == null) {
+        stringResource(R.string.route_study)
+    } else {
+        stringResource(R.string.a11y_item_action, stringResource(R.string.route_study), deckName)
+    }
     Surface(
         shape = MaterialTheme.shapes.small,
         // bez kart do powtórki przycisk nie wyróżnia się jako główne działanie (nadal działa — ekran nauki wyjaśni dlaczego pusto)
@@ -70,6 +78,7 @@ fun StudySplitButton(
                     .weight(1f)
                     .defaultMinSize(minHeight = MinTouchTarget)
                     .clickable(role = Role.Button, onClick = onStudy)
+                    .semantics { contentDescription = studyLabel }
                     .padding(horizontal = Spacing.s),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -85,7 +94,7 @@ fun StudySplitButton(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = Spacing.xs)
+                    modifier = Modifier.padding(start = Spacing.xs).clearAndSetSemantics {}
                 )
             }
             Box(
@@ -104,7 +113,16 @@ fun StudySplitButton(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = stringResource(R.string.study_modes_title))
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = if (deckName ==
+                        null
+                    ) {
+                        stringResource(R.string.study_modes_title)
+                    } else {
+                        stringResource(R.string.a11y_item_action, stringResource(R.string.study_modes_title), deckName)
+                    }
+                )
                 ModeMenu(
                     expanded = menuExpanded,
                     modes = modes,

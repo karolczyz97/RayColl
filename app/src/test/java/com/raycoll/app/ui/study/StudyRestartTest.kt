@@ -13,6 +13,7 @@ import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.NextCardStep
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.domain.session.ListenResult
@@ -20,11 +21,13 @@ import com.raycoll.app.domain.session.ListenStatus
 import com.raycoll.app.domain.session.SessionDeps
 import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.domain.session.SpeakResult
-import com.raycoll.app.playback.SessionControls
+import com.raycoll.app.playback.AudioFocusRequester
+import com.raycoll.app.playback.FocusChange
 import com.raycoll.app.playback.StudySessionHolder
 import com.raycoll.app.playback.StudySessionService
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.FakeSessionDeps
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import com.raycoll.app.testing.routeArgs
@@ -32,6 +35,7 @@ import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -49,6 +53,7 @@ import org.robolectric.Shadows.shadowOf
 /** „Powtórz błędne” / „Zacznij od nowa” ponownie oddają sesję do pracy w tle (serwis + powiadomienie). */
 @RunWith(RobolectricTestRunner::class)
 class StudyRestartTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
 
     @Test
     fun `failed reviews block restart and retry refreshes the finished summary`() {
@@ -60,14 +65,14 @@ class StudyRestartTest {
         vm.rate(3)
         idle()
         vm.rate(3)
-        waitFor { (vm.uiState.value as? StudyUiState.Active)?.resultCards?.size == 2 }
-        assertTrue((vm.uiState.value as StudyUiState.Active).resultCards!!.all { it.srsState.state == 0 })
+        waitFor { (vm.uiState.value as? StudyUiState.Active)?.finished == true }
+        assertNull((vm.uiState.value as StudyUiState.Active).resultCards)
         vm.restartSession()
         idle()
         assertTrue((vm.uiState.value as StudyUiState.Active).finished)
         repos.db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_review")
         vm.retryReviewSave()
-        waitFor { (vm.uiState.value as StudyUiState.Active).resultCards!!.all { it.srsState.repetitions == 1 } }
+        waitFor { (vm.uiState.value as StudyUiState.Active).resultCards?.all { it.srsState.repetitions == 1 } == true }
     }
 
     private val app: Application = ApplicationProvider.getApplicationContext()
@@ -76,6 +81,11 @@ class StudyRestartTest {
     private lateinit var holder: StudySessionHolder
     private var serviceStartFails = false
     private var appVisible = true
+    private var allowFocus = true
+    private val focus = object : AudioFocusRequester {
+        override fun request(onChange: (FocusChange) -> Unit): Boolean = allowFocus
+        override fun abandon() {}
+    }
 
     @Before
     fun setup() {
@@ -86,12 +96,14 @@ class StudyRestartTest {
                 if (serviceStartFails) throw IllegalStateException("background start not allowed")
                 ContextCompat.startForegroundService(context, intent)
             },
-            { appVisible }
+            { appVisible },
+            focus
         )
     }
 
     @After
     fun teardown() {
+        holder.current()?.let(holder::release)
         repos.db.close()
     }
 
@@ -102,9 +114,9 @@ class StudyRestartTest {
 
     /** Czeka na pracę na innych wątkach (DataStore, Room), pompując główny wątek. */
     private fun waitFor(condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + 5_000
+        val deadline = System.nanoTime() + 5_000_000_000L
         while (!condition()) {
-            check(System.currentTimeMillis() < deadline) { "warunek nie spełniony w 5 s" }
+            check(System.nanoTime() < deadline) { "warunek nie spełniony w 5 s" }
             idle()
             Thread.sleep(10)
         }
@@ -113,7 +125,7 @@ class StudyRestartTest {
     private fun startedServices(): List<Intent> = generateSequence { shadowOf(app).nextStartedService }.toList()
 
     private fun studyVm(steps: List<ModeStep>): StudyViewModel {
-        val prefs = UserPreferencesRepository(app)
+        val prefs = testPreferences.repository
         val deckId = runBlocking {
             // ustawienie urządzenia współdzielone między testami — jawnie: nauka w tle włączona
             prefs.setBackgroundPlayback(true)
@@ -161,6 +173,11 @@ class StudyRestartTest {
         assertTrue(state.resultCards!!.all { it.srsState.state == 2 && it.srsState.repetitions == 1 })
         assertTrue(state.session.cards.all { it.srsState.state == 0 })
         assertEquals(2, state.completedCardCount)
+        vm.endSessionEarly() // spóźnione potwierdzenie otwartego wcześniej dialogu
+        idle()
+        val after = vm.uiState.value as StudyUiState.Active
+        assertFalse(after.endedEarly)
+        assertEquals(2, after.completedCardCount)
     }
 
     @Test
@@ -189,7 +206,7 @@ class StudyRestartTest {
 
     @Test
     fun `paused session is visible and resume follows service controls including focus refusal`() {
-        val vm = studyVm(listOf(ShowPageStep(), WaitStep(ms = 60_000), NextCardStep()))
+        val vm = studyVm(listOf(ShowPageStep(), SpeakPageStep(), WaitStep(ms = 60_000), NextCardStep()))
         waitFor { vm.uiState.value is StudyUiState.Active }
         val engine = holder.current()!!
         engine.pause()
@@ -201,28 +218,15 @@ class StudyRestartTest {
         idle()
         assertEquals(1, vm.session().currentCardIndex)
         assertTrue((vm.uiState.value as StudyUiState.Active).paused)
-        var allowFocus = false
-        var playCalls = 0
-        val controls = object : SessionControls {
-            override fun play(): Boolean {
-                playCalls++
-                if (allowFocus) engine.resume()
-                return allowFocus
-            }
-            override fun pause() {}
-            override fun next() {}
-            override fun previous() {}
-            override fun stop() {}
-        }
-        holder.attachControls(controls)
+        allowFocus = false
         vm.resume()
+        idle()
         assertTrue(engine.isPaused.value)
+        assertEquals(StudyEvent.AudioFocusDenied, runBlocking { vm.events.first() })
         allowFocus = true
         vm.resume()
         idle()
         assertFalse((vm.uiState.value as StudyUiState.Active).paused)
-        assertEquals(2, playCalls)
-        holder.detachControls(controls)
         vm.endSessionEarly()
     }
 

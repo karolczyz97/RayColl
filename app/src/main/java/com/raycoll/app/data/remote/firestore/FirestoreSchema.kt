@@ -41,6 +41,8 @@ object FirestoreSchema {
     const val PATH_ACTIVITY = "activity"
 
     const val FIELD_UPDATED_AT = "updatedAt"
+    const val FIELD_REPLACEMENT_AT = "replacementAt"
+    const val FIELD_REPLACEMENT_ID = "replacementId"
     private const val FIELD_POSITION = "position"
 
     private val json = Json {
@@ -101,7 +103,7 @@ object FirestoreSchema {
 
     // ---------- deserializacja (mapy Firestore → Kotlin, strict) ----------
 
-    fun deckFromMap(docId: String, data: Map<String, Any?>, cards: List<Flashcard>): FlashcardGroup {
+    fun deckFromMap(docId: String, data: Map<String, Any?>): FlashcardGroup {
         val id = (data["id"] as? String)?.takeIf { it.isNotBlank() } ?: docId
         val studyFilter = keyedEnumOrNull(StudyFilter.entries, data["studyFilter"] as? String)
             ?: throw FirestoreDocException("Firestore deck $docId has invalid studyFilter.")
@@ -110,7 +112,7 @@ object FirestoreSchema {
         return FlashcardGroup(
             id = id,
             name = requireString(data["name"], "name for deck $docId"),
-            cards = cards,
+            cards = emptyList(),
             activeModeId = requireString(data["activeModeId"], "activeModeId for deck $docId"),
             pageLanguages = requireStringList(data["pageLanguages"], "pageLanguages for deck $docId"),
             pageNames = requireStringList(data["pageNames"], "pageNames for deck $docId"),
@@ -180,6 +182,20 @@ object FirestoreSchema {
 
     /** Miejsce dokumentu talii/karty na liście; null w starszych dokumentach. */
     fun positionFromMap(data: Map<String, Any?>): Long? = optionalLong(data[FIELD_POSITION])
+
+    /** Brak znacznika oznacza konto utworzone przed wprowadzeniem zastępowania danych. */
+    fun replacementFromMap(data: Map<String, Any?>): Pair<Long, String> {
+        if (FIELD_REPLACEMENT_AT !in data && FIELD_REPLACEMENT_ID !in data) return 0L to ""
+        val at = data[FIELD_REPLACEMENT_AT]
+        val id = data[FIELD_REPLACEMENT_ID]
+        if (at !is Number || !at.toDouble().isFinite() || at.toDouble() < 0 ||
+            at.toDouble() >= Long.MAX_VALUE.toDouble() ||
+            at.toDouble() != at.toLong().toDouble() || id !is String || (at.toLong() > 0 && id.isBlank())
+        ) {
+            throw FirestoreDocException("Firestore account has an invalid replacement marker.")
+        }
+        return at.toLong() to id
+    }
 
     fun activityCountFromMap(docId: String, data: Map<String, Any?>): Int {
         val count = data["count"]

@@ -12,9 +12,11 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -70,8 +72,12 @@ fun RayCollNavHost() {
                 popEnterTransition = { growBack() },
                 popExitTransition = { slideAway() }
             ) {
-                screen<DashboardRoute> {
+                screen<DashboardRoute> { entry ->
+                    val result by entry.savedStateHandle.getStateFlow<String?>(SCREEN_RESULT, null)
+                        .collectAsStateWithLifecycle()
                     DashboardScreen(
+                        result = decodeScreenResult(result),
+                        onResultConsumed = { entry.savedStateHandle[SCREEN_RESULT] = null },
                         onStudy = { navController.navigate(StudyRoute(it)) },
                         onBrowse = { navController.navigate(BrowseRoute(it)) },
                         onDeckSettings = { navController.navigate(DeckSettingsRoute(it)) },
@@ -88,13 +94,21 @@ fun RayCollNavHost() {
                 screen<BrowseRoute>(popExit = { shrinkInPlace() }) {
                     BrowseScreen(onBack = navController::popIfResumed)
                 }
-                screen<DeckSettingsRoute>(popExit = { shrinkInPlace() }) {
-                    DeckSettingsScreen(onBack = navController::popIfResumed, onEditMode = {
-                        navController.navigate(ModeDetailRoute(it))
-                    })
+                screen<DeckSettingsRoute>(popExit = { shrinkInPlace() }) { entry ->
+                    DeckSettingsScreen(
+                        onBack = navController::popIfResumed,
+                        onClosed = rememberScreenCompletion(navController, entry),
+                        onEditMode = { navController.navigate(ModeDetailRoute(it)) }
+                    )
                 }
-                screen<ModeDetailRoute> { ModeDetailScreen(onBack = navController::popIfResumed) }
-                screen<ImportRoute> { ImportScreen(onFinished = navController::popIfResumed) }
+                screen<ModeDetailRoute> { entry ->
+                    val complete = rememberScreenCompletion(navController, entry)
+                    ModeDetailScreen(onBack = navController::popIfResumed, onClosed = { complete(null) })
+                }
+                screen<ImportRoute> { entry ->
+                    val complete = rememberScreenCompletion(navController, entry)
+                    ImportScreen(onFinished = navController::popIfResumed, onCompleted = { complete(it) })
+                }
                 screen<StatsRoute> { StatsScreen(onBack = navController::popIfResumed) }
                 screen<ArchiveRoute> { ArchiveScreen(onBack = navController::popIfResumed) }
                 screen<AppSettingsRoute> {
@@ -117,11 +131,11 @@ fun RayCollNavHost() {
 /** Ekran z dostępem do przejść talii między ekranami (zakres wspólnego przejścia dostarcza [RayCollNavHost]). */
 private inline fun <reified T : Any> NavGraphBuilder.screen(
     noinline popExit: (AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?)? = null,
-    crossinline content: @Composable AnimatedContentScope.() -> Unit
+    crossinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
 ) {
-    composable<T>(popExitTransition = popExit) {
+    composable<T>(popExitTransition = popExit) { entry ->
         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
-            content()
+            content(entry)
         }
     }
 }

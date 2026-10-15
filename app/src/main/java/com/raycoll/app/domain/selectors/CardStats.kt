@@ -2,7 +2,6 @@ package com.raycoll.app.domain.selectors
 
 import com.raycoll.app.core.LocalDates
 import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.domain.srs.getCardCategory
 
@@ -32,7 +31,11 @@ fun computeCardStats(cards: List<Flashcard>): CardStats {
 fun computeStreak(heatmap: Map<String, Int>, now: Long): Int {
     val today = LocalDates.localDate(now)
     val start = if ((heatmap[LocalDates.dayKey(today)] ?: 0) > 0) today else today.minusDays(1)
-    return (0 until StudyConstants.STREAK_MAX_DAYS)
-        .takeWhile { offset -> (heatmap[LocalDates.dayKey(start.minusDays(offset.toLong()))] ?: 0) > 0 }
-        .count()
+    var streak = 0
+    var day = start
+    while ((heatmap[LocalDates.dayKey(day)] ?: 0) > 0) {
+        streak++
+        day = day.minusDays(1)
+    }
+    return streak
 }

@@ -109,7 +109,10 @@ class ModeDetailViewModel @Inject constructor(
         if (index in steps.indices) steps[index] = steps[index].copy(step = step)
     }
 
-    fun addStep(step: ModeStep) = editSteps { it += EditableStep(step) }
+    fun addStep(step: ModeStep, afterKey: String? = null) = editSteps { steps ->
+        val after = steps.indexOfFirst { it.key == afterKey }
+        steps.add(if (after >= 0) after + 1 else steps.size, EditableStep(step))
+    }
 
     fun removeStep(index: Int) {
         val state = _uiState.value as? ModeDetailUiState.Editing ?: return

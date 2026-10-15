@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -39,6 +41,7 @@ import com.raycoll.app.data.repository.BackupResult
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -51,6 +54,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
     val scope = rememberCoroutineScope()
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val messages = rememberSnackbarMessages(snackbarHostState)
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var showImportDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -68,7 +72,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             // nauka w tle działa dalej, ale kontrolki w powiadomieniu są niewidoczne — warto o tym powiedzieć
             if (!granted) {
                 scope.launch {
-                    val result = snackbarHostState.showSnackbar(notificationsOff, actionLabel = notificationsOpen)
+                    val result = messages.showAction(notificationsOff, actionLabel = notificationsOpen)
                     if (result == SnackbarResult.ActionPerformed) openNotificationSettings(context)
                 }
             }
@@ -89,6 +93,8 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
                 BackupResult.INVALID_BACKUP -> R.string.app_settings_import_invalid
             }
 
+            AppSettingsEvent.SignOutFailed -> R.string.auth_sign_out_failed
+
             AppSettingsEvent.SaveFailed -> R.string.errors_save_failed
 
             is AppSettingsEvent.SyncFinished ->
@@ -96,7 +102,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
 
             AppSettingsEvent.FactoryResetDone -> R.string.app_settings_factory_reset_done
         }
-        snackbarHostState.showSnackbar(resources.getString(message))
+        messages.showLatest(resources.getString(message))
     }
 
     ScreenScaffold(
@@ -119,40 +125,48 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
                 onSignOut = viewModel::signOut,
                 onSyncNow = viewModel::syncNow
             )
-            AppearanceSection(
-                preferences = uiState.preferences,
-                onTheme = viewModel::setTheme,
-                onSystemColors = viewModel::setSystemColors
-            )
-            LanguageSpeechSection(
-                preferences = uiState.preferences,
-                currentLanguage = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-'),
-                onLanguage = { tag ->
-                    AppCompatDelegate.setApplicationLocales(
-                        if (tag.isEmpty()) {
-                            LocaleListCompat.getEmptyLocaleList()
-                        } else {
-                            LocaleListCompat.forLanguageTags(
-                                tag
-                            )
+            val preferences = uiState.preferences
+            if (preferences == null) {
+                CircularProgressIndicator()
+            } else {
+                AppearanceSection(
+                    preferences = preferences,
+                    onTheme = viewModel::setTheme,
+                    onSystemColors = viewModel::setSystemColors
+                )
+                LanguageSpeechSection(
+                    preferences = preferences,
+                    currentLanguage = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-'),
+                    onLanguage = { tag ->
+                        AppCompatDelegate.setApplicationLocales(
+                            if (tag.isEmpty()) {
+                                LocaleListCompat.getEmptyLocaleList()
+                            } else {
+                                LocaleListCompat.forLanguageTags(
+                                    tag
+                                )
+                            }
+                        )
+                    },
+                    onTtsRate = viewModel::setTtsRate,
+                    onBackgroundPlayback = { enabled ->
+                        viewModel.setBackgroundPlayback(enabled)
+                        // kontrolki nauki w tle są w powiadomieniu
+                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
-                    )
-                },
-                onTtsRate = viewModel::setTtsRate,
-                onBackgroundPlayback = { enabled ->
-                    viewModel.setBackgroundPlayback(enabled)
-                    // kontrolki nauki w tle są w powiadomieniu
-                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
-                }
-            )
+                )
+            }
             StudyModesLink(onStudyModes)
+            val backupsEnabled = uiState.backupOperation == null && !uiState.signingIn && !uiState.signingOut
+            if (uiState.backupOperation != null) LinearProgressIndicator()
             BackupSection(
+                enabled = backupsEnabled,
                 onExport = { exportLauncher.launch(viewModel.backupFileName()) },
                 onImport = { showImportDialog = true }
             )
-            FactoryResetSection(onReset = { showResetDialog = true })
+            FactoryResetSection(onReset = { showResetDialog = true }, enabled = backupsEnabled)
             Text(
                 stringResource(R.string.app_settings_version, uiState.appVersion),
                 style = MaterialTheme.typography.bodySmall,
@@ -205,4 +219,5 @@ private fun signInErrorMessage(error: SignInError): Int = when (error) {
     SignInError.NO_TOKEN -> R.string.auth_error_no_token
     SignInError.INVALID_TOKEN -> R.string.auth_error_invalid_token
     SignInError.LOGIN_FAILED -> R.string.auth_error_login_failed
+    SignInError.LOCAL_DATA -> R.string.auth_error_local_data
 }

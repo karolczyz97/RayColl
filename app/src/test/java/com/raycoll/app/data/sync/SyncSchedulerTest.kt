@@ -15,6 +15,17 @@ import org.junit.Test
 class SyncSchedulerTest {
 
     @Test
+    fun `abort releases a hanging exclusive read before sign out acquires the lock`() = runTest {
+        val scheduler = SyncScheduler(this, push = { true })
+        val read = launch { scheduler.exclusive { awaitCancellation() } }
+        runCurrent()
+        scheduler.abort()
+        assertEquals(7, scheduler.exclusive { 7 })
+        read.join()
+        assertEquals(0, testScheduler.currentTime)
+    }
+
+    @Test
     fun `debounce skleja serię mutacji w jeden push`() = runTest {
         var pushes = 0
         val scheduler = SyncScheduler(this, push = {

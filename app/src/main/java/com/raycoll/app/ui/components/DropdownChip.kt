@@ -29,17 +29,19 @@ fun <T> DropdownChip(
     selected: T,
     optionLabel: @Composable (T) -> String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onSelect: (T) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         AssistChip(
+            enabled = enabled,
             onClick = { expanded = true },
             label = { Text(label) },
             trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
             modifier = modifier
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 val current = option == selected
                 DropdownMenuItem(

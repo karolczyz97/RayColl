@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -45,6 +45,7 @@ import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.sync.SyncStatus
 import com.raycoll.app.domain.model.TtsRate
+import com.raycoll.app.ui.components.ChoiceChip
 import com.raycoll.app.ui.components.DropdownChip
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.SectionCard
@@ -74,12 +75,20 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
             ) {
                 Button(
                     onClick = onSyncNow,
-                    enabled = state.syncStatus != SyncStatus.SYNCING,
+                    enabled =
+                        state.syncStatus != SyncStatus.SYNCING && !state.signingOut && state.backupOperation == null,
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(stringResource(R.string.auth_sync_now))
                 }
-                OutlinedButton(onClick = onSignOut, shape = MaterialTheme.shapes.small) {
+                OutlinedButton(
+                    onClick = onSignOut,
+                    enabled = !state.signingOut && state.backupOperation == null,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    if (state.signingOut) {
+                        CircularProgressIndicator(modifier = Modifier.size(ButtonDefaults.IconSize), strokeWidth = 2.dp)
+                    }
                     Text(stringResource(R.string.auth_sign_out))
                 }
             }
@@ -90,7 +99,11 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(stringResource(R.string.auth_local_benefit), style = MaterialTheme.typography.bodyMedium)
-            Button(onClick = onSignIn, enabled = !state.signingIn, shape = MaterialTheme.shapes.small) {
+            Button(
+                onClick = onSignIn,
+                enabled = !state.signingIn && state.backupOperation == null,
+                shape = MaterialTheme.shapes.small
+            ) {
                 if (state.signingIn) {
                     CircularProgressIndicator(modifier = Modifier.size(ButtonDefaults.IconSize), strokeWidth = 2.dp)
                 } else {
@@ -113,7 +126,7 @@ fun AppearanceSection(preferences: UserPreferences, onTheme: (ThemePref) -> Unit
                 onChange = onSystemColors
             )
         }
-        Text(stringResource(R.string.app_settings_theme), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.app_settings_theme), style = MaterialTheme.typography.labelLarge)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs)
@@ -123,12 +136,10 @@ fun AppearanceSection(preferences: UserPreferences, onTheme: (ThemePref) -> Unit
                 ThemePref.LIGHT to R.string.app_settings_theme_light,
                 ThemePref.DARK to R.string.app_settings_theme_dark
             ).forEach { (theme, label) ->
-                FilterChip(
+                ChoiceChip(
                     selected = preferences.theme == theme,
                     onClick = { onTheme(theme) },
-                    label = { Text(stringResource(label)) },
-                    // wybór jednej opcji, nie pole wyboru
-                    modifier = Modifier.semantics { role = Role.RadioButton }
+                    label = { Text(stringResource(label)) }
                 )
             }
         }
@@ -156,7 +167,7 @@ fun LanguageSpeechSection(
         Row {
             Text(
                 stringResource(R.string.app_settings_tts_rate),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
             Text(
@@ -243,16 +254,16 @@ fun StudyModesLink(onClick: () -> Unit) {
 }
 
 @Composable
-fun BackupSection(onExport: () -> Unit, onImport: () -> Unit) {
+fun BackupSection(onExport: () -> Unit, onImport: () -> Unit, enabled: Boolean = true) {
     SectionCard(title = stringResource(R.string.app_settings_export_import)) {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
-            Button(onClick = onExport, shape = MaterialTheme.shapes.small) {
+            Button(onClick = onExport, enabled = enabled, shape = MaterialTheme.shapes.small) {
                 Text(stringResource(R.string.app_settings_export_btn))
             }
-            OutlinedButton(onClick = onImport, shape = MaterialTheme.shapes.small) {
+            OutlinedButton(onClick = onImport, enabled = enabled, shape = MaterialTheme.shapes.small) {
                 Text(stringResource(R.string.app_settings_import_file_btn))
             }
         }
@@ -261,10 +272,11 @@ fun BackupSection(onExport: () -> Unit, onImport: () -> Unit) {
 
 /** Wymazanie wszystkich danych — osobno od bezpiecznych akcji kopii zapasowej. */
 @Composable
-fun FactoryResetSection(onReset: () -> Unit) {
+fun FactoryResetSection(onReset: () -> Unit, enabled: Boolean = true) {
     SectionCard {
         Button(
             onClick = onReset,
+            enabled = enabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -280,6 +292,7 @@ private fun SwitchRow(title: String, description: String, checked: Boolean, onCh
     Row(
         Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m)

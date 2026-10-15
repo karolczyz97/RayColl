@@ -33,7 +33,7 @@ private val stepList = ListSerializer(ModeStep.serializer())
 private fun <T> decodeOrEmpty(serializer: KSerializer<List<T>>, value: String, what: String): List<T> = try {
     json.decodeFromString(serializer, value)
 } catch (e: Exception) {
-    Log.w(TAG, "Corrupt $what column, using empty list: ${e.message}")
+    Log.w(TAG, "Corrupt $what column, using empty list", e)
     emptyList()
 }
 

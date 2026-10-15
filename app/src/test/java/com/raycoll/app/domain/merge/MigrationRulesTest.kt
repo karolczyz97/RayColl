@@ -14,6 +14,13 @@ import org.junit.Test
 class MigrationRulesTest {
 
     @Test
+    fun `deleted custom and modified built in modes do not trigger guest migration`() {
+        val custom = StudyMode("custom", "Custom", deletedAt = 100)
+        val edited = SEED_MODES.first().copy(name = "Edited", updatedAt = 50, deletedAt = 100)
+        assertFalse(getGuestHasData(emptyList(), emptyMap(), listOf(custom, edited)))
+    }
+
+    @Test
     fun `shouldTriggerMigration only when user cache fresh and guest has data`() {
         assertTrue(shouldTriggerMigration(hasUserLocalCache = false, guestHasData = true))
         assertFalse(shouldTriggerMigration(hasUserLocalCache = true, guestHasData = true))

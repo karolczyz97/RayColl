@@ -31,6 +31,23 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class ModeDetailViewModelTest {
+    @Test
+    fun `insert below follows the selected key after moving and undo retains the inserted key`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.chooseTemplate(ModeTemplate.CLASSIC)
+        val original = editing(vm).steps
+        val selected = original[1]
+        vm.moveStep(1, 0)
+        val inserted = ShowPageStep(pageIndex = 4)
+        vm.addStep(inserted, afterKey = selected.key)
+        val after = editing(vm).steps
+        assertEquals(selected.key, after[0].key)
+        assertEquals(inserted, after[1].step)
+        assertEquals(original.map { it.key }.toSet(), after.filterIndexed { i, _ -> i != 1 }.map { it.key }.toSet())
+        vm.removeStep(1)
+        vm.undoRemove()
+        assertEquals(after, editing(vm).steps)
+    }
 
     @Test
     fun `double save creates one new mode`() = runTest(dispatcher) {
@@ -66,7 +83,7 @@ class ModeDetailViewModelTest {
         val vm = vm()
         vm.chooseTemplate(ModeTemplate.CLASSIC)
 
-        val state = (vm.uiState.value as ModeDetailUiState.Editing)
+        val state = editing(vm)
         assertTrue(state.steps.isNotEmpty())
         assertEquals(ModeTemplate.CLASSIC.steps, state.steps.map { it.step })
 
@@ -79,16 +96,16 @@ class ModeDetailViewModelTest {
         val vm = vm()
         vm.chooseTemplate(ModeTemplate.CLASSIC)
 
-        val originalItem = (vm.uiState.value as ModeDetailUiState.Editing).steps[0]
+        val originalItem = editing(vm).steps[0]
         val originalId = originalItem.key
         val newStep = ShowPageStep(pageIndex = 5)
 
         vm.updateStep(0, newStep)
 
-        val updatedItem = (vm.uiState.value as ModeDetailUiState.Editing).steps[0]
+        val updatedItem = editing(vm).steps[0]
         assertEquals(originalId, updatedItem.key)
         assertEquals(newStep, updatedItem.step)
-        assertEquals(newStep, (vm.uiState.value as ModeDetailUiState.Editing).steps[0].step)
+        assertEquals(newStep, editing(vm).steps[0].step)
     }
 
     @Test
@@ -96,12 +113,12 @@ class ModeDetailViewModelTest {
         val vm = vm()
         vm.chooseTemplate(ModeTemplate.CLASSIC)
 
-        val item0 = (vm.uiState.value as ModeDetailUiState.Editing).steps[0]
-        val item1 = (vm.uiState.value as ModeDetailUiState.Editing).steps[1]
+        val item0 = editing(vm).steps[0]
+        val item1 = editing(vm).steps[1]
 
         vm.moveStep(0, 1)
 
-        val newStepItems = (vm.uiState.value as ModeDetailUiState.Editing).steps
+        val newStepItems = editing(vm).steps
         assertEquals(item1.key, newStepItems[0].key)
         assertEquals(item0.key, newStepItems[1].key)
     }
@@ -110,16 +127,16 @@ class ModeDetailViewModelTest {
     fun `adding and removing steps updates the editable list`() = runTest(dispatcher) {
         val vm = vm()
         vm.chooseTemplate(ModeTemplate.BLANK)
-        val initialCount = (vm.uiState.value as ModeDetailUiState.Editing).steps.size
+        val initialCount = editing(vm).steps.size
 
         val extraStep = ShowPageStep(pageIndex = 0)
         vm.addStep(extraStep)
 
-        assertEquals(initialCount + 1, (vm.uiState.value as ModeDetailUiState.Editing).steps.size)
-        assertEquals(extraStep, (vm.uiState.value as ModeDetailUiState.Editing).steps.last().step)
+        assertEquals(initialCount + 1, editing(vm).steps.size)
+        assertEquals(extraStep, editing(vm).steps.last().step)
 
-        vm.removeStep((vm.uiState.value as ModeDetailUiState.Editing).steps.lastIndex)
-        assertEquals(initialCount, (vm.uiState.value as ModeDetailUiState.Editing).steps.size)
+        vm.removeStep(editing(vm).steps.lastIndex)
+        assertEquals(initialCount, editing(vm).steps.size)
     }
 
     @Test
@@ -137,23 +154,23 @@ class ModeDetailViewModelTest {
     fun `operacje z indeksem poza zakresem sa bezpiecznymi no-op`() = runTest(dispatcher) {
         val vm = vm()
         vm.chooseTemplate(ModeTemplate.CLASSIC)
-        val initialSize = (vm.uiState.value as ModeDetailUiState.Editing).steps.size
+        val initialSize = editing(vm).steps.size
 
         // move poza zakres
         vm.moveStep(0, -1)
-        assertEquals(initialSize, (vm.uiState.value as ModeDetailUiState.Editing).steps.size)
+        assertEquals(initialSize, editing(vm).steps.size)
         vm.moveStep(initialSize - 1, +1)
-        assertEquals(initialSize, (vm.uiState.value as ModeDetailUiState.Editing).steps.size)
+        assertEquals(initialSize, editing(vm).steps.size)
 
         // remove poza zakres
         vm.removeStep(-1)
         vm.removeStep(initialSize + 5)
-        assertEquals(initialSize, (vm.uiState.value as ModeDetailUiState.Editing).steps.size)
+        assertEquals(initialSize, editing(vm).steps.size)
 
         // update poza zakres
         vm.updateStep(-1, ShowPageStep(pageIndex = 0))
         vm.updateStep(initialSize + 5, ShowPageStep(pageIndex = 0))
-        assertEquals(initialSize, (vm.uiState.value as ModeDetailUiState.Editing).steps.size)
+        assertEquals(initialSize, editing(vm).steps.size)
     }
 
     @Test
@@ -178,7 +195,7 @@ class ModeDetailViewModelTest {
         val id = repos.studyModeRepository.addMode("Original", ModeTemplate.CLASSIC.steps)
         val vm = vm(id)
         advanceUntilIdle()
-        assertFalse((vm.uiState.value as ModeDetailUiState.Editing).isNew)
+        assertFalse(editing(vm).isNew)
         vm.setName("Renamed")
         vm.save()
         advanceUntilIdle()
@@ -193,7 +210,7 @@ class ModeDetailViewModelTest {
             val id = repos.studyModeRepository.addMode("Flip", ModeTemplate.CLASSIC.steps)
             val vm = vm(id)
             advanceUntilIdle()
-            val steps = (vm.uiState.value as ModeDetailUiState.Editing).steps
+            val steps = editing(vm).steps
             val flipIndex = steps.indexOfFirst { (it.step as? CompoundStep)?.params is CompoundParams.FlipReveal }
             val flip = steps[flipIndex].step as CompoundStep
             vm.updateStep(flipIndex, flip.copy(params = CompoundParams.FlipReveal(RevealStyle.NEXT)))

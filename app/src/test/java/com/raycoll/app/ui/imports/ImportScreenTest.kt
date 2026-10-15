@@ -121,6 +121,7 @@ class ImportScreenTest {
         textField("Paste CSV / TSV text here").performTextInput("Word;Translation\nhello;cześć")
         settle()
         compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Preview (1)"))
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasSetTextAction() and hasText("hello"))
 
         compose.onNode(hasText("Word") and !hasSetTextAction()).assertExists()
         compose.onNode(hasText("Translation") and !hasSetTextAction()).assertExists()

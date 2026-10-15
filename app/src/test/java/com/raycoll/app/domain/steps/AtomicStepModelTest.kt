@@ -65,6 +65,6 @@ class AtomicStepModelTest {
     @Test
     fun `page index is absent for show all pages`() {
         val step: ModeStep = ShowAllPagesStep()
-        assertEquals(null, step.referencedPage)
+        org.junit.Assert.assertNull(step.referencedPage)
     }
 }

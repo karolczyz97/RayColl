@@ -18,7 +18,7 @@ enum class CsvSeparator(val char: Char) {
 private val LINE_BREAKS = Regex("\r\n?")
 
 /** Ujednolica tekst: bez znacznika BOM, końce linii jako "\n". */
-fun normalizeCsvText(text: String): String = text.removePrefix("\uFEFF").replace(LINE_BREAKS, "\n")
+private fun normalizeCsvText(text: String): String = text.removePrefix("\uFEFF").replace(LINE_BREAKS, "\n")
 
 /**
  * Dzieli tekst na wiersze i komórki (cudzysłowy jak w CSV: `"a;b"`, `""` = cudzysłów).
@@ -62,17 +62,22 @@ fun parseRows(text: String, separator: CsvSeparator, maxRows: Int = Int.MAX_VALU
     return rows
 }
 
-/** Separator, który daje najwięcej spójnych kolumn w pierwszych wierszach. */
+private data class SeparatorCandidate(val separator: CsvSeparator, val consistency: Double, val width: Int)
+
+private const val CONSISTENT_TAB_SHARE = 0.8
+
+/** Spójny TSV z arkusza ma pierwszeństwo; pozostałe formaty porównujemy po stałej szerokości. */
 fun detectSeparator(text: String): CsvSeparator {
-    val candidates = CsvSeparator.entries.map { separator ->
-        separator to parseRows(text, separator, ImportConstants.SEP_DETECT_ROWS)
+    val candidates = CsvSeparator.entries.mapNotNull { separator ->
+        val rows = parseRows(text, separator, ImportConstants.SEP_DETECT_ROWS)
+        val dominant = rows.groupingBy { it.size }.eachCount().entries.filter { it.key > 1 }
+            .maxWithOrNull(compareBy<Map.Entry<Int, Int>> { it.value }.thenBy { it.key }) ?: return@mapNotNull null
+        SeparatorCandidate(separator, dominant.value.toDouble() / rows.size, dominant.key)
     }
-    val best = candidates.maxByOrNull { (_, rows) ->
-        if (rows.isEmpty()) return@maxByOrNull 0.0
-        val splitRows = rows.filter { it.size > 1 }
-        splitRows.sumOf { it.size - 1 } * (splitRows.size.toDouble() / rows.size)
-    }
-    return best?.takeIf { (_, rows) -> rows.any { it.size > 1 } }?.first ?: CsvSeparator.DEFAULT
+    candidates.firstOrNull { it.separator == CsvSeparator.TAB && it.consistency >= CONSISTENT_TAB_SHARE }
+        ?.let { return it.separator }
+    return candidates.maxWithOrNull(compareBy<SeparatorCandidate> { it.consistency }.thenBy { it.width })?.separator
+        ?: CsvSeparator.DEFAULT
 }
 
 /**

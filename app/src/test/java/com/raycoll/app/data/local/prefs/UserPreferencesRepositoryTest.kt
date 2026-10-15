@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
+import com.raycoll.app.testing.PreferencesRule
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,7 @@ import org.robolectric.RobolectricTestRunner
 /** Preferencje urządzenia: wartości domyślne, zapis i zakres szybkości mowy. */
 @RunWith(RobolectricTestRunner::class)
 class UserPreferencesRepositoryTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
 
     @get:Rule
     val folder = TemporaryFolder()
@@ -72,7 +74,7 @@ class UserPreferencesRepositoryTest {
     @Test
     fun `preferences defaults, writes and ttsRate clamping`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val repo = UserPreferencesRepository(context)
+        val repo = testPreferences.repository
 
         // wartości domyślne
         val defaults = repo.preferences.first()

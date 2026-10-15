@@ -33,6 +33,19 @@ class SettingsSectionsTest {
     val compose = createComposeRule()
 
     @Test
+    fun `backup and reset actions are disabled during an operation`() {
+        compose.setContent {
+            androidx.compose.foundation.layout.Column {
+                BackupSection(onExport = {}, onImport = {}, enabled = false)
+                FactoryResetSection(onReset = {}, enabled = false)
+            }
+        }
+        compose.onNodeWithText("Save backup to file").assertIsNotEnabled()
+        compose.onNodeWithText("Restore from backup").assertIsNotEnabled()
+        compose.onNodeWithText("Restore factory data").assertIsNotEnabled()
+    }
+
+    @Test
     @Config(qualifiers = "de-w360dp-h800dp")
     fun `backup buttons wrap instead of running off a narrow card in german`() {
         compose.setContent { Box(Modifier.width(360.dp)) { BackupSection(onExport = {}, onImport = {}) } }

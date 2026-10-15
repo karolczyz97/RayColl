@@ -13,13 +13,16 @@ interface CloudSync {
     /** Wczytuje dane konta i ustawia bazę. */
     suspend fun load(uid: String): CloudLoad
 
-    /** Czy od naszego ostatniego odczytu/zapisu nikt inny nie zapisał chmury (inne urządzenie, web). */
+    /** Czy od naszego ostatniego odczytu/zapisu nikt inny nie zapisał chmury (inne urządzenie). */
     suspend fun hasFreshBaseline(uid: String): Boolean
 
     /** Wysyła różnice [data] względem bazy; false — brak bazy albo błąd (do ponowienia). */
     suspend fun save(uid: String, data: StoreData): Boolean
 
     fun clearBaseline()
+
+    /** Błąd operacji obejmującej także pracę lokalną lub krótszy limit bootstrapu. */
+    fun reportFailure() {}
 }
 
 /** Zalogowane konto widziane przez synchronizację (implementacja: AuthRepository). */

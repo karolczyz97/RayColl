@@ -97,7 +97,7 @@ class SessionReducerTest {
         assertEquals(1, result.currentCardIndex)
         assertEquals(listOf(0), result.revealedPages)
         assertNull(result.peekedPageIndex)
-        assertEquals(false, result.cardReviewed)
+        org.junit.Assert.assertFalse(result.cardReviewed)
     }
 
     @Test

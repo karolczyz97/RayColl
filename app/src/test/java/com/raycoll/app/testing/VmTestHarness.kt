@@ -27,7 +27,8 @@ data class TestRepos(
     val namespaceManager: NamespaceManager,
     val deckRepository: DeckRepository,
     val studyModeRepository: StudyModeRepository,
-    val localStore: LocalStore
+    val localStore: LocalStore,
+    val mutations: DataMutations
 )
 
 object VmTestHarness {
@@ -46,7 +47,8 @@ object VmTestHarness {
             namespaceManager = namespace,
             deckRepository = DeckRepository(db, clock, namespace, mutations),
             studyModeRepository = StudyModeRepository(db, clock, namespace, mutations),
-            localStore = LocalStore(db, namespace, mutations)
+            localStore = LocalStore(db, namespace, mutations, clock),
+            mutations = mutations
         )
     }
 }

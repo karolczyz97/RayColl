@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-15",
+  "jdk": "Eclipse Adoptium 17.0.19+10",
+  "gradle": "9.8.1",
+  "command": ":app:check :app:assembleDebug :app:assembleRelease --no-parallel --max-workers=2 --offline",
+  "result": "BUILD SUCCESSFUL",
+  "unitTests": {
+    "tests": 643,
+    "failures": 0,
+    "skipped": 0
+  },
+  "firestoreEmulator": {
+    "project": "demo-raycoll",
+    "tests": 10,
+    "failures": 0
+  },
+  "gradleLockTests": {
+    "tests": 2,
+    "failures": 0,
+    "wrapperVersionExitCode": 0
+  },
+  "repomixFailureTest": {
+    "expectedExit": 23,
+    "actualExit": 23,
+    "invocations": 1,
+    "shell": "Windows PowerShell 5.1"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 6,
+    "notes": "Five PluralsCandidate heuristics; one newer Firebase BOM patch notice"
+  },
+  "releaseSigned": false,
+  "debugSignatureVerified": true,
+  "reviewScope": {
+    "total": 166,
+    "closed": 155,
+    "preserved": 11
+  },
+  "artifacts": [
+    {
+      "path": "app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 32811425,
+      "sha256": "4f9b24126f1c6e6c794710e6c1b23229d9f0ba02a2b24ab0daa947a01bf97b97"
+    },
+    {
+      "path": "app/build/outputs/apk/release/app-release-unsigned.apk",
+      "bytes": 4735879,
+      "sha256": "eaf655c117b6bbca8d5e51a223ab37d0f067360eddf0e49904591b2fa692f2d2"
+    }
+  ],
+  "deviceChecks": "Not executed: adb devices returned no connected device; no AVD"
+}

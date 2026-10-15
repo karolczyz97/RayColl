@@ -43,7 +43,7 @@ class SessionPlayer(looper: Looper, private val controls: SessionControls) : Sim
     override fun getState(): State {
         val metadata = MediaMetadata.Builder()
             .setTitle(playback.title)
-            .setArtist(playback.deckName)
+            .setArtist(listOf(playback.deckName, playback.progress).filter(String::isNotBlank).joinToString(" · "))
             .setSubtitle(playback.progress)
             .build()
         val item = MediaItemData.Builder(ITEM_UID)

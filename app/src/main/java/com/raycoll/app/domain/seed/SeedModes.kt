@@ -63,11 +63,11 @@ val SEED_MODES: List<StudyMode> = listOf(
             NextCardStep(condition = CORRECT),
             FeedbackErrorStep(condition = WRONG),
             WaitStep(condition = WRONG, ms = StudyConstants.PAUSE_BEFORE_RETRY_MS),
-            // druga próba po błędzie
+            // druga próba po błędzie; trafienie = HARD niezależnie od dopasowania (odpowiedź była już raz zła)
             ListenAndCheckStep(condition = WRONG, pageIndex = 1),
             FeedbackSuccessStep(condition = CORRECT),
             ShowAllPagesStep(condition = CORRECT),
-            AutoRateFromAnswerStep(condition = CORRECT),
+            AutoRateFixedStep(condition = CORRECT, rating = Ratings.HARD),
             WaitStep(condition = CORRECT, ms = StudyConstants.PAUSE_AFTER_CORRECT_MS),
             NextCardStep(condition = CORRECT),
             FeedbackErrorStep(condition = WRONG),

@@ -54,13 +54,13 @@ class HapticAndSoundPlayer @Inject constructor(@ApplicationContext context: Cont
 
     init {
         // słuchacz przed load(): inaczej szybkie załadowanie mogłoby przejść niezauważone
-        soundPool.setOnLoadCompleteListener { pool, soundId, status ->
+        soundPool.setOnLoadCompleteListener { _, soundId, status ->
             if (status != 0) return@setOnLoadCompleteListener
             val playNow = synchronized(this) {
                 loaded += soundId
                 pending.remove(soundId)
             }
-            if (playNow) pool.play(soundId, 1f, 1f, 1, 0, 1f)
+            if (playNow) playOnce(soundId)
         }
         successSound = soundPool.load(context, R.raw.success, 1)
         errorSound = soundPool.load(context, R.raw.error, 1)
@@ -82,7 +82,11 @@ class HapticAndSoundPlayer @Inject constructor(@ApplicationContext context: Cont
         val ready = synchronized(this) {
             (soundId in loaded).also { if (!it) pending += soundId }
         }
-        if (ready) soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
+        if (ready) playOnce(soundId)
+    }
+
+    private fun playOnce(soundId: Int) {
+        soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
     }
 
     private fun vibrate(durationMs: Long) {

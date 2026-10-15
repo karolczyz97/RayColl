@@ -1,20 +1,39 @@
 package com.raycoll.app.data.remote.firestore
 
+import com.raycoll.app.data.remote.firestore.FirestoreSchema
+import com.raycoll.app.domain.model.AutoRateFixedStep
+import com.raycoll.app.domain.model.AutoRateFromAnswerStep
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.CompoundParams
 import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.DynamicPauseStep
+import com.raycoll.app.domain.model.FeedbackErrorStep
+import com.raycoll.app.domain.model.FeedbackSuccessStep
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.ListenAndCheckStep
+import com.raycoll.app.domain.model.MarkFailedStep
+import com.raycoll.app.domain.model.ModeStep
+import com.raycoll.app.domain.model.NextCardStep
+import com.raycoll.app.domain.model.ShowAllPagesStep
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakAllPagesStep
+import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StepCondition
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.model.WaitForTapStep
+import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
+import com.raycoll.app.domain.model.WaitForTapToRevealStep
+import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.domain.normalize.validateBackupData
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -124,7 +143,7 @@ class FirestoreSchemaTest {
         assertEquals(card(), FirestoreSchema.cardFromMap("c1", withPosition))
         assertEquals(card(), FirestoreSchema.cardFromMap("c1", FirestoreSchema.cardToMap(card())))
         val deckWithPosition = FirestoreSchema.deckToMap(deck(), position = 1)
-        assertEquals(deck(), FirestoreSchema.deckFromMap("d1", deckWithPosition, listOf(card())))
+        assertEquals(deck(), FirestoreSchema.deckFromMap("d1", deckWithPosition).copy(cards = listOf(card())))
     }
 
     @Test
@@ -132,7 +151,7 @@ class FirestoreSchemaTest {
         val deck = deck()
         val cardBack = FirestoreSchema.cardFromMap("c1", FirestoreSchema.cardToMap(card()))
         assertEquals(card(), cardBack)
-        val deckBack = FirestoreSchema.deckFromMap("d1", FirestoreSchema.deckToMap(deck), listOf(cardBack))
+        val deckBack = FirestoreSchema.deckFromMap("d1", FirestoreSchema.deckToMap(deck)).copy(cards = listOf(cardBack))
         assertEquals(deck, deckBack)
         val mode = mode()
         val modeBack = FirestoreSchema.modeFromMap("m1", FirestoreSchema.modeToMap(mode))
@@ -164,14 +183,14 @@ class FirestoreSchemaTest {
     fun `deck ze złym studyFilter odrzucony`() {
         val map = FirestoreSchema.deckToMap(deck()).toMutableMap()
         map["studyFilter"] = "everything"
-        assertThrows(Exception::class.java) { FirestoreSchema.deckFromMap("d1", map, emptyList()) }
+        assertThrows(Exception::class.java) { FirestoreSchema.deckFromMap("d1", map) }
     }
 
     @Test
     fun `deck bez updatedAt odrzucony`() {
         val map = FirestoreSchema.deckToMap(deck()).toMutableMap()
         map.remove("updatedAt")
-        assertThrows(Exception::class.java) { FirestoreSchema.deckFromMap("d1", map, emptyList()) }
+        assertThrows(Exception::class.java) { FirestoreSchema.deckFromMap("d1", map) }
     }
 
     @Test
@@ -223,5 +242,76 @@ class FirestoreSchemaTest {
         val decoded = FirestoreSchema.modeFromMap("m1", map)
         assertEquals(ShowPageStep(pageIndex = 1), decoded.steps[0])
         assertNull((decoded.steps[0] as ShowPageStep).condition)
+    }
+
+    @Test
+    fun `parameterless compound steps read legacy dummy fields in backups and cloud`() {
+        val json = Json { ignoreUnknownKeys = true }
+        for ((kind, params) in listOf(
+            "show_all_grade" to CompoundParams.ShowAllGrade,
+            "fail_next" to CompoundParams.FailNext
+        )) {
+            val legacy = """{"type":"compound","params":{"kind":"$kind","dummy":0}}"""
+            val step = json.decodeFromString(ModeStep.serializer(), legacy) as CompoundStep
+            assertSame(params, step.params)
+            val encoded = json.encodeToString(ModeStep.serializer(), step)
+            assertFalse(encoded.contains("dummy"))
+            assertEquals(step, json.decodeFromString(ModeStep.serializer(), encoded))
+
+            val mode = StudyMode(id = "legacy", name = "Legacy", steps = listOf(step))
+            val cloud = FirestoreSchema.modeToMap(mode) + (
+                "steps" to listOf(
+                    mapOf("type" to "compound", "condition" to null, "params" to mapOf("kind" to kind, "dummy" to 0))
+                )
+                )
+            validateBackupData(
+                mapOf(
+                    "groups" to emptyList<Any>(),
+                    "studyModes" to listOf(cloud),
+                    "activityHeatmap" to emptyMap<String, Int>()
+                )
+            )
+            assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, cloud))
+        }
+    }
+
+    @Test
+    fun `all editable steps survive backup validation and cloud round trip`() {
+        val steps = listOf(
+            ShowPageStep(), ShowAllPagesStep(), WaitForTapToRevealNextStep(), WaitForTapToRevealStep(),
+            ShowRatingsStep(), SpeakPageStep(), SpeakAllPagesStep(), DynamicPauseStep(), WaitStep(),
+            ListenAndCheckStep(), FeedbackSuccessStep(), FeedbackErrorStep(), AutoRateFromAnswerStep(),
+            AutoRateFixedStep(), MarkFailedStep(), WaitForTapStep(), NextCardStep(),
+            CompoundStep(params = CompoundParams.PresentFront()),
+            CompoundStep(params = CompoundParams.FlipReveal()),
+            CompoundStep(params = CompoundParams.ShowAllGrade),
+            CompoundStep(params = CompoundParams.SpeakPauseNext()),
+            CompoundStep(params = CompoundParams.AutoFlip()),
+            CompoundStep(params = CompoundParams.ListenGrade()),
+            CompoundStep(params = CompoundParams.GradeAfterListen()),
+            CompoundStep(params = CompoundParams.AutoPassNext()),
+            CompoundStep(params = CompoundParams.FailNext)
+        )
+        val mode = StudyMode(id = "all-steps", name = "All steps", steps = steps, updatedAt = 1L)
+        val plain = FirestoreSchema.modeToMap(mode)
+        val plainSteps = plain["steps"] as List<*>
+        val stepTypes = ModeStep.serializer().descriptor.getElementDescriptor(1)
+        assertEquals(
+            (0 until stepTypes.elementsCount).map { stepTypes.getElementName(it) }.toSet(),
+            plainSteps.map { (it as Map<*, *>)["type"] }.toSet()
+        )
+        val compoundTypes = CompoundParams.serializer().descriptor.getElementDescriptor(1)
+        assertEquals(
+            (0 until compoundTypes.elementsCount).map { compoundTypes.getElementName(it) }.toSet(),
+            plainSteps.mapNotNull { ((it as Map<*, *>)["params"] as? Map<*, *>)?.get("kind") }.toSet()
+        )
+        validateBackupData(
+            mapOf(
+                "groups" to emptyList<Any>(),
+                "studyModes" to listOf(plain),
+                "activityHeatmap" to emptyMap<String, Int>()
+            )
+        )
+        assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, plain))
     }
 }

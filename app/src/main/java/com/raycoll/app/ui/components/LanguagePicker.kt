@@ -11,11 +11,12 @@ private val PAGE_LANGUAGES = listOf("en-US", "pl-PL", "de-DE", "es-ES", "it-IT",
 
 /** Język strony: skrót na przycisku, pełne nazwy na liście (wybrany oznaczony ptaszkiem). */
 @Composable
-fun LanguagePicker(language: String, onSelect: (String) -> Unit) {
+fun LanguagePicker(language: String, enabled: Boolean = true, onSelect: (String) -> Unit) {
     DropdownChip(
         label = language.substringBefore('-').uppercase(Locale.ROOT),
         options = PAGE_LANGUAGES,
         selected = language,
+        enabled = enabled,
         optionLabel = { Locale.forLanguageTag(it).displayName },
         modifier = Modifier.semantics { contentDescription = Locale.forLanguageTag(language).displayName },
         onSelect = onSelect

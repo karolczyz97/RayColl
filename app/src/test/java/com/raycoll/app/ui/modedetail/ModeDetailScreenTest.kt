@@ -28,6 +28,21 @@ import org.robolectric.RobolectricTestRunner
 /** Edytor trybu: komunikaty o błędach, wskazówki i wyjście z niezapisanymi zmianami. */
 @RunWith(RobolectricTestRunner::class)
 class ModeDetailScreenTest {
+    @Test
+    fun `exiting issue banner keeps its text and a new issue is shown immediately`() {
+        nameField().performTextInput("Mine")
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+        vm.addStep(ShowPageStep())
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("• Add at least one step").assertExists()
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.onNodeWithText("• Add at least one step").assertDoesNotExist()
+        vm.removeStep(0)
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("• Add at least one step").assertExists()
+        compose.mainClock.autoAdvance = true
+    }
 
     @get:Rule
     val compose = createComposeRule()

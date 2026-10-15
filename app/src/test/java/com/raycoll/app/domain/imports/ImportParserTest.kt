@@ -7,6 +7,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ImportParserTest {
+
+    @Test
+    fun `spreadsheet tabs win over commas inside both sentence columns`() {
+        val text = List(5) { "Wenn ich Zeit habe, gehe ich\tIf I have time, I go" }.joinToString("\n")
+        assertEquals(CsvSeparator.TAB, detectSeparator(text))
+        assertEquals(2, parseRows(text, detectSeparator(text)).first().size)
+        assertEquals(CsvSeparator.COMMA, detectSeparator("word; hint,translation,example\none; two,three,four"))
+    }
+
+    @Test
+    fun `only unnamed trailing empty columns are discarded`() {
+        fun rows(text: String) = parseRows(text, CsvSeparator.SEMICOLON)
+        assertEquals(2, HeaderDetector.detectPageCount(rows("a;b;\nc;d;")))
+        assertEquals(3, HeaderDetector.detectPageCount(rows("a;;c\nd;;e")))
+        assertEquals(3, HeaderDetector.detectPageCount(rows("front;back;notes\na;b;\nc;d;"), true))
+        assertEquals(2, HeaderDetector.detectPageCount(rows("front;back;\na;b;\nc;d;"), true))
+    }
+
     @Test
     fun `quotes within unquoted cells do not absorb following rows`() {
         assertEquals(

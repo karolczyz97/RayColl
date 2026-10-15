@@ -37,7 +37,7 @@ class LocalDatesTest {
             assertEquals(LocalDates.localDate(instant, zone).toString(), LocalDates.dayKey(instant, zone))
         }
         assertEquals("2024-01-15", LocalDates.dayKey(LocalDates.localDate(instant, ZoneId.of("UTC"))))
-        // Auckland jest już następnego dnia
+        // Auckland: nadal ten sam dzień przy tej godzinie UTC
         assertEquals("2024-01-15", LocalDates.dayKey(instant, ZoneId.of("Pacific/Auckland")))
         assertEquals("2024-01-14", LocalDates.dayKey(instant, ZoneId.of("America/Los_Angeles")))
     }

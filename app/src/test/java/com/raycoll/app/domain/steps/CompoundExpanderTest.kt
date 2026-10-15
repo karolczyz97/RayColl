@@ -11,6 +11,7 @@ import com.raycoll.app.domain.model.FeedbackSuccessStep
 import com.raycoll.app.domain.model.ListenAndCheckStep
 import com.raycoll.app.domain.model.MarkFailedStep
 import com.raycoll.app.domain.model.NextCardStep
+import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.RevealStyle
 import com.raycoll.app.domain.model.ShowAllPagesStep
 import com.raycoll.app.domain.model.ShowPageStep
@@ -120,7 +121,7 @@ class CompoundExpanderTest {
             )
         )
         val listen = expanded.filterIsInstance<ListenAndCheckStep>().single()
-        assertEquals(null, listen.condition)
+        org.junit.Assert.assertNull(listen.condition)
         val fallbackRatings = expanded.filterIsInstance<ShowRatingsStep>()
         assertTrue(fallbackRatings.all { it.condition == null })
     }
@@ -164,7 +165,7 @@ class CompoundExpanderTest {
 
         assertTrue(correctSteps[5] is FeedbackSuccessStep)
         assertTrue(correctSteps[6] is ShowAllPagesStep)
-        assertTrue(correctSteps[7] is AutoRateFromAnswerStep)
+        assertEquals(Ratings.HARD, (correctSteps[7] as AutoRateFixedStep).rating)
         val waitCorrect2 = correctSteps[8] as WaitStep
         assertEquals(2000L, waitCorrect2.ms)
         assertTrue(correctSteps[9] is NextCardStep)

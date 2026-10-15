@@ -16,13 +16,30 @@ interface FocusedSession {
  * - Trwała utrata (inna aplikacja zaczęła grać muzykę) → pauza bez automatycznego wznowienia.
  */
 class SessionAudioFocus(private val focus: AudioFocusRequester, private val session: FocusedSession) {
+    private var recognitionOwnsFocus = false
+
+    /** Usługa rozpoznawania sama prosi o EXCLUSIVE; nasz listener nie może wtedy anulować mikrofonu. */
+    suspend fun <T> withRecognitionFocus(block: suspend () -> T): T {
+        recognitionOwnsFocus = true
+        focus.abandon()
+        try {
+            return block()
+        } finally {
+            recognitionOwnsFocus = false
+        }
+    }
+
     /** Sesja stoi z powodu chwilowej utraty fokusu i wróci sama po jego odzyskaniu. */
     var pausedByFocusLoss: Boolean = false
         private set
 
     /** Sesja gra (start, wznowienie z aplikacji) — potrzebny fokus; odmowa wstrzymuje sesję. */
-    fun onSessionPlaying() {
-        if (!focus.request(::onFocusChange)) session.pause()
+    fun onSessionPlaying(): Boolean {
+        if (recognitionOwnsFocus) return true
+        if (pausedByFocusLoss) return false
+        val granted = focus.request(::onFocusChange)
+        if (!granted) session.pause()
+        return granted
     }
 
     /** Sesja stoi — fokus oddany, chyba że czekamy na jego powrót po chwilowej utracie. */
@@ -32,6 +49,7 @@ class SessionAudioFocus(private val focus: AudioFocusRequester, private val sess
 
     /** Użytkownik chce grać (powiadomienie, słuchawki). False: fokus odmówiony, sesja się nie wznawia. */
     fun play(): Boolean {
+        if (pausedByFocusLoss) focus.abandon()
         pausedByFocusLoss = false
         if (!focus.request(::onFocusChange)) return false
         session.resume()

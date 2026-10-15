@@ -23,12 +23,12 @@ backup JSON oraz synchronizacja w chmurze (Firestore + logowanie Google).
 | Chmura | Firebase (BOM 35.0.0): Firestore + Auth, Credential Manager (Google Sign-In) |
 | Build | AGP 9.4.1, Gradle 9.8.1, `compileSdk`/`targetSdk` 37, `minSdk` 26 |
 
-- `applicationId`: `com.raycoll.app` (release), `com.raycoll.app.debug` (debug)
+- `applicationId`: `com.raycoll.app` (release), `com.raycoll.app.debug` (debug, na telefonie jako „RayColl (debug)”)
 - `versionName`: 1.0.0
 
 ## Wymagania
 
-- JDK 23
+- JDK 17 (sprawdzony pełny `check` oraz release z R8 i profilami ART)
 - Android SDK w `%LOCALAPPDATA%\Android\Sdk`
 - Wrapper Gradle w repo (`./gradlew.bat`)
 
@@ -39,19 +39,43 @@ backup JSON oraz synchronizacja w chmurze (Firestore + logowanie Google).
 ./gradlew.bat :app:assembleDebug
 :: → app/build/outputs/apk/debug/app-debug.apk
 
-:: Release APK (R8/proguard, unsigned — brak keystore w repo)
+:: Release APK (R8/proguard)
 ./gradlew.bat :app:assembleRelease
-:: → app/build/outputs/apk/release/app-release-unsigned.apk
+:: → app/build/outputs/apk/release/app-release.apk (z podpisem) albo app-release-unsigned.apk (bez)
 ```
 
-Release buduje się z minifikacją R8. Reguły `keep` (Room, kotlinx.serialization,
-Media3, Firebase, Hilt) są w [`app/proguard-rules.pro`](app/proguard-rules.pro).
+Oba APK wymagają klucza Firebase (sekcja niżej); testy i lint budują się bez niego.
+
+Release buduje się z minifikacją R8. W [`app/proguard-rules.pro`](app/proguard-rules.pro)
+są tylko reguły dla serializerów kotlinx.serialization klas aplikacji; Room, Media3,
+Firebase, Hilt i Credential Manager dostarczają własne reguły konsumenckie.
+
+### Podpis release
+
+Klucz podpisu nie jest w repozytorium. Żeby zainstalować release na telefonie,
+dopisz do `local.properties` (ścieżka względem katalogu repo albo bezwzględna):
+
+```
+release.storeFile=C:/Users/<ty>/klucze/raycoll-release.jks
+release.storePassword=...
+release.keyAlias=raycoll
+release.keyPassword=...
+```
+
+Bez tych wpisów release zostaje niepodpisany. Raz wybranego klucza nie zmieniaj —
+Android nie zaktualizuje aplikacji podpisanej innym kluczem bez odinstalowania
+(a więc bez utraty danych lokalnych). SHA-1 nowego klucza
+(`keytool -list -v -keystore <plik>`) trzeba dodać w Firebase Console do
+aplikacji `com.raycoll.app` (sekcja „wymagany SHA-1”).
 
 ## Testy
 
 ```bat
 ./gradlew.bat :app:testDebugUnitTest
+./gradlew.bat :app:ktlintCheck
 ./gradlew.bat :app:lint
+:: wszystko naraz (testy, ktlint, lint)
+./gradlew.bat :app:check
 ```
 
 Testy jednostkowe (JUnit4; część na Robolectric z in-memory Room). Pokrywają
@@ -61,13 +85,9 @@ Import, Stats, Archive, ModeDetail) oraz polecenia odtwarzacza Media3. Czas jest
 wstrzykiwany przez `Clock`, więc testy
 FSRS/streak/archiwum sterują czasem deterministycznie.
 
-Formatowanie Kotlin i skryptów Gradle: ktlint 1.8.0 z ustawieniami w `.editorconfig`.
-Po pobraniu oficjalnego wykonywalnego JAR ktlint można uruchomić:
-
-```powershell
-java -jar ktlint.jar -F 'app/src/**/*.kt' '*.gradle.kts' 'app/*.gradle.kts'
-java -jar ktlint.jar 'app/src/**/*.kt' '*.gradle.kts' 'app/*.gradle.kts'
-```
+Formatowanie Kotlin i skryptów Gradle: ktlint 1.8.0 z ustawieniami w `.editorconfig`,
+uruchamiany przez Gradle (`:app:ktlintCheck` sprawdza, `:app:ktlintFormat` poprawia).
+Obejmuje kod aplikacji, testy i wszystkie skrypty `*.gradle.kts`.
 
 ### Ręczna weryfikacja serializacji w release
 
@@ -90,7 +110,11 @@ firebase.apiKey=AIza...
 
 Klucz znajdziesz w [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials?project=raycoll-io).
 W CI ustaw zamiast tego zmienną środowiskową `FIREBASE_API_KEY` (np. z GitHub Secrets).
-Bez klucza build kończy się czytelnym błędem.
+Bez klucza budowanie APK (debug i release) kończy się czytelnym błędem — aplikacja
+bez klucza i tak nie uruchomiłaby się poprawnie. Klucz można dodatkowo ograniczyć
+w Google Cloud Console do aplikacji Android (nazwa pakietu + SHA-1), według
+[dokumentacji Firebase](https://firebase.google.com/docs/projects/api-keys);
+po takiej zmianie sprawdź logowanie i synchronizację na obu wariantach.
 
 ## Firebase — wymagany SHA-1
 
@@ -102,6 +126,9 @@ każdą z SHA-1:
 ```
 35:80:D2:75:83:68:BB:CB:8C:3F:CD:B5:CF:01:BC:24:3B:F8:23:7C
 ```
+
+Release podpisany własnym kluczem (sekcja „Podpis release”) potrzebuje dodatkowo SHA-1
+tego klucza przy `com.raycoll.app`.
 
 Bez tego logowanie Google rzuci `DEVELOPER_ERROR`. **Reszta aplikacji działa
 lokalnie** (Room jest źródłem prawdy) — chmura jest warstwą synchronizacji, nie
@@ -170,17 +197,41 @@ com/raycoll/app/
 │   ├── imports/               # CsvParser, Separator/Header/LanguageDetector
 │   └── seed/                  # SeedData (2 talie), SeedModes (2 tryby)
 ├── data/
+│   ├── files/                 # pliki z systemowego okna wyboru (import CSV, kopie JSON)
 │   ├── local/                 # Room DB (encje z namespace), DAO, mappery, prefs
 │   ├── remote/                # AuthRepository, Firestore (schema, dataSource)
 │   ├── repository/            # Deck/StudyMode/Backup, LocalStore, NamespaceManager
-│   └── sync/                  # SyncEngine, BootstrapLoader, MigrationController, SyncLifecycle
+│   └── sync/                  # SyncEngine, CloudOperations, BootstrapLoader, MigrationController, SyncLifecycle
 ├── playback/                  # TTS, STT, Media3 service, notyfikacja, audio focus
 └── ui/                        # theme, navigation, components + ekrany:
-                               # dashboard/ browse/ study/ decksettings/ modedetail/
-                               # imports/ stats/ archive/ appsettings/
+                               # main/ dashboard/ browse/ study/ decksettings/ modedetail/
+                               # studymodes/ imports/ stats/ archive/ appsettings/
 ```
 
 Reguły architektury: Room = źródło prawdy (ekrany obserwują Flow → StateFlow);
 akcje domenowe to czyste funkcje wołane wewnątrz transakcji Room; `SessionEngine`
 żyje w ViewModelu sesji, a holder udostępnia go serwisowi; dzięki temu sesja
 przeżywa obrót ekranu. Czas jest wstrzykiwany przez `Clock`.
+
+
+## Dodatkowe testy infrastruktury
+
+```powershell
+# lokalny emulator, wyłącznie projekt demo-raycoll (Node + Java 21 lub nowsza)
+npm ci --prefix tools/firestore-tests
+npm test --prefix tools/firestore-tests
+
+# blokada między procesami/checkoutami (Python 3)
+python -m unittest discover -s tools/tests -v
+python tools/gradle_locked.py :app:check
+```
+
+Pakiet Node służy wyłącznie testom reguł, nie jest częścią APK. Testy obejmują
+odczyt/zapis roota i podkolekcji przez anonimowego klienta, właściciela i inne UID.
+Konfiguracja testowa: `firebase.test.json`. Polecenia niczego nie wdrażają.
+
+Synchronizacja przechowuje generację zastąpienia w bazie Room i dokumentach Firestore.
+Import kopii i reset tworzą nową generację całego konta; synchronizujące urządzenia
+muszą używać wersji obsługującej ten kontrakt. Room v1→v2 zachowuje dane;
+nie instaluj ponownie starszej aplikacji z bazą v1 jako sposobu wycofania aktualizacji.
+Przed testem aktualizacji zrób synchronizację i kopię JSON.

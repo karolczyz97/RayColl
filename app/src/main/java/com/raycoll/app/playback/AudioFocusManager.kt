@@ -32,9 +32,11 @@ interface AudioFocusRequester {
 class AudioFocusManager @Inject constructor(@ApplicationContext context: Context) : AudioFocusRequester {
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private var focusRequest: AudioFocusRequest? = null
+    private var requestGeneration = 0L
 
     override fun request(onChange: (FocusChange) -> Unit): Boolean {
         focusRequest?.let { return true }
+        val generation = ++requestGeneration
         val attributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -42,16 +44,10 @@ class AudioFocusManager @Inject constructor(@ApplicationContext context: Context
         // MAY_DUCK: muzyka innej aplikacji tylko ścisza się na czas nauki zamiast stawać
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             .setAudioAttributes(attributes)
+            .setWillPauseWhenDucked(true)
             .setOnAudioFocusChangeListener { focus ->
-                when (focus) {
-                    AudioManager.AUDIOFOCUS_GAIN -> onChange(FocusChange.GAINED)
-
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> onChange(FocusChange.LOST_TRANSIENT)
-
-                    AudioManager.AUDIOFOCUS_LOSS -> onChange(FocusChange.LOST)
-
-                    // LOSS_TRANSIENT_CAN_DUCK: system sam ścisza mowę (Android 8+), nie przerywamy
-                    else -> Unit
+                if (generation == requestGeneration && focusRequest != null) {
+                    focusChangeOf(focus)?.let(onChange)
                 }
             }
             .build()
@@ -61,7 +57,21 @@ class AudioFocusManager @Inject constructor(@ApplicationContext context: Context
     }
 
     override fun abandon() {
-        focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        ++requestGeneration
+        val previous = focusRequest
         focusRequest = null
+        previous?.let { audioManager.abandonAudioFocusRequest(it) }
     }
+}
+
+/** Mowa wymaga pauzy także przy CAN_DUCK; automatyczne ściszanie nie obejmuje SPEECH. */
+internal fun focusChangeOf(value: Int): FocusChange? = when (value) {
+    AudioManager.AUDIOFOCUS_GAIN -> FocusChange.GAINED
+
+    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> FocusChange.LOST_TRANSIENT
+
+    AudioManager.AUDIOFOCUS_LOSS -> FocusChange.LOST
+
+    else -> null
 }

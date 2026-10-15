@@ -6,6 +6,7 @@ import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.SrsStates
 import com.raycoll.app.domain.model.StudyFilter
 import java.time.LocalDate
 import java.time.ZoneId
@@ -208,5 +209,69 @@ class SelectorsTest {
             LocalDates.dayKey(today.minusDays(3)) to 1
         )
         assertEquals(2, computeStreak(heatmap, at))
+    }
+
+    @Test
+    fun `computeStreak is not capped at a year`() {
+        val today = LocalDate.of(2026, 10, 14)
+        val at = today.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val heatmap = (0L until 400L).associate { LocalDates.dayKey(today.minusDays(it)) to 1 }
+        assertEquals(400, computeStreak(heatmap, at))
+    }
+
+    @Test
+    fun `computeStreak starts from yesterday when nothing was rated today`() {
+        val today = LocalDate.of(2026, 10, 14)
+        val at = today.atTime(8, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val heatmap = mapOf(
+            LocalDates.dayKey(today.minusDays(1)) to 2,
+            LocalDates.dayKey(today.minusDays(2)) to 1
+        )
+        assertEquals(2, computeStreak(heatmap, at))
+    }
+
+    @Test
+    fun `new and review filter takes new and overdue cards but not future or deleted ones`() {
+        val cards = listOf(
+            makeCard("new", state = SrsStates.NEW),
+            makeCard("due", state = SrsStates.REVIEW, reps = 2, nextReview = now - 1),
+            makeCard("dueNow", state = SrsStates.REVIEW, reps = 2, nextReview = now),
+            makeCard("future", state = SrsStates.REVIEW, reps = 2, nextReview = now + 1),
+            makeCard("deleted", state = SrsStates.NEW).copy(deletedAt = now - 10)
+        )
+        val due = getDueCards(cards, StudyFilter.NEW_AND_REVIEW, CardOrder.SEQUENTIAL, now)
+        assertEquals(listOf("new", "due", "dueNow"), due.map { it.id })
+    }
+
+    @Test
+    fun `hardest order sorts by difficulty, then earlier review, then deck order`() {
+        val cards = listOf(
+            makeCard("easy", difficulty = 2.0, nextReview = 10),
+            makeCard("hardLate", difficulty = 8.0, nextReview = 30),
+            makeCard("hardEarly", difficulty = 8.0, nextReview = 20),
+            makeCard("tieA", difficulty = 5.0, nextReview = 40),
+            makeCard("tieB", difficulty = 5.0, nextReview = 40)
+        )
+        assertEquals(
+            listOf("hardEarly", "hardLate", "tieA", "tieB", "easy"),
+            orderCards(cards, CardOrder.HARDEST).map { it.id }
+        )
+    }
+
+    @Test
+    fun `due card count matches the due card list for every filter`() {
+        val cards = listOf(
+            makeCard("new", state = SrsStates.NEW),
+            makeCard("due", state = SrsStates.REVIEW, reps = 1, nextReview = now - 5),
+            makeCard("future", state = SrsStates.REVIEW, reps = 1, nextReview = now + 5),
+            makeCard("deleted", state = SrsStates.REVIEW, nextReview = now - 5).copy(deletedAt = now)
+        )
+        StudyFilter.entries.forEach { filter ->
+            assertEquals(
+                filter.name,
+                getDueCards(cards, filter, CardOrder.SEQUENTIAL, now).size,
+                countDueCards(cards, filter, now)
+            )
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.raycoll.app.core.Clock
 import com.raycoll.app.core.minuteTicks
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.StudyModeRepository
+import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.operations.resolveStudyMode
 import com.raycoll.app.domain.selectors.CardStats
@@ -16,6 +17,7 @@ import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,13 +44,15 @@ sealed interface DashboardUiState {
 
 sealed interface DashboardEvent {
     data object SaveFailed : DashboardEvent
+    data class Archived(val deckId: String) : DashboardEvent
 }
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val deckRepository: DeckRepository,
     studyModeRepository: StudyModeRepository,
-    private val clock: Clock
+    private val clock: Clock,
+    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
     val uiState: StateFlow<DashboardUiState> = combine(
@@ -67,7 +71,7 @@ class DashboardViewModel @Inject constructor(
         }
         DashboardUiState.Ready(summaries, modes)
     }
-        .flowOn(Dispatchers.Default)
+        .flowOn(defaultDispatcher)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState.Loading)
 
     private val eventSink = UiEvents<DashboardEvent>()
@@ -77,7 +81,12 @@ class DashboardViewModel @Inject constructor(
 
     fun setActiveMode(deckId: String, modeId: String) = save { deckRepository.setActiveStudyMode(deckId, modeId) }
 
-    fun archiveDeck(deckId: String) = save { deckRepository.archiveDeck(deckId) }
+    fun archiveDeck(deckId: String) = save {
+        deckRepository.archiveDeck(deckId)
+        eventSink.send(DashboardEvent.Archived(deckId))
+    }
+
+    fun restoreDeck(deckId: String) = save { deckRepository.restoreDeck(deckId) }
 
     private fun save(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(DashboardEvent.SaveFailed) }, block = block)

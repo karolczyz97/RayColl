@@ -9,7 +9,17 @@ import kotlin.math.roundToInt
 
 object HeaderDetector {
 
-    val HEADER_TOKENS = setOf(
+    private const val LABEL_MAX_CHARACTERS = 24
+    private const val LABEL_MAX_WORDS = 3
+    private const val DATA_MIN_WORDS = 5
+    private const val MULTIPLE_KEYWORDS_WEIGHT = 0.65
+    private const val SINGLE_KEYWORD_WEIGHT = 0.45
+    private const val SHORT_LABELS_WEIGHT = 0.15
+    private const val SIMILAR_WIDTH_WEIGHT = 0.1
+    private const val DATA_PENALTY_MAX = 0.35
+    private const val DATA_FIELD_PENALTY = 0.15
+
+    private val HEADER_TOKENS = setOf(
         "word", "phrase", "translation", "example", "front", "back", "meaning", "definition",
         "english", "polish", "german", "deutsch", "french", "francais", "italian", "italiano",
         "spanish", "espanol", "palabra", "traduccion", "ejemplo", "wort", "ubersetzung", "beispiel",
@@ -26,34 +36,37 @@ object HeaderDetector {
         return COMBINING_MARKS.replace(temp, "").replace('ł', 'l').replace('Ł', 'L').lowercase(Locale.ROOT).trim()
     }
 
-    fun looksLikeHeaderLabel(value: String): Boolean {
+    private fun looksLikeHeaderLabel(value: String): Boolean {
         val normalized = normalizeHeaderToken(value)
         if (normalized.isEmpty()) return false
         val words = normalized.split(WHITESPACE)
         return words.any { HEADER_TOKENS.contains(it) }
     }
 
-    fun looksLikeShortLabel(value: String): Boolean {
+    private fun looksLikeShortLabel(value: String): Boolean {
         val normalized = value.trim()
         if (normalized.isEmpty()) return true
         val words = normalized.split(WHITESPACE)
-        return normalized.length <= 24 && words.size <= 3
+        return normalized.length <= LABEL_MAX_CHARACTERS && words.size <= LABEL_MAX_WORDS
     }
 
-    fun looksLikeDataValue(value: String): Boolean {
+    private fun looksLikeDataValue(value: String): Boolean {
         val normalized = value.trim()
         if (normalized.isEmpty()) return false
         val words = normalized.split(WHITESPACE)
-        val hasSentenceLikeLength = normalized.length > 24 || words.size >= 5
+        val hasSentenceLikeLength = normalized.length > LABEL_MAX_CHARACTERS || words.size >= DATA_MIN_WORDS
         val hasDigits = normalized.any { it.isDigit() }
         return hasSentenceLikeLength || hasDigits
     }
 
-    /** Liczba stron = najszersza linia danych (co najmniej minimalna liczba stron). */
+    /** Puste końcowe kolumny bez nazwy są pomijane; puste wewnętrzne i nazwane pozostają. */
     fun detectPageCount(rows: List<List<String>>, skipFirstRow: Boolean = false): Int {
-        val dataRows = if (skipFirstRow && rows.size > 1) rows.drop(1) else rows
-        return maxOf(PageLimits.MIN_PAGE_COUNT, dataRows.maxOfOrNull { it.size } ?: 0)
+        val dataRows = if (skipFirstRow) rows.drop(1) else rows
+        val headerWidth = if (skipFirstRow) rows.firstOrNull()?.meaningfulWidth() ?: 0 else 0
+        return maxOf(PageLimits.MIN_PAGE_COUNT, headerWidth, dataRows.maxOfOrNull { it.meaningfulWidth() } ?: 0)
     }
+
+    private fun List<String>.meaningfulWidth(): Int = indexOfLast { it.isNotBlank() } + 1
 
     fun looksLikeHeaderRow(rows: List<List<String>>): Boolean {
         if (rows.isEmpty()) return false
@@ -71,16 +84,16 @@ object HeaderDetector {
         val dataLikeMatches = firstFields.count { looksLikeDataValue(it) }
 
         if (keywordMatches > 0) {
-            score += if (keywordMatches >= 2) 0.65 else 0.45
+            score += if (keywordMatches >= 2) MULTIPLE_KEYWORDS_WEIGHT else SINGLE_KEYWORD_WEIGHT
         }
         if (shortLabelMatches == firstFields.size) {
-            score += 0.15
+            score += SHORT_LABELS_WEIGHT
         }
         if (secondRow.isNotEmpty() && abs(secondRow.size - firstRow.size) <= 1) {
-            score += 0.1
+            score += SIMILAR_WIDTH_WEIGHT
         }
         if (dataLikeMatches > 0) {
-            score -= minOf(0.35, dataLikeMatches.toDouble() * 0.15)
+            score -= minOf(DATA_PENALTY_MAX, dataLikeMatches.toDouble() * DATA_FIELD_PENALTY)
         }
 
         val confidence = ((score * 100).roundToInt() / 100.0).coerceIn(0.0, 1.0)

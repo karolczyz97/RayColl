@@ -80,7 +80,7 @@ class SttRecognizer @Inject constructor(@ApplicationContext private val context:
                                     recognizer.destroy()
                                 } catch (_: Exception) {}
                             }
-                            if (Looper.myLooper() == Looper.getMainLooper()) {
+                            if (Looper.getMainLooper().isCurrentThread) {
                                 destroy()
                             } else {
                                 mainHandler.post(destroy)

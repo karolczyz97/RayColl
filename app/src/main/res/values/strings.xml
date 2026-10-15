@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">RayColl</string>
+    <string name="app_name" translatable="false">RayColl</string>
     <string name="nav_dashboard">Dashboard</string>
     <string name="route_study">Study</string>
     <string name="route_browse">Browse cards</string>
@@ -16,14 +16,14 @@
     <string name="auth_migration_migrate_btn">Transfer to account</string>
     <string name="auth_migration_fresh_btn">Start with sample decks</string>
     <string name="auth_error_play_services">Google Play Services are unavailable or outdated. Please update them and try again.</string>
-    <string name="auth_error_no_token">No login token received. Please try again.</string>
+    <string name="auth_error_no_token">Could not find an available Google account. Check your account on this device and try signing in again.</string>
     <string name="auth_error_invalid_token">Invalid login token. Please try again.</string>
     <string name="auth_error_login_failed">Login failed. Please try again.</string>
     <string name="sync_status_syncing">Syncing changes…</string>
     <string name="sync_status_offline">Offline mode — changes are saved on this device and will sync when you\'re back online.</string>
     <string name="dialog_delete_desc">This action cannot be undone.</string>
     <string name="dialog_delete_permanent_title">Delete permanently?</string>
-    <string name="dialog_delete_permanent_desc">Deck "%1$s" will be permanently deleted. This cannot be undone.</string>
+    <string name="dialog_delete_permanent_desc">Deck “%1$s” will be permanently deleted. This cannot be undone.</string>
     <string name="dialog_archive_title">Archive this deck?</string>
     <plurals name="dialog_archive_confirm">
         <item quantity="one">The deck will be moved to Archive and permanently deleted after %1$d day. You can restore it before then.</item>
@@ -55,7 +55,7 @@
     <string name="study_exit_confirm_btn">Leave</string>
     <string name="study_session_ended_title">Session ended early</string>
     <string name="study_session_ended_desc">You left before finishing. Your progress is saved.</string>
-    <string name="study_background_paused">Paused — open the app to continue</string>
+    <string name="study_background_paused">Paused</string>
     <string name="browse_search_placeholder">Search flashcards…</string>
     <string name="browse_edit_card">Edit flashcard</string>
     <string name="browse_no_cards">No flashcards found.</string>
@@ -96,13 +96,13 @@
     <string name="app_settings_theme_system">System</string>
     <string name="app_settings_theme_light">Light</string>
     <string name="app_settings_theme_dark">Dark</string>
-    <string name="app_settings_tts_rate">TTS speech rate</string>
-    <string name="app_settings_export_import">Export / import data</string>
+    <string name="app_settings_tts_rate">Reading speed</string>
+    <string name="app_settings_export_import">Backup</string>
     <string name="app_settings_export_btn">Save backup to file</string>
     <string name="app_settings_import_file_btn">Restore from backup</string>
-    <string name="app_settings_export_error">Export failed.</string>
-    <string name="app_settings_import_success">Import completed!</string>
-    <string name="app_settings_import_error">Import failed.</string>
+    <string name="app_settings_export_error">Could not save the backup.</string>
+    <string name="app_settings_import_success">Data restored from backup.</string>
+    <string name="app_settings_import_error">Could not restore data from the backup.</string>
     <string name="app_settings_lang">Language</string>
     <string name="app_settings_dynamic_colors_title">Dynamic system colors</string>
     <string name="app_settings_dynamic_colors_desc">Extract accent and system colors directly from the device (Android 12+ / Material You).</string>
@@ -125,11 +125,11 @@
     <string name="step_show_ratings">Show rating buttons</string>
     <string name="step_speak_page">Speak page %1$d</string>
     <string name="step_speak_all_pages">Speak all pages</string>
-    <string name="step_dynamic_pause">Dynamic pause (page %1$d, ×%2$.1f)</string>
+    <string name="step_dynamic_pause">Pause based on page %1$d length (×%2$s)</string>
     <string name="step_wait">Wait %1$d ms</string>
-    <string name="step_listen_and_check">Check speech, page %1$d (min. %2$d%%)</string>
-    <string name="step_feedback_success">Play success feedback</string>
-    <string name="step_feedback_error">Play error feedback</string>
+    <string name="step_listen_and_check">Check spoken answer, page %1$d (minimum %2$d%%)</string>
+    <string name="step_feedback_success">Signal a correct answer</string>
+    <string name="step_feedback_error">Signal an error</string>
     <string name="step_auto_rate_from_answer">Auto-rate from answer</string>
     <string name="step_auto_rate_fixed">Auto-rate fixed: %1$d</string>
     <string name="step_mark_failed">Mark as failed</string>
@@ -141,18 +141,18 @@
     <string name="step_category_rating">Rating</string>
     <string name="step_category_flow">Flow</string>
     <string name="step_type_show_page">Show page</string>
-    <string name="step_type_speak_page">Speak page (TTS)</string>
+    <string name="step_type_speak_page">Read page aloud</string>
     <string name="step_type_dynamic_pause">Wait based on page length</string>
     <string name="step_type_wait">Wait (ms)</string>
-    <string name="step_type_listen_and_check">Check speech (STT)</string>
+    <string name="step_type_listen_and_check">Check spoken answer</string>
     <string name="step_type_auto_rate_fixed">Auto-rate (fixed rating)</string>
     <string name="compound_present_front_name">Show and read</string>
     <string name="compound_flip_reveal_name">Reveal answer manually</string>
     <string name="compound_show_all_grade_name">Show all and grade</string>
     <string name="compound_speak_pause_next_name">Read and reveal after pause</string>
     <string name="compound_auto_flip_name">Auto-reveal</string>
-    <string name="compound_listen_grade_name">Grade STT</string>
-    <string name="compound_grade_after_listen_name">Grade after STT</string>
+    <string name="compound_listen_grade_name">Listen and rate</string>
+    <string name="compound_grade_after_listen_name">Rate after listening</string>
     <string name="compound_auto_pass_next_name">Pass and continue</string>
     <string name="compound_fail_next_name">Fail and continue</string>
     <string name="compound_field_page">Page</string>
@@ -164,7 +164,7 @@
     <string name="compound_field_speak_question">Speak question</string>
     <string name="compound_field_speak_answer">Speak answer</string>
     <string name="compound_field_threshold">Threshold (%)</string>
-    <string name="compound_field_manual_fallback">Manual fallback</string>
+    <string name="compound_field_manual_fallback">Manual rating if recognition fails or is skipped</string>
     <string name="compound_field_wait_ms">Wait (ms)</string>
     <string name="compound_field_rating">Rating (1–4)</string>
     <string name="compound_field_reveal_style">Reveal pages</string>
@@ -181,7 +181,6 @@
     <string name="srs_badge_learning">Learning</string>
     <string name="srs_badge_review">Review</string>
     <string name="srs_badge_mastered">Mastered</string>
-    <string name="browse_delete_card">Delete flashcard</string>
     <string name="browse_card_missing">This flashcard no longer exists. Changes were not saved.</string>
     <string name="errors_retry">Try again</string>
     <plurals name="cards_count">
@@ -212,20 +211,20 @@
     <string name="mode_issue_name_required">Mode name is required</string>
     <string name="mode_issue_no_steps">Add at least one step</string>
     <string name="mode_issue_page_out_of_range">Step %1$d: page %2$d is out of range</string>
-    <string name="mode_issue_no_terminal">No terminal step: add “Show rating buttons” or “Next card”</string>
-    <string name="mode_issue_auto_rate_without_stt">“Auto-rate from answer” needs an earlier “Check speech (STT)” step</string>
+    <string name="mode_issue_no_terminal">No final step: add “%1$s” or “%2$s”.</string>
+    <string name="mode_issue_auto_rate_without_stt">“%1$s” needs an earlier “%2$s” step.</string>
     <string name="step_category_compound">Ready-made blocks</string>
     <string name="step_compound">Compound: %1$s</string>
     <string name="mode_list_edit">Edit mode</string>
     <string name="mode_list_new">New study mode</string>
     <string name="mode_list_reset">Restore defaults</string>
     <string name="mode_list_delete_title">Delete mode?</string>
-    <string name="mode_list_delete_desc">This custom study mode will be permanently deleted.</string>
+    <string name="mode_list_delete_desc">This custom study mode will be permanently deleted. Decks using it will switch to the default mode.</string>
     <string name="mode_list_reset_title">Restore defaults?</string>
     <string name="mode_list_reset_desc">The steps and name of this built-in mode will be restored to the original.</string>
-    <string name="study_missing_voice_title">Missing TTS voice</string>
+    <string name="study_missing_voice_title">Reading voice unavailable</string>
     <string name="study_missing_voice_desc">No text-to-speech voice is installed for this language. Install voice data in system settings.</string>
-    <string name="study_missing_voice_btn">Open TTS settings</string>
+    <string name="study_missing_voice_btn">Install a reading voice</string>
     <string name="study_answer_correct">Correct!</string>
     <string name="study_answer_incorrect">Incorrect</string>
     <string name="study_answer_skipped">Skipped</string>
@@ -233,7 +232,7 @@
     <string name="settings_delete_error">Could not delete the deck. Try again.</string>
     <string name="lang_system">System</string>
     <string name="app_settings_factory_reset">Restore factory data</string>
-    <string name="app_settings_factory_reset_desc">All decks, progress and modes will be replaced with the default sample data. When you are signed in, the change is also synced to the cloud. Save a backup first if you want to keep your data. This cannot be undone.</string>
+    <string name="app_settings_factory_reset_desc">All decks, progress, activity and study modes will be replaced with sample data. If signed in, this also replaces data on other devices on this account after syncing. Save a backup first. This cannot be undone.</string>
     <string name="app_settings_version">Version %1$s</string>
     <string name="study_answer_retry">Try again</string>
     <string name="study_modes_manage">Manage modes…</string>
@@ -245,7 +244,7 @@
     <string name="app_settings_export_success">Backup saved.</string>
     <string name="app_settings_import_invalid">This file is not a RayColl backup.</string>
     <string name="app_settings_import_confirm_title">Replace all data?</string>
-    <string name="app_settings_import_confirm_desc">Importing a backup replaces all your decks, progress and modes with the contents of the file. When you are signed in, the change is also synced to the cloud.</string>
+    <string name="app_settings_import_confirm_desc">Restoring replaces all decks, progress, activity and study modes on this device. If signed in, the replacement also applies to other devices on this account after syncing.</string>
     <string name="app_settings_tts_rate_value">%1$.1f×</string>
     <string name="errors_deck_missing">This deck no longer exists.</string>
     <string name="browse_add_card">Add card</string>
@@ -271,7 +270,7 @@
     <string name="study_recognized_text">Recognized: %1$s</string>
     <string name="study_answer_correct_percent">Correct! • %1$d%%</string>
     <string name="study_answer_incorrect_percent">Incorrect • %1$d%%</string>
-    <string name="study_answer_incorrect_threshold">Incorrect • %1$d%% / %2$d%%</string>
+    <string name="study_answer_incorrect_threshold">Incorrect • %1$d%% • required %2$d%%</string>
     <string name="study_suggested_rating">Suggested: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Listening</string>
@@ -279,19 +278,17 @@
     <string name="study_paused">Paused</string>
     <string name="study_resume">Resume</string>
     <string name="study_finished_without_ratings">The session ended without any ratings.</string>
-    <string name="mode_issue_no_fallback">Step %1$d: skipped or failed listening may stop the card. Add manual ratings or an unconditional next step.</string>
-    <string name="mode_issue_condition_after_tap">Step %1$d: the preceding tap clears the answer, so this condition will be skipped on screen.</string>
+    <string name="mode_issue_no_fallback">Step %1$d may stop after skipped or failed speech recognition. Add “%2$s” or an unconditional “%3$s”.</string>
+    <string name="mode_issue_condition_after_tap">Waiting for a tap before step %1$d clears the speech recognition result. This step’s condition will be skipped on screen.</string>
     <string name="study_summary_cards_done">Cards completed: %1$d of %2$d</string>
     <string name="study_summary_ratings">Rated: %1$d • Failed: %2$d</string>
     <string name="study_session_ended_no_ratings">Nothing was rated, so your review schedule hasn\'t changed.</string>
     <string name="dashboard_browse">Browse</string>
     <string name="sync_now_success">Synced</string>
     <string name="sync_now_failed">Couldn\'t sync. Changes are saved on this device and will be sent later.</string>
-    <!-- ui1 -->
     <string name="study_a11y_tap_card">Continue</string>
     <string name="browse_empty_deck">This deck has no flashcards yet.</string>
     <string name="a11y_deck_menu_named">Options for %1$s</string>
-    <!-- ui2 -->
     <string name="import_hint_format">One card per line. Separate pages with a tab, semicolon, comma or pipe. The first row can be a header.</string>
     <string name="mode_editor_discard_title">Discard changes?</string>
     <string name="mode_editor_discard_desc">The changes to this mode haven\'t been saved.</string>
@@ -306,5 +303,26 @@
     <string name="app_settings_notifications_open">Settings</string>
     <string name="settings_study_filter">Cards to study</string>
     <string name="a11y_item_action">%1$s: %2$s</string>
+    <string name="auth_error_local_data">You are signed in, but local account data could not be prepared. Sign out and sign in again.</string>
+    <string name="auth_migration_failed">Could not complete the operation. Try again.</string>
+    <string name="import_success">Deck imported.</string>
+    <string name="archive_success">Deck archived.</string>
+    <string name="btn_undo">Undo</string>
+    <string name="study_audio_focus_denied">Audio is in use by another app. Resume when it is available.</string>
+    <string name="import_discard_desc">The flashcard import has not been saved. Discard this draft?</string>
+    <string name="import_replace_title">Replace source?</string>
+    <string name="import_replace_desc">The selected file will replace the current text and preview edits.</string>
+    <string name="import_replace_confirm">Replace</string>
+    <string name="import_cell_label">Row %1$d · %2$s</string>
+    <string name="import_row_title">Row %1$d</string>
+    <string name="import_stored_columns_note">All %1$d columns will be saved. Up to %2$d pages can be shown during study.</string>
+    <string name="browse_card_added">Flashcard added.</string>
+    <string name="browse_clear_search">Clear search</string>
+    <string name="browse_clear_filters">Clear filters</string>
+    <string name="a11y_delete_card">Delete flashcard: %1$s</string>
+    <string name="mode_editor_add_below">Add below</string>
+    <string name="study_progress_description">Flashcard %1$d of %2$d</string>
+    <string name="study_modes_shared_hint">Modes are shared by all decks. Editing a mode changes it for every deck that uses it.</string>
+    <string name="auth_sign_out_failed">Could not sign out. Please try again.</string>
 </resources>
 

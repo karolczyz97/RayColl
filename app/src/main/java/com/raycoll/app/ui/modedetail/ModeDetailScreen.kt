@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
@@ -53,6 +54,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,18 +70,25 @@ import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ModeResetDialog
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.modeDisplayName
+import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
-fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel = hiltViewModel()) {
+fun ModeDetailScreen(
+    onBack: () -> Unit,
+    viewModel: ModeDetailViewModel = hiltViewModel(),
+    onClosed: () -> Unit = onBack
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddStep by rememberSaveable { mutableStateOf(false) }
+    var addAfterKey by rememberSaveable { mutableStateOf<String?>(null) }
     var showResetConfirm by rememberSaveable { mutableStateOf(false) }
     var showDiscardConfirm by rememberSaveable { mutableStateOf(false) }
     // Pola liczbowe z błędem (klucz kroku + pole): zapis czeka, aż użytkownik je poprawi.
     val invalidFields = remember { mutableStateSetOf<String>() }
     val snackbarHostState = remember { SnackbarHostState() }
+    val messages = rememberSnackbarMessages(snackbarHostState)
     val scope = rememberCoroutineScope()
     val saveFailed = stringResource(R.string.errors_save_failed)
     val stepDeleted = stringResource(R.string.mode_editor_step_deleted)
@@ -86,8 +96,8 @@ fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel = hiltVi
 
     CollectEvents(viewModel.events) { event ->
         when (event) {
-            ModeDetailEvent.Closed -> onBack()
-            ModeDetailEvent.SaveFailed -> snackbarHostState.showSnackbar(saveFailed)
+            ModeDetailEvent.Closed -> onClosed()
+            ModeDetailEvent.SaveFailed -> messages.showLatest(saveFailed)
         }
     }
 
@@ -130,15 +140,21 @@ fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel = hiltVi
             is ModeDetailUiState.Editing -> ModeEditor(
                 state = state,
                 onNameChange = viewModel::setName,
-                onAddStep = { showAddStep = true },
+                onAddStep = {
+                    addAfterKey = null
+                    showAddStep = true
+                },
+                onAddBelow = { key ->
+                    addAfterKey = key
+                    showAddStep = true
+                },
                 onUpdateStep = viewModel::updateStep,
                 onMoveStep = viewModel::moveStep,
                 onRemoveStep = { index ->
                     viewModel.removeStep(index)
                     // osobna korutyna: komunikat z cofnięciem nie może blokować zdarzeń z ViewModelu (np. zamknięcia)
                     scope.launch {
-                        snackbarHostState.currentSnackbarData?.dismiss()
-                        val result = snackbarHostState.showSnackbar(stepDeleted, actionLabel = undoLabel)
+                        val result = messages.showAction(stepDeleted, actionLabel = undoLabel, key = "stepUndo")
                         if (result == SnackbarResult.ActionPerformed) viewModel.undoRemove()
                     }
                 },
@@ -154,7 +170,7 @@ fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel = hiltVi
         AddStepDialog(
             onDismiss = { showAddStep = false },
             onChoose = {
-                viewModel.addStep(it)
+                viewModel.addStep(it, addAfterKey)
                 showAddStep = false
             }
         )
@@ -188,6 +204,7 @@ private fun ModeEditor(
     state: ModeDetailUiState.Editing,
     onNameChange: (String) -> Unit,
     onAddStep: () -> Unit,
+    onAddBelow: (String) -> Unit,
     onUpdateStep: (Int, ModeStep) -> Unit,
     onMoveStep: (from: Int, to: Int) -> Unit,
     onRemoveStep: (Int) -> Unit,
@@ -200,6 +217,8 @@ private fun ModeEditor(
     val issues = state.issues.filterNot { it == ModeIssue.NameRequired && !nameError }
     val blockingIssues = issues.filter { it.blocking }
     val tips = issues.filterNot { it.blocking }
+    val shownBlocking = rememberLastIssues(blockingIssues)
+    val shownTips = rememberLastIssues(tips)
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -222,7 +241,7 @@ private fun ModeEditor(
         AnimatedVisibility(visible = blockingIssues.isNotEmpty()) {
             NoticeBanner(
                 title = stringResource(R.string.mode_editor_issues_title),
-                issues = blockingIssues,
+                issues = shownBlocking,
                 icon = Icons.Filled.Warning,
                 container = MaterialTheme.colorScheme.errorContainer,
                 content = MaterialTheme.colorScheme.onErrorContainer,
@@ -274,7 +293,7 @@ private fun ModeEditor(
                     AnimatedVisibility(visible = tips.isNotEmpty()) {
                         NoticeBanner(
                             title = stringResource(R.string.mode_editor_tips_title),
-                            issues = tips,
+                            issues = shownTips,
                             icon = Icons.Filled.Info,
                             container = MaterialTheme.colorScheme.secondaryContainer,
                             content = MaterialTheme.colorScheme.onSecondaryContainer
@@ -282,7 +301,8 @@ private fun ModeEditor(
                     }
                     Text(
                         stringResource(R.string.mode_editor_steps_header, state.steps.size),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { heading() }
                     )
                 }
             }
@@ -295,6 +315,7 @@ private fun ModeEditor(
                     onMoveUp = { moveStep(index, index - 1) },
                     onMoveDown = { moveStep(index, index + 1) },
                     onDelete = { onRemoveStep(index) },
+                    onAddBelow = { onAddBelow(item.key) },
                     onUpdate = { onUpdateStep(index, it) },
                     onFieldValidityChange = { field, valid -> onFieldValidityChange("${item.key}/$field", valid) },
                     modifier = Modifier.animateItem()
@@ -303,11 +324,15 @@ private fun ModeEditor(
             item(key = "add_step") {
                 OutlinedButton(
                     onClick = onAddStep,
+                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Text(stringResource(R.string.mode_editor_add_step), Modifier.padding(start = Spacing.s))
+                    Text(
+                        stringResource(R.string.mode_editor_add_step),
+                        Modifier.padding(start = ButtonDefaults.IconSpacing)
+                    )
                 }
             }
         }
@@ -329,11 +354,14 @@ private fun ScrollToAddedStep(state: ModeDetailUiState.Editing, listState: LazyL
 
 @Composable
 private fun TemplatePicker(modifier: Modifier, onChoose: (ModeTemplate) -> Unit) {
-    Column(modifier.padding(Spacing.screen), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+    Column(
+        modifier.verticalScroll(rememberScrollState()).padding(Spacing.screen),
+        verticalArrangement = Arrangement.spacedBy(Spacing.m)
+    ) {
         Text(stringResource(R.string.mode_editor_template_title), style = MaterialTheme.typography.titleMedium)
         val buttonModifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .heightIn(min = 48.dp)
         Button(onClick = {
             onChoose(ModeTemplate.CLASSIC)
         }, shape = MaterialTheme.shapes.small, modifier = buttonModifier) {
@@ -388,4 +416,12 @@ private fun NoticeBanner(
             }
         }
     }
+}
+
+/** Pusty wynik nie usuwa tekstu wychodzącej animacji; nowy wynik od razu jest widoczny. */
+@Composable
+private fun rememberLastIssues(issues: List<ModeIssue>): List<ModeIssue> {
+    var last by remember { mutableStateOf(issues) }
+    SideEffect { if (issues.isNotEmpty()) last = issues }
+    return issues.ifEmpty { last }
 }

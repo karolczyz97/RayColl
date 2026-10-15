@@ -2,7 +2,7 @@ package com.raycoll.app.di
 
 import android.util.Log
 import com.raycoll.app.core.Clock
-import com.raycoll.app.core.SystemClock
+import com.raycoll.app.core.WallClock
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,7 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope
 
-/** Dispatcher do obliczeń w tle (parsowanie importu) — w testach podmieniany na testowy. */
+/** Dispatcher do obliczeń CPU (import, kopie zapasowe, modele ekranów) — w testach podmieniany na testowy. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class DefaultDispatcher
@@ -42,5 +42,5 @@ object AppModule {
     fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
 
     @Provides
-    fun provideClock(): Clock = SystemClock
+    fun provideClock(): Clock = WallClock
 }

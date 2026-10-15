@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
@@ -29,6 +31,8 @@ private const val UPCOMING_ALPHA = 0.22f
 @Composable
 fun SessionProgressBar(session: SessionState, modifier: Modifier = Modifier) {
     val srs = LocalSrsColors.current
+    val progressDescription =
+        stringResource(R.string.study_progress_description, session.currentCardIndex + 1, session.cards.size)
     Row(
         modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -38,7 +42,8 @@ fun SessionProgressBar(session: SessionState, modifier: Modifier = Modifier) {
         Text(
             stringResource(R.string.study_progress, session.currentCardIndex + 1, session.cards.size),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.clearAndSetSemantics { contentDescription = progressDescription }
         )
     }
 }

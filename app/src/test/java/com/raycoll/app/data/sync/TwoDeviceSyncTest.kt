@@ -1,6 +1,7 @@
 package com.raycoll.app.data.sync
 
 import android.content.Context
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.remote.auth.Account
 import com.raycoll.app.data.remote.auth.GoogleSignIn
@@ -23,6 +24,8 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.FakeSessionDeps
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +40,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 private const val UID = "uid-1"
 
@@ -44,6 +48,8 @@ private const val UID = "uid-1"
 private class FakeCloudBackend {
     var exists = false
     var version = 0L // znacznik updatedAt dokumentu konta
+    var replacementAt = 0L
+    var replacementId = ""
     val decks = linkedMapOf<String, FlashcardGroup>()
     val cards = linkedMapOf<Pair<String, String>, Flashcard>()
     val modes = linkedMapOf<String, StudyMode>()
@@ -64,7 +70,9 @@ private class FakeCloudBackend {
                 )
             },
             studyModes = modes.values.toList(),
-            activityHeatmap = activity.toMap()
+            activityHeatmap = activity.toMap(),
+            replacementAt = replacementAt,
+            replacementId = replacementId
         )
     )
 
@@ -107,15 +115,28 @@ private class FakeDeviceCloud(private val backend: FakeCloudBackend) : CloudSync
     var saveFails = false
     var freshnessChecks = 0
     var loads = 0
+    var saveAttempts = 0
+    var saveGate: CompletableDeferred<Unit>? = null
+    var saveCancelled = false
     private var baseline: Pair<StoreData, Long>? = null
+    private var stalePositions = emptySet<String>()
     override val status: StateFlow<SyncStatus> = MutableStateFlow(SyncStatus.IDLE)
 
     override suspend fun load(uid: String): CloudLoad {
         loads++
         if (!online) return CloudLoad.Failed
         val data = backend.snapshot()
+        val positions = buildMap<String, Long?> {
+            data.groups.forEach { deck ->
+                put(deckKey(deck.id), backend.deckPositions[deck.id]?.toLong())
+                deck.cards.forEach { card ->
+                    put(cardKey(deck.id, card.id), backend.cardPositions[deck.id to card.id]?.toLong())
+                }
+            }
+        }
+        stalePositions = stalePositionsOf(data, positions)
         baseline = data to backend.version
-        return if (backend.exists) CloudLoad.Loaded(data) else CloudLoad.Empty
+        return if (backend.exists) CloudLoad.Loaded(data, positions.values.all { it != null }) else CloudLoad.Empty
     }
 
     override suspend fun hasFreshBaseline(uid: String): Boolean {
@@ -125,15 +146,29 @@ private class FakeDeviceCloud(private val backend: FakeCloudBackend) : CloudSync
     }
 
     override suspend fun save(uid: String, data: StoreData): Boolean {
+        saveAttempts++
+        try {
+            saveGate?.await()
+        } catch (e: CancellationException) {
+            saveCancelled = true
+            throw e
+        }
         if (!online || saveFails) return false
         val known = baseline ?: return false
-        val ops = SyncDiff.diffSave(known.first, data)
-        if (ops.isNotEmpty()) {
+        val ops = SyncDiff.diffSave(known.first, data, stalePositions)
+        val replaced =
+            data.replacementAt != known.first.replacementAt || data.replacementId != known.first.replacementId
+        if (ops.isNotEmpty() || replaced) {
             ops.forEach(backend::apply)
             backend.exists = true
+            backend.replacementAt = data.replacementAt
+            backend.replacementId = data.replacementId
             backend.version++
+        } else {
+            return true
         }
         baseline = data to backend.version
+        stalePositions = emptySet()
         return true
     }
 
@@ -171,13 +206,16 @@ private class Device(context: Context, backend: FakeCloudBackend, val clock: Fak
 
     fun startSync() {
         sync.start()
-        SessionEndSync(holder, writes, sync, scope).start()
+        observeSessionEnds()
     }
+
+    fun observeSessionEnds() = SessionEndSync(holder, writes, sync, scope).start()
 
     fun decks() = runBlocking { repos.localStore.snapshot().groups.filter { it.deletedAt == null } }
 
     fun cardPages() = decks().flatMap { deck -> deck.cards.filter { it.deletedAt == null }.map { it.pages } }.toSet()
     fun close() {
+        holder.current()?.let(holder::release)
         scope.cancel()
         repos.db.close()
     }
@@ -194,6 +232,92 @@ private class Device(context: Context, backend: FakeCloudBackend, val clock: Fak
 /** Dwa urządzenia jednego konta: dane startowe, zmiany z innego urządzenia po powrocie, edycje offline. */
 @RunWith(RobolectricTestRunner::class)
 class TwoDeviceSyncTest {
+
+    @Test
+    fun `session end observer does not push on a cold start without a session`() {
+        val before = phone.cloud.saveAttempts
+        phone.observeSessionEnds()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(before, phone.cloud.saveAttempts)
+    }
+
+    @Test
+    fun `a second completed session does not cancel the first upload`() {
+        phone.observeSessionEnds()
+        val deck = phone.decks().first()
+        val (first, second) = deck.cards.take(2)
+        val before = phone.cloud.saveAttempts
+        val gate = CompletableDeferred<Unit>()
+        phone.cloud.saveGate = gate
+        phone.finishOneCard(deck, first)
+        waitUntil { phone.cloud.saveAttempts > before }
+        phone.finishOneCard(deck, second)
+        shadowOf(Looper.getMainLooper()).idle()
+        gate.complete(Unit)
+        waitUntil {
+            backend.cards.getValue(deck.id to first.id).srsState.repetitions == first.srsState.repetitions + 1 &&
+                backend.cards.getValue(deck.id to second.id).srsState.repetitions == second.srsState.repetitions + 1
+        }
+        assertTrue(!phone.cloud.saveCancelled)
+    }
+
+    @Test
+    fun `reset replaces another devices old cards custom modes and activity`() = runBlocking {
+        phone.repos.localStore.replaceAll(
+            phone.repos.localStore.snapshot().copy(activityHeatmap = mapOf("2026-10-14" to 10))
+        )
+        phone.sync.pushNow()
+        tablet.sync.runBootstrap()
+        val oldIds = tablet.decks().map { it.id }.toSet()
+        phone.repos.localStore.replaceAccount(phone.repos.localStore.seedData())
+        phone.sync.pushNow()
+        // Drugie urządzenie próbuje wysłać jeszcze stary stan: reconcile musi przyjąć reset.
+        tablet.sync.pushNow()
+        assertTrue(tablet.decks().none { it.id in oldIds })
+        assertEquals(phone.cardPages(), tablet.cardPages())
+        assertTrue(tablet.repos.localStore.snapshot().activityHeatmap.isEmpty())
+        assertEquals(phone.repos.localStore.snapshot().replacementId, tablet.repos.localStore.snapshot().replacementId)
+    }
+
+    @Test
+    fun `different local orders and duplicate cloud positions converge without endless writes`() = runBlocking {
+        val state = tablet.repos.localStore.snapshot()
+        tablet.repos.localStore.replaceAll(
+            state.copy(
+                groups = state.groups.reversed().map {
+                    it.copy(cards = it.cards.reversed())
+                }
+            )
+        )
+        backend.deckPositions.keys.forEach { backend.deckPositions[it] = 0 }
+        backend.cardPositions.keys.forEach { backend.cardPositions[it] = 0 }
+        backend.version++
+        phone.sync.pushNow()
+        tablet.sync.pushNow()
+        phone.sync.pushNow()
+        assertEquals(phone.repos.localStore.snapshot(), tablet.repos.localStore.snapshot())
+        val version = backend.version
+        repeat(2) {
+            tablet.sync.pushNow()
+            phone.sync.pushNow()
+        }
+        assertEquals(version, backend.version)
+    }
+
+    @Test
+    fun `documents without positions migrate once preserving this devices order`() = runBlocking {
+        val before = phone.decks().map { it.id }
+        backend.deckPositions.clear()
+        backend.cardPositions.clear()
+        backend.version++
+        phone.sync.pushNow()
+        assertEquals(before, backend.snapshot().groups.map { it.id })
+        tablet.sync.pushNow()
+        assertEquals(before, tablet.decks().map { it.id })
+        val version = backend.version
+        phone.sync.pushNow()
+        assertEquals(version, backend.version)
+    }
 
     @Test
     fun `retry after session completion uploads the last review without another mutation`() {
@@ -223,6 +347,30 @@ class TwoDeviceSyncTest {
         backend.version++
         phone.sync.runBootstrap()
         assertEquals(old.steps, phone.repos.studyModeRepository.getModeOrDefault("classic").steps)
+    }
+
+    @Test fun `bootstrap upgrades only untouched audio and preserves edited audio`() = runBlocking {
+        val audio = backend.modes.getValue("listen-speak")
+        var ratings = 0
+        val old = audio.copy(
+            steps = audio.steps.map { step ->
+                if (step is com.raycoll.app.domain.model.AutoRateFixedStep && step.rating == 2) {
+                    ratings++
+                    com.raycoll.app.domain.model.AutoRateFromAnswerStep(condition = step.condition)
+                } else {
+                    step
+                }
+            }
+        )
+        assertEquals(1, ratings)
+        backend.modes[audio.id] = old
+        backend.version++
+        phone.sync.runBootstrap()
+        assertEquals(audio.steps, phone.repos.studyModeRepository.getModeOrDefault(audio.id).steps)
+        backend.modes[audio.id] = old.copy(updatedAt = 123L)
+        backend.version++
+        phone.sync.runBootstrap()
+        assertEquals(old.steps, phone.repos.studyModeRepository.getModeOrDefault(audio.id).steps)
     }
 
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -344,21 +492,18 @@ class TwoDeviceSyncTest {
     @Test
     fun `quick app switching checks the cloud at most once per interval and reloads only after a change`() {
         phone.clock.advance(FOREGROUND_CLOUD_CHECK_INTERVAL_MS)
-        phone.sync.onAppForeground()
-        waitUntil { phone.cloud.freshnessChecks >= 1 }
-        Thread.sleep(50)
+        runBlocking { phone.sync.onAppForeground().join() }
         val checksAfterFirst = phone.cloud.freshnessChecks
         val loadsAfterFirst = phone.cloud.loads
 
-        phone.sync.onAppForeground()
-        phone.sync.onAppForeground()
-        Thread.sleep(50)
+        runBlocking {
+            phone.sync.onAppForeground().join()
+            phone.sync.onAppForeground().join()
+        }
         assertEquals("szybkie przełączanie: bez kolejnych odczytów", checksAfterFirst, phone.cloud.freshnessChecks)
 
         phone.clock.advance(FOREGROUND_CLOUD_CHECK_INTERVAL_MS)
-        phone.sync.onAppForeground()
-        waitUntil { phone.cloud.freshnessChecks > checksAfterFirst }
-        Thread.sleep(50)
+        runBlocking { phone.sync.onAppForeground().join() }
         assertEquals("chmura bez zmian: tylko odczyt znacznika", loadsAfterFirst, phone.cloud.loads)
 
         // zmiana z innego urządzenia → po kolejnym powrocie dane są pobierane i scalane
@@ -373,9 +518,10 @@ class TwoDeviceSyncTest {
     }
 
     private fun waitUntil(condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + 5_000
+        val deadline = System.nanoTime() + 5_000_000_000L
         while (!condition()) {
-            check(System.currentTimeMillis() < deadline) { "warunek nie spełniony w 5 s" }
+            shadowOf(Looper.getMainLooper()).idle()
+            check(System.nanoTime() < deadline) { "warunek nie spełniony w 5 s" }
             Thread.sleep(10)
         }
     }

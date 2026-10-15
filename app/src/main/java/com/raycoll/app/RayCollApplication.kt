@@ -25,7 +25,9 @@ class RayCollApplication : Application() {
         sessionEndSync.start()
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {
-                override fun onStart(owner: LifecycleOwner) = syncLifecycle.onAppForeground()
+                override fun onStart(owner: LifecycleOwner) {
+                    syncLifecycle.onAppForeground()
+                }
 
                 override fun onStop(owner: LifecycleOwner) = syncLifecycle.onAppBackground()
             }

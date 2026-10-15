@@ -16,7 +16,7 @@ class BackupValidationException(message: String) : Exception(message)
 fun validateBackupJson(jsonText: String) {
     val element = try {
         Json.parseToJsonElement(jsonText)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         throw BackupValidationException("Backup data is not a valid JSON object.")
     }
     validateBackupData(jsonElementToPlain(element))
@@ -70,43 +70,44 @@ private fun assertOptionalPage(value: Any?, message: String) {
 }
 
 private fun assertCompoundPause(value: Any?, modeId: String, index: Int) {
+    val message = stepMessage(modeId, index, "has invalid compound pause")
     if (value == null) return
-    if (value !is Map<*, *>) throw BackupValidationException(stepMessage(modeId, index, "has invalid compound pause"))
-    val kind = value["kind"]
-    when (kind) {
-        "fixed" -> assertNonNegativeNumber(value["ms"], stepMessage(modeId, index, "has invalid compound pause"))
+    if (value !is Map<*, *>) throw BackupValidationException(message)
+    when (value["kind"]) {
+        "fixed" -> assertNonNegativeNumber(value["ms"], message)
 
         "dynamic" -> {
-            assertNonNegativeNumber(value["page"], stepMessage(modeId, index, "has invalid compound pause"))
-            assertNonNegativeNumber(value["multiplier"], stepMessage(modeId, index, "has invalid compound pause"))
+            assertNonNegativeNumber(value["page"], message)
+            assertNonNegativeNumber(value["multiplier"], message)
         }
 
-        else -> throw BackupValidationException(stepMessage(modeId, index, "has invalid compound pause"))
+        else -> throw BackupValidationException(message)
     }
 }
 
 private fun assertCompoundBranch(value: Any?, modeId: String, index: Int) {
-    if (value !is Map<*, *>) throw BackupValidationException(stepMessage(modeId, index, "has invalid compound branch"))
-    assertBoolean(value["feedback"], stepMessage(modeId, index, "has invalid compound branch"))
-    assertOptionalPage(value["speakPage"], stepMessage(modeId, index, "has invalid compound branch"))
+    val message = stepMessage(modeId, index, "has invalid compound branch")
+    if (value !is Map<*, *>) throw BackupValidationException(message)
+    assertBoolean(value["feedback"], message)
+    assertOptionalPage(value["speakPage"], message)
     assertCompoundPause(value["pause"], modeId, index)
-    assertBoolean(value["revealAll"], stepMessage(modeId, index, "has invalid compound branch"))
-    assertBoolean(value["markFailed"], stepMessage(modeId, index, "has invalid compound branch"))
+    assertBoolean(value["revealAll"], message)
+    assertBoolean(value["markFailed"], message)
     val rate = value["rate"]
     if (rate != "fromAnswer" && rate != "fixed" && rate != "none") {
-        throw BackupValidationException(stepMessage(modeId, index, "has invalid compound branch"))
+        throw BackupValidationException(message)
     }
-    assertNonNegativeNumber(value["fixedRating"], stepMessage(modeId, index, "has invalid compound branch"))
-    assertBoolean(value["advance"], stepMessage(modeId, index, "has invalid compound branch"))
+    assertNonNegativeNumber(value["fixedRating"], message)
+    assertBoolean(value["advance"], message)
 }
 
 private fun assertCompoundParams(params: Any?, modeId: String, index: Int) {
-    if (params !is Map<*, *>) throw BackupValidationException(stepMessage(modeId, index, "has invalid compound params"))
-    val kind = params["kind"]
-    when (kind) {
+    val message = stepMessage(modeId, index, "has invalid compound params")
+    if (params !is Map<*, *>) throw BackupValidationException(message)
+    when (params["kind"]) {
         "present_front" -> {
             assertNonNegativeNumber(params["page"], stepMessage(modeId, index, "has invalid pageIndex"))
-            assertBoolean(params["speak"], stepMessage(modeId, index, "has invalid compound params"))
+            assertBoolean(params["speak"], message)
         }
 
         "flip_reveal" -> {
@@ -114,7 +115,7 @@ private fun assertCompoundParams(params: Any?, modeId: String, index: Int) {
             if (rs != "all" &&
                 rs != "next"
             ) {
-                throw BackupValidationException(stepMessage(modeId, index, "has invalid compound params"))
+                throw BackupValidationException(message)
             }
         }
 
@@ -130,8 +131,8 @@ private fun assertCompoundParams(params: Any?, modeId: String, index: Int) {
             assertNonNegativeNumber(params["questionPage"], stepMessage(modeId, index, "has invalid pageIndex"))
             assertNonNegativeNumber(params["answerPage"], stepMessage(modeId, index, "has invalid pageIndex"))
             assertNonNegativeNumber(params["multiplier"], stepMessage(modeId, index, "has invalid pauseMultiplier"))
-            assertBoolean(params["speakQuestion"], stepMessage(modeId, index, "has invalid compound params"))
-            assertBoolean(params["speakAnswer"], stepMessage(modeId, index, "has invalid compound params"))
+            assertBoolean(params["speakQuestion"], message)
+            assertBoolean(params["speakAnswer"], message)
         }
 
         "listen_grade" -> {
@@ -142,18 +143,18 @@ private fun assertCompoundParams(params: Any?, modeId: String, index: Int) {
             }
             assertCompoundBranch(params["onCorrect"], modeId, index)
             assertCompoundBranch(params["onWrong"], modeId, index)
-            assertBoolean(params["manualFallback"], stepMessage(modeId, index, "has invalid compound params"))
+            assertBoolean(params["manualFallback"], message)
         }
 
         "grade_after_listen" -> {
             assertCompoundBranch(params["onCorrect"], modeId, index)
             assertCompoundBranch(params["onWrong"], modeId, index)
-            assertBoolean(params["manualFallback"], stepMessage(modeId, index, "has invalid compound params"))
+            assertBoolean(params["manualFallback"], message)
         }
 
         "auto_pass_next" -> assertNonNegativeNumber(params["rating"], stepMessage(modeId, index, "has invalid rating"))
 
-        else -> throw BackupValidationException(stepMessage(modeId, index, "has invalid compound params"))
+        else -> throw BackupValidationException(message)
     }
 }
 
@@ -208,7 +209,7 @@ fun assertStudyModeStep(step: Any?, modeId: String, index: Int) {
     }
 }
 
-fun validateSrsState(cardId: String, groupName: String, srsState: Any?) {
+private fun validateSrsState(cardId: String, groupName: String, srsState: Any?) {
     if (srsState !is Map<*, *>) {
         throw BackupValidationException(
             "Card $cardId in group $groupName is missing a valid \"srsState\" object."
@@ -228,7 +229,7 @@ fun validateSrsState(cardId: String, groupName: String, srsState: Any?) {
     )
 }
 
-fun validateCard(card: Any?, groupName: String) {
+private fun validateCard(card: Any?, groupName: String) {
     if (card !is Map<*, *>) throw BackupValidationException("Card in group $groupName is not a valid object.")
     if (card["id"] !is String) throw BackupValidationException("Card in group $groupName is missing a string ID.")
     assertDocumentId(card["id"])
@@ -248,11 +249,15 @@ fun validateCard(card: Any?, groupName: String) {
     validateSrsState(cardId, groupName, card["srsState"])
 }
 
-fun validateGroup(group: Any?) {
+private fun validateGroup(group: Any?) {
     if (group !is Map<*, *>) throw BackupValidationException("Each group must be a valid object.")
     if (group["id"] !is String) throw BackupValidationException("Each group must have a string id.")
     assertDocumentId(group["id"])
-    if (group["name"] !is String) throw BackupValidationException("Group with ID ${group["id"]} must have a name.")
+    if ((group["name"] as? String).isNullOrBlank()) {
+        throw BackupValidationException(
+            "Group with ID ${group["id"]} must have a name."
+        )
+    }
     if (group["cards"] !is List<*>) {
         throw BackupValidationException(
             "Group with ID ${group["id"]} must contain a \"cards\" array."
@@ -268,7 +273,7 @@ fun validateGroup(group: Any?) {
             "Group with ID ${group["id"]} must contain a \"pageNames\" array."
         )
     }
-    if (group["activeModeId"] !is String) {
+    if ((group["activeModeId"] as? String).isNullOrBlank()) {
         throw BackupValidationException(
             "Group with ID ${group["id"]} must have an active study mode."
         )
@@ -277,12 +282,16 @@ fun validateGroup(group: Any?) {
     (group["cards"] as List<*>).forEach { validateCard(it, groupName) }
 }
 
-fun validateStudyMode(mode: Any?) {
+private fun validateStudyMode(mode: Any?) {
     if (mode !is Map<*, *>) throw BackupValidationException("Each study mode must be a valid object.")
     if (mode["id"] !is String) throw BackupValidationException("Each study mode must have a string id.")
     assertDocumentId(mode["id"])
     val modeId = mode["id"] as String
-    if (mode["name"] !is String) throw BackupValidationException("Study mode with ID $modeId must have a name.")
+    if ((mode["name"] as? String).isNullOrBlank()) {
+        throw BackupValidationException(
+            "Study mode with ID $modeId must have a name."
+        )
+    }
     if (mode["steps"] !is List<*>) {
         throw BackupValidationException(
             "Study mode with ID $modeId must have a \"steps\" array."
@@ -301,7 +310,7 @@ fun validateStudyMode(mode: Any?) {
     (mode["steps"] as List<*>).forEachIndexed { index, step -> assertStudyModeStep(step, modeId, index) }
 }
 
-fun validateBackupData(data: Any?) {
+internal fun validateBackupData(data: Any?) {
     if (data !is Map<*, *>) throw BackupValidationException("Backup data is not a valid JSON object.")
     if (data["groups"] !is List<*>) throw BackupValidationException("Backup data must contain a \"groups\" array.")
     if (data["studyModes"] !is List<*>) {
@@ -313,6 +322,17 @@ fun validateBackupData(data: Any?) {
         throw BackupValidationException(
             "Backup data must contain an \"activityHeatmap\" object."
         )
+    }
+    data["replacementAt"]?.let {
+        assertNonNegativeNumber(it, "Invalid replacement timestamp.")
+        if ((it as Number).toDouble() >=
+            Long.MAX_VALUE.toDouble()
+        ) {
+            throw BackupValidationException("Invalid replacement timestamp.")
+        }
+    }
+    data["replacementId"]?.let {
+        if (it !is String) throw BackupValidationException("Invalid replacement ID.")
     }
     (data["activityHeatmap"] as Map<*, *>).forEach { (date, count) ->
         assertDocumentId(date)

@@ -52,7 +52,7 @@ class SessionPlayerTest {
     fun `metadata contains card title deck name and progress`() {
         player.update(SessionPlayback("Card", "Deck", "2/5", true))
         assertEquals("Card", player.mediaMetadata.title.toString())
-        assertEquals("Deck", player.mediaMetadata.artist.toString())
+        assertEquals("Deck · 2/5", player.mediaMetadata.artist.toString())
         assertEquals("2/5", player.mediaMetadata.subtitle.toString())
         assertTrue(player.isPlaying)
     }

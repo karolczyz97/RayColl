@@ -22,6 +22,10 @@ internal fun deckKey(deckId: String) = deckId
 
 internal fun cardKey(deckId: String, cardId: String) = "$deckId/$cardId"
 
+/** Pusty diff nie przesuwa bazy; sama nowa generacja wymaga publikacji znacznika. */
+internal fun cloudCommitRequired(previous: StoreData, data: StoreData, ops: List<SyncOp>): Boolean =
+    ops.isNotEmpty() || previous.replacementAt != data.replacementAt || previous.replacementId != data.replacementId
+
 /** Wyliczanie operacji zapisu do chmury: `previous` = znany stan chmury, `data` = stan lokalny. */
 object SyncDiff {
 
@@ -34,11 +38,12 @@ object SyncDiff {
      */
     fun diffSave(previous: StoreData, data: StoreData, stalePositions: Set<String> = emptySet()): List<SyncOp> {
         val ops = mutableListOf<SyncOp>()
+        val replacing = previous.replacementAt != data.replacementAt || previous.replacementId != data.replacementId
 
         val previousGroups = previous.groups.withIndex().associateBy { it.value.id }.toMutableMap()
         for ((index, group) in data.groups.withIndex()) {
             val prevGroup = previousGroups.remove(group.id)
-            if (prevGroup == null || prevGroup.index != index || deckKey(group.id) in stalePositions ||
+            if (replacing || prevGroup == null || prevGroup.index != index || deckKey(group.id) in stalePositions ||
                 prevGroup.value.copy(cards = emptyList()) != group.copy(cards = emptyList())
             ) {
                 ops.add(SyncOp.PutDeck(group, index))
@@ -47,7 +52,8 @@ object SyncDiff {
                 ?: mutableMapOf()
             for ((cardIndex, card) in group.cards.withIndex()) {
                 val prevCard = prevCards.remove(card.id)
-                if (prevCard == null || prevCard.index != cardIndex || cardKey(group.id, card.id) in stalePositions ||
+                if (replacing || prevCard == null || prevCard.index != cardIndex ||
+                    cardKey(group.id, card.id) in stalePositions ||
                     prevCard.value != card
                 ) {
                     ops.add(SyncOp.PutCard(group.id, card, cardIndex))
@@ -63,14 +69,18 @@ object SyncDiff {
         val previousModes = previous.studyModes.associateBy { it.id }.toMutableMap()
         for (mode in data.studyModes) {
             val prevMode = previousModes.remove(mode.id)
-            if (prevMode != mode) ops.add(SyncOp.PutMode(mode))
+            if (replacing || modeKey(mode.id) in stalePositions || prevMode != mode) ops.add(SyncOp.PutMode(mode))
         }
         for (modeId in previousModes.keys) ops.add(SyncOp.DeleteMode(modeId))
 
         val previousDays = previous.activityHeatmap.toMutableMap()
         for ((dayKey, count) in data.activityHeatmap) {
             val prevCount = previousDays.remove(dayKey)
-            if (prevCount != count) ops.add(SyncOp.PutActivity(dayKey, count))
+            if (replacing || activityKey(dayKey) in stalePositions ||
+                prevCount != count
+            ) {
+                ops.add(SyncOp.PutActivity(dayKey, count))
+            }
         }
         for (dayKey in previousDays.keys) ops.add(SyncOp.DeleteActivity(dayKey))
 

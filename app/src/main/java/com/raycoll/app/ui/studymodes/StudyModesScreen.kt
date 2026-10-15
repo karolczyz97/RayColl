@@ -1,6 +1,5 @@
 package com.raycoll.app.ui.studymodes
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,6 +43,7 @@ import com.raycoll.app.ui.components.ModeResetDialog
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.displayName
+import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
 
 @Composable
@@ -57,8 +57,9 @@ fun StudyModesScreen(
     var resetTarget by rememberSaveable { mutableStateOf<String?>(null) }
     var deleteTarget by rememberSaveable { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val messages = rememberSnackbarMessages(snackbarHostState)
     val saveFailed = stringResource(R.string.errors_save_failed)
-    CollectEvents(viewModel.events) { snackbarHostState.showSnackbar(saveFailed) }
+    CollectEvents(viewModel.events) { messages.showLatest(saveFailed) }
 
     ScreenScaffold(
         title = stringResource(R.string.app_settings_study_modes),
@@ -87,12 +88,14 @@ fun StudyModesScreen(
                         mode = mode,
                         onEdit = { onEditMode(mode.id) },
                         onReset = { resetTarget = mode.id },
-                        onDelete = { deleteTarget = mode.id }
+                        onDelete = { deleteTarget = mode.id },
+                        modifier = Modifier.animateItem()
                     )
                 }
                 item(key = "new") {
                     OutlinedButton(
                         onClick = onNewMode,
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -101,7 +104,10 @@ fun StudyModesScreen(
                             contentDescription = null,
                             modifier = Modifier.size(ButtonDefaults.IconSize)
                         )
-                        Text(stringResource(R.string.mode_list_new), modifier = Modifier.padding(start = Spacing.s))
+                        Text(
+                            stringResource(R.string.mode_list_new),
+                            modifier = Modifier.padding(start = ButtonDefaults.IconSpacing)
+                        )
                     }
                 }
             }
@@ -151,11 +157,19 @@ private fun InfoBanner() {
 }
 
 @Composable
-private fun ModeCard(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDelete: () -> Unit) {
+private fun ModeCard(
+    mode: StudyMode,
+    onEdit: () -> Unit,
+    onReset: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val editLabel =
+        stringResource(R.string.a11y_item_action, stringResource(R.string.mode_list_edit), mode.displayName())
     RayCollCard(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onEdit)
+        onClick = onEdit,
+        onClickLabel = editLabel,
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(Modifier.padding(Spacing.l), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {

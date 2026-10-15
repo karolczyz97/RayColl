@@ -8,6 +8,8 @@ import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.NextCardStep
 import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakAllPagesStep
+import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.WaitForTapStep
@@ -19,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +59,9 @@ class SessionEngine(
     }
     private val executor = StepExecutor(this, deps, group, clock, ttsRate)
     val needsMicrophone: Boolean = expandedSteps.any { it is ListenAndCheckStep }
+    val needsAudio: Boolean = expandedSteps.any {
+        it is SpeakPageStep || it is SpeakAllPagesStep || it is ListenAndCheckStep
+    }
     val canRunHandsFree: Boolean = BackgroundSubstitution.isModeHandsFreeCapable(expandedSteps)
 
     // stan SRS sprzed pierwszej oceny w tej próbie — baza dla ponownej (nadpisującej) oceny;
@@ -100,15 +106,16 @@ class SessionEngine(
         cardJobs[cardIndex]?.cancel()
         // LAZY: job musi trafić do mapy, zanim ruszy — przy natychmiastowym dispatcherze
         // ciało wykonałoby się przed przypisaniem i anulowanie trafiałoby w stary job
-        val job = scope.launch(start = CoroutineStart.LAZY) { runSteps(_state.value.cards[cardIndex]) }
+        val card = s.cards[cardIndex]
+        val job = scope.launch(start = CoroutineStart.LAZY) { runSteps(card) }
         cardJobs[cardIndex] = job
         job.start()
     }
 
-    private suspend fun CoroutineScope.runSteps(card: Flashcard) {
+    private suspend fun runSteps(card: Flashcard) {
         var stepIndex = 0
         while (stepIndex < expandedSteps.size) {
-            ensureActive()
+            currentCoroutineContext().ensureActive()
             if (_state.value.status == SessionStatus.FINISHED) return
             _state.value.pendingStepIndexToRun?.let { pending ->
                 dispatch(SessionAction.ConsumePendingStepIndex)
@@ -153,9 +160,10 @@ class SessionEngine(
         if (s.cardReviewed) return
         val card = s.cards.getOrNull(s.currentCardIndex) ?: return
         deps.haptic(rating)
-        if (card.id in baseSrsStates) {
+        val base = baseSrsStates[card.id]
+        if (base != null) {
             dispatch(SessionAction.RemoveFailedCard(card.id))
-            deps.onCardReviewed(group.id, card.id, rating, baseSrsStates[card.id] ?: card.srsState)
+            deps.onCardReviewed(group.id, card.id, rating, base)
         } else {
             baseSrsStates[card.id] = card.srsState
             deps.onCardReviewed(group.id, card.id, rating, null)
@@ -205,9 +213,7 @@ class SessionEngine(
 
     private fun interruptCurrentCard() {
         cardJobs[_state.value.currentCardIndex]?.cancel()
-        holding.value = false
-        peekTimerJob?.cancel()
-        peekTimerJob = null
+        releaseHold()
     }
 
     /**
@@ -247,7 +253,7 @@ class SessionEngine(
         }
     }
 
-    private fun hiddenPages(): List<Int> = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
+    internal fun hiddenPages(): List<Int> = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
 
     fun setBackground(value: Boolean) {
         _inBackground.value = value
@@ -310,7 +316,6 @@ class SessionEngine(
 
     private fun handleGateTap() {
         val gate = _state.value.interactionGate
-        if (gate.kind != InteractionGateKind.TAP_TO_REVEAL) return
         val hidden = hiddenPages()
         val reveals = gate.revealMode == TapRevealMode.SINGLE || gate.revealMode == TapRevealMode.REMAINING
         if (reveals) hidden.firstOrNull()?.let { dispatch(SessionAction.RevealPages(listOf(it))) }
@@ -341,9 +346,7 @@ class SessionEngine(
 
     /** Puszczenie karty: krótkie = zwykłe tapnięcie, długie = schowanie podglądu. */
     fun pressUp() {
-        holding.value = false
-        peekTimerJob?.cancel()
-        peekTimerJob = null
+        releaseHold()
         if (clock.now() - holdStartedAt >= StudyConstants.PEEK_HOLD_THRESHOLD_MS) {
             clearPeek()
         } else {
@@ -353,10 +356,14 @@ class SessionEngine(
 
     /** Anulowanie naciśnięcia (np. przewijanie): chowa podgląd, nie działa jak tapnięcie. */
     fun cancelPress() {
+        releaseHold()
+        clearPeek()
+    }
+
+    private fun releaseHold() {
         holding.value = false
         peekTimerJob?.cancel()
         peekTimerJob = null
-        clearPeek()
     }
 
     private fun clearPeek() {
@@ -366,8 +373,7 @@ class SessionEngine(
     fun pause() {
         _isPaused.value = true
         // zawsze puszcza trzymanie — inaczej po powrocie karta czekałaby na puszczenie palca
-        holding.value = false
-        peekTimerJob?.cancel()
+        releaseHold()
         val s = _state.value
         // oceny/bramka czekają na użytkownika — nie ma czego pauzować
         if (s.status == SessionStatus.FINISHED || s.status == SessionStatus.REVEALED) return

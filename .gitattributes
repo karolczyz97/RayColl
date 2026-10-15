@@ -1,0 +1,9 @@
+# końce linii: LF w repo i w kopii roboczej; skrypty Windows z CRLF
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.webp binary
+*.jar binary

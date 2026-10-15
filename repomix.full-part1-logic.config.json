@@ -23,6 +23,8 @@
     "gradle.properties",
     "gradle/libs.versions.toml",
     "gradle/wrapper/gradle-wrapper.properties",
+    "firebase.json",
+    "firestore.rules",
     "gradlew",
     "gradlew.bat",
     "app/build.gradle.kts",

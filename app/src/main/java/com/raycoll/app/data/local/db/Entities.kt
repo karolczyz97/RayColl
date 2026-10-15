@@ -66,3 +66,6 @@ data class StudyModeEntity(
 
 @Entity(tableName = "activity_days", primaryKeys = ["dayKey", "namespace"])
 data class ActivityDayEntity(val dayKey: String, val namespace: String, val count: Int)
+
+@Entity(tableName = "namespace_state", primaryKeys = ["namespace"])
+data class NamespaceStateEntity(val namespace: String, val replacementAt: Long, val replacementId: String)

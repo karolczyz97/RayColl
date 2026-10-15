@@ -6,16 +6,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.StudyModeRepository
+import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.operations.resolveStudyMode
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import com.raycoll.app.ui.navigation.DeckSettingsRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +42,7 @@ sealed interface DeckSettingsUiState {
 sealed interface DeckSettingsEvent {
     /** Talia zarchiwizowana albo usunięta — ekran się zamyka. */
     data object Closed : DeckSettingsEvent
+    data class Archived(val deckId: String) : DeckSettingsEvent
 
     data object DeleteFailed : DeckSettingsEvent
 
@@ -50,7 +54,8 @@ sealed interface DeckSettingsEvent {
 class DeckSettingsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val deckRepository: DeckRepository,
-    private val modeRepository: StudyModeRepository
+    private val modeRepository: StudyModeRepository,
+    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
     val deckId: String = savedStateHandle.toRoute<DeckSettingsRoute>().deckId
 
@@ -72,7 +77,7 @@ class DeckSettingsViewModel @Inject constructor(
             else -> DeckSettingsUiState.DeckMissing
         }
     }
-        .flowOn(Dispatchers.Default)
+        .flowOn(defaultDispatcher)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DeckSettingsUiState.Loading)
 
     private val eventSink = UiEvents<DeckSettingsEvent>()
@@ -92,7 +97,7 @@ class DeckSettingsViewModel @Inject constructor(
 
     fun swapPages(from: Int, to: Int) = launch { deckRepository.swapPages(deckId, from, to) }
 
-    fun setActivePageCount(count: Int, defaultName: (Int) -> String = { "Page ${it + 1}" }) = launch {
+    fun setActivePageCount(count: Int, defaultName: (Int) -> String = ::defaultPageName) = launch {
         deckRepository.setActivePageCount(deckId, count, defaultName)
     }
 
@@ -107,17 +112,19 @@ class DeckSettingsViewModel @Inject constructor(
     fun deleteMode(modeId: String) = launch { modeRepository.deleteMode(modeId) }
 
     fun archive() {
+        if (closing.value) return
         closing.value = true
         viewModelScope.launchSaving(onFailure = {
             closing.value = false
             eventSink.send(DeckSettingsEvent.SaveFailed)
         }) {
             deckRepository.archiveDeck(deckId)
-            eventSink.send(DeckSettingsEvent.Closed)
+            eventSink.send(DeckSettingsEvent.Archived(deckId))
         }
     }
 
     fun delete() {
+        if (closing.value) return
         closing.value = true
         viewModelScope.launchSaving(onFailure = {
             closing.value = false

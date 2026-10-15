@@ -9,8 +9,11 @@ import javax.inject.Singleton
 import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface BootstrapResult {
-    /** Pracujemy na danych lokalnych (gość, konto bez danych w chmurze albo chmura nieosiągalna). */
+    /** Pracujemy jako gość na danych lokalnych. */
     data object LocalOnly : BootstrapResult
+
+    /** Konto jest dostępne lokalnie, ale wymaga ponowienia połączenia z chmurą. */
+    data object CloudUnavailable : BootstrapResult
 
     /** Dane z chmury scalone z lokalnymi — trzeba odesłać wynik. */
     data object Merged : BootstrapResult
@@ -30,29 +33,32 @@ private const val CLOUD_LOAD_TIMEOUT_MS = 8_000L
 /** Start aplikacji i logowanie: wybór przestrzeni danych i pierwsze scalenie z chmurą. */
 @Singleton
 class BootstrapLoader @Inject constructor(
-    private val authRepository: CurrentUser,
+    private val currentUser: CurrentUser,
     private val localStore: LocalStore,
     private val namespaceManager: NamespaceManager,
-    private val syncEngine: CloudSync
+    private val cloudSync: CloudSync
 ) {
     suspend fun bootstrap(): BootstrapResult {
-        val uid = authRepository.currentUid()
+        val uid = currentUser.currentUid()
         if (uid == null) {
             namespaceManager.switchToGuest()
             localStore.seedIfEmpty()
             return BootstrapResult.LocalOnly
         }
         namespaceManager.switchTo(uid)
-        val cloud = withTimeoutOrNull(CLOUD_LOAD_TIMEOUT_MS) { syncEngine.load(uid) } ?: CloudLoad.Failed
+        val cloud = withTimeoutOrNull(CLOUD_LOAD_TIMEOUT_MS) { cloudSync.load(uid) } ?: CloudLoad.Failed
         val result = when (cloud) {
             is CloudLoad.Loaded -> {
-                localStore.mergeWithCloud(cloud.data)
+                localStore.mergeWithCloud(cloud.data, cloud.positionsComplete)
                 BootstrapResult.Merged
             }
 
             // bez seedowania: chmura może mieć dane, a seed po scaleniu dałby duplikaty;
             // pierwszy zapis i tak najpierw scali stan z chmurą
-            CloudLoad.Failed -> BootstrapResult.LocalOnly
+            CloudLoad.Failed -> {
+                cloudSync.reportFailure()
+                BootstrapResult.CloudUnavailable
+            }
 
             CloudLoad.Empty -> bootstrapFreshAccount()
         }
@@ -60,7 +66,7 @@ class BootstrapLoader @Inject constructor(
         return result
     }
 
-    private suspend fun bootstrapFreshAccount(): BootstrapResult {
+    internal suspend fun bootstrapFreshAccount(): BootstrapResult {
         val local = localStore.snapshot()
         val guest = localStore.snapshotOf(NamespaceManager.GUEST)
         val hasUserLocalCache = local.groups.isNotEmpty() || local.studyModes.isNotEmpty()

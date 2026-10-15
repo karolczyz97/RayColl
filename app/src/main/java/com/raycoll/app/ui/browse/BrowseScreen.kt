@@ -1,9 +1,9 @@
 package com.raycoll.app.ui.browse
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,13 +12,14 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,8 +39,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +50,7 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.ui.components.CardStatsBar
+import com.raycoll.app.ui.components.ChoiceChip
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.EmptyState
@@ -54,6 +58,7 @@ import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
 
@@ -84,18 +89,25 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
     var saveAttempt by rememberSaveable { mutableIntStateOf(0) }
     val ready = uiState as? BrowseUiState.Ready
     val snackbarHostState = remember { SnackbarHostState() }
+    val messages = rememberSnackbarMessages(snackbarHostState)
     val cardMissing = stringResource(R.string.browse_card_missing)
     val saveFailed = stringResource(R.string.errors_save_failed)
+    val cardAdded = stringResource(R.string.browse_card_added)
 
     CollectEvents(viewModel.events) { event ->
         when (event) {
             BrowseEvent.Saved -> editTarget = null
 
-            BrowseEvent.CardMissing -> snackbarHostState.showSnackbar(cardMissing)
+            BrowseEvent.CardAdded -> {
+                editTarget = null
+                messages.showLatest(cardAdded)
+            }
+
+            BrowseEvent.CardMissing -> messages.showLatest(cardMissing)
 
             BrowseEvent.SaveFailed -> {
                 saveAttempt++
-                snackbarHostState.showSnackbar(saveFailed)
+                messages.showLatest(saveFailed)
             }
         }
     }
@@ -202,6 +214,7 @@ private fun BrowseContent(
     onAdd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val keyboard = LocalSoftwareKeyboardController.current
     // nagłówek jest elementem listy (przewija się razem z nią, w poziomie zostaje miejsce na karty);
     // jedna lista także przy braku wyników — pole wyszukiwania nie jest odtwarzane i nie traci fokusu
     LazyColumn(
@@ -217,6 +230,20 @@ private fun BrowseContent(
                     onValueChange = onSearch,
                     placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = if (query.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { onSearch("") }) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = stringResource(R.string.browse_clear_search)
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
                     shape = MaterialTheme.shapes.small,
                     singleLine = true,
                     modifier = Modifier
@@ -233,9 +260,20 @@ private fun BrowseContent(
                     message = stringResource(if (deckEmpty) R.string.browse_empty_deck else R.string.browse_no_cards),
                     modifier = Modifier.fillParentMaxWidth(),
                     action = if (deckEmpty) {
-                        { Button(onClick = onAdd) { Text(stringResource(R.string.browse_add_card)) } }
+                        {
+                            Button(onClick = onAdd, shape = MaterialTheme.shapes.small) {
+                                Text(stringResource(R.string.browse_add_card))
+                            }
+                        }
                     } else {
-                        null
+                        {
+                            Button(onClick = {
+                                onSearch("")
+                                onCategory(null)
+                            }, shape = MaterialTheme.shapes.small) {
+                                Text(stringResource(R.string.browse_clear_filters))
+                            }
+                        }
                     }
                 )
             }
@@ -246,7 +284,7 @@ private fun BrowseContent(
                     activePageCount = state.activePageCount,
                     onEdit = { onEdit(card) },
                     onDelete = { onDelete(card) },
-                    modifier = Modifier.padding(horizontal = Spacing.screen)
+                    modifier = Modifier.animateItem().padding(horizontal = Spacing.screen)
                 )
             }
         }
@@ -263,16 +301,14 @@ private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCatego
         SrsCardCategory.REVIEW to (R.string.srs_badge_review to counts.review),
         SrsCardCategory.MASTERED to (R.string.srs_badge_mastered to counts.mastered)
     )
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.screen, vertical = Spacing.s),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+    FlowRow(
+        Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.s),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         chips.forEach { (category, label) ->
             val (labelRes, count) = label
-            FilterChip(
+            ChoiceChip(
                 selected = state.category == category,
                 onClick = { onCategory(category) },
                 label = { Text(stringResource(R.string.filter_chip_count, stringResource(labelRes), count)) }
@@ -330,7 +366,12 @@ private fun CardItem(
             IconButton(onClick = onDelete, modifier = Modifier.padding(top = Spacing.xs, end = Spacing.xs)) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.browse_delete_card),
+                    contentDescription = stringResource(
+                        R.string.a11y_delete_card,
+                        card.pages.firstOrNull {
+                            it.isNotBlank()
+                        }.orEmpty().replace('\n', ' ').take(60)
+                    ),
                     tint = MaterialTheme.colorScheme.error
                 )
             }

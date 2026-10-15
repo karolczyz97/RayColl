@@ -93,11 +93,13 @@ class ReviewWriteQueue internal constructor(
      */
     suspend fun awaitIdle(): Boolean = state.first { it.pending == 0 || it.failed }.pending == 0
 
-    private fun ensureWorker() = synchronized(queue) {
-        if (worker != null || failed || queue.isEmpty()) return@synchronized
-        // Rejestracja przed startem: natychmiastowy sukces/błąd nie zostawia zakończonego joba w worker.
-        worker = scope.launch(start = CoroutineStart.LAZY) { drain() }
-        worker?.start()
+    private fun ensureWorker() {
+        synchronized(queue) {
+            if (worker != null || failed || queue.isEmpty()) return@synchronized
+            // Rejestracja przed startem: natychmiastowy sukces/błąd nie zostawia zakończonego joba w worker.
+            worker = scope.launch(start = CoroutineStart.LAZY) { drain() }
+            worker?.start()
+        }
     }
 
     private suspend fun drain() {

@@ -1,9 +1,9 @@
 package com.raycoll.app.ui.study
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,26 +25,33 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.domain.session.LastAnswerResult
-import com.raycoll.app.ui.theme.LocalSrsColors
+import com.raycoll.app.ui.theme.LocalRatingColors
 import com.raycoll.app.ui.theme.Spacing
 
-/** Wynik odpowiedzi głosowej: co usłyszano, dopasowanie i proponowana ocena. Dotknięcie = pominięcie czekania. */
+/**
+ * Wynik odpowiedzi głosowej: co usłyszano, dopasowanie i proponowana ocena. Dotknięcie = pominięcie czekania.
+ * [listeningLabel]: słowo „Słucham” przy fali — gdy słuchana strona jest zakryta i na karcie nie ma etykiety.
+ */
 @Composable
-fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit) {
+fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit, listeningLabel: Boolean = false) {
     Surface(
+        onClick = onTap,
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onTap)
             // wynik czytany na głos po zakończeniu; w trakcie nasłuchu tekst zmienia się kilka razy na sekundę (i mikrofon złapałby głos TalkBacka)
-            .semantics { if (!listening) liveRegion = LiveRegionMode.Polite }
+            .semantics {
+                role = Role.Button
+                if (!listening) liveRegion = LiveRegionMode.Polite
+            }
     ) {
         Column(
             modifier = Modifier.padding(Spacing.m),
@@ -65,7 +72,7 @@ fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit)
 
                 AnswerStatus.SKIPPED -> Text(
                     stringResource(R.string.study_answer_skipped),
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 AnswerStatus.ERROR -> Text(
@@ -76,11 +83,23 @@ fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit)
                 AnswerStatus.NONE -> Unit
             }
             if (listening) {
-                Icon(
-                    Icons.Filled.GraphicEq,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    Icon(
+                        Icons.Filled.GraphicEq,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    if (listeningLabel) {
+                        Text(
+                            stringResource(R.string.study_badge_listening),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }
@@ -88,22 +107,28 @@ fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit)
 
 @Composable
 private fun CorrectResult(answer: LastAnswerResult) {
-    val srs = LocalSrsColors.current
+    val colors = LocalRatingColors.current
     val rating = answer.suggestedRating ?: Ratings.GOOD
+    val (container, content) = when (rating) {
+        Ratings.AGAIN -> colors.againBg to colors.againFg
+        Ratings.HARD -> colors.hardBg to colors.hardFg
+        Ratings.EASY -> colors.easyBg to colors.easyFg
+        else -> colors.goodBg to colors.goodFg
+    }
     ResultChip(
         icon = Icons.Filled.CheckCircle,
         title =
             answer.percent?.let { stringResource(R.string.study_answer_correct_percent, it) }
                 ?: stringResource(R.string.study_answer_correct),
         badge = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(rating))),
-        container = srs.masteredBg,
-        content = srs.masteredFg
+        container = container,
+        content = content
     )
 }
 
 @Composable
 private fun IncorrectResult(answer: LastAnswerResult) {
-    val colors = MaterialTheme.colorScheme
+    val colors = LocalRatingColors.current
     val percent = answer.percent
     val threshold = answer.threshold
     ResultChip(
@@ -120,8 +145,8 @@ private fun IncorrectResult(answer: LastAnswerResult) {
             else -> stringResource(R.string.study_answer_incorrect)
         },
         badge = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(Ratings.AGAIN))),
-        container = colors.errorContainer,
-        content = colors.onErrorContainer
+        container = colors.againBg,
+        content = colors.againFg
     )
 }
 
@@ -146,13 +171,19 @@ private fun ResultChip(icon: ImageVector, title: String, badge: String?, contain
         contentColor = content,
         border = BorderStroke(1.dp, content.copy(alpha = 0.35f))
     ) {
-        Row(
+        FlowRow(
             modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+            itemVerticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(title, style = MaterialTheme.typography.titleSmall)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s)
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(title, style = MaterialTheme.typography.titleSmall)
+            }
             if (badge != null) {
                 Surface(shape = MaterialTheme.shapes.extraSmall, color = content.copy(alpha = 0.15f)) {
                     Text(

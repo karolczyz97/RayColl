@@ -32,13 +32,17 @@ interface DeckDao {
 
     // Soft delete nie zmienia updatedAt: tombstone ma własny deletedAt, a późniejsza edycja ma wygrać
     // z usunięciem (MergeEngine.isAlive); to samo dla kart i trybów.
-    @Query("UPDATE decks SET deletedAt = :now WHERE namespace = :ns AND id = :deckId")
+    @Query("UPDATE decks SET deletedAt = :now WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL")
     suspend fun softDeleteDeck(ns: String, deckId: String, now: Long)
 
-    @Query("UPDATE decks SET archivedAt = :now, updatedAt = :now WHERE namespace = :ns AND id = :deckId")
+    @Query(
+        "UPDATE decks SET archivedAt = :now, updatedAt = :now WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL"
+    )
     suspend fun archiveDeck(ns: String, deckId: String, now: Long)
 
-    @Query("UPDATE decks SET archivedAt = NULL, updatedAt = :now WHERE namespace = :ns AND id = :deckId")
+    @Query(
+        "UPDATE decks SET archivedAt = NULL, updatedAt = :now WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL"
+    )
     suspend fun restoreDeck(ns: String, deckId: String, now: Long)
 
     @Query("DELETE FROM decks WHERE namespace = :ns")
@@ -49,25 +53,25 @@ interface DeckDao {
 
     @Query(
         "UPDATE decks SET name = :name, updatedAt = :now " +
-            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL"
+            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL AND name != :name"
     )
     suspend fun updateName(ns: String, deckId: String, name: String, now: Long): Int
 
     @Query(
         "UPDATE decks SET activeModeId = :modeId, updatedAt = :now " +
-            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL"
+            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL AND activeModeId != :modeId"
     )
     suspend fun updateActiveMode(ns: String, deckId: String, modeId: String, now: Long): Int
 
     @Query(
         "UPDATE decks SET studyFilter = :filter, updatedAt = :now " +
-            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL"
+            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL AND studyFilter != :filter"
     )
     suspend fun updateStudyFilter(ns: String, deckId: String, filter: String, now: Long): Int
 
     @Query(
         "UPDATE decks SET cardOrder = :order, updatedAt = :now " +
-            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL"
+            "WHERE namespace = :ns AND id = :deckId AND deletedAt IS NULL AND cardOrder != :order"
     )
     suspend fun updateCardOrder(ns: String, deckId: String, order: String, now: Long): Int
 
@@ -85,6 +89,11 @@ interface DeckDao {
         activePageCount: Int,
         now: Long
     ): Int
+
+    @Query(
+        "UPDATE decks SET deletedAt = :now WHERE namespace = :ns AND deletedAt IS NULL AND archivedAt IS NOT NULL AND archivedAt <= :cutoff"
+    )
+    suspend fun purgeExpiredArchives(ns: String, cutoff: Long, now: Long): Int
 }
 
 @Dao
@@ -118,7 +127,7 @@ interface CardDao {
     @Upsert
     suspend fun upsertCards(cards: List<CardEntity>)
 
-    @Query("UPDATE cards SET deletedAt = :now WHERE namespace = :ns AND id = :cardId")
+    @Query("UPDATE cards SET deletedAt = :now WHERE namespace = :ns AND id = :cardId AND deletedAt IS NULL")
     suspend fun softDeleteCard(ns: String, cardId: String, now: Long)
 
     /** Sama treść karty; stan SRS, talia i tombstone zostają. Zwraca liczbę zmienionych wierszy. */
@@ -147,7 +156,7 @@ interface StudyModeDao {
     @Upsert
     suspend fun upsertModes(modes: List<StudyModeEntity>)
 
-    @Query("UPDATE study_modes SET deletedAt = :now WHERE namespace = :ns AND id = :modeId")
+    @Query("UPDATE study_modes SET deletedAt = :now WHERE namespace = :ns AND id = :modeId AND deletedAt IS NULL")
     suspend fun softDeleteMode(ns: String, modeId: String, now: Long)
 
     @Query("DELETE FROM study_modes WHERE namespace = :ns")
@@ -181,4 +190,13 @@ interface ActivityDao {
 
     @Query("DELETE FROM activity_days WHERE namespace = :ns")
     suspend fun deleteAllActivity(ns: String)
+}
+
+@Dao
+interface NamespaceStateDao {
+    @Query("SELECT * FROM namespace_state WHERE namespace = :ns")
+    suspend fun get(ns: String): NamespaceStateEntity?
+
+    @Upsert
+    suspend fun upsert(state: NamespaceStateEntity)
 }

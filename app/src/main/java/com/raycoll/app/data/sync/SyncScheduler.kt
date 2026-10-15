@@ -5,7 +5,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -35,6 +37,7 @@ class SyncScheduler(
     private val inFlight = Mutex()
     private var timer: Job? = null
     private val running = AtomicReference<Job?>(null)
+    private val exclusiveJob = AtomicReference<Job?>(null)
 
     fun enqueueDebounced() {
         pending.set(true)
@@ -64,7 +67,7 @@ class SyncScheduler(
             // wysyłka w osobnym dziecku: [abort] przerywa tylko ją, nie korutynę wołającego
             val aborted = try {
                 coroutineScope {
-                    val job = launch {
+                    val job = launch(start = CoroutineStart.LAZY) {
                         ok = try {
                             push()
                         } catch (e: CancellationException) {
@@ -74,6 +77,7 @@ class SyncScheduler(
                         }
                     }
                     running.set(job)
+                    job.start()
                     job.join()
                     job.isCancelled
                 }
@@ -99,12 +103,24 @@ class SyncScheduler(
     }
 
     /** Praca z chmurą, która nie może iść równolegle z wysyłką (uzgodnienie po powrocie do aplikacji). */
-    suspend fun <T> exclusive(block: suspend () -> T): T = inFlight.withLock { block() }
+    suspend fun <T> exclusive(block: suspend () -> T): T = inFlight.withLock {
+        coroutineScope {
+            val job = async(start = CoroutineStart.LAZY) { block() }
+            exclusiveJob.set(job)
+            try {
+                job.start()
+                job.await()
+            } finally {
+                exclusiveJob.compareAndSet(job, null)
+            }
+        }
+    }
 
     /** Porzuca zaplanowane wysyłki i przerywa trwającą (wylogowanie po limicie czasu). */
     fun abort() {
         cancel()
         running.get()?.cancel()
+        exclusiveJob.get()?.cancel()
     }
 
     /** Porzuca zaplanowane wysyłki (wylogowanie, rezygnacja z migracji). */

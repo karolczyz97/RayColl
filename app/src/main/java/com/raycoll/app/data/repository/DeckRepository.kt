@@ -9,12 +9,13 @@ import com.raycoll.app.data.local.mappers.encodeStringList
 import com.raycoll.app.data.local.mappers.toDomain
 import com.raycoll.app.data.local.mappers.toEntity
 import com.raycoll.app.data.local.mappers.toHeatmap
+import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
-import com.raycoll.app.domain.operations.isArchiveExpired
+import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.operations.newCard
 import com.raycoll.app.domain.operations.newGroup
 import com.raycoll.app.domain.operations.reviewed
@@ -62,8 +63,9 @@ class DeckRepository @Inject constructor(
     }
 
     /** Jak [deck], jednorazowo: usunięta talia = null. */
-    suspend fun getDeck(deckId: String): FlashcardGroup? {
-        val ns = ns
+    suspend fun getDeck(deckId: String): FlashcardGroup? = loadDeck(ns, deckId)
+
+    private suspend fun loadDeck(ns: String, deckId: String): FlashcardGroup? {
         val deck = deckDao.getLiveDeck(ns, deckId) ?: return null
         return deck.toDomain(cardDao.getLiveCardsOf(ns, deckId))
     }
@@ -126,7 +128,7 @@ class DeckRepository @Inject constructor(
             deck.copy(pageLanguages = deck.pageLanguages.mapIndexed { i, old -> if (i == pageIndex) language else old })
         }
 
-    suspend fun setActivePageCount(deckId: String, count: Int, defaultName: (Int) -> String = { "Page ${it + 1}" }) =
+    suspend fun setActivePageCount(deckId: String, count: Int, defaultName: (Int) -> String = ::defaultPageName) =
         editPageMetadata(deckId) { deck, now ->
             deck.withActivePageCount(count, now, defaultName)
         }
@@ -146,6 +148,11 @@ class DeckRepository @Inject constructor(
         val updated = db.withTransaction {
             val deck = deckDao.getLiveDeck(ns, deckId)?.toDomain(emptyList()) ?: return@withTransaction 0
             val edited = edit(deck, now) ?: return@withTransaction 0
+            if (edited.pageNames == deck.pageNames && edited.pageLanguages == deck.pageLanguages &&
+                edited.activePageCount == deck.activePageCount
+            ) {
+                return@withTransaction 0
+            }
             deckDao.updatePageMetadata(
                 ns,
                 deckId,
@@ -166,8 +173,8 @@ class DeckRepository @Inject constructor(
         val ns = ns
         val now = clock.now()
         val swappedAny = db.withTransaction {
-            val deck = deckDao.getLiveDeck(ns, deckId)?.toDomain(cardDao.getLiveCardsOf(ns, deckId))
-                ?: return@withTransaction false
+            val deck = loadDeck(ns, deckId) ?: return@withTransaction false
+            if (from == to) return@withTransaction false
             if (from !in deck.pageNames.indices || to !in deck.pageNames.indices) return@withTransaction false
             val swapped = deck.withPagesSwapped(from, to, now)
             deckDao.updatePageMetadata(
@@ -203,10 +210,9 @@ class DeckRepository @Inject constructor(
     suspend fun purgeExpiredArchives() {
         val ns = ns
         val now = clock.now()
-        val expired = deckDao.allDecks(ns).map { it.toDomain(emptyList()) }.filter { it.isArchiveExpired(now) }
-        if (expired.isEmpty()) return
-        db.withTransaction { expired.forEach { deckDao.softDeleteDeck(ns, it.id, now) } }
-        dataMutations.signal(CloudWriteMode.IMMEDIATE)
+        if (deckDao.purgeExpiredArchives(ns, now - ArchiveConstants.RETENTION_MS, now) > 0) {
+            dataMutations.signal(CloudWriteMode.IMMEDIATE)
+        }
     }
 
     // --- karty ---

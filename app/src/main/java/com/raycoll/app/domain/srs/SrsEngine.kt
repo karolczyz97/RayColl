@@ -12,7 +12,7 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     val w = SrsConstants.W
     val rating = rawRating.coerceIn(Ratings.MIN, Ratings.MAX)
     val lastReview = current.lastReviewTimestamp
-    val elapsedMs = now - (if (lastReview != 0L) lastReview else now)
+    val elapsedMs = if (lastReview == 0L) 0L else now - lastReview
     val elapsedDays = max(elapsedMs.toDouble() / SrsConstants.DAY_MS, 0.0)
 
     val newD: Double

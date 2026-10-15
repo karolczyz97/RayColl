@@ -9,15 +9,23 @@ plugins {
     alias(libs.plugins.room)
 }
 
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+}
+
 // klucz Firebase spoza repozytorium: local.properties (lokalnie) albo zmienna środowiskowa (CI / GitHub Secrets);
-// bez klucza działa debug, testy i lint — wymaga go dopiero build release (requireFirebaseApiKey)
-val firebaseApiKey: String = (
-    Properties()
-        .apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
-        .getProperty("firebase.apiKey")
-        ?.takeIf { it.isNotBlank() }
+// bez klucza kompilują się testy i lint, ale APK (debug i release) się nie zbuduje — aplikacja bez klucza
+// wywraca się przy starcie na inicjalizacji Firebase
+val firebaseApiKey: String = providers.gradleProperty("firebase.apiKey").orNull ?: (
+    localProperties.getProperty("firebase.apiKey")?.takeIf { it.isNotBlank() }
         ?: System.getenv("FIREBASE_API_KEY")
     ).orEmpty()
+
+// opcjonalny podpis release z local.properties (release.storeFile, release.storePassword, release.keyAlias,
+// release.keyPassword); bez tych wpisów release jest niepodpisany
+val releaseSigning: Map<String, String>? = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .associateWith { localProperties.getProperty("release.$it").orEmpty() }
+    .takeIf { values -> values.values.all { it.isNotBlank() } }
 
 val requireFirebaseApiKey = tasks.register("requireFirebaseApiKey") {
     val key = firebaseApiKey
@@ -29,8 +37,10 @@ val requireFirebaseApiKey = tasks.register("requireFirebaseApiKey") {
         }
     }
 }
+// instalowalne paczki wymagają klucza; testy jednostkowe i lint nie
+val tasksNeedingFirebaseKey = setOf("packageDebug", "packageRelease", "bundleDebug", "bundleRelease")
 tasks.configureEach {
-    if (name == "generateReleaseBuildConfig") dependsOn(requireFirebaseApiKey)
+    if (name in tasksNeedingFirebaseKey) dependsOn(requireFirebaseApiKey)
 }
 
 android {
@@ -46,11 +56,23 @@ android {
         buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
     }
 
+    signingConfigs {
+        if (releaseSigning != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseSigning.getValue("storeFile"))
+                storePassword = releaseSigning.getValue("storePassword")
+                keyAlias = releaseSigning.getValue("keyAlias")
+                keyPassword = releaseSigning.getValue("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
         }
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -77,6 +99,7 @@ android {
             isIncludeAndroidResources = true
         }
     }
+    sourceSets.getByName("test").resources.srcDir("schemas")
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -129,9 +152,13 @@ dependencies {
     implementation(libs.googleid)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    // bez bezpośrednich importów, ale podnosi androidx.test.ext:junit wciągany przez ui-test-junit4 (inaczej 1.1.5)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
@@ -146,7 +173,8 @@ dependencies {
     }
 }
 
-val ktlintSources = listOf("src/**/*.kt", "*.kts", "!**/build/**")
+// ścieżki względem katalogu głównego repo: kod aplikacji i wszystkie skrypty Gradle
+val ktlintSources = listOf("app/src/**/*.kt", "*.kts", "app/*.kts", "!**/build/**")
 
 tasks.register<JavaExec>("ktlintCheck") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
@@ -154,7 +182,18 @@ tasks.register<JavaExec>("ktlintCheck") {
     classpath = ktlint
     mainClass.set("com.pinterest.ktlint.Main")
     jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
+    workingDir = rootDir
     args(ktlintSources)
+}
+
+tasks.named("check") { dependsOn("ktlintCheck") }
+
+// Lint/UAST widzi generowane źródła obu wariantów. Hilt musi skończyć ich zapis,
+// zanim lint testów je otworzy (AGP 9.4 + Hilt 2.60, inaczej FileNotFoundException).
+tasks.configureEach {
+    if (name.startsWith("lintAnalyze") && name.endsWith("UnitTest")) {
+        dependsOn(tasks.matching { it.name.startsWith("hiltJavaCompile") && !it.name.endsWith("UnitTest") })
+    }
 }
 
 tasks.register<JavaExec>("ktlintFormat") {
@@ -163,5 +202,6 @@ tasks.register<JavaExec>("ktlintFormat") {
     classpath = ktlint
     mainClass.set("com.pinterest.ktlint.Main")
     jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
+    workingDir = rootDir
     args(listOf("-F") + ktlintSources)
 }

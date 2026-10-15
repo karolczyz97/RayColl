@@ -41,6 +41,7 @@ sealed interface StudyUiState {
     data object Loading : StudyUiState
 
     data object DeckMissing : StudyUiState
+    data object ReviewSaveBlocked : StudyUiState
 
     data class NoDueCards(val deckName: String) : StudyUiState
 
@@ -72,6 +73,7 @@ sealed interface StudyEvent {
 
     /** Część ocen nie zapisała się w bazie — czekają w kolejce na ponowienie. */
     data object ReviewSaveFailed : StudyEvent
+    data object AudioFocusDenied : StudyEvent
 }
 
 /** Jedna sesja nauki talii; sesja żyje tyle co ten ViewModel (przetrwa obrót ekranu). */
@@ -93,6 +95,7 @@ class StudyViewModel @Inject constructor(
 
     private val eventSink = UiEvents<StudyEvent>()
     val events: Flow<StudyEvent> = eventSink.flow
+    val reviewWriteState = reviewWrites.state
 
     private var engine: SessionEngine? = null
     private var deckName = ""
@@ -114,6 +117,14 @@ class StudyViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            sessionHolder.focusDenied.collect { denied ->
+                if (denied) {
+                    if (sessionHolder.appVisible()) eventSink.send(StudyEvent.AudioFocusDenied)
+                    sessionHolder.clearFocusError()
+                }
+            }
+        }
         viewModelScope.launch { startSession() }
         // nieudany zapis oceny nie znika po cichu: komunikat z możliwością ponowienia
         viewModelScope.launch {
@@ -124,6 +135,12 @@ class StudyViewModel @Inject constructor(
     }
 
     private suspend fun startSession() {
+        // Nie otwieramy nowej sesji na danych sprzed poprzedniej oceny. Błąd ma akcję
+        // ponowienia w komunikacie; po udanym ponowieniu oczekiwanie kończy się samo.
+        if (!reviewWrites.awaitIdle()) {
+            _uiState.value = StudyUiState.ReviewSaveBlocked
+            reviewWrites.state.first { it.pending == 0 && !it.failed }
+        }
         val deck = deckRepository.getDeck(deckId)
         if (deck == null) {
             _uiState.value = StudyUiState.DeckMissing
@@ -161,6 +178,7 @@ class StudyViewModel @Inject constructor(
             }
         }
         // przebieg musi już trwać, zanim serwis w tle zacznie go obserwować (zakończony by go zamknął)
+        sessionHolder.prepare(engine, deckName)
         engine.start(cards)
         registerSession(engine)
     }
@@ -190,7 +208,7 @@ class StudyViewModel @Inject constructor(
 
     /** Karty podsumowania czytane z bazy dopiero po zapisie wszystkich ocen. */
     private suspend fun refreshResultCards(session: SessionState) {
-        reviewWrites.awaitIdle()
+        if (!reviewWrites.awaitIdle()) return
         val ids = session.cards.map { it.id }.toSet()
         val fresh = deckRepository.getDeck(deckId)?.cards?.filter { it.id in ids }.orEmpty()
         _uiState.update { current ->
@@ -225,7 +243,9 @@ class StudyViewModel @Inject constructor(
         engine?.handleCardPress()
     }
 
-    fun resume() = sessionHolder.resume()
+    fun resume() {
+        sessionHolder.resume()
+    }
 
     fun pressDown() {
         engine?.pressDown()
@@ -272,6 +292,7 @@ class StudyViewModel @Inject constructor(
             // Restart zachowuje ustawienia/kroki bieżącej sesji; zmiany talii obowiązują od nowej sesji.
             // ten sam silnik: najpierw nowy przebieg, potem ponowne oddanie go serwisowi w tle
             // (stary serwis zamknął się przy końcu poprzedniej próby razem z powiadomieniem)
+            sessionHolder.prepare(engine, deckName)
             engine.start(cards)
             registerSession(engine)
         }
@@ -279,6 +300,7 @@ class StudyViewModel @Inject constructor(
 
     /** Zakończenie przed ostatnią kartą — podsumowanie mówi wtedy "sesja przerwana". */
     fun endSessionEarly() {
+        if (engine?.state?.value?.status == SessionStatus.FINISHED) return
         _uiState.update {
             (it as? StudyUiState.Active)?.copy(endedEarly = true, completedCardCount = it.session.currentCardIndex)
                 ?: it
@@ -303,7 +325,7 @@ class StudyViewModel @Inject constructor(
         engine.setBackground(false)
         if (pausedByAppBackground) {
             pausedByAppBackground = false
-            engine.resume()
+            sessionHolder.resume()
         }
     }
 

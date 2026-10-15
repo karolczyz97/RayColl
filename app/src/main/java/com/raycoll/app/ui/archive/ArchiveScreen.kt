@@ -32,6 +32,7 @@ import com.raycoll.app.ui.components.EmptyState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
 
 private const val URGENT_DAYS_LEFT = 3
@@ -40,8 +41,9 @@ private const val URGENT_DAYS_LEFT = 3
 fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val messages = rememberSnackbarMessages(snackbarHostState)
     val saveFailed = stringResource(R.string.errors_save_failed)
-    CollectEvents(viewModel.events) { snackbarHostState.showSnackbar(saveFailed) }
+    CollectEvents(viewModel.events) { messages.showLatest(saveFailed) }
 
     ScreenScaffold(
         title = stringResource(R.string.archive_title),
@@ -63,7 +65,9 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
                     verticalArrangement = Arrangement.spacedBy(Spacing.m)
                 ) {
                     items(state.decks, key = { deck -> deck.id }) { deck ->
-                        ArchivedDeckCard(deck, onRestore = { viewModel.restore(deck.id) })
+                        ArchivedDeckCard(deck, onRestore = {
+                            viewModel.restore(deck.id)
+                        }, modifier = Modifier.animateItem())
                     }
                 }
             }
@@ -72,8 +76,8 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
 }
 
 @Composable
-private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit) {
-    RayCollCard(Modifier.fillMaxWidth()) {
+private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit, modifier: Modifier = Modifier) {
+    RayCollCard(modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Text(deck.name, style = MaterialTheme.typography.titleLarge)
             Text(
@@ -97,11 +101,15 @@ private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit) {
             )
             OutlinedButton(
                 onClick = onRestore,
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Text(stringResource(R.string.btn_restore), modifier = Modifier.padding(start = Spacing.s))
+                Text(
+                    stringResource(R.string.btn_restore),
+                    modifier = Modifier.padding(start = ButtonDefaults.IconSpacing)
+                )
             }
         }
     }

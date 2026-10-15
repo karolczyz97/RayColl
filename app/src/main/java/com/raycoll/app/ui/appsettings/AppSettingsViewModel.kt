@@ -34,10 +34,16 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class BackupOperation { EXPORT, IMPORT, RESET }
+
+private data class SettingsWork(val signingIn: Boolean, val signingOut: Boolean, val backup: BackupOperation?)
+
 data class AppSettingsUiState(
-    val preferences: UserPreferences = UserPreferences(),
+    val preferences: UserPreferences? = null,
     val account: Account? = null,
     val signingIn: Boolean = false,
+    val signingOut: Boolean = false,
+    val backupOperation: BackupOperation? = null,
     val syncStatus: SyncStatus = SyncStatus.IDLE,
     val appVersion: String = BuildConfig.VERSION_NAME
 )
@@ -50,6 +56,7 @@ sealed interface AppSettingsEvent {
     data class BackupImported(val result: BackupResult) : AppSettingsEvent
 
     /** Ustawienie albo reset danych się nie zapisały. */
+    data object SignOutFailed : AppSettingsEvent
     data object SaveFailed : AppSettingsEvent
 
     /** Wynik ręcznej synchronizacji. */
@@ -68,14 +75,24 @@ class AppSettingsViewModel @Inject constructor(
     private val clock: Clock
 ) : ViewModel() {
     private val signingIn = MutableStateFlow(false)
+    private val signingOut = MutableStateFlow(false)
+    private val backupOperation = MutableStateFlow<BackupOperation?>(null)
+    private val work = combine(signingIn, signingOut, backupOperation, ::SettingsWork)
 
     val uiState: StateFlow<AppSettingsUiState> = combine(
         prefsRepository.preferences,
         authRepository.account,
-        signingIn,
+        work,
         syncLifecycle.syncStatus
-    ) { preferences, account, signingIn, syncStatus ->
-        AppSettingsUiState(preferences, account, signingIn, syncStatus)
+    ) { preferences, account, work, syncStatus ->
+        AppSettingsUiState(
+            preferences = preferences,
+            account = account,
+            signingIn = work.signingIn,
+            signingOut = work.signingOut,
+            backupOperation = work.backup,
+            syncStatus = syncStatus
+        )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
@@ -91,13 +108,17 @@ class AppSettingsViewModel @Inject constructor(
      * trzyma starej Activity). Logowanie tokenem i synchronizacja idą w zakresie aplikacji.
      */
     suspend fun chooseGoogleAccount(activityContext: Context) {
-        if (signingIn.value) return
+        if (signingIn.value || signingOut.value || backupOperation.value != null) return
         signingIn.value = true
         val token = try {
             authRepository.requestGoogleIdToken(activityContext)
         } catch (e: CancellationException) {
             signingIn.value = false
             throw e
+        } catch (_: Exception) {
+            signingIn.value = false
+            eventSink.send(AppSettingsEvent.SignInFailed(SignInError.PLAY_SERVICES))
+            return
         }
         when (token) {
             is IdTokenResult.Token -> {
@@ -125,12 +146,22 @@ class AppSettingsViewModel @Inject constructor(
 
     /** Najpierw wysyła zaległe zmiany (błąd chmury nie blokuje wylogowania), potem przechodzi na dane gościa. */
     fun signOut() {
-        syncLifecycle.signOut()
+        if (signingOut.value || signingIn.value || backupOperation.value != null) return
+        signingOut.value = true
+        val result = syncLifecycle.signOut()
+        viewModelScope.launch {
+            try {
+                if (!result.await()) eventSink.send(AppSettingsEvent.SignOutFailed)
+            } finally {
+                signingOut.value = false
+            }
+        }
     }
 
     /** Ręczna synchronizacja kończy się komunikatem — inaczej nie widać, czy coś się stało. */
     fun syncNow() {
-        viewModelScope.launch { eventSink.send(AppSettingsEvent.SyncFinished(syncLifecycle.pushNow())) }
+        if (signingOut.value || backupOperation.value != null) return
+        launch { eventSink.send(AppSettingsEvent.SyncFinished(syncLifecycle.pushNow())) }
     }
 
     fun setTheme(value: ThemePref) = launch { prefsRepository.setTheme(value) }
@@ -141,7 +172,7 @@ class AppSettingsViewModel @Inject constructor(
 
     fun setBackgroundPlayback(value: Boolean) = launch { prefsRepository.setBackgroundPlayback(value) }
 
-    fun factoryReset() = launch {
+    fun factoryReset() = backup(BackupOperation.RESET) {
         backupRepository.factoryReset()
         eventSink.send(AppSettingsEvent.FactoryResetDone)
     }
@@ -149,16 +180,28 @@ class AppSettingsViewModel @Inject constructor(
     fun backupFileName(): String =
         "raycoll-backup-" + BACKUP_TIMESTAMP.format(Instant.ofEpochMilli(clock.now())) + ".json"
 
-    fun exportBackup(uri: Uri) = launch {
+    fun exportBackup(uri: Uri) = backup(BackupOperation.EXPORT) {
         eventSink.send(AppSettingsEvent.BackupExported(backupRepository.exportTo(uri)))
     }
 
-    fun importBackup(uri: Uri) = launch {
+    fun importBackup(uri: Uri) = backup(BackupOperation.IMPORT) {
         eventSink.send(AppSettingsEvent.BackupImported(backupRepository.importFrom(uri)))
     }
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(AppSettingsEvent.SaveFailed) }, block = block)
+    }
+
+    private fun backup(operation: BackupOperation, block: suspend () -> Unit) {
+        if (backupOperation.value != null || signingIn.value || signingOut.value) return
+        backupOperation.value = operation
+        launch {
+            try {
+                block()
+            } finally {
+                backupOperation.value = null
+            }
+        }
     }
 
     private companion object {

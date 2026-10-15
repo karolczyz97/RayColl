@@ -25,7 +25,8 @@ fun resolveStudyMode(liveModes: List<StudyMode>, modeId: String): StudyMode = li
 
 /** Wbudowany tryb zmieniony względem wersji fabrycznej (nazwa albo kroki). */
 fun StudyMode.isModifiedBuiltIn(): Boolean {
-    val seed = seedModeFor(builtInSourceId)?.takeIf { isBuiltIn } ?: return false
+    if (!isBuiltIn) return false
+    val seed = seedModeFor(builtInSourceId) ?: return false
     return name != seed.name || steps != seed.steps
 }
 

@@ -6,11 +6,10 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
@@ -33,7 +32,7 @@ private const val TAG = "AuthRepository"
 
 private fun FirebaseUser.toAccount() = Account(uid, email)
 
-enum class SignInError { PLAY_SERVICES, NO_TOKEN, INVALID_TOKEN, LOGIN_FAILED }
+enum class SignInError { PLAY_SERVICES, NO_TOKEN, INVALID_TOKEN, LOGIN_FAILED, LOCAL_DATA }
 
 sealed interface SignInResult {
     data class Success(val account: Account) : SignInResult
@@ -64,11 +63,14 @@ interface GoogleSignIn {
 
 /** Konto Google przez Credential Manager + Firebase Auth. */
 @Singleton
-class AuthRepository @Inject constructor(
+class AuthRepository internal constructor(
     private val auth: FirebaseAuth,
-    @ApplicationContext private val appContext: Context
+    private val credentialManager: CredentialManager
 ) : CurrentUser,
     GoogleSignIn {
+    @Inject constructor(auth: FirebaseAuth, @ApplicationContext context: Context) :
+        this(auth, CredentialManager.create(context))
+
     private val _account = MutableStateFlow(auth.currentUser?.toAccount())
 
     override val account: StateFlow<Account?> = _account.asStateFlow()
@@ -83,20 +85,18 @@ class AuthRepository @Inject constructor(
     override suspend fun requestGoogleIdToken(activityContext: Context): IdTokenResult {
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(
-                GetGoogleIdOption.Builder()
-                    .setServerClientId(FirebaseConfig.WEB_CLIENT_ID)
-                    .setFilterByAuthorizedAccounts(false)
+                GetSignInWithGoogleOption.Builder(FirebaseConfig.WEB_CLIENT_ID)
                     .build()
             )
             .build()
         val credential = try {
-            CredentialManager.create(activityContext).getCredential(activityContext, request).credential
+            credentialManager.getCredential(activityContext, request).credential
         } catch (_: GetCredentialCancellationException) {
             return IdTokenResult.Cancelled
         } catch (_: NoCredentialException) {
             return IdTokenResult.Failure(SignInError.NO_TOKEN)
         } catch (e: GetCredentialException) {
-            Log.w(TAG, "Google account selection failed: ${e.javaClass.simpleName}: ${e.message}")
+            Log.w(TAG, "Google account selection failed", e)
             return IdTokenResult.Failure(SignInError.PLAY_SERVICES)
         }
         if (credential !is CustomCredential ||
@@ -127,9 +127,12 @@ class AuthRepository @Inject constructor(
     override suspend fun signOut() {
         auth.signOut()
         try {
-            CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest())
-        } catch (_: ClearCredentialException) {
-            // brak zapisanych danych logowania to nie błąd wylogowania
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Firebase jest już wylogowane; błąd dostawcy nie może zatrzymać zmiany przestrzeni.
+            Log.w(TAG, "Could not clear credential provider state", e)
         }
     }
 }

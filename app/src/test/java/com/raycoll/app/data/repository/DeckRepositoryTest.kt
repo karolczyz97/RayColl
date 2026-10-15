@@ -17,6 +17,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -38,6 +41,35 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class DeckRepositoryTest {
+
+    @Test
+    fun `unchanged deck metadata does not advance its edit timestamp`() = runTest {
+        val id = seedDeckWithCard()
+        val before = repos.deckRepository.getDeck(id)!!
+        clock.advance(1_000)
+        repos.deckRepository.renameDeck(id, "  ${before.name}  ")
+        repos.deckRepository.setPageName(id, 0, before.pageNames[0])
+        repos.deckRepository.setPageLanguage(id, 0, before.pageLanguages[0])
+        repos.deckRepository.setActivePageCount(id, before.activePageCount)
+        repos.deckRepository.setActiveStudyMode(id, before.activeModeId)
+        repos.deckRepository.setStudyFilter(id, before.studyFilter)
+        repos.deckRepository.setCardOrder(id, before.cardOrder)
+        assertEquals(before, repos.deckRepository.getDeck(id))
+        repos.deckRepository.setPageName(id, 0, "Changed")
+        assertEquals(clock.now(), repos.deckRepository.getDeck(id)!!.updatedAt)
+    }
+
+    @Test
+    fun `archive restore and repeated deletion cannot revive or advance a tombstone`() = runTest {
+        val id = seedDeckWithCard()
+        repos.deckRepository.deleteDeck(id)
+        val before = repos.localStore.snapshot().groups.single()
+        clock.advance(1_000)
+        repos.deckRepository.archiveDeck(id)
+        repos.deckRepository.restoreDeck(id)
+        repos.deckRepository.deleteDeck(id)
+        assertEquals(before, repos.localStore.snapshot().groups.single())
+    }
 
     @Test
     fun `reviewing a deleted card neither revives it nor adds activity`() = runTest(dispatcher) {
@@ -221,8 +253,8 @@ class DeckRepositoryTest {
         val id = seedDeckWithCard()
         val card = repos.deckRepository.getDeck(id)!!.cards.single()
         repos.deckRepository.deleteCard(card.id)
-        assertEquals(false, repos.deckRepository.updateCardPages(card.id, listOf("x", "y")))
-        assertEquals(false, repos.deckRepository.updateCardPages("no-such-card", listOf("x", "y")))
+        org.junit.Assert.assertFalse(repos.deckRepository.updateCardPages(card.id, listOf("x", "y")))
+        org.junit.Assert.assertFalse(repos.deckRepository.updateCardPages("no-such-card", listOf("x", "y")))
         val tombstone = repos.localStore.snapshot().groups.single().cards.single()
         assertEquals(listOf("hi", "cześć"), tombstone.pages)
         assertNotNull(tombstone.deletedAt)
@@ -251,6 +283,7 @@ class DeckRepositoryTest {
     @Test
     fun `settings edits stamp updatedAt and signal sync once per change`() = runTest(dispatcher) {
         val id = seedDeckWithCard()
+        assertEquals(CloudWriteMode.IMMEDIATE, repos.mutations.events.first())
         clock.advance(5_000)
         repos.deckRepository.setCardOrder(id, CardOrder.RANDOM)
         repos.deckRepository.setStudyFilter(id, StudyFilter.ALL)
@@ -258,6 +291,10 @@ class DeckRepositoryTest {
         assertEquals(CardOrder.RANDOM, deck.cardOrder)
         assertEquals(StudyFilter.ALL, deck.studyFilter)
         assertEquals(clock.now(), deck.updatedAt)
+        assertEquals(
+            listOf(CloudWriteMode.DEBOUNCED, CloudWriteMode.DEBOUNCED),
+            repos.mutations.events.take(2).toList()
+        )
     }
 
     @Test

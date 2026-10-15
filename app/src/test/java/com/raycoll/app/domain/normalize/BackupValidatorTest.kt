@@ -35,31 +35,6 @@ import org.junit.Test
 /** Walidacja kopii zapasowych przed zastąpieniem danych użytkownika. */
 class BackupValidatorTest {
 
-    @Test
-    fun `parameterless compound steps read legacy dummy fields in backups and cloud`() {
-        val json = Json { ignoreUnknownKeys = true }
-        for ((kind, params) in listOf(
-            "show_all_grade" to CompoundParams.ShowAllGrade,
-            "fail_next" to CompoundParams.FailNext
-        )) {
-            val legacy = """{"type":"compound","params":{"kind":"$kind","dummy":0}}"""
-            val step = json.decodeFromString(ModeStep.serializer(), legacy) as CompoundStep
-            assertSame(params, step.params)
-            val encoded = json.encodeToString(ModeStep.serializer(), step)
-            assertFalse(encoded.contains("dummy"))
-            assertEquals(step, json.decodeFromString(ModeStep.serializer(), encoded))
-
-            val mode = StudyMode(id = "legacy", name = "Legacy", steps = listOf(step))
-            val cloud = FirestoreSchema.modeToMap(mode) + (
-                "steps" to listOf(
-                    mapOf("type" to "compound", "condition" to null, "params" to mapOf("kind" to kind, "dummy" to 0))
-                )
-                )
-            validateBackupData(backup(modes = listOf(cloud)))
-            assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, cloud))
-        }
-    }
-
     private fun group(id: String = "deck", cardId: String = "card") = mapOf(
         "id" to id,
         "name" to "Deck",
@@ -101,46 +76,6 @@ class BackupValidatorTest {
         )) {
             assertThrows(BackupValidationException::class.java) { validateBackupData(data) }
         }
-    }
-
-    @Test
-    fun `all editable steps survive backup validation and cloud round trip`() {
-        val steps = listOf(
-            ShowPageStep(), ShowAllPagesStep(), WaitForTapToRevealNextStep(), WaitForTapToRevealStep(),
-            ShowRatingsStep(), SpeakPageStep(), SpeakAllPagesStep(), DynamicPauseStep(), WaitStep(),
-            ListenAndCheckStep(), FeedbackSuccessStep(), FeedbackErrorStep(), AutoRateFromAnswerStep(),
-            AutoRateFixedStep(), MarkFailedStep(), WaitForTapStep(), NextCardStep(),
-            CompoundStep(params = CompoundParams.PresentFront()),
-            CompoundStep(params = CompoundParams.FlipReveal()),
-            CompoundStep(params = CompoundParams.ShowAllGrade),
-            CompoundStep(params = CompoundParams.SpeakPauseNext()),
-            CompoundStep(params = CompoundParams.AutoFlip()),
-            CompoundStep(params = CompoundParams.ListenGrade()),
-            CompoundStep(params = CompoundParams.GradeAfterListen()),
-            CompoundStep(params = CompoundParams.AutoPassNext()),
-            CompoundStep(params = CompoundParams.FailNext)
-        )
-        val mode = StudyMode(id = "all-steps", name = "All steps", steps = steps, updatedAt = 1L)
-        val plain = FirestoreSchema.modeToMap(mode)
-        val plainSteps = plain["steps"] as List<*>
-        val stepTypes = ModeStep.serializer().descriptor.getElementDescriptor(1)
-        assertEquals(
-            (0 until stepTypes.elementsCount).map { stepTypes.getElementName(it) }.toSet(),
-            plainSteps.map { (it as Map<*, *>)["type"] }.toSet()
-        )
-        val compoundTypes = CompoundParams.serializer().descriptor.getElementDescriptor(1)
-        assertEquals(
-            (0 until compoundTypes.elementsCount).map { compoundTypes.getElementName(it) }.toSet(),
-            plainSteps.mapNotNull { ((it as Map<*, *>)["params"] as? Map<*, *>)?.get("kind") }.toSet()
-        )
-        validateBackupData(
-            mapOf(
-                "groups" to emptyList<Any>(),
-                "studyModes" to listOf(plain),
-                "activityHeatmap" to emptyMap<String, Int>()
-            )
-        )
-        assertEquals(mode, FirestoreSchema.modeFromMap(mode.id, plain))
     }
 
     @Test

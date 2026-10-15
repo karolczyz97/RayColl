@@ -20,7 +20,7 @@ private fun localSrsWins(localReps: Int, localSrsAt: Long, cloudReps: Int, cloud
     else -> false
 }
 
-fun mergeActivityHeatmap(local: Map<String, Int>, cloud: Map<String, Int>): Map<String, Int> {
+internal fun mergeActivityHeatmap(local: Map<String, Int>, cloud: Map<String, Int>): Map<String, Int> {
     val merged = cloud.toMutableMap()
     for ((date, count) in local) merged[date] = maxOf(merged[date] ?: 0, count)
     return merged
@@ -28,28 +28,36 @@ fun mergeActivityHeatmap(local: Map<String, Int>, cloud: Map<String, Int>): Map<
 
 /**
  * Suma list po id: [both] scala element obecny po obu stronach, [single] obsługuje element tylko z jednej.
- * Kolejność: najpierw id lokalne, potem te tylko z chmury (kolejność kart w talii zależy od zapisu).
+ * Kolejność: najpierw id lokalne, potem te tylko z chmury (kolejność kart w talii zależy od zapisu);
+ * z [preferCloudOrder] odwrotnie — najpierw kolejność chmury, żeby dwa urządzenia doszły do tej samej.
  */
 private inline fun <T> mergeById(
     local: List<T>,
     cloud: List<T>,
     id: (T) -> String,
     both: (T, T) -> T,
-    single: (T) -> T
+    single: (T) -> T,
+    preferCloudOrder: Boolean = false
 ): List<T> {
     val localMap = local.associateBy(id)
     val cloudMap = cloud.associateBy(id)
-    return (local.map(id) + cloud.map(id)).toSet().map { key ->
+    val keys = if (preferCloudOrder) cloud.map(id) + local.map(id) else local.map(id) + cloud.map(id)
+    return keys.toSet().map { key ->
         val l = localMap[key]
         val c = cloudMap[key]
         if (l != null && c != null) both(l, c) else single(requireNotNull(l ?: c))
     }
 }
 
-fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<Flashcard> = mergeById(
+fun mergeCards(
+    localCards: List<Flashcard>,
+    cloudCards: List<Flashcard>,
+    preferCloudOrder: Boolean = false
+): List<Flashcard> = mergeById(
     local = localCards,
     cloud = cloudCards,
     id = { it.id },
+    preferCloudOrder = preferCloudOrder,
     single = { card ->
         val delAt = card.deletedAt ?: 0
         if (delAt > 0 && getLatestEdit(card) > delAt) card.copy(deletedAt = null) else card
@@ -58,7 +66,7 @@ fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<F
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(getLatestEdit(l), getLatestEdit(c))
         if (!isAlive(latestEdit, deletedAt)) {
-            c.copy(deletedAt = if (deletedAt > 0) deletedAt else null)
+            c.copy(deletedAt = deletedAt.takeIf { it > 0 })
         } else {
             val preferLocalSrs =
                 localSrsWins(l.srsState.repetitions, l.srsUpdatedAt, c.srsState.repetitions, c.srsUpdatedAt)
@@ -80,20 +88,25 @@ fun mergeCards(localCards: List<Flashcard>, cloudCards: List<Flashcard>): List<F
     }
 )
 
-fun mergeGroups(localGroups: List<FlashcardGroup>, cloudGroups: List<FlashcardGroup>): List<FlashcardGroup> = mergeById(
+fun mergeGroups(
+    localGroups: List<FlashcardGroup>,
+    cloudGroups: List<FlashcardGroup>,
+    preferCloudOrder: Boolean = false
+): List<FlashcardGroup> = mergeById(
     local = localGroups,
     cloud = cloudGroups,
     id = { it.id },
+    preferCloudOrder = preferCloudOrder,
     single = { group -> group.copy(cards = mergeCards(group.cards, emptyList())) },
     both = { l, c ->
         val deletedAt = latestDelete(l.deletedAt, c.deletedAt)
         val latestEdit = maxOf(l.updatedAt, c.updatedAt)
         if (!isAlive(latestEdit, deletedAt)) {
-            c.copy(cards = mergeCards(l.cards, c.cards), deletedAt = if (deletedAt > 0) deletedAt else null)
+            c.copy(cards = mergeCards(l.cards, c.cards, preferCloudOrder), deletedAt = deletedAt.takeIf { it > 0 })
         } else {
             val winner = if (l.updatedAt > c.updatedAt) l else c
             winner.copy(
-                cards = mergeCards(l.cards, c.cards),
+                cards = mergeCards(l.cards, c.cards, preferCloudOrder),
                 updatedAt = latestEdit,
                 deletedAt = null // edycja nowsza niż kasowanie = ożywienie (isAlive)
             )
@@ -118,17 +131,19 @@ fun mergeStudyModes(localModes: List<StudyMode>, cloudModes: List<StudyMode>): L
                 // wbudowanego trybu nie da się usunąć na stałe: kasowanie przegrywa
                 winner.copy(updatedAt = latestEdit, deletedAt = null)
             } else {
-                c.copy(deletedAt = if (deletedAt > 0) deletedAt else null)
+                c.copy(deletedAt = deletedAt.takeIf { it > 0 })
             }
         }
     }
 )
 
-fun mergeUserData(local: StoreData, cloud: StoreData): StoreData {
-    val mergedGroups = mergeGroups(local.groups, cloud.groups)
+fun mergeUserData(local: StoreData, cloud: StoreData, preferCloudOrder: Boolean = false): StoreData {
+    val generationOrder = compareValuesBy(local, cloud, StoreData::replacementAt, StoreData::replacementId)
+    if (generationOrder != 0) return normalizeStoreData(if (generationOrder > 0) local else cloud)
+    val mergedGroups = mergeGroups(local.groups, cloud.groups, preferCloudOrder)
     val mergedModes = mergeStudyModes(local.studyModes, cloud.studyModes)
     val mergedHeatmap = mergeActivityHeatmap(local.activityHeatmap, cloud.activityHeatmap)
     return normalizeStoreData(
-        StoreData(groups = mergedGroups, studyModes = mergedModes, activityHeatmap = mergedHeatmap)
+        local.copy(groups = mergedGroups, studyModes = mergedModes, activityHeatmap = mergedHeatmap)
     )
 }

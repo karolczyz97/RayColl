@@ -12,4 +12,17 @@ build/
 
 # Lokalne ustawienia narzędzi i wygenerowane kopie kodu
 /.claude/settings.local.json
+/.claude/worktrees/
 /repomix*.xml
+
+# Klucze podpisu i logi narzędzi
+*.jks
+*.keystore
+keystore.properties
+firebase-debug.log*
+.firebase/
+node_modules/
+__pycache__/
+*-debug.log
+hs_err_pid*.log
+replay_pid*.log

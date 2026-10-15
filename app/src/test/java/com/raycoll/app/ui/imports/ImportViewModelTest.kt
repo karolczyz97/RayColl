@@ -34,6 +34,34 @@ import org.robolectric.RobolectricTestRunner
 class ImportViewModelTest {
 
     @Test
+    fun `manual separator wins over automatic tab detection`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.setHasHeader(false)
+        vm.onSourceTextChanged("Wenn ich Zeit habe, gehe ich\tIf I have time, I go")
+        advanceUntilIdle()
+        assertEquals(CsvSeparator.TAB, vm.uiState.value.separator)
+        vm.setSeparator(CsvSeparator.COMMA)
+        advanceUntilIdle()
+        assertEquals(CsvSeparator.COMMA, vm.uiState.value.separator)
+        assertEquals(3, vm.uiState.value.rows.single().size)
+    }
+
+    @Test
+    fun `named empty header column survives parsing and importing`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.setDeckName("Notes")
+        vm.setHasHeader(true)
+        vm.onSourceTextChanged("front;back;notes\none;two;\nthree;four;")
+        advanceUntilIdle()
+        assertEquals(3, vm.uiState.value.pageCount)
+        assertEquals(listOf("front", "back", "notes"), vm.uiState.value.pageNames)
+        vm.runImport(pageNames)
+        advanceUntilIdle()
+        assertEquals(ImportEvent.Imported, vm.events.first())
+        assertEquals(listOf("one", "two", ""), repos.localStore.snapshot().groups.single().cards.first().pages)
+    }
+
+    @Test
     fun `import with 21 columns is rejected without truncating data`() = runTest(dispatcher) {
         val vm = vm()
         vm.setDeckName("Too wide")
@@ -41,6 +69,9 @@ class ImportViewModelTest {
         vm.onSourceTextChanged((1..21).joinToString(";") { "cell $it" })
         advanceUntilIdle()
         assertEquals(21, vm.uiState.value.pageCount)
+        assertEquals(21, vm.uiState.value.rows.single().size)
+        assertTrue(vm.uiState.value.pageNames.size <= 20)
+        assertFalse(vm.uiState.value.canImport)
         vm.runImport(pageNames)
         advanceUntilIdle()
         assertEquals(ImportEvent.Invalid(ImportProblem.InvalidPageCount), vm.events.first())

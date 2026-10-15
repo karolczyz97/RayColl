@@ -1,0 +1,13 @@
+{
+  "name": "raycoll-firestore-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --config ../../firebase.test.json --only firestore --project demo-raycoll \"node --test firestore.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.0.0",
+    "firebase-tools": "15.34.0"
+  }
+}

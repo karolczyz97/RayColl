@@ -18,11 +18,14 @@ class SessionDepsAdapter @Inject constructor(
     private val ttsPlayer: TtsPlayer,
     private val sttRecognizer: SttRecognizer,
     private val hapticPlayer: HapticAndSoundPlayer,
-    private val reviewWrites: ReviewWriteQueue
+    private val reviewWrites: ReviewWriteQueue,
+    private val sessionHolder: StudySessionHolder
 ) : SessionDeps {
 
     // mikrofon nie może słuchać, gdy aplikacja jeszcze mówi (nagrałby sam siebie) — i odwrotnie
     private val audioTurn = AudioTurn()
+
+    override fun acquireAudioFocus(): Boolean = sessionHolder.acquireAudioFocus()
 
     override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult =
         audioTurn.withTurn { ttsPlayer.speak(text, lang, rate).toSpeakResult() }
@@ -42,7 +45,9 @@ class SessionDepsAdapter @Inject constructor(
     }
 
     override suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult =
-        audioTurn.withTurn { sttRecognizer.listen(lang, timeoutMs, onPartial) }
+        audioTurn.withTurn {
+            sessionHolder.withRecognitionFocus { sttRecognizer.listen(lang, timeoutMs, onPartial) }
+        }
 
     override fun feedbackSuccess() = hapticPlayer.playSuccess()
 

@@ -72,7 +72,7 @@ class SessionEngineBackgroundTest {
     )
 
     private fun engine(steps: List<ModeStep>, scope: TestScope, clock: Clock = FakeClock()) =
-        SessionEngine(group(), steps, FakeSessionDeps(listenStatus = ListenStatus.SKIPPED), clock, 1.0f, scope)
+        SessionEngine(group(), steps, FakeSessionDeps(listenHangs = true), clock, 1.0f, scope)
 
     @Test
     fun `going to background resumes a foreground tap gate without user interaction`() =
@@ -166,20 +166,32 @@ class SessionEngineBackgroundTest {
         runTest(UnconfinedTestDispatcher()) {
             val eng =
                 engine(
-                    listOf(ShowPageStep(pageIndex = 0), WaitForTapToRevealNextStep(), NextCardStep()),
+                    listOf(
+                        ShowPageStep(pageIndex = 0),
+                        WaitForTapToRevealNextStep(),
+                        ShowRatingsStep(),
+                        NextCardStep()
+                    ),
                     TestScope(UnconfinedTestDispatcher(testScheduler)),
                     clock
                 )
             eng.start(listOf(card("c1"), card("c2"), card("c3")))
             advanceUntilIdle()
             eng.handleCardPress()
+            eng.rate(3)
             advanceUntilIdle()
             assertEquals(1, eng.state.value.currentCardIndex)
+            eng.handleCardPress()
+            advanceUntilIdle()
+            assertEquals(listOf(0, 1), eng.state.value.revealedPages.sorted())
+            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
             clock.current += 5_000 // poza oknem 3 s
             eng.goToPreviousCard()
             advanceUntilIdle()
-            // restart bieżącej karty od kroku 0 — indeks bez zmian
+            // Ten sam indeks, ale rzeczywisty restart: druga strona znów zakryta i bramka czeka.
             assertEquals(1, eng.state.value.currentCardIndex)
+            assertEquals(listOf(0), eng.state.value.revealedPages.sorted())
+            assertEquals(InteractionGateKind.TAP_TO_REVEAL, eng.state.value.interactionGate.kind)
         }
     }
 
@@ -196,6 +208,7 @@ class SessionEngineBackgroundTest {
         )
         eng.setBackground(true)
         eng.start(listOf(card("c1"), card("c2")))
+        eng.handleCardPress() // rzeczywiste przerwanie nasłuchu tapnięciem
         advanceUntilIdle()
         assertEquals(AnswerStatus.SKIPPED, eng.state.value.lastAnswerResult.status)
         assertNull(eng.state.value.lastAnswerResult.percent)
@@ -207,7 +220,7 @@ class SessionEngineBackgroundTest {
     @Test
     fun `background ratings wait for the user without recording an automatic review`() =
         runTest(UnconfinedTestDispatcher()) {
-            val deps = FakeSessionDeps(listenStatus = ListenStatus.SKIPPED)
+            val deps = FakeSessionDeps(listenHangs = true)
             val eng = SessionEngine(
                 group(),
                 listOf(ShowPageStep(pageIndex = 0), ShowRatingsStep()),

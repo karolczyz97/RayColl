@@ -16,7 +16,7 @@ fun shouldTriggerMigration(hasUserLocalCache: Boolean, guestHasData: Boolean): B
 fun getGuestHasData(groups: List<FlashcardGroup>, heatmap: Map<String, Int>, modes: List<StudyMode>): Boolean =
     groups.any { it.deletedAt == null && !it.isUntouchedSeed() } ||
         heatmap.values.any { it > 0 } ||
-        modes.any(::isUserAuthoredMode)
+        modes.any { it.deletedAt == null && isUserAuthoredMode(it) }
 
 /** Tryb własny albo wbudowany, któremu użytkownik zmienił nazwę lub kroki. */
 fun isUserAuthoredMode(mode: StudyMode): Boolean =

@@ -31,6 +31,7 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.seed.isBuiltInModeSourceId
 
 // Normalizacja danych z zewnątrz (backup, chmura, merge): przycina wartości do
@@ -41,22 +42,20 @@ fun padPageMetadata(
     pageNames: List<String>,
     pageLanguages: List<String>,
     count: Int,
-    defaultName: (Int) -> String = { "Page ${it + 1}" }
+    defaultName: (Int) -> String = ::defaultPageName
 ): Pair<List<String>, List<String>> {
     val names = pageNames + (pageNames.size until count).map(defaultName)
     val languages = pageLanguages + List((count - pageLanguages.size).coerceAtLeast(0)) { DEFAULT_PAGE_LANGUAGE }
     return names to languages
 }
 
-fun getStoredPageCount(group: FlashcardGroup): Int {
+private fun getStoredPageCount(group: FlashcardGroup): Int {
     val maxCardPages = group.cards.maxOfOrNull { it.pages.size } ?: 0
     val rawStored = maxOf(group.pageNames.size, group.pageLanguages.size, maxCardPages, PageLimits.MIN_PAGE_COUNT)
     return minOf(rawStored, PageLimits.MAX_STORED_PAGE_COUNT)
 }
 
-private fun normalizeCard(card: Flashcard): Flashcard = if (card.srsState.state in
-    SrsStates.VALID
-) {
+private fun normalizeCard(card: Flashcard): Flashcard = if (card.srsState.state in SrsStates.VALID) {
     card
 } else {
     card.copy(srsState = card.srsState.copy(state = SrsStates.NEW))

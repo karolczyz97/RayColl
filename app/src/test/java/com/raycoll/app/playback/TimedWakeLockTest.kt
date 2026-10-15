@@ -85,6 +85,6 @@ class TimedWakeLockTest {
         val second = latest()!!
         assertNotSame(first, second)
         assertTrue(second.isHeld)
-        assertEquals(false, first.isHeld)
+        org.junit.Assert.assertFalse(first.isHeld)
     }
 }
