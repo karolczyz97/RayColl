@@ -45,7 +45,7 @@ class StudyCardTest {
     @Test
     fun `reveal label retains its content until the exit animation finishes`() {
         var state by mutableStateOf(active(SessionState(cards = listOf(twoPageCard)), 2))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         compose.onNodeWithText("Tap to reveal").assertExists()
         compose.mainClock.autoAdvance = false
         state = state.copy(session = state.session.copy(status = SessionStatus.LISTENING))
@@ -61,7 +61,7 @@ class StudyCardTest {
         val front = "Question"
         val card = twoPageCard.copy(pages = listOf(front, (1..40).joinToString("\n") { "Definition line $it" }))
         var state by mutableStateOf(active(SessionState(cards = listOf(card), revealedPages = listOf(0, 1)), 2))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         compose.mainClock.advanceTimeBy(2_000)
         compose.onNodeWithText(front, useUnmergedTree = true).performScrollTo()
         fun position(): Float = compose.onNode(
@@ -117,7 +117,7 @@ class StudyCardTest {
     fun `reveal button counts only active pages of the deck`() {
         val card = Flashcard(id = "c1", pages = listOf("front", "back", "hidden example"), srsState = SrsState())
         var state by mutableStateOf(active(SessionState(cards = listOf(card), revealedPages = listOf(0)), 2))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
 
         compose.onNodeWithText("Tap to reveal").assertExists()
 
@@ -133,7 +133,7 @@ class StudyCardTest {
         val definition = (1..15).joinToString("\n") { "Line $it of a long definition" }
         val card = Flashcard(id = "c1", pages = listOf("term", definition), srsState = SrsState())
         val state = active(SessionState(cards = listOf(card), revealedPages = listOf(0, 1)), 2)
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
 
         val node = compose.onNodeWithText(definition, useUnmergedTree = true)
         node.performScrollTo().assertIsDisplayed()
@@ -157,7 +157,7 @@ class StudyCardTest {
             lastAnswerResult = LastAnswerResult(status = AnswerStatus.INCORRECT, text = "old answer")
         )
         var state by mutableStateOf(active(answered, 2))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         compose.onNodeWithText("old answer", substring = true).assertExists()
 
         state = active(sessionReducer(answered, SessionAction.AdvanceCard(1)), 2)
@@ -190,7 +190,7 @@ class StudyCardTest {
 
     private fun assertAudioNeverMovesText() {
         var state by mutableStateOf(audioState(SessionStatus.IDLE, null))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         val idle = pageBounds()
         listOf(
             SessionStatus.SPEAKING to 0,
@@ -214,7 +214,7 @@ class StudyCardTest {
     @Test
     fun `audio indicator is exposed to TalkBack`() {
         var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         compose.onNode(pageState("Speaking")).assertExists()
 
         state = audioState(SessionStatus.LISTENING, 1)
@@ -225,7 +225,7 @@ class StudyCardTest {
     @Test
     fun `audio indicator is held briefly and then removed`() {
         var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         compose.onNode(pageState("Speaking")).assertExists()
 
         compose.mainClock.autoAdvance = false
@@ -293,7 +293,7 @@ class StudyCardTest {
         val tall = (1..14).joinToString("\n") { "Line $it" }
         val card = Flashcard(id = "c1", pages = listOf("front", tall, "third page"), srsState = SrsState())
         var state by mutableStateOf(active(SessionState(cards = listOf(card), revealedPages = listOf(0, 1)), 3))
-        compose.setContent { StudyCardContent("deck", state, noActions) }
+        compose.setContent { StudyCardContent(state, noActions) }
         compose.waitForIdle()
 
         state = active(state.session.copy(revealedPages = listOf(0, 1, 2)), 3)

@@ -74,7 +74,7 @@ sealed interface StudyEvent {
 /** Jedna sesja nauki talii; sesja żyje tyle co ten ViewModel (przetrwa obrót ekranu). */
 @HiltViewModel(assistedFactory = StudyViewModel.Factory::class)
 class StudyViewModel @AssistedInject constructor(
-    @Assisted val deckId: String,
+    @Assisted private val deckId: String,
     private val deckRepository: DeckRepository,
     private val modeRepository: StudyModeRepository,
     private val prefsRepository: UserPreferencesRepository,

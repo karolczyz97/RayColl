@@ -97,7 +97,8 @@ fun ImportScreen(
             if (state.hasDraft) showDiscard = true else onFinished()
         }
     }
-    BackHandler(onBack = requestBack)
+    // „wstecz” przechwycony tylko, gdy jest co chronić — inaczej system pokazuje swoje przejście cofania
+    BackHandler(enabled = state.importing || state.hasDraft, onBack = requestBack)
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val importInToolbar = with(LocalDensity.current) { windowHeight.toDp() } < 480.dp && keyboardVisible
@@ -215,6 +216,7 @@ fun ImportScreen(
             destructive = true,
             onConfirm = {
                 showDiscard = false
+                viewModel.discardDraft()
                 onFinished()
             },
             onDismiss = { showDiscard = false }

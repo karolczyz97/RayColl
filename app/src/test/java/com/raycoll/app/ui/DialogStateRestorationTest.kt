@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.TextRange
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
@@ -73,7 +74,7 @@ class DialogStateRestorationTest {
     fun `mode reset confirmation stays open after state restoration`() {
         runBlocking { repos.seed("en") }
         val vm =
-            ModeDetailViewModel("classic", repos.studyModeRepository, testPreferences.repository)
+            ModeDetailViewModel("classic", repos.studyModeRepository, testPreferences.repository, SavedStateHandle())
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         waitForText("Classic")
@@ -90,7 +91,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `discard changes confirmation stays open after state restoration`() {
-        val vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository)
+        val vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository, SavedStateHandle())
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.onNodeWithText("Empty mode").performClick()

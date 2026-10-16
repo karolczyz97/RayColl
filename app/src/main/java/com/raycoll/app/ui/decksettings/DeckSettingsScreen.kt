@@ -50,8 +50,6 @@ import com.raycoll.app.ui.components.rememberModeDelete
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.settingsBackground
 import com.raycoll.app.ui.navigation.ScreenResult
-import com.raycoll.app.ui.navigation.sharedDeckCard
-import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
 
 @Composable
@@ -88,7 +86,6 @@ fun DeckSettingsScreen(
     val ready = uiState as? DeckSettingsUiState.Ready
     ScreenScaffold(
         title = ready?.deck?.name ?: stringResource(R.string.route_deck_settings),
-        titleModifier = Modifier.sharedDeckTitle(viewModel.deckId),
         onBack = onBack,
         snackbarHostState = snackbarHostState,
         containerColor = settingsBackground
@@ -137,7 +134,7 @@ private fun DeckSettingsContent(
             .padding(Spacing.screenContent()),
         verticalArrangement = Arrangement.spacedBy(Spacing.item)
     ) {
-        SettingsGroup(stringResource(R.string.settings_section_general), Modifier.sharedDeckCard(deck.id)) {
+        SettingsGroup(stringResource(R.string.settings_section_general)) {
             item { shapes ->
                 SettingsBlock(shapes) {
                     PersistedTextField(

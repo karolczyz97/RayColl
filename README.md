@@ -13,7 +13,7 @@ kopia JSON oraz dane w chmurze (Firestore + konto gościa albo logowanie Google)
 | Warstwa | Technologia |
 |---|---|
 | Język | Kotlin 2.4.21 |
-| UI | Jetpack Compose (BOM-alpha 2026.10.00), single-activity, Material 3 1.5 Expressive, Navigation 3 |
+| UI | Jetpack Compose (BOM-alpha 2026.10.00), Material 3 1.5 Expressive; każdy ekran to osobna Activity (przejścia i gest „wstecz” animuje system) |
 | DI | Hilt 2.60.1 |
 | Dane | Cloud Firestore jako jedyne źródło danych, z trwałą pamięcią podręczną na telefonie (praca offline) |
 | Konto | Firebase Auth: konto gościa (anonimowe) albo Google przez Credential Manager |
@@ -219,7 +219,7 @@ i `package-lock.json`.
 ```
 com/raycoll/app/
 ├── RayCollApplication.kt      # @HiltAndroidApp, start konta
-├── MainActivity.kt            # single-activity, edge-to-edge, splash, okno wyboru danych gościa
+├── MainActivity.kt            # pulpit (pierwsze okno), splash; otwiera pozostałe ekrany
 ├── di/                        # moduły Hilt (Firebase, magazyn, zegar, dispatchery, sesja)
 ├── core/                      # Ids, LocalDates, Clock
 ├── domain/                    # CZYSTY Kotlin — zero importów Androida
@@ -241,9 +241,10 @@ com/raycoll/app/
 │   ├── files/                 # pliki z systemowego okna wyboru (import CSV, kopie JSON)
 │   └── local/prefs/           # ustawienia w DataStore
 ├── playback/                  # TTS, STT, Media3 service, notyfikacja, audio focus
-└── ui/                        # theme, navigation, components + ekrany:
-                               # main/ dashboard/ browse/ study/ decksettings/ modedetail/
-                               # studymodes/ imports/ stats/ archive/ appsettings/
+└── ui/                        # theme, components, navigation (wyniki ekranów) + ekrany:
+                               # main/ (AppActivity: wspólna oprawa okna) dashboard/ browse/
+                               # study/ decksettings/ modedetail/ studymodes/ imports/ stats/
+                               # archive/ appsettings/ — każdy ekran ma swoją *Activity
 ```
 
 Reguły architektury: Firestore = jedyne źródło prawdy; repozytoria wystawiają
@@ -251,3 +252,10 @@ współdzielone nasłuchy kolekcji jako Flow, a ekrany zbierają je jako StateFl
 Zapisy nie czekają na serwer (działają offline). Akcje domenowe to czyste funkcje.
 `SessionEngine` żyje w ViewModelu sesji, a holder udostępnia go serwisowi; dzięki
 temu sesja przeżywa obrót ekranu. Czas jest wstrzykiwany przez `Clock`.
+
+Nawigacja: jedna Activity na ekran (`AppActivity`), argumenty w Intent, wyniki
+(import, archiwizacja) przez Activity Result API. Dzięki temu wejście, cofanie gestem
+z podglądem i jego anulowanie rysuje system, jak w aplikacjach Androida. „Wstecz”
+jest przechwytywane tylko, gdy jest co chronić (trwająca sesja nauki, niezapisany
+import albo tryb) — wtedy zamiast podglądu pojawia się pytanie. Szkic importu
+(plik prywatny) i edytora trybu (stan ekranu) przeżywają śmierć procesu.

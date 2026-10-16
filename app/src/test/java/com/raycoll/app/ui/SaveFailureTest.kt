@@ -1,5 +1,6 @@
 package com.raycoll.app.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.domain.steps.ModeTemplate
@@ -45,13 +46,14 @@ class SaveFailureTest {
     fun `browse mode editor and import report failed writes`() = runTest {
         val browse = BrowseViewModel("d1", repos.deckRepository, testPreferences.repository)
         val mode =
-            ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository)
+            ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository, SavedStateHandle())
         mode.chooseTemplate(ModeTemplate.CLASSIC)
         mode.setName("Custom")
         val imports = ImportViewModel(
             repos.deckRepository,
             DocumentFiles(ApplicationProvider.getApplicationContext()),
-            UnconfinedTestDispatcher(testScheduler)
+            UnconfinedTestDispatcher(testScheduler),
+            SavedStateHandle()
         )
         imports.setDeckName("Import")
         imports.onSourceTextChanged("q;a")

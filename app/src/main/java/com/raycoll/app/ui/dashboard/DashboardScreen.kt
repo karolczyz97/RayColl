@@ -77,8 +77,6 @@ import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.rememberSwipeRevealState
 import com.raycoll.app.ui.navigation.ScreenResult
-import com.raycoll.app.ui.navigation.sharedDeckCard
-import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -288,11 +286,7 @@ private fun DeckCard(
         onHintShown = onHintShown,
         modifier = modifier
     ) {
-        RayCollCard(
-            Modifier
-                .sharedDeckCard(deck.id)
-                .fillMaxWidth()
-        ) {
+        RayCollCard(Modifier.fillMaxWidth()) {
             Column(
                 Modifier
                     // dotknięcie: podgląd talii (a gdy akcje są odsłonięte — schowanie ich); przytrzymanie odsłania akcje
@@ -315,8 +309,7 @@ private fun DeckCard(
                     ) {
                         Text(
                             deck.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.sharedDeckTitle(deck.id)
+                            style = MaterialTheme.typography.titleLarge
                         )
                         DeckSubtitle(deck)
                     }

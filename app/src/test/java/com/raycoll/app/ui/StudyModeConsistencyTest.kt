@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.performTextReplacement
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.domain.model.DEFAULT_MODE_ID
 import com.raycoll.app.domain.model.ShowPageStep
@@ -106,7 +107,8 @@ class StudyModeConsistencyTest {
             ModeDetailViewModel(
                 DEFAULT_MODE_ID,
                 repos.studyModeRepository,
-                testPreferences.repository
+                testPreferences.repository,
+                SavedStateHandle()
             )
         compose.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { vm.uiState.value is ModeDetailUiState.Editing }
@@ -134,7 +136,8 @@ class StudyModeConsistencyTest {
             ModeDetailViewModel(
                 DEFAULT_MODE_ID,
                 repos.studyModeRepository,
-                testPreferences.repository
+                testPreferences.repository,
+                SavedStateHandle()
             )
         compose.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { vm.uiState.value is ModeDetailUiState.Editing }

@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.modedetail
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.core.Ids
@@ -28,6 +29,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /** Krok na liście edytora; stałe [key] pozwala animować przestawianie. */
 @Immutable
@@ -68,12 +71,26 @@ sealed interface ModeDetailEvent {
     data object SaveFailed : ModeDetailEvent
 }
 
+/** Niezapisany stan edytora; przeżywa śmierć procesu (w [SavedStateHandle]). */
+@Serializable
+private data class ModeDraft(
+    val isNew: Boolean,
+    val name: String,
+    val steps: List<ModeStep>,
+    val builtInId: String?,
+    val baselineName: String,
+    val baselineSteps: List<ModeStep>
+)
+
+private const val DRAFT_KEY = "modeDraft"
+
 /** [modeId] == null: nowy tryb. */
 @HiltViewModel(assistedFactory = ModeDetailViewModel.Factory::class)
 class ModeDetailViewModel @AssistedInject constructor(
     @Assisted private val modeId: String?,
     private val modeRepository: StudyModeRepository,
-    private val preferencesRepository: UserPreferencesRepository
+    private val preferencesRepository: UserPreferencesRepository,
+    private val savedState: SavedStateHandle
 ) : ViewModel() {
     @AssistedFactory
     interface Factory {
@@ -81,6 +98,8 @@ class ModeDetailViewModel @AssistedInject constructor(
     }
 
     private var existingMode: StudyMode? = null
+
+    private val restoredDraft: ModeDraft? = savedState.get<String>(DRAFT_KEY)?.let(::decodeDraft)
 
     /** Ostatnio usunięty krok (z miejscem na liście) — do cofnięcia. */
     private var lastRemoved: Pair<Int, EditableStep>? = null
@@ -99,15 +118,22 @@ class ModeDetailViewModel @AssistedInject constructor(
         viewModelScope.launch {
             val mode = modeId?.let { modeRepository.getMode(it) }?.takeIf { it.deletedAt == null }
             existingMode = mode
-            _uiState.value = if (mode == null) {
-                ModeDetailUiState.ChoosingTemplate
-            } else {
-                editing(
+            // szkic zmian w trybie, który w międzyczasie usunięto, nie ma czego edytować
+            val draft = restoredDraft?.takeIf { it.isNew || mode != null }
+            _uiState.value = when {
+                draft != null -> draft.toEditing()
+
+                mode == null -> ModeDetailUiState.ChoosingTemplate
+
+                else -> editing(
                     isNew = false,
                     name = mode.name,
                     steps = mode.steps.map(::EditableStep),
                     builtIn = BuiltInMode.fromId(mode.builtInSourceId)?.takeIf { mode.isBuiltIn }
                 )
+            }
+            _uiState.collect { state ->
+                savedState[DRAFT_KEY] = (state as? ModeDetailUiState.Editing)?.let { Json.encodeToString(it.toDraft()) }
             }
         }
     }
@@ -207,10 +233,37 @@ class ModeDetailViewModel @AssistedInject constructor(
         state.copy(steps = state.steps.toMutableList().apply(change))
     }
 
+    private fun ModeDraft.toEditing() = ModeDetailUiState.Editing(
+        isNew = isNew,
+        name = name,
+        steps = steps.map(::EditableStep),
+        builtIn = BuiltInMode.fromId(builtInId),
+        issues = ModeStepValidator.validate(name, steps),
+        baselineName = baselineName,
+        baselineSteps = baselineSteps
+    )
+
+    private fun ModeDetailUiState.Editing.toDraft() = ModeDraft(
+        isNew = isNew,
+        name = name,
+        steps = steps.map { it.step },
+        builtInId = builtIn?.id,
+        baselineName = baselineName,
+        baselineSteps = baselineSteps
+    )
+
     private fun validate(name: String, steps: List<EditableStep>) = ModeStepValidator.validate(
         name,
         steps.map {
             it.step
         }
     )
+}
+
+/** Szkic w innym formacie (np. ze starszej wersji aplikacji) przepada — edytor startuje od trybu z bazy. */
+private fun decodeDraft(json: String): ModeDraft? = try {
+    Json.decodeFromString<ModeDraft>(json)
+} catch (_: IllegalArgumentException) {
+    // także SerializationException
+    null
 }

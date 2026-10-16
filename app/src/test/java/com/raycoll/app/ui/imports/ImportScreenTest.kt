@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.testing.FakeClock
@@ -70,7 +71,8 @@ class ImportScreenTest {
     @Test
     fun `typed csv, an edited preview cell and the import button produce the deck shown on screen`() {
         var finished = false
-        val vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
+        val vm =
+            ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined, SavedStateHandle())
         compose.setContent { ImportScreen(onFinished = { finished = true }, viewModel = vm) }
 
         textField("Deck name").performTextInput("Imported")
@@ -97,7 +99,8 @@ class ImportScreenTest {
 
     @Test
     fun `import button stays on screen and says why it is disabled`() {
-        val vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
+        val vm =
+            ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined, SavedStateHandle())
         compose.setContent { ImportScreen(onFinished = {}, viewModel = vm) }
         val importButton = compose.onNode(hasText("Import flashcards") and hasClickAction())
 
@@ -114,7 +117,8 @@ class ImportScreenTest {
 
     @Test
     fun `preview rows are headed by the page names`() {
-        val vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
+        val vm =
+            ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined, SavedStateHandle())
         compose.setContent { ImportScreen(onFinished = {}, viewModel = vm) }
 
         textField("Paste CSV / TSV text here").performTextInput("Word;Translation\nhello;cześć")

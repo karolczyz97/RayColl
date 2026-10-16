@@ -58,7 +58,6 @@ import com.raycoll.app.ui.components.SingleChoiceButtonGroup
 import com.raycoll.app.ui.components.SwipeToDeleteItem
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.srsCategoryIcon
-import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -128,7 +127,6 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
 
     ScreenScaffold(
         title = ready?.deckName ?: stringResource(R.string.route_browse),
-        titleModifier = Modifier.sharedDeckTitle(viewModel.deckId),
         onBack = onBack,
         snackbarHostState = snackbarHostState,
         floatingActionButton = {

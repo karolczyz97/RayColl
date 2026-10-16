@@ -44,7 +44,6 @@ fun ScreenScaffold(
     title: String,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
-    titleModifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -71,7 +70,7 @@ fun ScreenScaffold(
                 ),
             topBar = {
                 val titleContent = @Composable {
-                    Text(title, modifier = titleModifier, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 val navigationIcon = @Composable {
                     if (onBack != null) {

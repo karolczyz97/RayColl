@@ -1,9 +1,11 @@
 package com.raycoll.app.ui.modedetail
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.remote.firestore.FirestoreSchema
 import com.raycoll.app.domain.model.CompoundParams
 import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.DEFAULT_MODE_ID
 import com.raycoll.app.domain.model.RevealStyle
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.steps.ModeTemplate
@@ -76,8 +78,34 @@ class ModeDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm(modeId: String? = null) =
-        ModeDetailViewModel(modeId, repos.studyModeRepository, testPreferences.repository)
+    private fun vm(modeId: String? = null, savedState: SavedStateHandle = SavedStateHandle()) =
+        ModeDetailViewModel(modeId, repos.studyModeRepository, testPreferences.repository, savedState)
+
+    @Test
+    fun `unsaved edits survive process death`() = runTest(dispatcher) {
+        // po śmierci procesu nowy ViewModel dostaje ten sam zapisany stan
+        val savedState = SavedStateHandle()
+        val before = vm(savedState = savedState)
+        before.chooseTemplate(ModeTemplate.CLASSIC)
+        before.setName("Draft")
+        before.removeStep(0)
+
+        val restored = editing(vm(savedState = savedState))
+        assertEquals("Draft", restored.name)
+        assertEquals(editing(before).steps.map { it.step }, restored.steps.map { it.step })
+        assertTrue(restored.isNew)
+        assertTrue(restored.dirty)
+    }
+
+    @Test
+    fun `edits of a mode deleted meanwhile are not restored`() = runTest(dispatcher) {
+        repos.seed("en")
+        val savedState = SavedStateHandle()
+        vm(DEFAULT_MODE_ID, savedState).setName("Edited")
+        repos.studyModeRepository.deleteMode(DEFAULT_MODE_ID)
+
+        assertEquals(ModeDetailUiState.ChoosingTemplate, vm(DEFAULT_MODE_ID, savedState).uiState.value)
+    }
 
     @Test
     fun `choosing a template creates steps with stable unique keys`() = runTest(dispatcher) {

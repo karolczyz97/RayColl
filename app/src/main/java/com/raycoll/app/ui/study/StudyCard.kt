@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.domain.session.SessionStatus
-import com.raycoll.app.ui.navigation.sharedDeckCard
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -78,7 +77,7 @@ class CardActions(
 )
 
 @Composable
-fun StudyCardContent(deckId: String, state: StudyUiState.Active, actions: CardActions) {
+fun StudyCardContent(state: StudyUiState.Active, actions: CardActions) {
     val card = state.currentCard ?: return
     val session = state.session
     val pages = card.pages.take(state.activePageCount)
@@ -134,7 +133,6 @@ fun StudyCardContent(deckId: String, state: StudyUiState.Active, actions: CardAc
                 ),
                 actions = actions,
                 modifier = Modifier
-                    .sharedDeckCard(deckId)
                     .fillMaxWidth()
             )
             // panel odpowiedzi: w trakcie nasłuchu i po wyniku bieżącej karty, ale nie gdy karta czyta pytanie

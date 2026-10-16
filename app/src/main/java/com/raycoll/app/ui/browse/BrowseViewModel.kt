@@ -63,7 +63,7 @@ sealed interface BrowseEvent {
 
 @HiltViewModel(assistedFactory = BrowseViewModel.Factory::class)
 class BrowseViewModel internal constructor(
-    val deckId: String,
+    private val deckId: String,
     private val deckRepository: DeckRepository,
     private val preferencesRepository: UserPreferencesRepository,
     /** Gdzie liczy się filtr listy; testy podstawiają wstrzymywany wątek. */

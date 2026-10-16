@@ -55,7 +55,6 @@ import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.rememberSnackbarMessages
-import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
 
 @Composable
@@ -126,7 +125,6 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
             is StudyUiState.NoDueCards -> state.deckName
             else -> ""
         },
-        titleModifier = Modifier.sharedDeckTitle(viewModel.deckId),
         onBack = { if (inProgress) showExitDialog = true else onExit() },
         snackbarHostState = snackbarHostState,
         // nauka potrzebuje całej wysokości ekranu — zwykły, niski pasek tytułu
@@ -193,7 +191,6 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
                                 Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xs)
                             )
                             StudyCardContent(
-                                deckId = viewModel.deckId,
                                 state = state,
                                 actions = remember(viewModel) {
                                     CardActions(

@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.imports
 
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.domain.imports.CsvSeparator
@@ -12,6 +13,7 @@ import com.raycoll.app.testing.VmTestHarness
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -24,6 +26,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,7 +98,75 @@ class ImportViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm() = ImportViewModel(repos.deckRepository, files, dispatcher)
+    private fun vm(savedState: SavedStateHandle = SavedStateHandle()) =
+        ImportViewModel(repos.deckRepository, files, dispatcher, savedState)
+
+    /** Plik szkicu zapisuje się na prawdziwym wątku IO — czas testu przesuwany, aż [done]. */
+    private fun TestScope.advanceUntil(done: () -> Boolean) {
+        repeat(300) {
+            advanceUntilIdle()
+            if (done()) return
+            Thread.sleep(10)
+        }
+        fail("timed out")
+    }
+
+    @Test
+    fun `draft survives process death`() = runTest(dispatcher) {
+        // po śmierci procesu nowy ViewModel dostaje ten sam zapisany stan ekranu
+        val savedState = SavedStateHandle()
+        val before = vm(savedState)
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == false }
+        before.setDeckName("Animals")
+        before.onSourceTextChanged("Word;Translation\ncat;kot")
+        advanceUntilIdle()
+        before.setPageName(1, "Polish")
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+
+        val restored = vm(savedState)
+        advanceUntil { restored.uiState.value.rows.isNotEmpty() }
+        val state = restored.uiState.value
+        assertEquals("Animals", state.deckName)
+        assertEquals("Word;Translation\ncat;kot", state.sourceText)
+        assertEquals(listOf("Word", "Polish"), state.pageNames)
+        assertEquals(listOf(listOf("cat", "kot")), state.rows)
+    }
+
+    @Test
+    fun `discarded draft does not come back`() = runTest(dispatcher) {
+        val savedState = SavedStateHandle()
+        val before = vm(savedState)
+        before.onSourceTextChanged("cat;kot")
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+
+        before.discardDraft()
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == false }
+        assertEquals(null, runBlocking { files.readPrivate(IMPORT_DRAFT_FILE) })
+    }
+
+    @Test
+    fun `clearing the text removes the draft`() = runTest(dispatcher) {
+        val savedState = SavedStateHandle()
+        val vm = vm(savedState)
+        vm.onSourceTextChanged("cat;kot")
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+
+        vm.onSourceTextChanged("")
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == false }
+        assertEquals(null, runBlocking { files.readPrivate(IMPORT_DRAFT_FILE) })
+    }
+
+    @Test
+    fun `new import does not resume an old draft`() = runTest(dispatcher) {
+        val savedState = SavedStateHandle()
+        val before = vm(savedState)
+        before.onSourceTextChanged("cat;kot")
+        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+
+        val fresh = vm()
+        advanceUntil { runBlocking { files.readPrivate(IMPORT_DRAFT_FILE) } == null }
+        assertEquals("", fresh.uiState.value.sourceText)
+    }
 
     @Test
     fun `source text detects semicolon and row count`() = runTest(dispatcher) {
@@ -440,7 +511,7 @@ class ImportViewModelTest {
     @Test
     fun `final parse runs on the parse dispatcher and a second click does not import twice`() = runTest(dispatcher) {
         val parseDispatcher = StandardTestDispatcher(testScheduler, name = "parse")
-        val vm = ImportViewModel(repos.deckRepository, files, parseDispatcher)
+        val vm = ImportViewModel(repos.deckRepository, files, parseDispatcher, SavedStateHandle())
         vm.setDeckName("Deck")
         vm.onSourceTextChanged("Word;Translation\ncat;kot")
         vm.runImport(pageNames)

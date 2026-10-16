@@ -167,6 +167,8 @@ bez `gradle_locked`.
   **`PersistedTextField`** (pole zapisywane na bieżąco, którego nie nadpisuje echo zapisu).
   Żadna biblioteka nie robi tego za nas. Navigation 3 uprościłaby przekazywanie wyniku, ale
   wymaga przepisania całej nawigacji.
+  *Zmiana 16.10.2026:* nawigacja przeszła na osobne Activity (systemowe cofanie gestem);
+  `ScreenCompletion` zastąpiło Activity Result API — zob. `docs/PROTOTYP_NAWIGACJA.md`.
 - **5 języków.**
 - **Własny FSRS-4.5.** Gotowa biblioteka FsrsKt jest na licencji GPL-3 (kłóci się z zamkniętymi
   częściami Google w aplikacji). FSRS-6 napiszemy sami na podstawie implementacji

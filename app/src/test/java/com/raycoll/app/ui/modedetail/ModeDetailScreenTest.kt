@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.domain.model.ShowPageStep
@@ -70,7 +71,7 @@ class ModeDetailScreenTest {
     @Before
     fun setup() {
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), FakeClock())
-        vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository)
+        vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository, SavedStateHandle())
         compose.setContent { ModeDetailScreen(onBack = { backCount++ }, viewModel = vm) }
         compose.onNodeWithText("Empty mode").performClick()
     }

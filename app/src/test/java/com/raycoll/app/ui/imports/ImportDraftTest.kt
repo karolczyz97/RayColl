@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.app.ActivityOptionsCompat
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.R
 import com.raycoll.app.data.files.DocumentFiles
@@ -50,7 +51,7 @@ class ImportDraftTest {
     private lateinit var vm: ImportViewModel
 
     @Before fun setup() {
-        vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined)
+        vm = ImportViewModel(repos.deckRepository, DocumentFiles(context), Dispatchers.Unconfined, SavedStateHandle())
         vm.setDeckName("Draft")
     }
 
