@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -57,7 +58,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.ModeStep
@@ -76,11 +76,7 @@ import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
-fun ModeDetailScreen(
-    onBack: () -> Unit,
-    viewModel: ModeDetailViewModel = hiltViewModel(),
-    onClosed: () -> Unit = onBack
-) {
+fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel, onClosed: () -> Unit = onBack) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expertMode by viewModel.expertMode.collectAsStateWithLifecycle()
     var showAddStep by rememberSaveable { mutableStateOf(false) }
@@ -121,11 +117,18 @@ fun ModeDetailScreen(
         actions = {
             if (editing != null) {
                 if (editing.builtIn != null) {
-                    IconButton(onClick = { showResetConfirm = true }, enabled = editing.canReset) {
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
+                        showResetConfirm = true
+                    }, enabled = editing.canReset) {
                         Icon(Icons.Filled.RestartAlt, contentDescription = stringResource(R.string.mode_list_reset))
                     }
                 }
-                TextButton(onClick = viewModel::save, enabled = editing.canSave && invalidFields.isEmpty()) {
+                TextButton(
+                    shapes = ButtonDefaults.shapes(),
+                    onClick = viewModel::save,
+                    enabled =
+                        editing.canSave && invalidFields.isEmpty()
+                ) {
                     Text(stringResource(R.string.btn_save))
                 }
             }
@@ -338,7 +341,7 @@ private fun ModeEditor(
                 OutlinedButton(
                     onClick = onAddStep,
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                    shape = MaterialTheme.shapes.small,
+                    shapes = ButtonDefaults.shapes(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
@@ -377,17 +380,17 @@ private fun TemplatePicker(modifier: Modifier, onChoose: (ModeTemplate) -> Unit)
             .heightIn(min = 48.dp)
         Button(onClick = {
             onChoose(ModeTemplate.CLASSIC)
-        }, shape = MaterialTheme.shapes.small, modifier = buttonModifier) {
+        }, shapes = ButtonDefaults.shapes(), modifier = buttonModifier) {
             Text(stringResource(R.string.mode_editor_template_classic))
         }
         Button(onClick = {
             onChoose(ModeTemplate.AUDIO)
-        }, shape = MaterialTheme.shapes.small, modifier = buttonModifier) {
+        }, shapes = ButtonDefaults.shapes(), modifier = buttonModifier) {
             Text(stringResource(R.string.mode_editor_template_audio))
         }
         OutlinedButton(onClick = {
             onChoose(ModeTemplate.BLANK)
-        }, shape = MaterialTheme.shapes.small, modifier = buttonModifier) {
+        }, shapes = ButtonDefaults.shapes(), modifier = buttonModifier) {
             Text(stringResource(R.string.mode_editor_template_blank))
         }
     }

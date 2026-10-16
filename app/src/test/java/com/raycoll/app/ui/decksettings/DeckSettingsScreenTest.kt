@@ -10,7 +10,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -42,7 +41,7 @@ class DeckSettingsScreenTest {
                 listOf(listOf("x", "y"))
             )
         }
-        vm = DeckSettingsViewModel(routeArgs("deckId" to deckId), repos.deckRepository, repos.studyModeRepository)
+        vm = DeckSettingsViewModel(deckId, repos.deckRepository, repos.studyModeRepository)
     }
 
     @After

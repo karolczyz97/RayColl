@@ -2,11 +2,13 @@ package com.raycoll.app.ui.browse
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -46,7 +48,9 @@ fun CardEditorDialog(
     onDismiss: () -> Unit,
     onSave: (pages: List<String>) -> Unit,
     saveAttempt: Int = 0,
-    autoFocusFirst: Boolean = false
+    autoFocusFirst: Boolean = false,
+    /** Usunięcie edytowanej karty (druga droga obok przesunięcia na liście); null — bez przycisku. */
+    onDelete: (() -> Unit)? = null
 ) {
     // tekst i kursor każdej strony przeżywają obrót; nowy szkic zaczyna z kursorem na końcu tekstu
     // key(): każde pole ma własny klucz zapisu stanu (w pętli bez niego pola dzieliłyby jeden)
@@ -93,6 +97,7 @@ fun CardEditorDialog(
         },
         confirmButton = {
             TextButton(
+                shapes = ButtonDefaults.shapes(),
                 onClick = {
                     // drugie dotknięcie, zanim okno zniknie, nie zapisuje drugi raz
                     if (!saved) {
@@ -103,6 +108,20 @@ fun CardEditorDialog(
                 enabled = !saved && pages.count { it.isNotBlank() } >= MIN_FILLED_PAGES
             ) { Text(stringResource(R.string.btn_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
+        dismissButton = {
+            Row {
+                if (onDelete != null) {
+                    TextButton(
+                        shapes = ButtonDefaults.shapes(),
+                        onClick = onDelete,
+                        enabled = !saved,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) { Text(stringResource(R.string.browse_delete_card)) }
+                }
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        }
     )
 }

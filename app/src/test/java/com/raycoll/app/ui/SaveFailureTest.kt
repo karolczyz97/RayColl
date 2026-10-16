@@ -7,7 +7,6 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import com.raycoll.app.ui.archive.ArchiveViewModel
 import com.raycoll.app.ui.browse.BrowseEvent
 import com.raycoll.app.ui.browse.BrowseViewModel
@@ -44,9 +43,9 @@ class SaveFailureTest {
 
     @Test
     fun `browse mode editor and import report failed writes`() = runTest {
-        val browse = BrowseViewModel(routeArgs("deckId" to "d1"), repos.deckRepository)
+        val browse = BrowseViewModel("d1", repos.deckRepository, testPreferences.repository)
         val mode =
-            ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository, testPreferences.repository)
+            ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository)
         mode.chooseTemplate(ModeTemplate.CLASSIC)
         mode.setName("Custom")
         val imports = ImportViewModel(
@@ -104,7 +103,7 @@ class SaveFailureTest {
 
     @Test
     fun `deck settings report a failed write`() = runTest {
-        val vm = DeckSettingsViewModel(routeArgs("deckId" to "d1"), repos.deckRepository, repos.studyModeRepository)
+        val vm = DeckSettingsViewModel("d1", repos.deckRepository, repos.studyModeRepository)
         breakDatabase()
         vm.rename("New")
         assertEquals(DeckSettingsEvent.SaveFailed, vm.events.first())

@@ -28,7 +28,6 @@ import com.raycoll.app.testing.FakeSessionDeps
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -117,7 +116,7 @@ class StudyRestartTest {
             id
         }
         return StudyViewModel(
-            routeArgs("deckId" to deckId),
+            deckId,
             repos.deckRepository,
             repos.studyModeRepository,
             prefs,

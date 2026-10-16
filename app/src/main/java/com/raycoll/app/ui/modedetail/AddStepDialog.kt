@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,7 +121,9 @@ fun AddStepDialog(expert: Boolean, onDismiss: () -> Unit, onChoose: (ModeStep) -
                         modifier = Modifier.padding(top = Spacing.s)
                     )
                     group.choices.forEach { choice ->
-                        TextButton(onClick = { onChoose(choice.create()) }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(shapes = ButtonDefaults.shapes(), onClick = {
+                            onChoose(choice.create())
+                        }, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(choice.labelRes), modifier = Modifier.fillMaxWidth())
                         }
                     }
@@ -128,6 +131,10 @@ fun AddStepDialog(expert: Boolean, onDismiss: () -> Unit, onChoose: (ModeStep) -
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
+        dismissButton = {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        }
     )
 }

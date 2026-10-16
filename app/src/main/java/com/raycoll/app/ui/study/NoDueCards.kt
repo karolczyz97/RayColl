@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.study
 
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,7 +16,7 @@ fun NoDueCards(onExit: () -> Unit, modifier: Modifier = Modifier) {
         message = stringResource(R.string.study_no_due),
         modifier = modifier,
         action = {
-            Button(onClick = onExit, shape = MaterialTheme.shapes.small) {
+            Button(onClick = onExit, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.study_back_to_panel))
             }
         }

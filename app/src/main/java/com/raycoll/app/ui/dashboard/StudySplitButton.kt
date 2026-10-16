@@ -1,17 +1,10 @@
 package com.raycoll.app.ui.dashboard
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
@@ -19,34 +12,35 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.theme.Spacing
 
-/** "Ucz się" + rozwijany wybór trybu nauki talii. */
+private const val ARROW_OPEN_DEGREES = 180f
+
+/**
+ * Przycisk dzielony: ▶ zaczyna naukę, ▾ rozwija wybór trybu nauki talii. Przy otwartym menu prawa
+ * część zmienia się w kółko, a strzałka się obraca (Material 3 Expressive).
+ */
 @Composable
 fun StudySplitButton(
     modes: List<StudyMode>,
@@ -60,68 +54,51 @@ fun StudySplitButton(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
-    val studyLabel = if (deckName == null) {
-        stringResource(R.string.route_study)
+    // bez kart do powtórki przycisk nie wyróżnia się jako główne działanie (nadal działa — ekran nauki wyjaśni dlaczego pusto)
+    val buttonColors = if (hasDue) {
+        ButtonDefaults.buttonColors()
     } else {
-        stringResource(R.string.a11y_item_action, stringResource(R.string.route_study), deckName)
+        ButtonDefaults.buttonColors(
+            containerColor = colors.secondaryContainer,
+            contentColor = colors.onSecondaryContainer
+        )
     }
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        // bez kart do powtórki przycisk nie wyróżnia się jako główne działanie (nadal działa — ekran nauki wyjaśni dlaczego pusto)
-        color = if (hasDue) colors.primary else colors.secondaryContainer,
-        contentColor = if (hasDue) colors.onPrimary else colors.onSecondaryContainer,
-        modifier = modifier
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .defaultMinSize(minHeight = MinTouchTarget)
-                    .clickable(role = Role.Button, onClick = onStudy)
-                    .semantics { contentDescription = studyLabel }
-                    .padding(horizontal = Spacing.s),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+    val studyLabel = actionLabel(stringResource(R.string.route_study), deckName)
+    val modesLabel = actionLabel(stringResource(R.string.study_modes_title), deckName)
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (menuExpanded) ARROW_OPEN_DEGREES else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "mode_menu_arrow"
+    )
+    SplitButtonLayout(
+        modifier = modifier,
+        leadingButton = {
+            SplitButtonDefaults.LeadingButton(
+                onClick = onStudy,
+                colors = buttonColors,
+                modifier = Modifier.semantics { contentDescription = studyLabel }
             ) {
                 Icon(
                     Icons.Filled.PlayArrow,
                     contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize)
-                )
-                Text(
-                    stringResource(R.string.route_study),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = Spacing.xs).clearAndSetSemantics {}
+                    modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize)
                 )
             }
-            Box(
-                Modifier
-                    .height(20.dp)
-                    .width(1.dp)
-                    .background(LocalContentColor.current.copy(alpha = 0.28f))
-            )
-            Box(
-                modifier = Modifier
-                    .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
-                    .clickable(
-                        enabled = modes.isNotEmpty(),
-                        role = Role.Button,
-                        onClick = { menuExpanded = true }
-                    ),
-                contentAlignment = Alignment.Center
+        },
+        trailingButton = {
+            SplitButtonDefaults.TrailingButton(
+                checked = menuExpanded,
+                onCheckedChange = { menuExpanded = it },
+                enabled = modes.isNotEmpty(),
+                colors = buttonColors,
+                modifier = Modifier.semantics { contentDescription = modesLabel }
             ) {
                 Icon(
-                    Icons.Filled.ArrowDropDown,
-                    contentDescription = if (deckName ==
-                        null
-                    ) {
-                        stringResource(R.string.study_modes_title)
-                    } else {
-                        stringResource(R.string.a11y_item_action, stringResource(R.string.study_modes_title), deckName)
-                    }
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(SplitButtonDefaults.TrailingIconSize)
+                        .graphicsLayer { rotationZ = arrowRotation }
                 )
                 ModeMenu(
                     expanded = menuExpanded,
@@ -133,8 +110,12 @@ fun StudySplitButton(
                 )
             }
         }
-    }
+    )
 }
+
+@Composable
+private fun actionLabel(action: String, deckName: String?): String =
+    if (deckName == null) action else stringResource(R.string.a11y_item_action, action, deckName)
 
 @Composable
 private fun ModeMenu(

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -92,7 +93,7 @@ fun SessionSummary(
                     if (session.failedCardIds.isNotEmpty()) {
                         Button(
                             onClick = onRestartFailed,
-                            shape = MaterialTheme.shapes.small,
+                            shapes = ButtonDefaults.shapes(),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.study_restart_failed))
@@ -100,12 +101,12 @@ fun SessionSummary(
                     }
                     OutlinedButton(
                         onClick = onRestart,
-                        shape = MaterialTheme.shapes.small,
+                        shapes = ButtonDefaults.shapes(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.study_restart_session))
                     }
-                    TextButton(onClick = onExit, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(shapes = ButtonDefaults.shapes(), onClick = onExit, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.study_back_to_panel))
                     }
                 }

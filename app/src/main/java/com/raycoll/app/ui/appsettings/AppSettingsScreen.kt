@@ -15,8 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -39,6 +38,7 @@ import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.repository.BackupResult
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
+import com.raycoll.app.ui.components.ExpressiveLoadingIndicator
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
@@ -127,7 +127,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             )
             val preferences = uiState.preferences
             if (preferences == null) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
             } else {
                 AppearanceSection(
                     preferences = preferences,
@@ -152,7 +152,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             }
             StudyModesLink(onStudyModes)
             val backupsEnabled = uiState.backupOperation == null && !uiState.signingIn && !uiState.signingOut
-            if (uiState.backupOperation != null) LinearProgressIndicator()
+            if (uiState.backupOperation != null) LinearWavyProgressIndicator()
             BackupSection(
                 enabled = backupsEnabled,
                 onExport = { exportLauncher.launch(viewModel.backupFileName()) },

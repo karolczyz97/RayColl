@@ -314,6 +314,9 @@
     <string name="import_row_title">Zeile %1$d</string>
     <string name="import_stored_columns_note">Alle %1$d Spalten werden gespeichert. Beim Lernen können bis zu %2$d Seiten angezeigt werden.</string>
     <string name="browse_card_added">Karte hinzugefügt.</string>
+    <string name="browse_card_deleted">Karte gelöscht.</string>
+    <string name="browse_delete_card">Karte löschen</string>
+    <string name="dashboard_deck_options">Optionen</string>
     <string name="browse_clear_search">Suche löschen</string>
     <string name="browse_clear_filters">Filter zurücksetzen</string>
     <string name="a11y_delete_card">Karte löschen: %1$s</string>

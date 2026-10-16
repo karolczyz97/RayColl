@@ -11,7 +11,6 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -78,7 +77,7 @@ class ModeDetailViewModelTest {
     }
 
     private fun vm(modeId: String? = null) =
-        ModeDetailViewModel(routeArgs("modeId" to modeId), repos.studyModeRepository, testPreferences.repository)
+        ModeDetailViewModel(modeId, repos.studyModeRepository, testPreferences.repository)
 
     @Test
     fun `choosing a template creates steps with stable unique keys`() = runTest(dispatcher) {

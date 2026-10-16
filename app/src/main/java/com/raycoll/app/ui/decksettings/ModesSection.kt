@@ -53,7 +53,9 @@ internal fun ModesSection(
                     .weight(1f)
                     .semantics { heading() }
             )
-            TextButton(onClick = { onEdit(null) }, contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = {
+                onEdit(null)
+            }, contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Text(
                     stringResource(R.string.mode_list_new),

@@ -5,7 +5,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -51,7 +50,7 @@ class DeckSettingsViewModelTest {
         listOf(listOf("hello", "cześć"))
     )
     private fun vm(deckId: String) =
-        DeckSettingsViewModel(routeArgs("deckId" to deckId), repos.deckRepository, repos.studyModeRepository).also {
+        DeckSettingsViewModel(deckId, repos.deckRepository, repos.studyModeRepository).also {
             viewModels +=
                 it
         }

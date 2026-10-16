@@ -20,13 +20,16 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -44,7 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
@@ -58,9 +61,11 @@ import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.SwipeToDeleteItem
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
 /** Co edytuje okno karty: nową kartę albo istniejącą (po id — przeżywa obrót ekranu). */
 private sealed interface CardEditTarget {
@@ -81,11 +86,14 @@ private val CardEditTargetSaver = Saver<CardEditTarget?, String>(
 )
 
 @Composable
-fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel()) {
+fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val query by viewModel.search.collectAsStateWithLifecycle()
     var editTarget by rememberSaveable(stateSaver = CardEditTargetSaver) { mutableStateOf(null) }
-    var deleteTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    // karta przywrócona po „Cofnij” — wjeżdża z powrotem na listę
+    var restoredCardId by rememberSaveable { mutableStateOf<String?>(null) }
+    var hintPlayed by rememberSaveable { mutableStateOf(false) }
+    val swipeHintsLeft by viewModel.swipeHintsLeft.collectAsStateWithLifecycle()
     var saveAttempt by rememberSaveable { mutableIntStateOf(0) }
     val ready = uiState as? BrowseUiState.Ready
     val snackbarHostState = remember { SnackbarHostState() }
@@ -93,6 +101,9 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
     val cardMissing = stringResource(R.string.browse_card_missing)
     val saveFailed = stringResource(R.string.errors_save_failed)
     val cardAdded = stringResource(R.string.browse_card_added)
+    val cardDeleted = stringResource(R.string.browse_card_deleted)
+    val undo = stringResource(R.string.btn_undo)
+    val scope = rememberCoroutineScope()
 
     CollectEvents(viewModel.events) { event ->
         when (event) {
@@ -108,6 +119,14 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
             BrowseEvent.SaveFailed -> {
                 saveAttempt++
                 messages.showLatest(saveFailed)
+            }
+
+            // każde kolejne usunięcie zastępuje poprzedni komunikat (jak w Gmailu)
+            is BrowseEvent.CardDeleted -> scope.launch {
+                if (messages.showAction(cardDeleted, undo, key = "cardDeleted") == SnackbarResult.ActionPerformed) {
+                    restoredCardId = event.cardId
+                    viewModel.restoreCard(event.cardId)
+                }
             }
         }
     }
@@ -141,8 +160,15 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
                 onSearch = viewModel::setSearch,
                 onCategory = viewModel::setCategory,
                 onEdit = { editTarget = CardEditTarget.Existing(it.id) },
-                onDelete = { deleteTargetId = it.id },
+                onDelete = { card, swiped -> viewModel.deleteCard(card.id, swiped) },
                 onAdd = { editTarget = CardEditTarget.New },
+                hintCardId = state.cards.firstOrNull()?.id?.takeIf { swipeHintsLeft > 0 && !hintPlayed },
+                onHintShown = {
+                    hintPlayed = true
+                    viewModel.swipeHintShown()
+                },
+                restoredCardId = restoredCardId,
+                onRestoredShown = { restoredCardId = null },
                 modifier = contentModifier.imePadding()
             )
         }
@@ -181,25 +207,15 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel = hiltViewModel(
                         onSave = { visiblePages ->
                             // edytujemy tylko widoczne strony; ukryte zostają bez zmian
                             viewModel.updateCard(card.id, visiblePages)
+                        },
+                        onDelete = {
+                            editTarget = null
+                            viewModel.deleteCard(card.id)
                         }
                     )
                 }
             }
         }
-    }
-
-    deleteTargetId?.let { cardId ->
-        ConfirmDialog(
-            title = stringResource(R.string.dialog_delete_permanent_title),
-            text = stringResource(R.string.dialog_delete_desc),
-            confirmLabel = stringResource(R.string.btn_delete),
-            destructive = true,
-            onConfirm = {
-                viewModel.deleteCard(cardId)
-                deleteTargetId = null
-            },
-            onDismiss = { deleteTargetId = null }
-        )
     }
 }
 
@@ -210,8 +226,12 @@ private fun BrowseContent(
     onSearch: (String) -> Unit,
     onCategory: (SrsCardCategory?) -> Unit,
     onEdit: (Flashcard) -> Unit,
-    onDelete: (Flashcard) -> Unit,
+    onDelete: (card: Flashcard, swiped: Boolean) -> Unit,
     onAdd: () -> Unit,
+    hintCardId: String?,
+    onHintShown: () -> Unit,
+    restoredCardId: String?,
+    onRestoredShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
@@ -232,7 +252,7 @@ private fun BrowseContent(
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = if (query.isNotEmpty()) {
                         {
-                            IconButton(onClick = { onSearch("") }) {
+                            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { onSearch("") }) {
                                 Icon(
                                     Icons.Filled.Close,
                                     contentDescription = stringResource(R.string.browse_clear_search)
@@ -261,7 +281,7 @@ private fun BrowseContent(
                     modifier = Modifier.fillParentMaxWidth(),
                     action = if (deckEmpty) {
                         {
-                            Button(onClick = onAdd, shape = MaterialTheme.shapes.small) {
+                            Button(onClick = onAdd, shapes = ButtonDefaults.shapes()) {
                                 Text(stringResource(R.string.browse_add_card))
                             }
                         }
@@ -270,7 +290,7 @@ private fun BrowseContent(
                             Button(onClick = {
                                 onSearch("")
                                 onCategory(null)
-                            }, shape = MaterialTheme.shapes.small) {
+                            }, shapes = ButtonDefaults.shapes()) {
                                 Text(stringResource(R.string.browse_clear_filters))
                             }
                         }
@@ -279,13 +299,23 @@ private fun BrowseContent(
             }
         } else {
             items(state.cards, key = { it.id }) { card ->
-                CardItem(
-                    card = card,
-                    activePageCount = state.activePageCount,
-                    onEdit = { onEdit(card) },
-                    onDelete = { onDelete(card) },
-                    modifier = Modifier.animateItem().padding(horizontal = Spacing.screen)
-                )
+                SwipeToDeleteItem(
+                    onDelete = { onDelete(card, true) },
+                    deleteLabel = stringResource(R.string.btn_delete),
+                    shape = MaterialTheme.shapes.large,
+                    showHint = card.id == hintCardId,
+                    onHintShown = onHintShown,
+                    enterFromStart = card.id == restoredCardId,
+                    onEntered = onRestoredShown,
+                    modifier = Modifier
+                        .animateItem(
+                            placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                            fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec()
+                        )
+                        .padding(horizontal = Spacing.screen)
+                ) {
+                    CardItem(card = card, activePageCount = state.activePageCount, onEdit = { onEdit(card) })
+                }
             }
         }
     }
@@ -320,22 +350,15 @@ private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCatego
 /** Pełny tekst strony widać w edytorze po dotknięciu karty. */
 private const val MAX_PAGE_LINES = 4
 
-/** Karta na liście: dotknięcie otwiera edycję, kosz usuwa (po potwierdzeniu). */
+/** Karta na liście: dotknięcie otwiera edycję, przesunięcie w lewo usuwa. */
 @Composable
-private fun CardItem(
-    card: Flashcard,
-    activePageCount: Int,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun CardItem(card: Flashcard, activePageCount: Int, onEdit: () -> Unit, modifier: Modifier = Modifier) {
     val editLabel = stringResource(R.string.browse_edit_card)
-    RayCollCard(modifier.fillMaxWidth()) {
+    RayCollCard(onClick = onEdit, onClickLabel = editLabel, modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.Top) {
             Column(
                 Modifier
                     .weight(1f)
-                    .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onEdit)
                     .padding(Spacing.l)
             ) {
                 card.pages.take(activePageCount).forEachIndexed { index, page ->
@@ -362,18 +385,6 @@ private fun CardItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.padding(top = Spacing.xs, end = Spacing.xs)) {
-                Icon(
-                    Icons.Filled.Delete,
-                    contentDescription = stringResource(
-                        R.string.a11y_delete_card,
-                        card.pages.firstOrNull {
-                            it.isNotBlank()
-                        }.orEmpty().replace('\n', ' ').take(60)
-                    ),
-                    tint = MaterialTheme.colorScheme.error
-                )
             }
         }
     }

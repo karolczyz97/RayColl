@@ -28,7 +28,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -127,7 +128,9 @@ fun ImportScreen(
         onBack = requestBack,
         actions = {
             if (importInToolbar) {
-                IconButton(onClick = { viewModel.runImport(defaultPageNames) }, enabled = state.canImport) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
+                    viewModel.runImport(defaultPageNames)
+                }, enabled = state.canImport) {
                     if (state.importing) {
                         CircularProgressIndicator(Modifier.size(ButtonDefaults.IconSize))
                     } else {
@@ -144,7 +147,7 @@ fun ImportScreen(
                 .padding(padding)
                 .imePadding()
         ) {
-            if (state.loadingFile) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (state.loadingFile) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(Spacing.screen),
@@ -257,7 +260,7 @@ private fun SubmitBar(state: ImportUiState, onImport: () -> Unit) {
             Button(
                 onClick = onImport,
                 enabled = state.canImport,
-                shape = MaterialTheme.shapes.small,
+                shapes = ButtonDefaults.shapes(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
@@ -305,7 +308,7 @@ private fun SourceCard(
             onClick = onPickFile,
             enabled = !state.inputLocked,
             contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-            shape = MaterialTheme.shapes.small
+            shapes = ButtonDefaults.shapes()
         ) {
             Icon(
                 Icons.Filled.FileOpen,

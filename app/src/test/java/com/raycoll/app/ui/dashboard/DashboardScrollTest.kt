@@ -44,13 +44,9 @@ class DashboardScrollTest {
             compose.setContent { DashboardScreen({ studied = it }, { browsed = it }, {}, {}, {}, {}, {}, {}, vm) }
             compose.waitUntil(5_000) { vm.uiState.value is DashboardUiState.Ready }
             val study = context.getString(R.string.a11y_item_action, context.getString(R.string.route_study), "Biology")
-            val browse = context.getString(
-                R.string.a11y_item_action,
-                context.getString(R.string.dashboard_browse),
-                "Biology"
-            )
             compose.onNodeWithContentDescription(study).performClick()
-            compose.onNodeWithContentDescription(browse).performClick()
+            // dotknięcie talii otwiera podgląd
+            compose.onNodeWithText("Biology").performClick()
             assertEquals(id, studied)
             assertEquals(id, browsed)
         } finally {

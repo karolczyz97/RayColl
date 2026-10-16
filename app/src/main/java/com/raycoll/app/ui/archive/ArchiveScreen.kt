@@ -102,7 +102,7 @@ private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit, modifier
             OutlinedButton(
                 onClick = onRestore,
                 contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                shape = MaterialTheme.shapes.small,
+                shapes = ButtonDefaults.shapes(),
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))

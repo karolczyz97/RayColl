@@ -315,6 +315,9 @@
     <string name="import_row_title">Row %1$d</string>
     <string name="import_stored_columns_note">All %1$d columns will be saved. Up to %2$d pages can be shown during study.</string>
     <string name="browse_card_added">Flashcard added.</string>
+    <string name="browse_card_deleted">Flashcard deleted.</string>
+    <string name="browse_delete_card">Delete flashcard</string>
+    <string name="dashboard_deck_options">Options</string>
     <string name="browse_clear_search">Clear search</string>
     <string name="browse_clear_filters">Clear filters</string>
     <string name="a11y_delete_card">Delete flashcard: %1$s</string>

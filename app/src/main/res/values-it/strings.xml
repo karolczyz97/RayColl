@@ -319,6 +319,9 @@
     <string name="import_row_title">Riga %1$d</string>
     <string name="import_stored_columns_note">Verranno salvate tutte le %1$d colonne. Durante lo studio si possono visualizzare fino a %2$d pagine.</string>
     <string name="browse_card_added">Scheda aggiunta.</string>
+    <string name="browse_card_deleted">Scheda eliminata.</string>
+    <string name="browse_delete_card">Elimina scheda</string>
+    <string name="dashboard_deck_options">Opzioni</string>
     <string name="browse_clear_search">Cancella ricerca</string>
     <string name="browse_clear_filters">Cancella filtri</string>
     <string name="a11y_delete_card">Elimina scheda: %1$s</string>

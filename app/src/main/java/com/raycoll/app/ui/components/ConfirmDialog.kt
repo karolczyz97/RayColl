@@ -25,6 +25,7 @@ fun ConfirmDialog(
         text = { Text(text) },
         confirmButton = {
             TextButton(
+                shapes = ButtonDefaults.shapes(),
                 onClick = onConfirm,
                 colors = if (destructive) {
                     ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -33,6 +34,10 @@ fun ConfirmDialog(
                 }
             ) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
+        dismissButton = {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        }
     )
 }

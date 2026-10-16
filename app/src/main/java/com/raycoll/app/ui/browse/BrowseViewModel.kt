@@ -1,9 +1,8 @@
 package com.raycoll.app.ui.browse
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
+import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.model.Flashcard
@@ -13,9 +12,10 @@ import com.raycoll.app.domain.selectors.computeCardStats
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
-import com.raycoll.app.ui.navigation.BrowseRoute
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +26,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 sealed interface BrowseUiState {
     data object Loading : BrowseUiState
@@ -54,22 +56,30 @@ sealed interface BrowseEvent {
     data object CardMissing : BrowseEvent
 
     data object SaveFailed : BrowseEvent
+
+    /** Karta usunięta — do cofnięcia z komunikatu. */
+    data class CardDeleted(val cardId: String) : BrowseEvent
 }
 
-@HiltViewModel
+@HiltViewModel(assistedFactory = BrowseViewModel.Factory::class)
 class BrowseViewModel internal constructor(
-    savedStateHandle: SavedStateHandle,
+    val deckId: String,
     private val deckRepository: DeckRepository,
+    private val preferencesRepository: UserPreferencesRepository,
     /** Gdzie liczy się filtr listy; testy podstawiają wstrzymywany wątek. */
     filterContext: CoroutineContext
 ) : ViewModel() {
-    @Inject constructor(
-        savedStateHandle: SavedStateHandle,
+    @AssistedInject constructor(
+        @Assisted deckId: String,
         deckRepository: DeckRepository,
+        preferencesRepository: UserPreferencesRepository,
         @DefaultDispatcher defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
-    ) : this(savedStateHandle, deckRepository, defaultDispatcher as CoroutineContext)
+    ) : this(deckId, deckRepository, preferencesRepository, defaultDispatcher as CoroutineContext)
 
-    val deckId: String = savedStateHandle.toRoute<BrowseRoute>().deckId
+    @AssistedFactory
+    interface Factory {
+        fun create(deckId: String): BrowseViewModel
+    }
 
     private val eventSink = UiEvents<BrowseEvent>()
     val events: Flow<BrowseEvent> = eventSink.flow
@@ -119,7 +129,23 @@ class BrowseViewModel internal constructor(
         }
     }
 
-    fun deleteCard(cardId: String) = write { deckRepository.deleteCard(cardId) }
+    /** Ile razy jeszcze pokazać podpowiedź gestu usuwania (0, dopóki ustawienia się nie wczytają). */
+    val swipeHintsLeft: StateFlow<Int> = preferencesRepository.preferences
+        .map { it.swipeHintsLeft }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    fun swipeHintShown() {
+        viewModelScope.launch { preferencesRepository.swipeHintShown() }
+    }
+
+    /** [swiped] — usunięcie przesunięciem: użytkownik zna gest, podpowiedź znika na zawsze. */
+    fun deleteCard(cardId: String, swiped: Boolean = false) = write {
+        if (swiped) preferencesRepository.swipeLearned()
+        deckRepository.deleteCard(cardId)
+        eventSink.send(BrowseEvent.CardDeleted(cardId))
+    }
+
+    fun restoreCard(cardId: String) = write { deckRepository.restoreCard(cardId) }
 
     private fun write(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(BrowseEvent.SaveFailed) }, block = block)

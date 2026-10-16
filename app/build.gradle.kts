@@ -108,6 +108,13 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        // nowe komponenty Material 3 Expressive (wskaźnik ładowania, kształty) — część API jeszcze oznaczona jako eksperymentalna
+        optIn.add("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -124,7 +131,9 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 
-    implementation(libs.navigation.compose)
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
+    implementation(libs.lifecycle.viewmodel.navigation3)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

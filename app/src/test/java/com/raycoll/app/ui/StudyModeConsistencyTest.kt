@@ -14,7 +14,6 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.dashboard.DashboardUiState
 import com.raycoll.app.ui.dashboard.DashboardViewModel
@@ -77,7 +76,7 @@ class StudyModeConsistencyTest {
                 .first { state -> state.decks.any { it.id == deckId } }
                 .decks.single { it.id == deckId }
             val settings = DeckSettingsViewModel(
-                routeArgs("deckId" to deckId),
+                deckId,
                 repos.deckRepository,
                 repos.studyModeRepository
             ).uiState.filterIsInstance<DeckSettingsUiState.Ready>().first()
@@ -104,7 +103,7 @@ class StudyModeConsistencyTest {
     fun `typing and erasing a letter in a built-in name keeps the canonical name and saves nothing`() {
         val vm =
             ModeDetailViewModel(
-                routeArgs("modeId" to DEFAULT_MODE_ID),
+                DEFAULT_MODE_ID,
                 repos.studyModeRepository,
                 testPreferences.repository
             )
@@ -132,7 +131,7 @@ class StudyModeConsistencyTest {
     fun `a real custom name of a built-in mode is kept and marks the mode as modified`() {
         val vm =
             ModeDetailViewModel(
-                routeArgs("modeId" to DEFAULT_MODE_ID),
+                DEFAULT_MODE_ID,
                 repos.studyModeRepository,
                 testPreferences.repository
             )

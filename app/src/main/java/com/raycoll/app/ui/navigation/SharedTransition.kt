@@ -8,24 +8,44 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
-import com.raycoll.app.ui.theme.RayCollMotion
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 
 // Wspólne przejście talii między ekranami: karta i tytuł "przelatują" z listy na ekran talii.
+// W czasie gestu „wstecz” przelot jest wyłączony — ekran kurczy się w całości, jak w systemie.
 
 val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
-val LocalNavAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
 
-private val deckBoundsTransform = BoundsTransform { _, _ -> RayCollMotion.spatial<Rect>() }
+/** Konfiguracja przelotu talii z [RayCollNavHost]; bez niej (podgląd, testy ekranów) przelot jest zawsze włączony. */
+internal val LocalDeckSharedContentConfig = staticCompositionLocalOf<SharedTransitionScope.SharedContentConfig?> {
+    null
+}
+
+/** Przelot talii wyłączony, dopóki trwa gest „wstecz” (także jego dokończenie po puszczeniu palca). */
+internal class DeckSharedContentConfig(private val isPredictiveBack: () -> Boolean) :
+    SharedTransitionScope.SharedContentConfig {
+    override val SharedTransitionScope.SharedContentState.isEnabled: Boolean
+        get() = !isPredictiveBack()
+
+    override val shouldKeepEnabledForOngoingAnimation: Boolean
+        get() = false
+}
+
+@Composable
+private fun deckBoundsTransform(): BoundsTransform {
+    val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
+    return BoundsTransform { _, _ -> spec }
+}
 
 /** Karta talii przechodząca między ekranami. */
 @Composable
 fun Modifier.sharedDeckCard(deckId: String): Modifier {
     val clip = MaterialTheme.shapes.large
+    val boundsTransform = deckBoundsTransform()
     return withSharedScopes { modifier, visibilityScope ->
         modifier.sharedBounds(
-            sharedContentState = rememberSharedContentState(key = "deck-card-$deckId"),
+            sharedContentState = rememberDeckContentState("deck-card-$deckId"),
             animatedVisibilityScope = visibilityScope,
-            boundsTransform = deckBoundsTransform,
+            boundsTransform = boundsTransform,
             clipInOverlayDuringTransition = OverlayClip(clip)
         )
     }
@@ -33,20 +53,29 @@ fun Modifier.sharedDeckCard(deckId: String): Modifier {
 
 /** Tytuł talii przechodzący między ekranami. */
 @Composable
-fun Modifier.sharedDeckTitle(deckId: String): Modifier = withSharedScopes { modifier, visibilityScope ->
-    modifier.sharedElement(
-        sharedContentState = rememberSharedContentState(key = "deck-title-$deckId"),
-        animatedVisibilityScope = visibilityScope,
-        boundsTransform = deckBoundsTransform
-    )
+fun Modifier.sharedDeckTitle(deckId: String): Modifier {
+    val boundsTransform = deckBoundsTransform()
+    return withSharedScopes { modifier, visibilityScope ->
+        modifier.sharedElement(
+            sharedContentState = rememberDeckContentState("deck-title-$deckId"),
+            animatedVisibilityScope = visibilityScope,
+            boundsTransform = boundsTransform
+        )
+    }
 }
 
-/** Bez zakresów przejścia (np. ekran poza NavHostem, podgląd) modyfikator zostaje bez zmian. */
+@Composable
+private fun SharedTransitionScope.rememberDeckContentState(key: String): SharedTransitionScope.SharedContentState {
+    val config = LocalDeckSharedContentConfig.current
+    return if (config == null) rememberSharedContentState(key) else rememberSharedContentState(key, config)
+}
+
+/** Bez zakresów przejścia (np. ekran poza [RayCollNavHost], podgląd) modyfikator zostaje bez zmian. */
 @Composable
 private inline fun Modifier.withSharedScopes(
     block: @Composable SharedTransitionScope.(modifier: Modifier, visibilityScope: AnimatedVisibilityScope) -> Modifier
 ): Modifier {
+    // zakres przejścia ekranu istnieje zawsze tam, gdzie RayCollNavHost podał zakres wspólnego przejścia
     val sharedScope = LocalSharedTransitionScope.current ?: return this
-    val visibilityScope = LocalNavAnimatedVisibilityScope.current ?: return this
-    return sharedScope.block(this, visibilityScope)
+    return sharedScope.block(this, LocalNavAnimatedContentScope.current)
 }

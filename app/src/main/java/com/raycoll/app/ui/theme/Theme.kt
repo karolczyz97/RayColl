@@ -1,7 +1,8 @@
 package com.raycoll.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -112,8 +113,10 @@ fun RayCollTheme(
         LocalSrsColors provides if (isDark) DarkSrsColors else LightSrsColors,
         LocalRatingColors provides if (isDark) DarkRatingColors else LightRatingColors
     ) {
-        MaterialTheme(
+        // styl Material 3 Expressive: sprężysty ruch i kształty komponentów reagujące na dotyk
+        MaterialExpressiveTheme(
             colorScheme = colorScheme,
+            motionScheme = MotionScheme.expressive(),
             typography = RayCollTypography,
             shapes = RayCollShapes,
             content = content

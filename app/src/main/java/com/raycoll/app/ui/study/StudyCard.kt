@@ -29,8 +29,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,7 +60,6 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.ui.navigation.sharedDeckCard
-import com.raycoll.app.ui.theme.RayCollMotion
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -92,8 +94,8 @@ fun StudyCardContent(deckId: String, state: StudyUiState.Active, actions: CardAc
             }
         }
     }
-    val effects = remember { RayCollMotion.effects<Float>() }
-    val spatialSize = remember { RayCollMotion.spatial<IntSize>() }
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatialSize = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
 
     // nowo odsłonięta strona jest na dole — przewiń do niej
     LaunchedEffect(session.revealedPages.size, session.currentCardIndex) {
@@ -228,8 +230,8 @@ private data class StudyActionState(val kind: StudyActionKind, val enabled: Bool
 @Composable
 private fun StudyActions(state: StudyUiState.Active, pageCount: Int, actions: CardActions, modifier: Modifier) {
     val session = state.session
-    val effects = remember { RayCollMotion.effects<Float>() }
-    val spatialOffset = remember { RayCollMotion.spatial<IntOffset>() }
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatialOffset = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val canReveal = session.status != SessionStatus.LISTENING &&
         session.revealedPages.count { it < pageCount } < pageCount &&
         !session.cardReviewed && session.lastAnswerResult.status == AnswerStatus.NONE
@@ -263,7 +265,7 @@ private fun StudyActions(state: StudyUiState.Active, pageCount: Int, actions: Ca
                 suggestedRating = shown.suggested
             )
 
-            StudyActionKind.REVEAL -> TextButton(onClick = actions.onTap) {
+            StudyActionKind.REVEAL -> TextButton(shapes = ButtonDefaults.shapes(), onClick = actions.onTap) {
                 Text(stringResource(R.string.study_tap_to_reveal))
             }
 
@@ -284,7 +286,7 @@ private fun NextCardButton(actions: CardActions) {
 
 @Composable
 private fun CardNavButton(icon: ImageVector, @StringRes description: Int, onClick: () -> Unit) {
-    FilledTonalIconButton(onClick = onClick) {
+    FilledTonalIconButton(shapes = IconButtonDefaults.shapes(), onClick = onClick) {
         Icon(icon, contentDescription = stringResource(description))
     }
 }

@@ -235,6 +235,14 @@ class DeckRepository @Inject constructor(
         if (store.cachedDoc(path)?.data?.get("deletedAt") != null) return
         store.write(WriteOp.Update(path, mapOf("deletedAt" to clock.now())))
     }
+
+    /** Cofnięcie usunięcia karty (zdjęcie znacznika usunięcia). */
+    suspend fun restoreCard(cardId: String) {
+        val path = cardPath(cardId) ?: return
+        if (store.cachedDoc(path)?.data?.get("deletedAt") == null) return
+        store.write(WriteOp.Update(path, mapOf("deletedAt" to null)))
+    }
+
     suspend fun reviewCard(deckId: String, cardId: String, rating: Int, baseState: SrsState? = null) =
         reviews.withLock {
             val paths = paths()

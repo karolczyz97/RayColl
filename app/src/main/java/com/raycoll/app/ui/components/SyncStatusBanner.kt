@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -52,7 +53,9 @@ fun SyncStatusBanner(status: SyncStatus, onRetry: () -> Unit, modifier: Modifier
             )
             Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             if (isError) {
-                TextButton(onClick = onRetry) { Text(stringResource(R.string.errors_retry), color = contentColor) }
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = onRetry) {
+                    Text(stringResource(R.string.errors_retry), color = contentColor)
+                }
             }
         }
     }

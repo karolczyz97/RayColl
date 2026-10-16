@@ -55,12 +55,17 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
         },
         confirmButton = {
             TextButton(
+                shapes = ButtonDefaults.shapes(),
                 onClick = confirmIfValid,
                 enabled = confirmed,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) { Text(stringResource(R.string.btn_delete)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
+        dismissButton = {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        }
     )
 }
 

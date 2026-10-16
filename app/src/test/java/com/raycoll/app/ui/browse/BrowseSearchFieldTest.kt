@@ -7,9 +7,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -25,6 +25,7 @@ import org.robolectric.RobolectricTestRunner
 /** Pole wyszukiwania nie czeka na filtr liczony w tle — szybkie pisanie nie gubi znaków (A4). */
 @RunWith(RobolectricTestRunner::class)
 class BrowseSearchFieldTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
 
     @get:Rule
     val compose = createComposeRule()
@@ -54,8 +55,9 @@ class BrowseSearchFieldTest {
     @Test
     fun `characters typed while the filter is stalled all stay in the field`() {
         val vm = BrowseViewModel(
-            routeArgs("deckId" to deckId),
+            deckId,
             repos.deckRepository,
+            testPreferences.repository,
             filterExecutor.asCoroutineDispatcher()
         )
         compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }

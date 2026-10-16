@@ -324,6 +324,9 @@
     <string name="import_row_title">Wiersz %1$d</string>
     <string name="import_stored_columns_note">Zapiszemy wszystkie %1$d kolumn. Podczas nauki można wyświetlać do %2$d stron.</string>
     <string name="browse_card_added">Dodano fiszkę.</string>
+    <string name="browse_card_deleted">Usunięto fiszkę.</string>
+    <string name="browse_delete_card">Usuń fiszkę</string>
+    <string name="dashboard_deck_options">Opcje</string>
     <string name="browse_clear_search">Wyczyść wyszukiwanie</string>
     <string name="browse_clear_filters">Wyczyść filtry</string>
     <string name="a11y_delete_card">Usuń fiszkę: %1$s</string>

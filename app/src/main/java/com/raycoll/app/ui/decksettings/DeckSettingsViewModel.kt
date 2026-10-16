@@ -1,9 +1,7 @@
 package com.raycoll.app.ui.decksettings
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.di.DefaultDispatcher
@@ -15,9 +13,10 @@ import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.operations.resolveStudyMode
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
-import com.raycoll.app.ui.navigation.DeckSettingsRoute
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -50,14 +49,17 @@ sealed interface DeckSettingsEvent {
     data object SaveFailed : DeckSettingsEvent
 }
 
-@HiltViewModel
-class DeckSettingsViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+@HiltViewModel(assistedFactory = DeckSettingsViewModel.Factory::class)
+class DeckSettingsViewModel @AssistedInject constructor(
+    @Assisted val deckId: String,
     private val deckRepository: DeckRepository,
     private val modeRepository: StudyModeRepository,
     @DefaultDispatcher defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
-    val deckId: String = savedStateHandle.toRoute<DeckSettingsRoute>().deckId
+    @AssistedFactory
+    interface Factory {
+        fun create(deckId: String): DeckSettingsViewModel
+    }
 
     // po archiwizacji/usunięciu z tego ekranu zostaje ostatni widok, dopóki ekran się zamyka
     private val closing = MutableStateFlow(false)

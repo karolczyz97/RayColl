@@ -16,14 +16,17 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.ui.theme.Spacing
@@ -32,7 +35,22 @@ import com.raycoll.app.ui.theme.Spacing
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        ExpressiveLoadingIndicator()
+    }
+}
+
+/**
+ * Wskaźnik ładowania Material 3 Expressive (kształt, który płynnie się przekształca).
+ * Gdy animacje nieskończone są wyłączone ([InfiniteAnimationPolicy], np. w testach), zwykłe kółko:
+ * LoadingIndicator z Material 3 1.5.0-beta01 mimo tej polityki uruchamia pętlę animacji bez końca.
+ */
+@Composable
+fun ExpressiveLoadingIndicator(modifier: Modifier = Modifier) {
+    val scope = rememberCoroutineScope()
+    if (scope.coroutineContext[InfiniteAnimationPolicy] == null) {
+        LoadingIndicator(modifier)
+    } else {
+        CircularProgressIndicator(modifier)
     }
 }
 

@@ -1,7 +1,6 @@
 package com.raycoll.app.testing
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.files.DocumentFiles
 import com.raycoll.app.data.firestore.FieldOp
@@ -67,4 +66,3 @@ object VmTestHarness {
         )
     }
 }
-fun routeArgs(vararg args: Pair<String, Any?>): SavedStateHandle = SavedStateHandle(mapOf(*args))

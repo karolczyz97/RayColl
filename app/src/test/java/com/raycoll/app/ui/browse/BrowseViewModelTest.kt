@@ -4,9 +4,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -31,6 +31,8 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class BrowseViewModelTest {
+    @get:org.junit.Rule val testPreferences = PreferencesRule()
+
     @Test
     fun `adding a hidden card confirms the addition without clearing filters`() = runTest {
         val vm = vm(seedDeck(cards = 1))
@@ -69,7 +71,7 @@ class BrowseViewModelTest {
         (1..cards).map { listOf("front$it", "back$it") }
     )
 
-    private fun vm(deckId: String) = BrowseViewModel(routeArgs("deckId" to deckId), repos.deckRepository).also {
+    private fun vm(deckId: String) = BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository).also {
         viewModels +=
             it
     }

@@ -1,7 +1,10 @@
 package com.raycoll.app.ui.study
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -24,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -134,6 +138,11 @@ private fun RatingRow(
     onRate: (Int) -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
+    // wciśnięty przycisk rośnie, a sąsiedzi ustępują mu miejsca (jak w grupach przycisków Material 3 Expressive)
+    val interactions = remember(styles.size) { List(styles.size) { MutableInteractionSource() } }
+    val pressed = interactions.map { it.collectIsPressedAsState().value }
+    val pressedIndex = pressed.indexOf(true)
+    val squish = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     // wysokość = najwyższy przycisk, nic się nie ucina
     Row(
         Modifier
@@ -144,6 +153,11 @@ private fun RatingRow(
         styles.forEachIndexed { index, style ->
             val suggested = style.rating == suggestedRating
             val suggestion = stringResource(R.string.study_suggested_rating, stringResource(ratingLabel(style.rating)))
+            val weight by animateFloatAsState(
+                targetValue = pressedWeight(index, pressedIndex, styles.size),
+                animationSpec = squish,
+                label = "rating_weight"
+            )
             Button(
                 onClick = {
                     haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
@@ -151,7 +165,11 @@ private fun RatingRow(
                 },
                 enabled = enabled,
                 border = if (suggested) BorderStroke(2.dp, style.content) else null,
-                shape = MaterialTheme.shapes.medium,
+                shapes = ButtonDefaults.shapes(
+                    shape = MaterialTheme.shapes.large,
+                    pressedShape = MaterialTheme.shapes.small
+                ),
+                interactionSource = interactions[index],
                 colors = ButtonDefaults.buttonColors(
                     containerColor = style.container,
                     contentColor = style.content,
@@ -160,7 +178,7 @@ private fun RatingRow(
                 ),
                 contentPadding = PaddingValues(horizontal = RatingLabelPadding, vertical = Spacing.s),
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(weight)
                     .fillMaxHeight()
                     .heightIn(min = RatingButtonHeight)
                     .semantics { if (suggested) stateDescription = suggestion }
@@ -175,4 +193,14 @@ private fun RatingRow(
             }
         }
     }
+}
+
+private const val PRESSED_GROWTH = 0.15f
+
+/** Szerokość przycisku [index]: wciśnięty rośnie o [PRESSED_GROWTH], jego sąsiedzi dzielą się ubytkiem. */
+private fun pressedWeight(index: Int, pressedIndex: Int, count: Int): Float {
+    if (pressedIndex < 0) return 1f
+    if (index == pressedIndex) return 1f + PRESSED_GROWTH
+    val neighbours = listOf(pressedIndex - 1, pressedIndex + 1).count { it in 0 until count }
+    return if (kotlin.math.abs(index - pressedIndex) == 1) 1f - PRESSED_GROWTH / neighbours else 1f
 }

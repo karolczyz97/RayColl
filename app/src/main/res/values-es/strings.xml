@@ -319,6 +319,9 @@
     <string name="import_row_title">Fila %1$d</string>
     <string name="import_stored_columns_note">Se guardarán las %1$d columnas. Durante el estudio se pueden mostrar hasta %2$d páginas.</string>
     <string name="browse_card_added">Tarjeta añadida.</string>
+    <string name="browse_card_deleted">Tarjeta eliminada.</string>
+    <string name="browse_delete_card">Eliminar tarjeta</string>
+    <string name="dashboard_deck_options">Opciones</string>
     <string name="browse_clear_search">Borrar búsqueda</string>
     <string name="browse_clear_filters">Borrar filtros</string>
     <string name="a11y_delete_card">Eliminar tarjeta: %1$s</string>

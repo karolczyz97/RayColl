@@ -7,8 +7,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -56,7 +58,7 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (mode.isBuiltIn) {
             // niezmieniony wbudowany tryb nie ma czego przywracać
-            IconButton(onClick = onReset, enabled = mode.isModifiedBuiltIn()) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onReset, enabled = mode.isModifiedBuiltIn()) {
                 Icon(
                     Icons.Filled.RestartAlt,
                     contentDescription = stringResource(
@@ -67,7 +69,7 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
                 )
             }
         } else {
-            IconButton(onClick = onDelete) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
                     contentDescription = stringResource(
@@ -79,7 +81,7 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
                 )
             }
         }
-        IconButton(onClick = onEdit) {
+        IconButton(shapes = IconButtonDefaults.shapes(), onClick = onEdit) {
             Icon(
                 Icons.Filled.Edit,
                 contentDescription = stringResource(

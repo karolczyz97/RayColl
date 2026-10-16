@@ -8,6 +8,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -46,10 +49,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -71,13 +77,16 @@ import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.Pill
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.SwipeAction
+import com.raycoll.app.ui.components.SwipeReveal
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.components.rememberSwipeRevealState
 import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.navigation.sharedDeckCard
 import com.raycoll.app.ui.navigation.sharedDeckTitle
-import com.raycoll.app.ui.theme.RayCollMotion
 import com.raycoll.app.ui.theme.Spacing
+import kotlinx.coroutines.launch
 
 /** Minimalny rozmiar celu dotyku (Material). */
 internal val MinTouchTarget = 48.dp
@@ -98,8 +107,8 @@ fun DashboardScreen(
     onResultConsumed: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // id talii czekającej na potwierdzenie archiwizacji — okno przeżywa obrót ekranu
-    var archiveTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    // talia z odsłoniętymi akcjami — odsłonięcie innej chowa poprzednią
+    var revealedDeckId by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val saveFailed = stringResource(R.string.errors_save_failed)
     val messages = rememberSnackbarMessages(snackbarHostState)
@@ -129,21 +138,23 @@ fun DashboardScreen(
         title = stringResource(R.string.nav_dashboard),
         snackbarHostState = snackbarHostState,
         actions = {
-            IconButton(onClick = onStats) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onStats) {
                 Icon(Icons.Filled.BarChart, contentDescription = stringResource(R.string.stats_title))
             }
-            IconButton(onClick = onArchive) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onArchive) {
                 Icon(Icons.Filled.Archive, contentDescription = stringResource(R.string.archive_title))
             }
-            IconButton(onClick = onAppSettings) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onAppSettings) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.app_settings_title))
             }
         },
         floatingActionButton = {
             AnimatedVisibility(
                 visible = uiState is DashboardUiState.Ready,
-                enter = scaleIn(RayCollMotion.spatial()) + fadeIn(RayCollMotion.effects()),
-                exit = scaleOut(RayCollMotion.spatial()) + fadeOut(RayCollMotion.effects())
+                enter = scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                exit = scaleOut(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                    fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
             ) {
                 FloatingActionButton(
                     onClick = onImport,
@@ -158,7 +169,7 @@ fun DashboardScreen(
         updateTransition(uiState, label = "dashboard_state").Crossfade(
             modifier = Modifier.padding(padding),
             contentKey = { it::class },
-            animationSpec = RayCollMotion.effects()
+            animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec()
         ) { state ->
             when (state) {
                 DashboardUiState.Loading -> LoadingState()
@@ -167,7 +178,7 @@ fun DashboardScreen(
                     EmptyState(
                         message = stringResource(R.string.dashboard_no_groups),
                         action = {
-                            Button(onClick = onImport, shape = MaterialTheme.shapes.small) {
+                            Button(onClick = onImport, shapes = ButtonDefaults.shapes()) {
                                 Text(stringResource(R.string.import_title))
                             }
                         }
@@ -189,10 +200,22 @@ fun DashboardScreen(
                                 onStudy = { onStudy(deck.id) },
                                 onBrowse = { onBrowse(deck.id) },
                                 onSettings = { onDeckSettings(deck.id) },
-                                onArchive = { archiveTargetId = deck.id },
+                                // bez okna potwierdzenia: talia trafia do Archiwum, a komunikat pozwala cofnąć
+                                onArchive = { viewModel.archiveDeck(deck.id) },
                                 onSelectMode = { modeId -> viewModel.setActiveMode(deck.id, modeId) },
                                 onManageModes = onManageModes,
-                                modifier = Modifier.animateItem()
+                                revealed = revealedDeckId == deck.id,
+                                onRevealedChange = { open ->
+                                    if (open) {
+                                        revealedDeckId = deck.id
+                                    } else if (revealedDeckId == deck.id) {
+                                        revealedDeckId = null
+                                    }
+                                },
+                                modifier = Modifier.animateItem(
+                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                    fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec()
+                                )
                             )
                         }
                     }
@@ -200,25 +223,9 @@ fun DashboardScreen(
             }
         }
     }
-
-    archiveTargetId?.let { deckId ->
-        ConfirmDialog(
-            title = stringResource(R.string.dialog_archive_title),
-            text = pluralStringResource(
-                R.plurals.dialog_archive_confirm,
-                ArchiveConstants.RETENTION_DAYS,
-                ArchiveConstants.RETENTION_DAYS
-            ),
-            confirmLabel = stringResource(R.string.btn_archive),
-            onConfirm = {
-                viewModel.archiveDeck(deckId)
-                archiveTargetId = null
-            },
-            onDismiss = { archiveTargetId = null }
-        )
-    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DeckCard(
     deck: DeckSummary,
@@ -229,64 +236,84 @@ private fun DeckCard(
     onArchive: () -> Unit,
     onSelectMode: (modeId: String) -> Unit,
     onManageModes: () -> Unit,
+    revealed: Boolean,
+    onRevealedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val browseLabel = stringResource(R.string.a11y_item_action, stringResource(R.string.dashboard_browse), deck.name)
-    RayCollCard(
-        modifier
-            .sharedDeckCard(deck.id)
-            .fillMaxWidth()
+    val colors = MaterialTheme.colorScheme
+    val reveal = rememberSwipeRevealState()
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    // inna talia odsłoniła akcje — ta chowa swoje
+    LaunchedEffect(revealed) {
+        if (!revealed && reveal.isOpen) reveal.close()
+    }
+    SwipeReveal(
+        actions = listOf(
+            SwipeAction(
+                label = stringResource(R.string.dashboard_deck_options),
+                icon = Icons.Filled.Settings,
+                containerColor = colors.secondaryContainer,
+                contentColor = colors.onSecondaryContainer,
+                onClick = onSettings
+            ),
+            SwipeAction(
+                label = stringResource(R.string.btn_archive),
+                icon = Icons.Filled.Archive,
+                containerColor = colors.errorContainer,
+                contentColor = colors.onErrorContainer,
+                removesItem = true,
+                onClick = onArchive
+            )
+        ),
+        state = reveal,
+        onOpenChange = onRevealedChange,
+        modifier = modifier
     ) {
-        Column(Modifier.padding(Spacing.l)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .padding(end = Spacing.s)
-                ) {
-                    Text(
-                        deck.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.sharedDeckTitle(deck.id)
+        RayCollCard(
+            Modifier
+                .sharedDeckCard(deck.id)
+                .fillMaxWidth()
+        ) {
+            Column(
+                Modifier
+                    // dotknięcie: podgląd talii (a gdy akcje są odsłonięte — schowanie ich); przytrzymanie odsłania akcje
+                    .combinedClickable(
+                        onClickLabel = browseLabel,
+                        onLongClickLabel = stringResource(R.string.dashboard_deck_options),
+                        onClick = { if (reveal.isOpen) scope.launch { reveal.close() } else onBrowse() },
+                        onLongClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            scope.launch { reveal.open() }
+                        }
                     )
-                    DeckSubtitle(deck)
+                    .padding(Spacing.l)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .padding(end = Spacing.s)
+                    ) {
+                        Text(
+                            deck.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.sharedDeckTitle(deck.id)
+                        )
+                        DeckSubtitle(deck)
+                    }
+                    StudySplitButton(
+                        modes = modes,
+                        deckName = deck.name,
+                        activeModeId = deck.activeMode.id,
+                        hasDue = deck.dueCount > 0,
+                        onStudy = onStudy,
+                        onSelectMode = onSelectMode,
+                        onManageModes = onManageModes
+                    )
                 }
-                DeckMenu(deckName = deck.name, onSettings = onSettings, onArchive = onArchive)
-            }
-            CardStatsBar(deck.stats, Modifier.padding(vertical = Spacing.m))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                OutlinedButton(
-                    onClick = onBrowse,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = MinTouchTarget)
-                        .semantics { contentDescription = browseLabel },
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        Icons.Filled.Style,
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize)
-                    )
-                    Text(
-                        stringResource(R.string.dashboard_browse),
-                        modifier = Modifier.padding(start = ButtonDefaults.IconSpacing).clearAndSetSemantics {},
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                StudySplitButton(
-                    modes = modes,
-                    deckName = deck.name,
-                    activeModeId = deck.activeMode.id,
-                    hasDue = deck.dueCount > 0,
-                    onStudy = onStudy,
-                    onSelectMode = onSelectMode,
-                    onManageModes = onManageModes,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = MinTouchTarget)
-                )
+                CardStatsBar(deck.stats, Modifier.padding(top = Spacing.m))
             }
         }
     }
@@ -328,31 +355,5 @@ private fun DeckSubtitle(deck: DeckSummary) {
             },
             textStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
         )
-    }
-}
-
-@Composable
-private fun DeckMenu(deckName: String, onSettings: () -> Unit, onArchive: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.a11y_deck_menu_named, deckName))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.route_deck_settings)) },
-                onClick = {
-                    expanded = false
-                    onSettings()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.btn_archive)) },
-                onClick = {
-                    expanded = false
-                    onArchive()
-                }
-            )
-        }
     }
 }

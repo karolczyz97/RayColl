@@ -23,7 +23,6 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import com.raycoll.app.ui.browse.BrowseScreen
 import com.raycoll.app.ui.browse.BrowseViewModel
 import com.raycoll.app.ui.decksettings.DeckSettingsScreen
@@ -48,7 +47,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `failed card save keeps the draft and allows a successful retry`() {
-        val vm = BrowseViewModel(routeArgs("deckId" to deckId), repos.deckRepository)
+        val vm = BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository)
         compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
         compose.onNodeWithContentDescription("Add card").performClick()
@@ -74,7 +73,7 @@ class DialogStateRestorationTest {
     fun `mode reset confirmation stays open after state restoration`() {
         runBlocking { repos.seed("en") }
         val vm =
-            ModeDetailViewModel(routeArgs("modeId" to "classic"), repos.studyModeRepository, testPreferences.repository)
+            ModeDetailViewModel("classic", repos.studyModeRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         waitForText("Classic")
@@ -91,7 +90,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `discard changes confirmation stays open after state restoration`() {
-        val vm = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository, testPreferences.repository)
+        val vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.onNodeWithText("Empty mode").performClick()
@@ -141,7 +140,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `new card dialog keeps its draft after recreation, cancel drops it`() {
-        val vm = BrowseViewModel(routeArgs("deckId" to deckId), repos.deckRepository)
+        val vm = BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
         restoration.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
@@ -167,7 +166,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `edit dialog survives recreation and saves exactly once`() {
-        val vm = BrowseViewModel(routeArgs("deckId" to deckId), repos.deckRepository)
+        val vm = BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository)
         val restoration = StateRestorationTester(compose)
         restoration.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         waitForText("cat")
@@ -189,7 +188,7 @@ class DialogStateRestorationTest {
 
     @Test
     fun `delete deck dialog stays open with typed confirmation`() {
-        val vm = DeckSettingsViewModel(routeArgs("deckId" to deckId), repos.deckRepository, repos.studyModeRepository)
+        val vm = DeckSettingsViewModel(deckId, repos.deckRepository, repos.studyModeRepository)
         val restoration = StateRestorationTester(compose)
         var closed = false
         restoration.setContent { DeckSettingsScreen(onBack = { closed = true }, onEditMode = {}, viewModel = vm) }

@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,22 +38,30 @@ fun MigrationDialog(busy: Boolean = false, failed: Boolean = false, onChoose: (G
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+                if (busy) ExpressiveLoadingIndicator(Modifier.align(Alignment.CenterHorizontally))
             }
         },
         confirmButton = {
             Column(horizontalAlignment = Alignment.End) {
-                Button(enabled = !busy, onClick = { onChoose(GuestDataChoice.MOVE_TO_ACCOUNT) }) {
+                Button(shapes = ButtonDefaults.shapes(), enabled = !busy, onClick = {
+                    onChoose(GuestDataChoice.MOVE_TO_ACCOUNT)
+                }) {
                     Text(stringResource(R.string.auth_choice_move))
                 }
-                TextButton(enabled = !busy, onClick = { onChoose(GuestDataChoice.KEEP_ON_DEVICE) }) {
+                TextButton(shapes = ButtonDefaults.shapes(), enabled = !busy, onClick = {
+                    onChoose(GuestDataChoice.KEEP_ON_DEVICE)
+                }) {
                     Text(stringResource(R.string.auth_choice_keep))
                 }
-                TextButton(enabled = !busy, onClick = { onChoose(GuestDataChoice.DELETE) }) {
+                TextButton(shapes = ButtonDefaults.shapes(), enabled = !busy, onClick = {
+                    onChoose(GuestDataChoice.DELETE)
+                }) {
                     Text(stringResource(R.string.auth_choice_delete))
                 }
                 Spacer(Modifier.height(Spacing.s))
-                TextButton(enabled = !busy, onClick = { onChoose(GuestDataChoice.CANCEL) }) {
+                TextButton(shapes = ButtonDefaults.shapes(), enabled = !busy, onClick = {
+                    onChoose(GuestDataChoice.CANCEL)
+                }) {
                     Text(stringResource(R.string.auth_migration_cancel_btn))
                 }
             }

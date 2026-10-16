@@ -25,7 +25,6 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import com.raycoll.app.testing.routeArgs
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -71,7 +70,7 @@ class ModeDetailScreenTest {
     @Before
     fun setup() {
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), FakeClock())
-        vm = ModeDetailViewModel(routeArgs("modeId" to null), repos.studyModeRepository, testPreferences.repository)
+        vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository)
         compose.setContent { ModeDetailScreen(onBack = { backCount++ }, viewModel = vm) }
         compose.onNodeWithText("Empty mode").performClick()
     }

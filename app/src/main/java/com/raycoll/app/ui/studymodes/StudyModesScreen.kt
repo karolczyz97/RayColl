@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -66,7 +67,7 @@ fun StudyModesScreen(
         onBack = onBack,
         snackbarHostState = snackbarHostState,
         actions = {
-            IconButton(onClick = onNewMode) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onNewMode) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.mode_list_new))
             }
         }
@@ -96,7 +97,7 @@ fun StudyModesScreen(
                     OutlinedButton(
                         onClick = onNewMode,
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                        shape = MaterialTheme.shapes.small,
+                        shapes = ButtonDefaults.shapes(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(

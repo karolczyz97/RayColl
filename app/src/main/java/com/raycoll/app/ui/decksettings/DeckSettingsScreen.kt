@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -34,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.ArchiveConstants
@@ -61,7 +61,7 @@ import com.raycoll.app.ui.theme.Spacing
 fun DeckSettingsScreen(
     onBack: () -> Unit,
     onEditMode: (modeId: String?) -> Unit,
-    viewModel: DeckSettingsViewModel = hiltViewModel(),
+    viewModel: DeckSettingsViewModel,
     onClosed: (ScreenResult?) -> Unit = { onBack() }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -180,7 +180,7 @@ private fun DeckSettingsContent(
         )
         OutlinedButton(onClick = {
             showArchiveDialog = true
-        }, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+        }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.settings_archive_btn))
         }
         Button(
@@ -190,7 +190,7 @@ private fun DeckSettingsContent(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer
             ),
-            shape = MaterialTheme.shapes.small,
+            shapes = ButtonDefaults.shapes(),
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
@@ -252,7 +252,12 @@ private fun PageCountStepper(count: Int, onChange: (Int) -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
-        FilledTonalIconButton(onClick = { onChange(count - 1) }, enabled = count > PageLimits.MIN_PAGE_COUNT) {
+        FilledTonalIconButton(
+            shapes = IconButtonDefaults.shapes(),
+            onClick = { onChange(count - 1) },
+            enabled =
+                count > PageLimits.MIN_PAGE_COUNT
+        ) {
             Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.a11y_fewer_pages))
         }
         Text(
@@ -260,7 +265,12 @@ private fun PageCountStepper(count: Int, onChange: (Int) -> Unit) {
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(horizontal = Spacing.m)
         )
-        FilledTonalIconButton(onClick = { onChange(count + 1) }, enabled = count < PageLimits.MAX_VISIBLE_PAGE_COUNT) {
+        FilledTonalIconButton(
+            shapes = IconButtonDefaults.shapes(),
+            onClick = { onChange(count + 1) },
+            enabled =
+                count < PageLimits.MAX_VISIBLE_PAGE_COUNT
+        ) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.a11y_more_pages))
         }
     }

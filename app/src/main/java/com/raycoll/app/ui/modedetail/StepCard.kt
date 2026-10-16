@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -62,7 +63,7 @@ fun StepCard(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f).semantics { heading() }
                 )
-                IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = onMoveUp, enabled = canMoveUp) {
                     Icon(
                         Icons.Filled.KeyboardArrowUp,
                         contentDescription = stringResource(
@@ -72,7 +73,7 @@ fun StepCard(
                         )
                     )
                 }
-                IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = onMoveDown, enabled = canMoveDown) {
                     Icon(
                         Icons.Filled.KeyboardArrowDown,
                         contentDescription = stringResource(
@@ -82,7 +83,7 @@ fun StepCard(
                         )
                     )
                 }
-                IconButton(onClick = onDelete) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = onDelete) {
                     Icon(
                         Icons.Filled.Delete,
                         contentDescription = stringResource(
@@ -99,7 +100,11 @@ fun StepCard(
                 StepParamFields(step, onUpdate)
             }
             if (onAddBelow != null) {
-                TextButton(onClick = onAddBelow, contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
+                TextButton(
+                    shapes = ButtonDefaults.shapes(),
+                    onClick = onAddBelow,
+                    contentPadding = ButtonDefaults.TextButtonWithIconContentPadding
+                ) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(stringResource(R.string.mode_editor_add_below))

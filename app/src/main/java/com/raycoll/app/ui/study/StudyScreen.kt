@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -51,7 +52,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,15 +63,16 @@ import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.navigation.predictiveBackGesture
+import com.raycoll.app.ui.navigation.screenCornerRadius
 import com.raycoll.app.ui.navigation.sharedDeckTitle
-import com.raycoll.app.ui.theme.RayCollMotion
 import com.raycoll.app.ui.theme.Spacing
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 @Composable
-fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel()) {
+fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -129,6 +130,7 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel())
         }
     }
 
+    val cornerRadius = screenCornerRadius()
     val backGesture = rememberStudyBackGesture(enabled = inProgress, onCommit = { showExitDialog = true })
 
     ScreenScaffold(
@@ -140,11 +142,14 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel())
         titleModifier = Modifier.sharedDeckTitle(viewModel.deckId),
         onBack = { if (inProgress) showExitDialog = true else onExit() },
         snackbarHostState = snackbarHostState,
+        // nauka potrzebuje całej wysokości ekranu — zwykły, niski pasek tytułu
+        collapsingTitle = false,
         // pauza w pasku tytułu, nie w treści — nic na ekranie nie przeskakuje przy pauzie i wznowieniu
         actions = {
             AnimatedVisibility(visible = active?.paused == true, enter = fadeIn(), exit = fadeOut()) {
                 val pausedLabel = stringResource(R.string.study_paused)
                 TextButton(
+                    shapes = ButtonDefaults.shapes(),
                     onClick = viewModel::resume,
                     modifier = Modifier.semantics {
                         stateDescription = pausedLabel
@@ -159,20 +164,19 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel = hiltViewModel())
         modifier = Modifier
             .then(if (inProgress) Modifier.keepScreenOn() else Modifier)
             .graphicsLayer {
-                val progress = backGesture.progress.value
-                val scale = 1f - progress * 0.08f
-                scaleX = scale
-                scaleY = scale
-                translationX = progress * 48.dp.toPx() * if (backGesture.edge == BackEventCompat.EDGE_RIGHT) -1f else 1f
-                clip = progress > 0f
-                shape = RoundedCornerShape((progress * 28).dp)
+                predictiveBackGesture(
+                    progress = backGesture.progress.value,
+                    fromRightEdge = backGesture.edge == BackEventCompat.EDGE_RIGHT,
+                    cornerRadius = cornerRadius
+                )
             }
     ) { padding ->
+        val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         Column(Modifier.fillMaxSize().padding(padding)) {
             AnimatedContent(
                 targetState = uiState,
                 contentKey = { it.screenPhase() },
-                transitionSpec = { fadeIn(RayCollMotion.effects()).togetherWith(fadeOut(RayCollMotion.effects())) },
+                transitionSpec = { fadeIn(fade).togetherWith(fadeOut(fade)) },
                 label = "study_screen",
                 modifier = Modifier.fillMaxSize().weight(1f)
             ) { state ->
@@ -256,12 +260,13 @@ private class StudyBackGesture {
 }
 
 /**
- * Gest „wstecz” w trakcie sesji: karta lekko się zmniejsza i odsuwa, po puszczeniu [onCommit]
+ * Gest „wstecz” w trakcie sesji: ekran kurczy się jak przy zamykaniu, po puszczeniu [onCommit]
  * (pytanie o wyjście), a po cofnięciu gestu wraca płynnie na miejsce.
  */
 @Composable
 private fun rememberStudyBackGesture(enabled: Boolean, onCommit: () -> Unit): StudyBackGesture {
     val gesture = remember { StudyBackGesture() }
+    val settleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     PredictiveBackHandler(enabled = enabled) { events ->
         try {
             events.collect { event ->
@@ -272,7 +277,7 @@ private fun rememberStudyBackGesture(enabled: Boolean, onCommit: () -> Unit): St
         } catch (_: CancellationException) {
             // gest cofnięty
         } finally {
-            withContext(NonCancellable) { gesture.progress.animateTo(0f, RayCollMotion.spatial()) }
+            withContext(NonCancellable) { gesture.progress.animateTo(0f, settleSpec) }
         }
     }
     return gesture

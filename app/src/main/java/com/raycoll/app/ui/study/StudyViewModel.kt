@@ -3,10 +3,8 @@ package com.raycoll.app.ui.study
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
@@ -20,9 +18,10 @@ import com.raycoll.app.domain.session.SessionState
 import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.playback.StudySessionHolder
 import com.raycoll.app.ui.components.UiEvents
-import com.raycoll.app.ui.navigation.StudyRoute
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,9 +72,9 @@ sealed interface StudyEvent {
 }
 
 /** Jedna sesja nauki talii; sesja żyje tyle co ten ViewModel (przetrwa obrót ekranu). */
-@HiltViewModel
-class StudyViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+@HiltViewModel(assistedFactory = StudyViewModel.Factory::class)
+class StudyViewModel @AssistedInject constructor(
+    @Assisted val deckId: String,
     private val deckRepository: DeckRepository,
     private val modeRepository: StudyModeRepository,
     private val prefsRepository: UserPreferencesRepository,
@@ -83,7 +82,10 @@ class StudyViewModel @Inject constructor(
     private val sessionDeps: SessionDeps,
     private val clock: Clock
 ) : ViewModel() {
-    val deckId: String = savedStateHandle.toRoute<StudyRoute>().deckId
+    @AssistedFactory
+    interface Factory {
+        fun create(deckId: String): StudyViewModel
+    }
 
     private val _uiState = MutableStateFlow<StudyUiState>(StudyUiState.Loading)
     val uiState: StateFlow<StudyUiState> = _uiState.asStateFlow()

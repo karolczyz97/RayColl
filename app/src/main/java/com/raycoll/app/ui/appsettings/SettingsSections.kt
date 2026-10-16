@@ -76,7 +76,7 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                     onClick = onSyncNow,
                     enabled =
                         state.syncStatus != SyncStatus.SYNCING && !state.signingOut && state.backupOperation == null,
-                    shape = MaterialTheme.shapes.small
+                    shapes = ButtonDefaults.shapes()
                 ) {
                     Text(stringResource(R.string.auth_sync_now))
                 }
@@ -84,7 +84,7 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                     onClick = onSignOut,
                     enabled = !state.signingOut && state.backupOperation == null &&
                         state.syncStatus != SyncStatus.ERROR,
-                    shape = MaterialTheme.shapes.small
+                    shapes = ButtonDefaults.shapes()
                 ) {
                     if (state.signingOut) {
                         CircularProgressIndicator(modifier = Modifier.size(ButtonDefaults.IconSize), strokeWidth = 2.dp)
@@ -107,7 +107,7 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
             Button(
                 onClick = onSignIn,
                 enabled = !state.signingIn && state.backupOperation == null,
-                shape = MaterialTheme.shapes.small
+                shapes = ButtonDefaults.shapes()
             ) {
                 if (state.signingIn) {
                     CircularProgressIndicator(modifier = Modifier.size(ButtonDefaults.IconSize), strokeWidth = 2.dp)
@@ -262,10 +262,10 @@ fun BackupSection(onExport: () -> Unit, onImport: () -> Unit, enabled: Boolean =
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
-            Button(onClick = onExport, enabled = enabled, shape = MaterialTheme.shapes.small) {
+            Button(onClick = onExport, enabled = enabled, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.app_settings_export_btn))
             }
-            OutlinedButton(onClick = onImport, enabled = enabled, shape = MaterialTheme.shapes.small) {
+            OutlinedButton(onClick = onImport, enabled = enabled, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.app_settings_import_file_btn))
             }
         }
@@ -283,7 +283,7 @@ fun FactoryResetSection(onReset: () -> Unit, enabled: Boolean = true) {
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer
             ),
-            shape = MaterialTheme.shapes.small,
+            shapes = ButtonDefaults.shapes(),
             modifier = Modifier.fillMaxWidth()
         ) { Text(stringResource(R.string.app_settings_factory_reset)) }
     }

@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,6 +27,7 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.data.account.AccountState
+import com.raycoll.app.ui.components.ExpressiveLoadingIndicator
 import com.raycoll.app.ui.components.MigrationDialog
 import com.raycoll.app.ui.components.RejectedChangesMessage
 import com.raycoll.app.ui.main.MainViewModel
@@ -80,7 +81,7 @@ class MainActivity : ComponentActivity() {
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                CircularProgressIndicator()
+                                ExpressiveLoadingIndicator()
                             }
 
                             AccountState.NeedsInternet -> Column(
@@ -89,7 +90,7 @@ class MainActivity : ComponentActivity() {
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(stringResource(R.string.auth_start_internet))
-                                Button(onClick = viewModel::retryStart) {
+                                Button(shapes = ButtonDefaults.shapes(), onClick = viewModel::retryStart) {
                                     Text(stringResource(R.string.auth_retry_start))
                                 }
                             }
@@ -109,7 +110,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     )
-                                    if (!offline) CircularProgressIndicator()
+                                    if (!offline) ExpressiveLoadingIndicator()
                                 }
                             } else {
                                 RayCollNavHost()

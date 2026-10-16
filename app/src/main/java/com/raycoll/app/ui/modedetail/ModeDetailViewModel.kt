@@ -1,10 +1,8 @@
 package com.raycoll.app.ui.modedetail
 
 import androidx.compose.runtime.Immutable
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import com.raycoll.app.core.Ids
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.StudyModeRepository
@@ -17,9 +15,10 @@ import com.raycoll.app.domain.steps.ModeStepValidator
 import com.raycoll.app.domain.steps.ModeTemplate
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
-import com.raycoll.app.ui.navigation.ModeDetailRoute
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -69,13 +68,18 @@ sealed interface ModeDetailEvent {
     data object SaveFailed : ModeDetailEvent
 }
 
-@HiltViewModel
-class ModeDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+/** [modeId] == null: nowy tryb. */
+@HiltViewModel(assistedFactory = ModeDetailViewModel.Factory::class)
+class ModeDetailViewModel @AssistedInject constructor(
+    @Assisted private val modeId: String?,
     private val modeRepository: StudyModeRepository,
     private val preferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
-    private val modeId: String? = savedStateHandle.toRoute<ModeDetailRoute>().modeId
+    @AssistedFactory
+    interface Factory {
+        fun create(modeId: String?): ModeDetailViewModel
+    }
+
     private var existingMode: StudyMode? = null
 
     /** Ostatnio usunięty krok (z miejscem na liście) — do cofnięcia. */

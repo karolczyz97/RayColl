@@ -7,24 +7,33 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 
-/** Wspólny układ ekranu: pasek tytułu (z powrotem, gdy [onBack] != null), FAB i komunikaty. */
+/**
+ * Wspólny układ ekranu: pasek tytułu (z powrotem, gdy [onBack] != null), FAB i komunikaty.
+ * [collapsingTitle] — duży tytuł, który przy przewijaniu treści zwija się do zwykłego paska;
+ * false dla ekranów, które potrzebują całej wysokości (nauka).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenScaffold(
@@ -35,26 +44,48 @@ fun ScreenScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    collapsingTitle: Boolean = true,
     content: @Composable (PaddingValues) -> Unit
 ) {
+    val scrollBehavior = if (collapsingTitle) TopAppBarDefaults.exitUntilCollapsedScrollBehavior() else null
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Scaffold(
-            modifier = Modifier.widthIn(max = 640.dp).fillMaxSize(),
+            modifier = Modifier
+                .widthIn(max = 640.dp)
+                .fillMaxSize()
+                .then(
+                    if (scrollBehavior !=
+                        null
+                    ) {
+                        Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+                    } else {
+                        Modifier
+                    }
+                ),
             topBar = {
-                TopAppBar(
-                    title = { Text(title, modifier = titleModifier, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    navigationIcon = {
-                        if (onBack != null) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.btn_back)
-                                )
-                            }
+                val titleContent = @Composable {
+                    Text(title, modifier = titleModifier, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                val navigationIcon = @Composable {
+                    if (onBack != null) {
+                        IconButton(shapes = IconButtonDefaults.shapes(), onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.btn_back)
+                            )
                         }
-                    },
-                    actions = actions
-                )
+                    }
+                }
+                if (scrollBehavior != null) {
+                    MediumFlexibleTopAppBar(
+                        title = titleContent,
+                        navigationIcon = navigationIcon,
+                        actions = actions,
+                        scrollBehavior = scrollBehavior
+                    )
+                } else {
+                    TopAppBar(title = titleContent, navigationIcon = navigationIcon, actions = actions)
+                }
             },
             floatingActionButton = floatingActionButton,
             snackbarHost = { SnackbarHost(snackbarHostState) },

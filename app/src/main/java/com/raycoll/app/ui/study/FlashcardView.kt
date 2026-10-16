@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.ui.components.RayCollCard
-import com.raycoll.app.ui.theme.RayCollMotion
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
@@ -87,8 +86,8 @@ internal val LocalCompactCard = staticCompositionLocalOf { false }
 
 @Composable
 internal fun FlashcardView(face: CardFace, actions: CardActions, modifier: Modifier) {
-    val effects = remember { RayCollMotion.effects<Float>() }
-    val spatialOffset = remember { RayCollMotion.spatial<IntOffset>() }
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatialOffset = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     RayCollCard(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.pointerInput(actions) {
@@ -121,8 +120,8 @@ private data class AudioPos(val page: Int?, val listening: Boolean)
 
 @Composable
 private fun CardPages(face: CardFace) {
-    val effects = remember { RayCollMotion.effects<Float>() }
-    val spatialSize = remember { RayCollMotion.spatial<IntSize>() }
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatialSize = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val compact = LocalCompactCard.current
     val gap = if (compact) Spacing.s else Spacing.l
     // pionowy odstęp każdej strony jest w jej własnym polu (nie w arrangement kolumny): ukryte strony nie dokładają przerw
@@ -181,7 +180,7 @@ private fun CardPages(face: CardFace) {
  */
 @Composable
 private fun AudioLabelLine(showDivider: Boolean, mark: AudioMark) {
-    val fadeSpec = remember { RayCollMotion.effects<Float>() }
+    val fadeSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     // ostatni znacznik trzyma napis, gdy etykieta już zanika
     var lastMark by remember { mutableStateOf(AudioMark.SPEAKING) }
     LaunchedEffect(mark) { if (mark != AudioMark.NONE) lastMark = mark }
@@ -245,7 +244,7 @@ private fun AudioLabel(listening: Boolean, modifier: Modifier) {
 private fun CardPage(page: String, isFirst: Boolean, mark: AudioMark) {
     val compact = LocalCompactCard.current
     val colors = MaterialTheme.colorScheme
-    val tintSpec = remember { RayCollMotion.effects<Color>() }
+    val tintSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
     val inset = if (compact) Spacing.xs else Spacing.s
     val shape = if (compact) MaterialTheme.shapes.extraSmall else MaterialTheme.shapes.medium
 

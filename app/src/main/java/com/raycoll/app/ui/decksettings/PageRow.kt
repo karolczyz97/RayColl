@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +46,7 @@ fun PageRow(
             modifier = Modifier.weight(1f)
         )
         LanguagePicker(language, onSelect = onLanguageChange)
-        IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+        IconButton(shapes = IconButtonDefaults.shapes(), onClick = onMoveUp, enabled = canMoveUp) {
             Icon(
                 Icons.Filled.KeyboardArrowUp,
                 contentDescription = stringResource(
@@ -54,7 +56,7 @@ fun PageRow(
                 )
             )
         }
-        IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+        IconButton(shapes = IconButtonDefaults.shapes(), onClick = onMoveDown, enabled = canMoveDown) {
             Icon(
                 Icons.Filled.KeyboardArrowDown,
                 contentDescription = stringResource(
