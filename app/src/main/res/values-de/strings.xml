@@ -6,6 +6,7 @@
     <string name="route_deck_settings">Deck-Einstellungen</string>
     <string name="route_study_mode_detail">Lernmodus bearbeiten</string>
     <string name="btn_cancel">Abbrechen</string>
+    <string name="btn_close">Schließen</string>
     <string name="btn_save">Speichern</string>
     <string name="btn_delete">Löschen</string>
     <string name="btn_back">Zurück</string>
@@ -17,7 +18,6 @@
     <string name="auth_error_login_failed">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</string>
     <string name="sync_status_syncing">Änderungen werden synchronisiert…</string>
     <string name="sync_status_offline">Offline — Änderungen werden nach dem Verbinden gesendet</string>
-    <string name="dialog_delete_desc">Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="dialog_delete_permanent_title">Endgültig löschen?</string>
     <string name="dialog_delete_permanent_desc">Das Deck „%1$s“ wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
     <string name="dialog_archive_title">Deck archivieren?</string>
@@ -67,8 +67,8 @@
     <string name="import_page_label">Seite %1$d</string>
     <string name="stats_title">Lernstatistiken</string>
     <plurals name="stats_heatmap_title">
-        <item quantity="one">Aktivität am letzten %1$d Tag</item>
-        <item quantity="other">Aktivität in den letzten %1$d Tagen</item>
+        <item quantity="one">Aktivität in der letzten %1$d Woche</item>
+        <item quantity="other">Aktivität in den letzten %1$d Wochen</item>
     </plurals>
     <string name="stats_heatmap_cd">Wiederholungen: %1$d; aktive Tage: %2$d; Länge der Serie: %3$d</string>
     <string name="stats_streak">Aufeinanderfolgende Tage</string>
@@ -76,7 +76,6 @@
     <string name="settings_archive_btn">Deck archivieren</string>
     <string name="settings_rename_label">Deckname</string>
     <string name="settings_pages_config">Seitenkonfiguration</string>
-    <string name="settings_study_scope">Lernumfang</string>
     <string name="settings_card_order">Kartenreihenfolge</string>
     <string name="settings_card_order_sequential">Der Reihe nach</string>
     <string name="settings_card_order_random">Zufällig</string>
@@ -215,8 +214,7 @@
     <string name="mode_list_edit">Modus bearbeiten</string>
     <string name="mode_list_new">Neuer Lernmodus</string>
     <string name="mode_list_reset">Standard wiederherstellen</string>
-    <string name="mode_list_delete_title">Modus löschen?</string>
-    <string name="mode_list_delete_desc">Dieser eigene Lernmodus wird dauerhaft gelöscht. Decks, die ihn verwenden, wechseln zum Standardmodus.</string>
+    <string name="mode_list_deleted">Modus gelöscht.</string>
     <string name="mode_list_reset_title">Standard wiederherstellen?</string>
     <string name="mode_list_reset_desc">Schritte und Name dieses integrierten Modus werden zurückgesetzt.</string>
     <string name="study_missing_voice_title">Vorlesestimme fehlt</string>
@@ -224,14 +222,12 @@
     <string name="study_missing_voice_btn">Vorlesestimme installieren</string>
     <string name="study_answer_correct">Richtig!</string>
     <string name="study_answer_incorrect">Falsch</string>
-    <string name="study_answer_skipped">Übersprungen</string>
     <string name="study_answer_error">Erkennungsfehler</string>
     <string name="settings_delete_error">Deck konnte nicht gelöscht werden. Versuche es erneut.</string>
     <string name="lang_system">System</string>
     <string name="app_settings_factory_reset">Werksdaten wiederherstellen</string>
     <string name="app_settings_factory_reset_desc">Alle Decks, Lernfortschritte, Aktivitäten und Lernmodi werden durch Beispieldaten ersetzt. Wenn du angemeldet bist, gilt dies nach der Synchronisierung auch für andere Geräte dieses Kontos. Speichere vorher eine Sicherung. Dies kann nicht rückgängig gemacht werden.</string>
     <string name="app_settings_version">Version %1$s</string>
-    <string name="study_answer_retry">Noch einmal versuchen</string>
     <string name="study_modes_manage">Modi verwalten…</string>
     <string name="study_modes_modified">Geändert</string>
     <string name="study_modes_info">Lernmodi bestimmen, wie Karten angezeigt und bewertet werden. Du kannst sie anpassen oder jederzeit auf die Standardeinstellungen zurücksetzen.</string>
@@ -265,9 +261,6 @@
     <string name="mode_editor_step_title">%1$d. %2$s</string>
     <string name="stats_cards_total">Karten: %1$d</string>
     <string name="study_recognized_text">Erkannt: %1$s</string>
-    <string name="study_answer_correct_percent">Richtig! • %1$d%%</string>
-    <string name="study_answer_incorrect_percent">Falsch • %1$d%%</string>
-    <string name="study_answer_incorrect_threshold">Falsch • %1$d%% • erforderlich: %2$d%%</string>
     <string name="study_suggested_rating">Vorschlag: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Ich höre zu</string>
@@ -285,7 +278,6 @@
     <string name="sync_now_failed">Änderungen warten auf Internet</string>
     <string name="study_a11y_tap_card">Weiter</string>
     <string name="browse_empty_deck">Dieses Deck hat noch keine Karten.</string>
-    <string name="a11y_deck_menu_named">Optionen für %1$s</string>
     <string name="import_hint_format">Eine Karte pro Zeile. Seiten mit Tabulator, Semikolon, Komma oder senkrechtem Strich trennen. Die erste Zeile kann eine Kopfzeile sein.</string>
     <string name="mode_editor_discard_title">Änderungen verwerfen?</string>
     <string name="mode_editor_discard_desc">Die Änderungen an diesem Modus wurden nicht gespeichert.</string>
@@ -319,7 +311,6 @@
     <string name="dashboard_deck_options">Optionen</string>
     <string name="browse_clear_search">Suche löschen</string>
     <string name="browse_clear_filters">Filter zurücksetzen</string>
-    <string name="a11y_delete_card">Karte löschen: %1$s</string>
     <string name="mode_editor_add_below">Darunter hinzufügen</string>
     <string name="study_progress_description">Karte %1$d von %2$d</string>
     <string name="study_modes_shared_hint">Lernmodi gelten für alle Decks. Änderungen wirken sich auf jedes Deck aus, das den Modus verwendet.</string>

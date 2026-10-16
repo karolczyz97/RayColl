@@ -2,17 +2,19 @@ package com.raycoll.app.ui.modedetail
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.AutoRateFixedStep
@@ -35,6 +37,7 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.ui.components.blurredDialogProperties
 import com.raycoll.app.ui.theme.Spacing
 
 private class StepChoice(val labelRes: Int, val create: () -> ModeStep)
@@ -107,6 +110,7 @@ private val STEP_CATALOG = listOf(
 fun AddStepDialog(expert: Boolean, onDismiss: () -> Unit, onChoose: (ModeStep) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = blurredDialogProperties(),
         title = { Text(stringResource(R.string.mode_editor_add_step)) },
         text = {
             Column(
@@ -121,11 +125,10 @@ fun AddStepDialog(expert: Boolean, onDismiss: () -> Unit, onChoose: (ModeStep) -
                         modifier = Modifier.padding(top = Spacing.s)
                     )
                     group.choices.forEach { choice ->
-                        TextButton(shapes = ButtonDefaults.shapes(), onClick = {
-                            onChoose(choice.create())
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(choice.labelRes), modifier = Modifier.fillMaxWidth())
-                        }
+                        ListItem(
+                            onClick = { onChoose(choice.create()) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        ) { Text(stringResource(choice.labelRes)) }
                     }
                 }
             }

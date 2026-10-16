@@ -6,6 +6,7 @@
     <string name="route_deck_settings">Ustawienia talii</string>
     <string name="route_study_mode_detail">Edycja trybu nauki</string>
     <string name="btn_cancel">Anuluj</string>
+    <string name="btn_close">Zamknij</string>
     <string name="btn_save">Zapisz</string>
     <string name="btn_delete">Usuń</string>
     <string name="btn_back">Wstecz</string>
@@ -17,7 +18,6 @@
     <string name="auth_error_login_failed">Logowanie nie powiodło się. Spróbuj ponownie.</string>
     <string name="sync_status_syncing">Synchronizowanie zmian…</string>
     <string name="sync_status_offline">Offline — zmiany wyślą się po połączeniu</string>
-    <string name="dialog_delete_desc">Tej operacji nie można cofnąć.</string>
     <string name="dialog_delete_permanent_title">Usunąć trwale?</string>
     <string name="dialog_delete_permanent_desc">Talia „%1$s” zostanie bezpowrotnie usunięta. Tej operacji nie można cofnąć.</string>
     <string name="dialog_archive_title">Zarchiwizować talię?</string>
@@ -69,10 +69,10 @@
     <string name="import_page_label">Strona %1$d</string>
     <string name="stats_title">Statystyki nauki</string>
     <plurals name="stats_heatmap_title">
-        <item quantity="one">Aktywność w ostatnim %1$d dniu</item>
-        <item quantity="few">Aktywność w ostatnich %1$d dniach</item>
-        <item quantity="many">Aktywność w ostatnich %1$d dniach</item>
-        <item quantity="other">Aktywność w ostatnich %1$d dniach</item>
+        <item quantity="one">Aktywność w ostatnim %1$d tygodniu</item>
+        <item quantity="few">Aktywność w ostatnich %1$d tygodniach</item>
+        <item quantity="many">Aktywność w ostatnich %1$d tygodniach</item>
+        <item quantity="other">Aktywność w ostatnich %1$d tygodniach</item>
     </plurals>
     <string name="stats_heatmap_cd">Powtórki: %1$d; dni aktywności: %2$d; długość serii: %3$d</string>
     <string name="stats_streak">Seria dni</string>
@@ -80,7 +80,6 @@
     <string name="settings_archive_btn">Archiwizuj talię</string>
     <string name="settings_rename_label">Nazwa talii</string>
     <string name="settings_pages_config">Konfiguracja stron</string>
-    <string name="settings_study_scope">Zakres nauki</string>
     <string name="settings_card_order">Kolejność fiszek</string>
     <string name="settings_card_order_sequential">Po kolei</string>
     <string name="settings_card_order_random">Losowo</string>
@@ -225,8 +224,7 @@
     <string name="mode_list_edit">Edytuj tryb</string>
     <string name="mode_list_new">Nowy tryb nauki</string>
     <string name="mode_list_reset">Przywróć domyślne</string>
-    <string name="mode_list_delete_title">Usunąć tryb?</string>
-    <string name="mode_list_delete_desc">Ten własny tryb nauki zostanie trwale usunięty. Talie, które go używają, przejdą na tryb domyślny.</string>
+    <string name="mode_list_deleted">Usunięto tryb.</string>
     <string name="mode_list_reset_title">Przywrócić domyślne?</string>
     <string name="mode_list_reset_desc">Kroki i nazwa tego wbudowanego trybu wrócą do oryginału.</string>
     <string name="study_missing_voice_title">Brak głosu do odczytu</string>
@@ -234,14 +232,12 @@
     <string name="study_missing_voice_btn">Zainstaluj głos do odczytu</string>
     <string name="study_answer_correct">Dobrze!</string>
     <string name="study_answer_incorrect">Źle</string>
-    <string name="study_answer_skipped">Pominięto</string>
     <string name="study_answer_error">Błąd rozpoznawania</string>
     <string name="settings_delete_error">Nie udało się usunąć talii. Spróbuj ponownie.</string>
     <string name="lang_system">Systemowy</string>
     <string name="app_settings_factory_reset">Przywróć dane fabryczne</string>
     <string name="app_settings_factory_reset_desc">Wszystkie talie, postępy, aktywność i tryby nauki zostaną zastąpione danymi przykładowymi. Jeśli jesteś zalogowany, po synchronizacji zastąpi to także dane na innych urządzeniach konta. Najpierw zapisz kopię zapasową. Tej operacji nie można cofnąć.</string>
     <string name="app_settings_version">Wersja %1$s</string>
-    <string name="study_answer_retry">Spróbuj jeszcze raz</string>
     <string name="study_modes_manage">Zarządzaj trybami…</string>
     <string name="study_modes_modified">Zmodyfikowany</string>
     <string name="study_modes_info">Tryby nauki określają kolejność wyświetlania stron fiszek, odczyt głosem i sposób oceniania. Wbudowane tryby możesz w każdej chwili przywrócić do oryginału.</string>
@@ -275,9 +271,6 @@
     <string name="mode_editor_step_title">%1$d. %2$s</string>
     <string name="stats_cards_total">Fiszki: %1$d</string>
     <string name="study_recognized_text">Rozpoznano: %1$s</string>
-    <string name="study_answer_correct_percent">Dobrze! • %1$d%%</string>
-    <string name="study_answer_incorrect_percent">Źle • %1$d%%</string>
-    <string name="study_answer_incorrect_threshold">Źle • %1$d%% • wymagane %2$d%%</string>
     <string name="study_suggested_rating">Sugestia: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Słucham</string>
@@ -295,7 +288,6 @@
     <string name="sync_now_failed">Zmiany czekają na internet</string>
     <string name="study_a11y_tap_card">Dalej</string>
     <string name="browse_empty_deck">Ta talia nie ma jeszcze fiszek.</string>
-    <string name="a11y_deck_menu_named">Opcje talii: %1$s</string>
     <string name="import_hint_format">Jedna fiszka w wierszu. Strony oddziel tabulatorem, średnikiem, przecinkiem lub kreską pionową. Pierwszy wiersz może być nagłówkiem.</string>
     <string name="mode_editor_discard_title">Odrzucić zmiany?</string>
     <string name="mode_editor_discard_desc">Zmiany w tym trybie nie zostały zapisane.</string>
@@ -329,7 +321,6 @@
     <string name="dashboard_deck_options">Opcje</string>
     <string name="browse_clear_search">Wyczyść wyszukiwanie</string>
     <string name="browse_clear_filters">Wyczyść filtry</string>
-    <string name="a11y_delete_card">Usuń fiszkę: %1$s</string>
     <string name="mode_editor_add_below">Dodaj poniżej</string>
     <string name="study_progress_description">Fiszka %1$d z %2$d</string>
     <string name="study_modes_shared_hint">Tryby są wspólne dla wszystkich talii. Edycja trybu zmienia go w każdej talii, która go używa.</string>

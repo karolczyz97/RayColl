@@ -33,7 +33,8 @@ class BackupDocumentStoreTest {
     private val repos = VmTestHarness.create(context, clock)
     private val backup = repos.backupRepository
     private fun file(text: String) = Uri.fromFile(File(folder.root, "backup.json").apply { writeText(text) })
-    private fun encoded(data: StoreData) = Json { encodeDefaults = true }.encodeToString(StoreData.serializer(), data)
+    private val json = Json { encodeDefaults = true }
+    private fun encoded(data: StoreData) = json.encodeToString(StoreData.serializer(), data)
     private suspend fun own(name: String = "Own") =
         repos.deckRepository.addDeckWithCards(name, listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
 
@@ -130,6 +131,24 @@ class BackupDocumentStoreTest {
         val before = repos.snapshot()
         backup.joinGuest(guest, "google", " (from phone)")
         assertEquals(before, repos.snapshot())
+    }
+
+    @Test fun `join keeps a seed deck changed only by deleting a card`() = runTest {
+        repos.seed()
+        val deck = repos.snapshot().groups.first()
+        val deletedCard = deck.cards.first()
+        repos.deckRepository.deleteCard(deletedCard.id)
+        val guest = repos.snapshot()
+        repos.account.signIn("google")
+        repos.seed()
+        val accountDecks = repos.snapshot().groups
+
+        backup.joinGuest(guest, "google", " (from phone)")
+
+        val joined = repos.snapshot().groups
+        assertEquals(accountDecks.map { it.id } + deck.id, joined.map { it.id })
+        assertEquals(deck.cards.drop(1), joined.last().cards)
+        assertTrue(joined.last().cards.none { it.id == deletedCard.id })
     }
 
     @Test fun `modified built in mode becomes a custom copy and guest deck refers to it`() = runTest {

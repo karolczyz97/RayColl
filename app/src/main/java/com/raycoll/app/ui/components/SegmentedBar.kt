@@ -22,6 +22,7 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
+import com.raycoll.app.ui.theme.withMinimumContrast
 
 /** Fragment paska: udział [weight] w kolorze [color]. */
 data class BarSegment(val weight: Float, val color: Color)
@@ -35,12 +36,13 @@ fun SegmentedBar(
     gap: Dp = Spacing.xxs,
     description: String? = null
 ) {
+    val track = MaterialTheme.colorScheme.surfaceContainerHighest
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .background(track)
             .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
         horizontalArrangement = Arrangement.spacedBy(gap)
     ) {
@@ -49,7 +51,7 @@ fun SegmentedBar(
                 Modifier
                     .weight(segment.weight)
                     .fillMaxHeight()
-                    .background(segment.color)
+                    .background(segment.color.withMinimumContrast(track))
             )
         }
     }
@@ -69,10 +71,10 @@ fun CardStatsBar(stats: CardStats, modifier: Modifier = Modifier) {
     }.joinToString(", ")
     SegmentedBar(
         segments = listOf(
-            BarSegment(stats.newCount.toFloat(), srs.newFg),
-            BarSegment(stats.learning.toFloat(), srs.learningFg),
-            BarSegment(stats.review.toFloat(), srs.reviewFg),
-            BarSegment(stats.mastered.toFloat(), srs.masteredFg)
+            BarSegment(stats.newCount.toFloat(), srs.newAccent),
+            BarSegment(stats.learning.toFloat(), srs.learningAccent),
+            BarSegment(stats.review.toFloat(), srs.reviewAccent),
+            BarSegment(stats.mastered.toFloat(), srs.masteredAccent)
         ),
         modifier = modifier,
         description = description

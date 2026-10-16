@@ -10,7 +10,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsToggleable
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
@@ -34,12 +34,7 @@ class SettingsSectionsTest {
 
     @Test
     fun `backup and reset actions are disabled during an operation`() {
-        compose.setContent {
-            androidx.compose.foundation.layout.Column {
-                BackupSection(onExport = {}, onImport = {}, enabled = false)
-                FactoryResetSection(onReset = {}, enabled = false)
-            }
-        }
+        compose.setContent { BackupSection(onExport = {}, onImport = {}, onReset = {}, enabled = false) }
         compose.onNodeWithText("Save backup to file").assertIsNotEnabled()
         compose.onNodeWithText("Restore from backup").assertIsNotEnabled()
         compose.onNodeWithText("Restore factory data").assertIsNotEnabled()
@@ -47,8 +42,8 @@ class SettingsSectionsTest {
 
     @Test
     @Config(qualifiers = "de-w360dp-h800dp")
-    fun `backup buttons wrap instead of running off a narrow card in german`() {
-        compose.setContent { Box(Modifier.width(360.dp)) { BackupSection(onExport = {}, onImport = {}) } }
+    fun `backup actions fit a narrow screen in german`() {
+        compose.setContent { Box(Modifier.width(360.dp)) { BackupSection(onExport = {}, onImport = {}, onReset = {}) } }
 
         listOf("Backup in Datei speichern", "Aus Backup wiederherstellen").forEach { label ->
             val bounds = compose.onNodeWithText(label).getUnclippedBoundsInRoot()

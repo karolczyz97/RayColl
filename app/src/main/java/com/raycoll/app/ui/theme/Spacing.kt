@@ -1,5 +1,7 @@
 package com.raycoll.app.ui.theme
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** Skala odstępów — wszystkie marginesy i przerwy w UI biorą wartości stąd. */
@@ -15,6 +17,12 @@ object Spacing {
     /** Margines treści ekranu od krawędzi. */
     val screen = l
 
+    /** Przerwa między kartami i sekcjami na każdym ekranie. */
+    val item = m
+
     /** Miejsce pod listą, żeby ostatni element nie chował się pod FAB. */
     val fabClearance = 88.dp
+
+    /** Wspólne marginesy treści ekranu: ten sam odstęp pod paskiem tytułu i od krawędzi wszędzie. */
+    fun screenContent(bottom: Dp = xl) = PaddingValues(start = screen, end = screen, top = s, bottom = bottom)
 }

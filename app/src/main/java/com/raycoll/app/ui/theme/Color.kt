@@ -92,3 +92,10 @@ val SrsReviewFgDark = Color(0xFFFFB68E)
 val SrsReviewBgDark = Color(0xFF6E2800)
 val SrsMasteredFgDark = Color(0xFF82DCAB)
 val SrsMasteredBgDark = Color(0xFF003E26)
+
+// akcenty kategorii do pasków i wykresów (bez tekstu na nich): żywe średnie tony w jasnym motywie,
+// jasne w ciemnym — kontrast z tłem min. 3:1 w obu
+val SrsNewAccentLight = Color(0xFF2B6FDB)
+val SrsLearningAccentLight = Color(0xFF997300)
+val SrsReviewAccentLight = Color(0xFFD0561C)
+val SrsMasteredAccentLight = Color(0xFF16875A)

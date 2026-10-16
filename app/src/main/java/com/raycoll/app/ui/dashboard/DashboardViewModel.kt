@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.core.Clock
 import com.raycoll.app.core.minuteTicks
+import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.di.DefaultDispatcher
@@ -24,7 +25,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @Immutable
 data class DeckSummary(
@@ -52,6 +55,7 @@ class DashboardViewModel @Inject constructor(
     private val deckRepository: DeckRepository,
     studyModeRepository: StudyModeRepository,
     private val clock: Clock,
+    private val preferencesRepository: UserPreferencesRepository,
     @DefaultDispatcher defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
@@ -87,6 +91,19 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun restoreDeck(deckId: String) = save { deckRepository.restoreDeck(deckId) }
+
+    /** Ile razy jeszcze pokazać podpowiedź gestu na talii (0, dopóki ustawienia się nie wczytają). */
+    val deckSwipeHintsLeft: StateFlow<Int> = preferencesRepository.preferences
+        .map { it.deckSwipeHintsLeft }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    fun deckSwipeHintShown() {
+        viewModelScope.launch { preferencesRepository.deckSwipeHintShown() }
+    }
+
+    fun deckSwipeLearned() {
+        viewModelScope.launch { preferencesRepository.deckSwipeLearned() }
+    }
 
     private fun save(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(DashboardEvent.SaveFailed) }, block = block)

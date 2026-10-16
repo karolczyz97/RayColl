@@ -27,8 +27,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.window.DialogProperties
 import com.raycoll.app.R
+import com.raycoll.app.ui.components.blurredDialogProperties
 import com.raycoll.app.ui.theme.Spacing
 
 /** Minimalna liczba niepustych stron, żeby karta miała sens (pytanie + odpowiedź). */
@@ -70,7 +70,7 @@ fun CardEditorDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         // dotknięcie poza oknem nie wyrzuca wpisanego tekstu; wyjście: Anuluj lub Wstecz
-        properties = DialogProperties(dismissOnClickOutside = false),
+        properties = blurredDialogProperties(dismissOnClickOutside = false),
         title = { Text(title) },
         text = {
             Column(
@@ -87,7 +87,6 @@ fun CardEditorDialog(
                         label = {
                             Text(pageNames.getOrNull(index) ?: stringResource(R.string.import_page_label, index + 1))
                         },
-                        shape = MaterialTheme.shapes.small,
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(firstFieldFocus) else Modifier)

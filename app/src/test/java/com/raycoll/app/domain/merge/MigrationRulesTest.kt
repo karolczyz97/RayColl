@@ -91,4 +91,11 @@ class MigrationRulesTest {
         val edited = seed.copy(cards = listOf(seed.cards[0].copy(contentUpdatedAt = 9L), seed.cards[1]))
         assertTrue(getGuestHasData(listOf(edited), emptyMap(), emptyList()))
     }
+
+    @Test
+    fun `seed deck with a deleted card counts as guest data`() {
+        val seed = seedShapedDeck()
+        val changed = seed.copy(cards = listOf(seed.cards[0].copy(deletedAt = 10L), seed.cards[1]))
+        assertTrue(getGuestHasData(listOf(changed), emptyMap(), SEED_MODES))
+    }
 }

@@ -18,7 +18,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -125,9 +125,10 @@ class StudyPresentationTest {
 
     @Test
     @org.robolectric.annotation.Config(qualifiers = "de")
-    fun `answer threshold and suggestion fit a narrow screen with large text`() {
+    fun `heard answer fits a narrow screen with large text`() {
         val answer = com.raycoll.app.domain.session.LastAnswerResult(
             status = com.raycoll.app.domain.session.AnswerStatus.INCORRECT,
+            text = "eine ziemlich lange gesprochene Antwort",
             percent = 45,
             threshold = 80,
             suggestedRating = Ratings.AGAIN
@@ -137,11 +138,8 @@ class StudyPresentationTest {
                 Box(Modifier.width(360.dp)) { AnswerPanel(answer, false, {}) }
             }
         }
-        val title = context.getString(R.string.study_answer_incorrect_threshold, 45, 80)
-        val badge = context.getString(R.string.study_suggested_rating, context.getString(ratingLabel(1)))
-        listOf(title, badge).forEach {
-            val bounds = compose.onNodeWithText(it, useUnmergedTree = true).getUnclippedBoundsInRoot()
-            org.junit.Assert.assertTrue(bounds.toString(), bounds.right <= 360.dp && bounds.left >= 0.dp)
-        }
+        val heard = context.getString(R.string.study_recognized_text, answer.text)
+        val bounds = compose.onNodeWithText(heard, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        org.junit.Assert.assertTrue(bounds.toString(), bounds.right <= 360.dp && bounds.left >= 0.dp)
     }
 }

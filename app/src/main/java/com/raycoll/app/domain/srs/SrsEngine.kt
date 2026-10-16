@@ -8,6 +8,11 @@ import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
 
+/**
+ * Harmonogram FSRS-6, przepisany ręcznie i sprawdzony z fsrs-rs (src/model_v6.rs) oraz py-fsrs 6.3.2.
+ * Bez kroków nauki: każda ocena, także tego samego dnia, idzie wzorami długoterminowymi
+ * z ułamkowym czasem od ostatniej powtórki.
+ */
 fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     val w = SrsConstants.W
     val rating = rawRating.coerceIn(Ratings.MIN, Ratings.MAX)
@@ -20,24 +25,26 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     val newState: Int
 
     if (current.state == SrsStates.NEW || current.stability <= 0) {
-        newD = initDifficulty(w, rating)
+        newD = clampDifficulty(initDifficulty(w, rating))
         newS = initStability(w, rating)
         newState = if (rating == Ratings.AGAIN) SrsStates.LEARNING else SrsStates.REVIEW
     } else {
-        newD = nextDifficulty(w, current.difficulty, rating)
-        val r = retrievability(elapsedDays, current.stability)
+        val d = clampDifficulty(current.difficulty)
+        val s = current.stability
+        val r = retrievability(elapsedDays, s)
+        newD = nextDifficulty(w, d, rating)
         if (rating == Ratings.AGAIN) {
-            newS = minOf(current.stability, nextForgetStability(w, current.difficulty, current.stability, r))
+            newS = nextForgetStability(w, d, s, r)
             newState = SrsStates.RELEARNING
         } else {
-            newS = nextRecallStability(w, current.difficulty, current.stability, r, rating)
+            newS = nextRecallStability(w, d, s, r, rating)
             newState = SrsStates.REVIEW
         }
     }
 
     // clamp zamiast coerceIn: NaN daje minimum, a nie trafia do nextReview i zapisu
     val clampedS = clamp(newS, SrsConstants.MIN_INTERVAL_DAYS, SrsConstants.MAX_INTERVAL_DAYS)
-    val nextReview = now + (clampedS * SrsConstants.DAY_MS).toLong()
+    val nextReview = now + (nextIntervalDays(clampedS) * SrsConstants.DAY_MS).toLong()
 
     return current.copy(
         difficulty = newD,
@@ -49,19 +56,16 @@ fun calculateFsrs(current: SrsState, rawRating: Int, now: Long): SrsState {
     )
 }
 
-// rating - 3: odchylenie od oceny "dobrze" (stała formuły FSRS)
-private fun initDifficulty(w: List<Double>, rating: Int): Double =
-    clamp(w[4] - (rating - 3) * w[5], SrsConstants.DIFFICULTY_MIN, SrsConstants.DIFFICULTY_MAX)
+/** D0(G) = w4 − e^(w5·(G−1)) + 1; bez przycięcia, bo cel średniej rewersji D0(4) wychodzi poniżej 1. */
+private fun initDifficulty(w: List<Double>, rating: Int): Double = w[4] - exp(w[5] * (rating - 1)) + 1
 
 private fun initStability(w: List<Double>, rating: Int): Double = max(w[rating - 1], SrsConstants.MIN_INTERVAL_DAYS)
 
+// rating - 3: odchylenie od oceny „dobrze”; zmiana słabnie liniowo im bliżej maksymalnej trudności
 private fun nextDifficulty(w: List<Double>, d: Double, rating: Int): Double {
-    val newD = d - w[6] * (rating - 3)
-    return clamp(
-        w[7] * initDifficulty(w, 3) + (1 - w[7]) * newD,
-        SrsConstants.DIFFICULTY_MIN,
-        SrsConstants.DIFFICULTY_MAX
-    )
+    val deltaD = -w[6] * (rating - 3)
+    val dampedD = d + deltaD * (SrsConstants.DIFFICULTY_MAX - d) / (SrsConstants.DIFFICULTY_MAX - 1)
+    return clampDifficulty(w[7] * initDifficulty(w, Ratings.EASY) + (1 - w[7]) * dampedD)
 }
 
 private fun retrievability(elapsedDays: Double, stability: Double): Double {
@@ -79,8 +83,20 @@ private fun nextRecallStability(w: List<Double>, d: Double, s: Double, r: Double
         )
 }
 
-private fun nextForgetStability(w: List<Double>, d: Double, s: Double, r: Double): Double =
-    w[11] * d.pow(-w[12]) * ((s + 1).pow(w[13]) - 1) * exp((1 - r) * w[14])
+/** Po pomyłce stabilność nie może przekroczyć S / e^(w17·w18) — górna granica z FSRS-6. */
+private fun nextForgetStability(w: List<Double>, d: Double, s: Double, r: Double): Double {
+    val longTerm = w[11] * d.pow(-w[12]) * ((s + 1).pow(w[13]) - 1) * exp((1 - r) * w[14])
+    return minOf(longTerm, s / exp(w[17] * w[18]))
+}
+
+private fun nextIntervalDays(stability: Double): Double {
+    val interval = stability / SrsConstants.FACTOR *
+        (SrsConstants.DESIRED_RETENTION.pow(1.0 / SrsConstants.DECAY) - 1)
+    return clamp(interval, SrsConstants.MIN_INTERVAL_DAYS, SrsConstants.MAX_INTERVAL_DAYS)
+}
+
+private fun clampDifficulty(value: Double): Double =
+    clamp(value, SrsConstants.DIFFICULTY_MIN, SrsConstants.DIFFICULTY_MAX)
 
 private fun clamp(value: Double, min: Double, max: Double): Double =
     if (value.isNaN()) min else maxOf(min, minOf(max, value))

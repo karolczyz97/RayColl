@@ -10,7 +10,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -108,7 +108,7 @@ class ModeDetailScreenTest {
 
     @Test
     fun `leaving an untouched editor does not ask anything`() {
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Close").performClick()
         compose.onNodeWithText("Discard changes?").assertDoesNotExist()
         assertEquals(1, backCount)
     }
@@ -117,7 +117,7 @@ class ModeDetailScreenTest {
     fun `leaving with unsaved changes asks first and discarding goes back`() {
         nameField().performTextInput("Mine")
 
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Close").performClick()
         compose.onNodeWithText("Discard changes?").assertExists()
         assertEquals(0, backCount)
 
@@ -125,7 +125,7 @@ class ModeDetailScreenTest {
         compose.onNodeWithText("Discard changes?").assertDoesNotExist()
         assertEquals(0, backCount)
 
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Close").performClick()
         compose.onNodeWithText("Discard").performClick()
         assertEquals(1, backCount)
     }

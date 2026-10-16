@@ -9,9 +9,12 @@ import android.os.LocaleList
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -40,7 +44,10 @@ import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.ExpressiveLoadingIndicator
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.expandIn
 import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.components.settingsBackground
+import com.raycoll.app.ui.components.shrinkOut
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -108,15 +115,16 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
     ScreenScaffold(
         title = stringResource(R.string.app_settings_title),
         onBack = onBack,
-        snackbarHostState = snackbarHostState
+        snackbarHostState = snackbarHostState,
+        containerColor = settingsBackground
     ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(Spacing.screen),
-            verticalArrangement = Arrangement.spacedBy(Spacing.l)
+                .padding(Spacing.screenContent()),
+            verticalArrangement = Arrangement.spacedBy(Spacing.item)
         ) {
             AccountSection(
                 state = uiState,
@@ -127,7 +135,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             )
             val preferences = uiState.preferences
             if (preferences == null) {
-                ExpressiveLoadingIndicator()
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { ExpressiveLoadingIndicator() }
             } else {
                 AppearanceSection(
                     preferences = preferences,
@@ -152,18 +160,20 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             }
             StudyModesLink(onStudyModes)
             val backupsEnabled = uiState.backupOperation == null && !uiState.signingIn && !uiState.signingOut
-            if (uiState.backupOperation != null) LinearWavyProgressIndicator()
+            AnimatedVisibility(uiState.backupOperation != null, enter = expandIn(), exit = shrinkOut()) {
+                LinearWavyProgressIndicator(Modifier.fillMaxWidth())
+            }
             BackupSection(
                 enabled = backupsEnabled,
                 onExport = { exportLauncher.launch(viewModel.backupFileName()) },
-                onImport = { showImportDialog = true }
+                onImport = { showImportDialog = true },
+                onReset = { showResetDialog = true }
             )
-            FactoryResetSection(onReset = { showResetDialog = true }, enabled = backupsEnabled)
             Text(
                 stringResource(R.string.app_settings_version, uiState.appVersion),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = Spacing.s)
+                modifier = Modifier.padding(start = Spacing.l)
             )
         }
     }

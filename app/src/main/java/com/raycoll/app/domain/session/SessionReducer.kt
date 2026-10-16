@@ -103,4 +103,8 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
     is SessionAction.RemoveFailedCard -> state.copy(failedCardIds = state.failedCardIds - action.cardId)
 
     is SessionAction.SetCardReviewed -> state.copy(cardReviewed = true)
+
+    is SessionAction.UpdateCardSrs -> state.copy(
+        cards = state.cards.map { if (it.id == action.cardId) it.copy(srsState = action.srsState) else it }
+    )
 }

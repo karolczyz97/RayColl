@@ -3,10 +3,6 @@ package com.raycoll.app.ui.dashboard
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -24,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -79,7 +76,7 @@ fun StudySplitButton(
                 modifier = Modifier.semantics { contentDescription = studyLabel }
             ) {
                 Icon(
-                    Icons.Filled.PlayArrow,
+                    painterResource(R.drawable.ic_play_arrow_filled),
                     contentDescription = null,
                     modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize)
                 )
@@ -94,7 +91,7 @@ fun StudySplitButton(
                 modifier = Modifier.semantics { contentDescription = modesLabel }
             ) {
                 Icon(
-                    Icons.Filled.KeyboardArrowDown,
+                    painterResource(R.drawable.ic_keyboard_arrow_down),
                     contentDescription = null,
                     modifier = Modifier
                         .size(SplitButtonDefaults.TrailingIconSize)
@@ -144,7 +141,7 @@ private fun ModeMenu(
         HorizontalDivider(Modifier.padding(vertical = Spacing.xs))
         DropdownMenuItem(
             text = { Text(stringResource(R.string.study_modes_manage)) },
-            leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_settings), contentDescription = null) },
             onClick = {
                 onDismiss()
                 onManageModes()

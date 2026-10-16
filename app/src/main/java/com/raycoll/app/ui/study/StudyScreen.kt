@@ -6,13 +6,11 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
-import androidx.activity.BackEventCompat
-import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -22,13 +20,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -36,20 +30,18 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
@@ -63,13 +55,8 @@ import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.rememberSnackbarMessages
-import com.raycoll.app.ui.navigation.predictiveBackGesture
-import com.raycoll.app.ui.navigation.screenCornerRadius
 import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
-import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
 
 @Composable
 fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
@@ -130,8 +117,8 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
         }
     }
 
-    val cornerRadius = screenCornerRadius()
-    val backGesture = rememberStudyBackGesture(enabled = inProgress, onCommit = { showExitDialog = true })
+    // w trakcie sesji „wstecz” pyta o wyjście zamiast zamykać ekran
+    BackHandler(enabled = inProgress) { showExitDialog = true }
 
     ScreenScaffold(
         title = when (val state = uiState) {
@@ -146,7 +133,11 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
         collapsingTitle = false,
         // pauza w pasku tytułu, nie w treści — nic na ekranie nie przeskakuje przy pauzie i wznowieniu
         actions = {
-            AnimatedVisibility(visible = active?.paused == true, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(
+                visible = active?.paused == true,
+                enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+            ) {
                 val pausedLabel = stringResource(R.string.study_paused)
                 TextButton(
                     shapes = ButtonDefaults.shapes(),
@@ -155,21 +146,17 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
                         stateDescription = pausedLabel
                     }
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                    Icon(
+                        painterResource(R.drawable.ic_play_arrow_filled),
+                        contentDescription = null,
+                        Modifier.size(ButtonDefaults.IconSize)
+                    )
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(stringResource(R.string.study_resume))
                 }
             }
         },
-        modifier = Modifier
-            .then(if (inProgress) Modifier.keepScreenOn() else Modifier)
-            .graphicsLayer {
-                predictiveBackGesture(
-                    progress = backGesture.progress.value,
-                    fromRightEdge = backGesture.edge == BackEventCompat.EDGE_RIGHT,
-                    cornerRadius = cornerRadius
-                )
-            }
+        modifier = Modifier.then(if (inProgress) Modifier.keepScreenOn() else Modifier)
     ) { padding ->
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -251,36 +238,6 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
             onDismiss = { showMissingVoiceDialog = false }
         )
     }
-}
-
-/** Postęp gestu „wstecz” (0..1) i krawędź, z której zaczął się gest. */
-private class StudyBackGesture {
-    val progress = Animatable(0f)
-    var edge by mutableIntStateOf(BackEventCompat.EDGE_LEFT)
-}
-
-/**
- * Gest „wstecz” w trakcie sesji: ekran kurczy się jak przy zamykaniu, po puszczeniu [onCommit]
- * (pytanie o wyjście), a po cofnięciu gestu wraca płynnie na miejsce.
- */
-@Composable
-private fun rememberStudyBackGesture(enabled: Boolean, onCommit: () -> Unit): StudyBackGesture {
-    val gesture = remember { StudyBackGesture() }
-    val settleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    PredictiveBackHandler(enabled = enabled) { events ->
-        try {
-            events.collect { event ->
-                gesture.progress.snapTo(event.progress)
-                gesture.edge = event.swipeEdge
-            }
-            onCommit()
-        } catch (_: CancellationException) {
-            // gest cofnięty
-        } finally {
-            withContext(NonCancellable) { gesture.progress.animateTo(0f, settleSpec) }
-        }
-    }
-    return gesture
 }
 
 private fun hasPermission(context: Context, permission: String) =

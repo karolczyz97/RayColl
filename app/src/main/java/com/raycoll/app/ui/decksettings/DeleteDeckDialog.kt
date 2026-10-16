@@ -21,8 +21,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.raycoll.app.R
+import com.raycoll.app.ui.components.blurredDialogProperties
 import com.raycoll.app.ui.theme.Spacing
-import java.text.Normalizer
+import org.apache.commons.lang3.StringUtils
 
 /**
  * Trwałe usunięcie talii — wymaga wpisania całego słowa potwierdzenia w języku aplikacji;
@@ -36,6 +37,7 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
     val confirmIfValid = { if (confirmed) onConfirm() }
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = blurredDialogProperties(),
         title = { Text(stringResource(R.string.dialog_delete_permanent_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -45,7 +47,6 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
                     onValueChange = { typed = it },
                     label = { Text(token) },
                     supportingText = { Text(stringResource(R.string.delete_confirm_hint, token)) },
-                    shape = MaterialTheme.shapes.small,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { confirmIfValid() }),
@@ -69,11 +70,6 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
     )
 }
 
-private val DIACRITICS = Regex("\\p{M}+")
-
-private fun withoutDiacritics(text: String): String =
-    Normalizer.normalize(text, Normalizer.Form.NFD).replace(DIACRITICS, "")
-
 /** Całe słowo potwierdzenia, bez względu na wielkość liter, ogonki i spacje na brzegach. */
 internal fun isDeleteConfirmed(typed: String, token: String): Boolean =
-    withoutDiacritics(typed.trim()).equals(withoutDiacritics(token), ignoreCase = true)
+    StringUtils.stripAccents(typed.trim()).equals(StringUtils.stripAccents(token), ignoreCase = true)

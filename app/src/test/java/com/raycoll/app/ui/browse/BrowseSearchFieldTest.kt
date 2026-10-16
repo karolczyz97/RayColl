@@ -2,8 +2,9 @@ package com.raycoll.app.ui.browse
 
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
@@ -16,6 +17,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -65,11 +67,15 @@ class BrowseSearchFieldTest {
 
         val filterStalled = CountDownLatch(1)
         filterExecutor.execute { filterStalled.await() } // filtr nie policzy niczego, dopóki piszemy
-        val field = compose.onNode(hasSetTextAction())
-        "zebra".forEach { field.performTextInput(it.toString()) }
+        // pole w otwartym wyszukiwaniu (pasek po dotknięciu rozwija się na cały ekran)
+        val field = { compose.onAllNodes(hasSetTextAction()).onLast() }
+        "zebra".forEach { field().performTextInput(it.toString()) }
 
-        assertEquals("zebra", field.fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
-        assertEquals("cat nadal widoczny — filtr stoi", 1, compose.onAllNodesWithText("cat").fetchSemanticsNodes().size)
+        assertEquals("zebra", field().fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+        assertTrue(
+            "cat nadal widoczny — filtr stoi",
+            compose.onAllNodesWithText("cat").fetchSemanticsNodes().isNotEmpty()
+        )
         filterStalled.countDown()
         compose.waitUntil(5_000) { compose.onAllNodesWithText("cat").fetchSemanticsNodes().isEmpty() }
     }

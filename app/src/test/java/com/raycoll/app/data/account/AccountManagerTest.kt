@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.data.remote.auth.Account
 import com.raycoll.app.data.remote.auth.AuthRepository
+import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.VmTestHarness
@@ -16,11 +17,14 @@ import javax.inject.Provider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
@@ -87,6 +91,42 @@ class AccountManagerTest {
         assertEquals(before, repos.snapshot())
         assertEquals("uid-1", manager.uid.value)
         assertFalse(manager.choiceRequired.value)
+    }
+
+    @Test fun `failed sign in and offline guest recovery leave a retryable state with pending data`() = runTest {
+        configure(true)
+        repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
+        doReturn(SignInResult.Failure(SignInError.LOGIN_FAILED)).`when`(auth).signInWithCredential(
+            any(AuthCredential::class.java)
+                ?: com.google.firebase.auth.GoogleAuthProvider.getCredential("token", null)
+        )
+        `when`(auth.signInAnonymously()).thenThrow(IllegalStateException("offline"))
+        val manager = AccountManager(
+            auth,
+            repos.store,
+            Provider { repos.backupRepository },
+            com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
+            context,
+            backgroundScope
+        )
+        manager.retryStart()
+        assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
+
+        assertFalse(manager.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT))
+
+        assertEquals(AccountState.NeedsInternet, manager.state.value)
+        assertNull(manager.uid.value)
+        val pending = repos.backupRepository.loadPrivate(AccountManager.PENDING)
+        assertNotNull(pending)
+        doAnswer {
+            current = user("recovered-guest", true)
+            mock(AuthResult::class.java).also { `when`(it.user).thenReturn(current) }
+        }.`when`(auth).signInAnonymously()
+        manager.retryStart()
+        assertTrue(manager.state.value is AccountState.Ready)
+        assertEquals("recovered-guest", manager.uid.value)
+        assertEquals(pending, repos.backupRepository.snapshot("recovered-guest"))
+        assertNull(repos.backupRepository.loadPrivate(AccountManager.PENDING))
     }
 
     @Test fun `move to existing account cleans guest and appends data with progress`() = runTest {

@@ -45,6 +45,8 @@ tasks.configureEach {
 android {
     namespace = "com.raycoll.app"
     compileSdk = 37
+    // Compose 1.13 wymaga Android 17.1 SDK (wersja „minor” platformy)
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "com.raycoll.app"
@@ -127,7 +129,6 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons.extended)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 
@@ -145,6 +146,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.commons.csv)
     implementation(libs.commons.text)
+    implementation(libs.commons.lang3)
 
     implementation(libs.media3.session)
 

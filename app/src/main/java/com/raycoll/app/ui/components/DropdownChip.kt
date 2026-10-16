@@ -3,9 +3,6 @@ package com.raycoll.app.ui.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -17,9 +14,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.raycoll.app.R
 
 /** Przycisk z bieżącym wyborem [label], który rozwija listę [options]. */
 @Composable
@@ -38,7 +37,7 @@ fun <T> DropdownChip(
             enabled = enabled,
             onClick = { expanded = true },
             label = { Text(label) },
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
+            trailingIcon = { Icon(painterResource(R.drawable.ic_arrow_drop_down), contentDescription = null) },
             modifier = modifier
         )
         DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
@@ -49,7 +48,7 @@ fun <T> DropdownChip(
                     leadingIcon = {
                         if (current) {
                             Icon(
-                                Icons.Filled.Check,
+                                painterResource(R.drawable.ic_check),
                                 contentDescription = null
                             )
                         } else {

@@ -12,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -95,14 +94,12 @@ fun RayCollNavHost() {
     val navigator = remember(backStack) { Navigator(backStack, predictiveBack) }
     // wynik ekranu (import, archiwizacja) dla pulpitu; przeżywa obrót i śmierć procesu
     var screenResult by rememberSaveable { mutableStateOf<String?>(null) }
-    val density = LocalDensity.current
 
     val entries = rememberDecoratedNavEntries(
         backStack = backStack,
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator(),
-            rememberTransitionCornersDecorator()
+            rememberViewModelStoreNavEntryDecorator()
         ),
         entryProvider = entryProvider {
             entry<DashboardRoute> {
@@ -203,10 +200,8 @@ fun RayCollNavHost() {
             NavDisplay(
                 sceneState = sceneState,
                 navigationEventState = navigationEventState,
-                modifier = Modifier.fillMaxSize(),
-                transitionSpec = { forwardTransition() },
-                popTransitionSpec = { popTransition() },
-                predictivePopTransitionSpec = { edge -> predictivePopTransition(density, edge) }
+                // domyślne przejścia Navigation 3 (także przewijane gestem „wstecz”)
+                modifier = Modifier.fillMaxSize()
             )
         }
     }

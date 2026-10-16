@@ -6,6 +6,7 @@
     <string name="route_deck_settings">Impostazioni mazzo</string>
     <string name="route_study_mode_detail">Modifica modalità di studio</string>
     <string name="btn_cancel">Annulla</string>
+    <string name="btn_close">Chiudi</string>
     <string name="btn_save">Salva</string>
     <string name="btn_delete">Elimina</string>
     <string name="btn_back">Indietro</string>
@@ -17,7 +18,6 @@
     <string name="auth_error_login_failed">Accesso fallito. Riprova.</string>
     <string name="sync_status_syncing">Sincronizzazione delle modifiche…</string>
     <string name="sync_status_offline">Offline — le modifiche saranno inviate dopo la connessione</string>
-    <string name="dialog_delete_desc">Questa azione non può essere annullata.</string>
     <string name="dialog_delete_permanent_title">Eliminare permanentemente?</string>
     <string name="dialog_delete_permanent_desc">Il mazzo «%1$s» verrà eliminato definitivamente. Questa operazione non può essere annullata.</string>
     <string name="dialog_archive_title">Archiviare questo mazzo?</string>
@@ -68,9 +68,9 @@
     <string name="import_page_label">Pagina %1$d</string>
     <string name="stats_title">Statistiche di studio</string>
     <plurals name="stats_heatmap_title">
-        <item quantity="one">Attività nell’ultimo %1$d giorno</item>
-        <item quantity="many">Attività negli ultimi %1$d giorni</item>
-        <item quantity="other">Attività negli ultimi %1$d giorni</item>
+        <item quantity="one">Attività nell’ultima %1$d settimana</item>
+        <item quantity="many">Attività nelle ultime %1$d settimane</item>
+        <item quantity="other">Attività nelle ultime %1$d settimane</item>
     </plurals>
     <string name="stats_heatmap_cd">Ripassi: %1$d; giorni attivi: %2$d; durata della serie: %3$d</string>
     <string name="stats_streak">Striscia di giorni</string>
@@ -78,7 +78,6 @@
     <string name="settings_archive_btn">Archivia mazzo</string>
     <string name="settings_rename_label">Nome del mazzo</string>
     <string name="settings_pages_config">Configurazione delle pagine</string>
-    <string name="settings_study_scope">Ambito di studio</string>
     <string name="settings_card_order">Ordine delle carte</string>
     <string name="settings_card_order_sequential">In ordine</string>
     <string name="settings_card_order_random">Casuale</string>
@@ -220,8 +219,7 @@
     <string name="mode_list_edit">Modifica modalità</string>
     <string name="mode_list_new">Nuova modalità di studio</string>
     <string name="mode_list_reset">Ripristina predefiniti</string>
-    <string name="mode_list_delete_title">Eliminare la modalità?</string>
-    <string name="mode_list_delete_desc">Questa modalità di studio personalizzata verrà eliminata definitivamente. I mazzi che la usano passeranno alla modalità predefinita.</string>
+    <string name="mode_list_deleted">Modalità eliminata.</string>
     <string name="mode_list_reset_title">Ripristinare i predefiniti?</string>
     <string name="mode_list_reset_desc">I passaggi e il nome di questa modalità integrata torneranno all’originale.</string>
     <string name="study_missing_voice_title">Voce di lettura non disponibile</string>
@@ -229,14 +227,12 @@
     <string name="study_missing_voice_btn">Installa una voce di lettura</string>
     <string name="study_answer_correct">Corretto!</string>
     <string name="study_answer_incorrect">Sbagliato</string>
-    <string name="study_answer_skipped">Saltato</string>
     <string name="study_answer_error">Errore di riconoscimento</string>
     <string name="settings_delete_error">Impossibile eliminare il mazzo. Riprova.</string>
     <string name="lang_system">Sistema</string>
     <string name="app_settings_factory_reset">Ripristina dati di fabbrica</string>
     <string name="app_settings_factory_reset_desc">Tutti i mazzi, i progressi, le attività e le modalità di studio verranno sostituiti con dati di esempio. Se hai effettuato l’accesso, dopo la sincronizzazione verranno sostituiti anche i dati sugli altri dispositivi di questo account. Salva prima un backup. Questa operazione non può essere annullata.</string>
     <string name="app_settings_version">Versione %1$s</string>
-    <string name="study_answer_retry">Riprova</string>
     <string name="study_modes_manage">Gestisci modalità…</string>
     <string name="study_modes_modified">Modificato</string>
     <string name="study_modes_info">Le modalità di studio determinano il modo in cui le carte vengono mostrate e valutate. Puoi personalizzarle o ripristinare le impostazioni originali in qualsiasi momento.</string>
@@ -270,9 +266,6 @@
     <string name="mode_editor_step_title">%1$d. %2$s</string>
     <string name="stats_cards_total">Carte: %1$d</string>
     <string name="study_recognized_text">Riconosciuto: %1$s</string>
-    <string name="study_answer_correct_percent">Corretto! • %1$d%%</string>
-    <string name="study_answer_incorrect_percent">Sbagliato • %1$d%%</string>
-    <string name="study_answer_incorrect_threshold">Risposta errata • %1$d%% • richiesto %2$d%%</string>
     <string name="study_suggested_rating">Suggerito: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">In ascolto</string>
@@ -290,7 +283,6 @@
     <string name="sync_now_failed">Le modifiche attendono una connessione internet</string>
     <string name="study_a11y_tap_card">Continua</string>
     <string name="browse_empty_deck">Questo mazzo non ha ancora carte.</string>
-    <string name="a11y_deck_menu_named">Opzioni per %1$s</string>
     <string name="import_hint_format">Una carta per riga. Separa le pagine con tabulazione, punto e virgola, virgola o barra verticale. La prima riga può essere un\'intestazione.</string>
     <string name="mode_editor_discard_title">Scartare le modifiche?</string>
     <string name="mode_editor_discard_desc">Le modifiche a questa modalità non sono state salvate.</string>
@@ -324,7 +316,6 @@
     <string name="dashboard_deck_options">Opzioni</string>
     <string name="browse_clear_search">Cancella ricerca</string>
     <string name="browse_clear_filters">Cancella filtri</string>
-    <string name="a11y_delete_card">Elimina scheda: %1$s</string>
     <string name="mode_editor_add_below">Aggiungi sotto</string>
     <string name="study_progress_description">Scheda %1$d di %2$d</string>
     <string name="study_modes_shared_hint">Le modalità sono condivise da tutti i mazzi. Modificandone una, cambierà per ogni mazzo che la usa.</string>

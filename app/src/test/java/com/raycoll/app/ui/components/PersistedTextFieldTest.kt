@@ -9,7 +9,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
@@ -68,6 +68,18 @@ class PersistedTextFieldTest {
         compose.onNodeWithText("Name required").assertIsDisplayed()
         otherField().performClick()
         field().assertIsNotFocused()
+        assertField("Saved")
+    }
+
+    @Test
+    fun `failed write resets the pending draft even while the field is focused`() {
+        val reset = mutableStateOf(0)
+        compose.setContent {
+            PersistedTextField("Saved", onValueChange = {}, label = "Name", resetKey = reset.value)
+        }
+        field().performClick().performTextReplacement("Not saved")
+        assertField("Not saved")
+        compose.runOnIdle { reset.value++ }
         assertField("Saved")
     }
 

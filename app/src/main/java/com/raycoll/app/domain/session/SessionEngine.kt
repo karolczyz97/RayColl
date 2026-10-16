@@ -16,6 +16,7 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.referencedPage
+import com.raycoll.app.domain.operations.reviewed
 import com.raycoll.app.domain.steps.CompoundExpander
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -169,6 +170,9 @@ class SessionEngine(
             deps.onCardReviewed(group.id, card.id, rating, null)
         }
         if (rating == Ratings.AGAIN) dispatch(SessionAction.AddFailedCard(card.id))
+        // ten sam wynik FSRS, który zapisuje repozytorium — liczony lokalnie, bez czytania z chmury
+        val reviewed = card.reviewed(rating, clock.now(), baseSrsStates.getValue(card.id))
+        dispatch(SessionAction.UpdateCardSrs(card.id, reviewed.srsState))
         dispatch(SessionAction.SetCardReviewed)
     }
 

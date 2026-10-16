@@ -12,7 +12,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -29,6 +29,7 @@ import com.raycoll.app.domain.session.SessionState
 import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.domain.session.sessionReducer
 import com.raycoll.app.ui.theme.LocalSrsColors
+import com.raycoll.app.ui.theme.withMinimumContrast
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -84,7 +85,10 @@ class StudyCardTest {
             SessionState(currentCardIndex = 75, cards = List(150) { Flashcard("c$it", listOf("q", "a"), SrsState()) })
         var currentColor = Color.Unspecified
         compose.setContent {
-            currentColor = LocalSrsColors.current.newFg
+            currentColor = LocalSrsColors.current.newAccent.withMinimumContrast(
+                androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest,
+                4.5f
+            )
             SessionProgressBar(session)
         }
         val pixels = compose.onRoot().captureToImage().toPixelMap()
@@ -150,20 +154,22 @@ class StudyCardTest {
         val answered = SessionState(
             cards = cards,
             revealedPages = listOf(0, 1),
-            lastAnswerResult = LastAnswerResult(status = AnswerStatus.SKIPPED)
+            lastAnswerResult = LastAnswerResult(status = AnswerStatus.INCORRECT, text = "old answer")
         )
         var state by mutableStateOf(active(answered, 2))
         compose.setContent { StudyCardContent("deck", state, noActions) }
-        compose.onNodeWithText("Skipped", substring = true).assertExists()
+        compose.onNodeWithText("old answer", substring = true).assertExists()
 
         state = active(sessionReducer(answered, SessionAction.AdvanceCard(1)), 2)
         compose.mainClock.advanceTimeBy(5_000)
         compose.waitForIdle()
         compose.onNodeWithText("q2").assertExists()
-        compose.onNodeWithText("Skipped", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("old answer", substring = true).assertDoesNotExist()
         // nowa karta może być odkryta — stary wynik niczego nie blokuje
         compose.onNodeWithText("Tap to reveal").assertExists()
     }
+
+    private fun pageState(label: String) = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, label)
 
     private val twoPageCard = Flashcard(id = "c1", pages = listOf("front", "back"), srsState = SrsState())
 
@@ -209,25 +215,25 @@ class StudyCardTest {
     fun `audio indicator is exposed to TalkBack`() {
         var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
         compose.setContent { StudyCardContent("deck", state, noActions) }
-        compose.onNodeWithText("Speaking").assertExists()
+        compose.onNode(pageState("Speaking")).assertExists()
 
         state = audioState(SessionStatus.LISTENING, 1)
         compose.waitForIdle()
-        compose.onNodeWithText("Listening").assertExists()
+        compose.onNode(pageState("Listening")).assertExists()
     }
 
     @Test
     fun `audio indicator is held briefly and then removed`() {
         var state by mutableStateOf(audioState(SessionStatus.SPEAKING, 0))
         compose.setContent { StudyCardContent("deck", state, noActions) }
-        compose.onNodeWithText("Speaking").assertExists()
+        compose.onNode(pageState("Speaking")).assertExists()
 
         compose.mainClock.autoAdvance = false
         state = audioState(SessionStatus.IDLE, null)
         compose.mainClock.advanceTimeBy(100)
-        compose.onNodeWithText("Speaking").assertExists()
+        compose.onNode(pageState("Speaking")).assertExists()
         compose.mainClock.advanceTimeBy(600)
-        compose.onNodeWithText("Speaking").assertDoesNotExist()
+        compose.onNode(pageState("Speaking")).assertDoesNotExist()
     }
 
     @Test

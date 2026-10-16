@@ -4,8 +4,10 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -37,13 +39,15 @@ class BrowseScreenTest {
         val vm = BrowseViewModel(deck(listOf(listOf("cat", "kot"))), repos.deckRepository, testPreferences.repository)
         compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { compose.onAllNodesWithText("cat").fetchSemanticsNodes().isNotEmpty() }
-        val field = compose.onNode(hasSetTextAction())
-        field.performTextInput("cat")
-        field.performImeAction()
-        org.junit.Assert.assertEquals("cat", vm.search.value)
-        compose.onNodeWithContentDescription("Clear search").performClick()
-        org.junit.Assert.assertEquals("", vm.search.value)
-        org.junit.Assert.assertEquals("", field.fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+        searchField().performTextInput("cat")
+        searchField().performImeAction()
+        compose.waitUntil(5_000) { vm.search.value == "cat" }
+        compose.onAllNodesWithContentDescription("Clear search").onLast().performClick()
+        compose.waitUntil(5_000) { vm.search.value == "" }
+        org.junit.Assert.assertEquals(
+            "",
+            searchField().fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+        )
     }
 
     @get:Rule
@@ -59,6 +63,9 @@ class BrowseScreenTest {
     @After
     fun teardown() {
     }
+
+    // po dotknięciu pasek otwiera wyszukiwanie na cały ekran — pole w nim jest ostatnim polem tekstowym
+    private fun searchField() = compose.onAllNodes(hasSetTextAction()).onLast()
 
     private fun deck(cards: List<List<String>>) = runBlocking {
         repos.deckRepository.addDeckWithCards("Deck", listOf("en-US", "pl-PL"), listOf("Front", "Back"), cards)
@@ -80,11 +87,11 @@ class BrowseScreenTest {
         val vm = BrowseViewModel(deck(listOf(listOf("cat", "kot"))), repos.deckRepository, testPreferences.repository)
         compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { compose.onAllNodesWithText("cat").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNode(hasSetTextAction()).performTextInput("zzz")
+        searchField().performTextInput("zzz")
         compose.waitUntil(5_000) {
             compose.onAllNodesWithText("No flashcards found.").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNode(hasSetTextAction()).assertIsDisplayed()
+        searchField().assertIsDisplayed()
     }
 
     @Test

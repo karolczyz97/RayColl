@@ -27,7 +27,7 @@ import com.raycoll.app.ui.theme.Spacing
 fun MigrationDialog(busy: Boolean = false, failed: Boolean = false, onChoose: (GuestDataChoice) -> Unit) {
     AlertDialog(
         onDismissRequest = {},
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        properties = blurredDialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.auth_migration_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {

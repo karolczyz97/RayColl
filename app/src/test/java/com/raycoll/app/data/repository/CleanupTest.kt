@@ -6,6 +6,7 @@ import com.raycoll.app.data.firestore.Docs
 import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.data.firestore.UserPaths
 import com.raycoll.app.data.firestore.WriteOp
+import com.raycoll.app.domain.merge.getGuestHasData
 import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.VmTestHarness
@@ -16,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -70,5 +72,25 @@ class CleanupTest {
         job.join()
         assertNull(repos.deckRepository.getDeck(id))
         assertEquals(clock.now(), repos.snapshot().groups.single().deletedAt)
+    }
+
+    @Test
+    fun `purging a deleted seed card preserves the guest deck change`() = runTest {
+        repos.seed()
+        val seed = repos.snapshot().groups.first()
+        val removed = seed.cards.first()
+        repos.deckRepository.deleteCard(removed.id)
+        clock.advance(31L * 86_400_000)
+
+        Cleanup(repos.store, clock).run("uid-1")
+
+        val snapshot = repos.snapshot()
+        assertNull(repos.store.cachedDoc(paths.card(seed.id, removed.id)))
+        assertEquals(clock.now(), snapshot.groups.first().updatedAt)
+        assertTrue(getGuestHasData(snapshot.groups, snapshot.activityHeatmap, snapshot.studyModes))
+        repos.account.signIn("google")
+        repos.backupRepository.joinGuest(snapshot, "google", " (from phone)")
+        assertEquals(listOf(seed.id), repos.snapshot().groups.map { it.id })
+        assertEquals(seed.cards.drop(1), repos.snapshot().groups.single().cards)
     }
 }

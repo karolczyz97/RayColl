@@ -111,7 +111,8 @@ class SaveFailureTest {
 
     @Test
     fun `dashboard, archive and study modes report failed writes`() = runTest {
-        val dashboard = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, FakeClock())
+        val dashboard =
+            DashboardViewModel(repos.deckRepository, repos.studyModeRepository, FakeClock(), testPreferences.repository)
         val archive = ArchiveViewModel(repos.deckRepository, FakeClock(), Dispatchers.Unconfined)
         val modes = StudyModesViewModel(repos.studyModeRepository)
         breakDatabase()

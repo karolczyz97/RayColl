@@ -151,7 +151,9 @@ class BackupRepository @Inject constructor(
         store.writeAll(operations(live(data), uid))
     }
     suspend fun joinGuest(data: StoreData, uid: String, modeSuffix: String) {
-        val own = live(data)
+        // Rozpoznaj zmienione talie przed odfiltrowaniem usuniętych kart: samo usunięcie
+        // przykładowej fiszki też jest zmianą użytkownika.
+        val own = live(data.copy(groups = data.groups.filter { !it.isUntouchedSeed() }))
         // Id kopii zależy też od chwili zmiany trybu: ponowienie z pending_join trafia w tę samą kopię,
         // a przeniesienie innego gościa na to samo konto nie nadpisuje poprzedniej.
         val remap = own.studyModes.filter { it.isBuiltIn && it.isModifiedBuiltIn() }.associate {
@@ -168,7 +170,7 @@ class BackupRepository @Inject constructor(
                 }
             }
         }
-        val groups = own.groups.filter { !it.isUntouchedSeed() }.map {
+        val groups = own.groups.map {
             it.copy(
                 activeModeId =
                     remap[it.activeModeId] ?: it.activeModeId

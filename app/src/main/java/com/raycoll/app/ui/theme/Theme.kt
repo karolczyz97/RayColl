@@ -111,14 +111,19 @@ fun RayCollTheme(
     }
     CompositionLocalProvider(
         LocalSrsColors provides if (isDark) DarkSrsColors else LightSrsColors,
-        LocalRatingColors provides if (isDark) DarkRatingColors else LightRatingColors
+        // „Jeszcze raz” i „Dobrze” biorą kolory z bieżącego schematu, więc z dynamicznymi kolorami
+        // pasują do reszty aplikacji; „Trudne”/„Łatwe” zostają stałe (żółty/zielony to znaczenie, nie motyw)
+        LocalRatingColors provides (if (isDark) DarkRatingColors else LightRatingColors).copy(
+            againBg = colorScheme.errorContainer,
+            againFg = colorScheme.onErrorContainer,
+            goodBg = colorScheme.primaryContainer,
+            goodFg = colorScheme.onPrimaryContainer
+        )
     ) {
         // styl Material 3 Expressive: sprężysty ruch i kształty komponentów reagujące na dotyk
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
             motionScheme = MotionScheme.expressive(),
-            typography = RayCollTypography,
-            shapes = RayCollShapes,
             content = content
         )
     }

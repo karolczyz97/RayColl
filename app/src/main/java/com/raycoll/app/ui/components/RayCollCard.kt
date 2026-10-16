@@ -20,7 +20,6 @@ fun RayCollCard(
 ) {
     ElevatedCard(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         content = content
@@ -41,7 +40,6 @@ fun RayCollCard(
         modifier = modifier.then(
             if (onClickLabel == null) Modifier else Modifier.semantics { onClick(label = onClickLabel, action = null) }
         ),
-        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         content = content

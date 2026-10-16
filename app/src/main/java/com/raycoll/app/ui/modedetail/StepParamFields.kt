@@ -3,13 +3,8 @@ package com.raycoll.app.ui.modedetail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -17,9 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
@@ -36,7 +28,8 @@ import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.ui.components.ChoiceChip
+import com.raycoll.app.ui.components.SingleChoiceButtonGroup
+import com.raycoll.app.ui.components.SwitchRow
 import com.raycoll.app.ui.theme.Spacing
 
 private const val MAX_WAIT_MS = 600_000
@@ -87,7 +80,7 @@ private fun CompoundParams(step: CompoundStep, onUpdate: (CompoundParams) -> Uni
     when (val params = step.params) {
         is CompoundParams.PresentFront -> FieldRow {
             PageField(R.string.compound_field_page, params.page) { onUpdate(params.copy(page = it)) }
-            LabeledSwitch(R.string.compound_field_speak, params.speak) { onUpdate(params.copy(speak = it)) }
+            SwitchRow(stringResource(R.string.compound_field_speak), params.speak) { onUpdate(params.copy(speak = it)) }
         }
 
         is CompoundParams.SpeakPauseNext -> FieldRow {
@@ -102,10 +95,10 @@ private fun CompoundParams(step: CompoundStep, onUpdate: (CompoundParams) -> Uni
             }
             PageField(R.string.compound_field_answer_page, params.answerPage) { onUpdate(params.copy(answerPage = it)) }
             MultiplierField(params.multiplier) { onUpdate(params.copy(multiplier = it)) }
-            LabeledSwitch(R.string.compound_field_speak_question, params.speakQuestion) {
+            SwitchRow(stringResource(R.string.compound_field_speak_question), params.speakQuestion) {
                 onUpdate(params.copy(speakQuestion = it))
             }
-            LabeledSwitch(R.string.compound_field_speak_answer, params.speakAnswer) {
+            SwitchRow(stringResource(R.string.compound_field_speak_answer), params.speakAnswer) {
                 onUpdate(params.copy(speakAnswer = it))
             }
         }
@@ -113,13 +106,13 @@ private fun CompoundParams(step: CompoundStep, onUpdate: (CompoundParams) -> Uni
         is CompoundParams.ListenGrade -> FieldRow {
             PageField(R.string.compound_field_answer_page, params.answerPage) { onUpdate(params.copy(answerPage = it)) }
             ThresholdField(params.threshold) { onUpdate(params.copy(threshold = it)) }
-            LabeledSwitch(R.string.compound_field_manual_fallback, params.manualFallback) {
+            SwitchRow(stringResource(R.string.compound_field_manual_fallback), params.manualFallback) {
                 onUpdate(params.copy(manualFallback = it))
             }
         }
 
         is CompoundParams.GradeAfterListen ->
-            LabeledSwitch(R.string.compound_field_manual_fallback, params.manualFallback) {
+            SwitchRow(stringResource(R.string.compound_field_manual_fallback), params.manualFallback) {
                 onUpdate(params.copy(manualFallback = it))
             }
 
@@ -137,22 +130,14 @@ private fun CompoundParams(step: CompoundStep, onUpdate: (CompoundParams) -> Uni
 private fun RevealStyleSelector(selected: RevealStyle, onChange: (RevealStyle) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.compound_field_reveal_style), style = MaterialTheme.typography.labelMedium)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
-        ) {
-            listOf(
-                RevealStyle.NEXT to R.string.compound_reveal_next,
-                RevealStyle.ALL to R.string.compound_reveal_all
-            ).forEach { (style, label) ->
-                ChoiceChip(
-                    selected = selected == style,
-                    onClick = { onChange(style) },
-                    label = { Text(stringResource(label)) },
-                    modifier = Modifier.semantics { role = Role.RadioButton }
-                )
-            }
-        }
+        SingleChoiceButtonGroup(
+            options = listOf(
+                RevealStyle.NEXT to stringResource(R.string.compound_reveal_next),
+                RevealStyle.ALL to stringResource(R.string.compound_reveal_all)
+            ),
+            selected = selected,
+            onSelect = onChange
+        )
     }
 }
 
@@ -229,17 +214,4 @@ private fun MultiplierField(value: Double, onChange: (Double) -> Unit) {
         onValidityChange = { onValidity(R.string.compound_field_multiplier, it) },
         modifier = Modifier.width(fieldWidth())
     )
-}
-
-@Composable
-private fun LabeledSwitch(labelRes: Int, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
-    ) {
-        Text(stringResource(labelRes), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = null)
-    }
 }

@@ -40,6 +40,8 @@ class StudyModesViewModel @Inject constructor(private val studyModeRepository: S
 
     fun deleteMode(modeId: String) = save { studyModeRepository.deleteMode(modeId) }
 
+    fun restoreMode(modeId: String) = save { studyModeRepository.restoreMode(modeId) }
+
     private fun save(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(StudyModesEvent.SaveFailed) }, block = block)
     }

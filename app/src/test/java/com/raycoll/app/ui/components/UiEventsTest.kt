@@ -1,7 +1,7 @@
 package com.raycoll.app.ui.components
 
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
 import org.junit.Rule

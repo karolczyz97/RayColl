@@ -1,13 +1,15 @@
 package com.raycoll.app.ui.dashboard
 
 import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.R
@@ -23,6 +25,8 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class DashboardScrollTest {
+    @get:org.junit.Rule val testPreferences = com.raycoll.app.testing.PreferencesRule()
+
     @get:Rule val compose = createComposeRule()
 
     @Test
@@ -37,7 +41,8 @@ class DashboardScrollTest {
                 listOf(listOf("q", "a"))
             )
         }
-        val vm = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, FakeClock())
+        val vm =
+            DashboardViewModel(repos.deckRepository, repos.studyModeRepository, FakeClock(), testPreferences.repository)
         var studied: String? = null
         var browsed: String? = null
         try {
@@ -69,7 +74,7 @@ class DashboardScrollTest {
                 )
             }
         }
-        val vm = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock)
+        val vm = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock, testPreferences.repository)
         try {
             compose.setContent { DashboardScreen({}, {}, {}, {}, {}, {}, {}, {}, vm) }
             compose.waitUntil(5_000) { (vm.uiState.value as? DashboardUiState.Ready)?.decks?.size == 10 }
@@ -81,6 +86,37 @@ class DashboardScrollTest {
             }
             compose.mainClock.advanceTimeBy(1_000)
             compose.onNodeWithText("Updated deck").assertIsDisplayed()
+        } finally {
+            vm.viewModelScope.cancel()
+            compose.waitForIdle()
+        }
+    }
+
+    @Test
+    fun `failed archive returns the deck to view`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val clock = FakeClock()
+        val repos = VmTestHarness.create(context, clock)
+        val id = runBlocking {
+            testPreferences.repository.deckSwipeLearned()
+            repos.deckRepository.addDeckWithCards(
+                "Biology",
+                listOf("en", "pl"),
+                listOf("A", "B"),
+                listOf(listOf("q", "a"))
+            )
+        }
+        val vm = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock, testPreferences.repository)
+        try {
+            compose.setContent { DashboardScreen({}, {}, {}, {}, {}, {}, {}, {}, vm) }
+            compose.waitUntil(5_000) { vm.uiState.value is DashboardUiState.Ready }
+            compose.onNodeWithText("Biology").performSemanticsAction(SemanticsActions.OnLongClick) { it() }
+            compose.waitForIdle()
+            repos.store.failWhen = { true }
+            compose.onNodeWithText(context.getString(R.string.btn_archive)).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Biology").assertIsDisplayed()
+            assertEquals(null, runBlocking { repos.deckRepository.getDeck(id) }!!.archivedAt)
         } finally {
             vm.viewModelScope.cancel()
             compose.waitForIdle()

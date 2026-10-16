@@ -1,4 +1,4 @@
-# Reguły aplikacji dla R8. Media3, Firebase/Play Services, Room, Hilt, Credential Manager
+# Reguły aplikacji dla R8. Media3, Firebase/Play Services, Hilt, Credential Manager
 # i kotlinx.serialization dostarczają własne reguły konsumenckie (META-INF/proguard,
 # META-INF/com.android.tools) — globalne -keep dla tych bibliotek tylko powiększały APK.
 

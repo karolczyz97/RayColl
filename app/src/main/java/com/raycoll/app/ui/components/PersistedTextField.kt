@@ -1,6 +1,5 @@
 package com.raycoll.app.ui.components
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,10 +25,11 @@ fun PersistedTextField(
     label: String,
     modifier: Modifier = Modifier,
     isError: (String) -> Boolean = { false },
-    errorText: String? = null
+    errorText: String? = null,
+    resetKey: Int = 0
 ) {
-    var text by rememberSaveable { mutableStateOf(storedValue) }
-    var pendingValue by rememberSaveable { mutableStateOf<String?>(null) }
+    var text by rememberSaveable(resetKey) { mutableStateOf(storedValue) }
+    var pendingValue by rememberSaveable(resetKey) { mutableStateOf<String?>(null) }
     var focused by remember { mutableStateOf(false) }
     LaunchedEffect(storedValue, focused, pendingValue) {
         if (storedValue == pendingValue) pendingValue = null
@@ -54,7 +54,6 @@ fun PersistedTextField(
             null
         },
         singleLine = true,
-        shape = MaterialTheme.shapes.small,
         modifier = modifier.onFocusChanged { focused = it.isFocused }
     )
 }

@@ -63,6 +63,10 @@ class AccountManager @Inject constructor(
 
     suspend fun retryStart() = operation {
         state.value = AccountState.Starting
+        prepareOrNeedsInternet()
+    }
+
+    private suspend fun prepareOrNeedsInternet() {
         try {
             prepareAccount()
         } catch (e: CancellationException) {
@@ -202,7 +206,7 @@ class AccountManager @Inject constructor(
             Log.w("AccountManager", "Account change failed", e)
             // Jeśli konto zostało przełączone, plik pending zostaje do dokończenia przy starcie.
             if (auth.currentUser == null) {
-                runCatching { prepareAccount() }
+                prepareOrNeedsInternet()
             } else {
                 ready()
             }

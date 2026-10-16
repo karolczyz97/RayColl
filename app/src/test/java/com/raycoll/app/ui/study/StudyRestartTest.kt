@@ -140,7 +140,8 @@ class StudyRestartTest {
         assertTrue(state.finished)
         assertEquals(2, state.reviewedCardCount)
         assertTrue(state.resultCards!!.all { it.srsState.state == 2 && it.srsState.repetitions == 1 })
-        assertTrue(state.session.cards.all { it.srsState.state == 0 })
+        // karty sesji też mają już stan po ocenie (pasek postępu pokazuje aktualną kategorię)
+        assertTrue(state.session.cards.all { it.srsState.state == 2 })
         assertEquals(2, state.completedCardCount)
         vm.endSessionEarly() // spóźnione potwierdzenie otwartego wcześniej dialogu
         idle()

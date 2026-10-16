@@ -3,7 +3,7 @@ package com.raycoll.app.ui.modedetail
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.DynamicPauseStep

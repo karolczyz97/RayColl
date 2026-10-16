@@ -27,9 +27,18 @@ class Cleanup @Inject constructor(private val store: DocumentStore, private val 
                     (it.data["deletedAt"] as? Number)?.toLong()?.let { at -> at < cutoff } == true
             }
             // Nawet przy wielu porcjach rodzic jest zawsze usuwany po kartach.
+            // Po usunięciu tombstonów talia startowa nadal musi być rozpoznawana jako zmieniona.
+            val parent = when {
+                removeDeck -> listOf(WriteOp.Delete(paths.deck(deck.id)))
+
+                deck.updatedAt == 0L && deletedCards.isNotEmpty() -> listOf(
+                    WriteOp.Update(paths.deck(deck.id), mapOf("updatedAt" to now))
+                )
+
+                else -> emptyList()
+            }
             store.writeAll(
-                deletedCards.map { WriteOp.Delete(paths.card(deck.id, it.id)) } +
-                    if (removeDeck) listOf(WriteOp.Delete(paths.deck(deck.id))) else emptyList()
+                deletedCards.map { WriteOp.Delete(paths.card(deck.id, it.id)) } + parent
             )
             if (deck.isArchiveExpired(now)) {
                 store.write(WriteOp.Update(paths.deck(deck.id), mapOf("deletedAt" to now, "updatedAt" to now)))

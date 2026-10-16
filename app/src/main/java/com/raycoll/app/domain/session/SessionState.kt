@@ -1,6 +1,7 @@
 package com.raycoll.app.domain.session
 
 import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.SrsState
 
 enum class SessionStatus { IDLE, SPEAKING, LISTENING, REVEALED, FINISHED, ERROR }
 enum class AnswerStatus { NONE, CORRECT, INCORRECT, SKIPPED, ERROR }
@@ -68,4 +69,7 @@ sealed interface SessionAction {
     data class AddFailedCard(val cardId: String) : SessionAction
     data class RemoveFailedCard(val cardId: String) : SessionAction
     data object SetCardReviewed : SessionAction
+
+    /** Nowy stan powtórek karty po ocenie — pasek postępu pokazuje jej aktualną kategorię. */
+    data class UpdateCardSrs(val cardId: String, val srsState: SrsState) : SessionAction
 }

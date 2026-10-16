@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
@@ -25,10 +22,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.InfiniteAnimationPolicy
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.raycoll.app.R
 import com.raycoll.app.ui.theme.Spacing
 
 /** Treść ekranu, która jeszcze się wczytuje. */
@@ -59,7 +58,7 @@ fun ExpressiveLoadingIndicator(modifier: Modifier = Modifier) {
 fun EmptyState(
     message: String,
     modifier: Modifier = Modifier,
-    icon: ImageVector = Icons.Filled.Inbox,
+    icon: Painter = painterResource(R.drawable.ic_inbox),
     action: (@Composable () -> Unit)? = null
 ) {
     MessageState(message, icon, MaterialTheme.colorScheme.primary, modifier, action)
@@ -68,13 +67,19 @@ fun EmptyState(
 /** Treści nie da się pokazać (np. talię usunięto na innym urządzeniu). */
 @Composable
 fun ErrorState(message: String, modifier: Modifier = Modifier) {
-    MessageState(message, Icons.Filled.ErrorOutline, MaterialTheme.colorScheme.error, modifier, action = null)
+    MessageState(
+        message,
+        painterResource(R.drawable.ic_error),
+        MaterialTheme.colorScheme.error,
+        modifier,
+        action = null
+    )
 }
 
 @Composable
 private fun MessageState(
     message: String,
-    icon: ImageVector,
+    icon: Painter,
     iconTint: Color,
     modifier: Modifier,
     action: (@Composable () -> Unit)?

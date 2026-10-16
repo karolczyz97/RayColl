@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -18,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -67,7 +65,6 @@ internal fun PreviewRow(
             onValueChange = { onCellChange(column, it) },
             label = { Text(stringResource(R.string.import_cell_label, rowNumber, name)) },
             enabled = enabled,
-            shape = MaterialTheme.shapes.small,
             singleLine = !vertical,
             maxLines = if (vertical) 3 else 1,
             modifier = modifier
@@ -76,7 +73,7 @@ internal fun PreviewRow(
     val delete: @Composable () -> Unit = {
         IconButton(shapes = IconButtonDefaults.shapes(), onClick = onDelete, enabled = enabled) {
             Icon(
-                Icons.Filled.Delete,
+                painterResource(R.drawable.ic_delete),
                 contentDescription = stringResource(
                     R.string.a11y_item_action,
                     stringResource(R.string.btn_delete),

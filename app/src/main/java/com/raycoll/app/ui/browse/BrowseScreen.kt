@@ -1,33 +1,25 @@
 package com.raycoll.app.ui.browse
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -43,26 +35,29 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.ui.components.CardStatsBar
-import com.raycoll.app.ui.components.ChoiceChip
 import com.raycoll.app.ui.components.CollectEvents
-import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.EmptyState
 import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.SingleChoiceButtonGroup
 import com.raycoll.app.ui.components.SwipeToDeleteItem
 import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.components.srsCategoryIcon
 import com.raycoll.app.ui.navigation.sharedDeckTitle
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
@@ -142,7 +137,12 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
                     onClick = { editTarget = CardEditTarget.New },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.browse_add_card)) }
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_add),
+                        contentDescription = stringResource(R.string.browse_add_card)
+                    )
+                }
             }
         }
     ) { padding ->
@@ -234,38 +234,19 @@ private fun BrowseContent(
     onRestoredShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val keyboard = LocalSoftwareKeyboardController.current
     // nagłówek jest elementem listy (przewija się razem z nią, w poziomie zostaje miejsce na karty);
     // jedna lista także przy braku wyników — pole wyszukiwania nie jest odtwarzane i nie traci fokusu
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.fabClearance),
-        verticalArrangement = Arrangement.spacedBy(Spacing.s)
+        contentPadding = PaddingValues(top = Spacing.s, bottom = Spacing.fabClearance),
+        verticalArrangement = Arrangement.spacedBy(Spacing.item)
     ) {
         item(key = "header") {
             Column {
                 CardStatsBar(state.counts, Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.s))
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = onSearch,
-                    placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = if (query.isNotEmpty()) {
-                        {
-                            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { onSearch("") }) {
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription = stringResource(R.string.browse_clear_search)
-                                )
-                            }
-                        }
-                    } else {
-                        null
-                    },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
-                    shape = MaterialTheme.shapes.small,
-                    singleLine = true,
+                BrowseSearchField(
+                    query = query,
+                    onSearch = onSearch,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.screen)
@@ -302,7 +283,7 @@ private fun BrowseContent(
                 SwipeToDeleteItem(
                     onDelete = { onDelete(card, true) },
                     deleteLabel = stringResource(R.string.btn_delete),
-                    shape = MaterialTheme.shapes.large,
+                    shape = CardDefaults.elevatedShape,
                     showHint = card.id == hintCardId,
                     onHintShown = onHintShown,
                     enterFromStart = card.id == restoredCardId,
@@ -321,31 +302,82 @@ private fun BrowseContent(
     }
 }
 
+private class CategoryOption(val category: SrsCardCategory?, val name: String, val count: Int)
+
+/**
+ * Filtr kategorii jako połączona grupa przycisków. Gdy nazwy z liczbą nie mieszczą się w jednym rzędzie
+ * (zwykły telefon w pionie), przyciski pokazują ikonę i liczbę; nazwa zostaje dla czytnika ekranu.
+ */
 @Composable
 private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCategory?) -> Unit) {
     val counts = state.counts
-    val chips = listOf(
-        null to (R.string.filter_all to counts.total),
-        SrsCardCategory.NEW to (R.string.srs_badge_new to counts.newCount),
-        SrsCardCategory.LEARNING to (R.string.srs_badge_learning to counts.learning),
-        SrsCardCategory.REVIEW to (R.string.srs_badge_review to counts.review),
-        SrsCardCategory.MASTERED to (R.string.srs_badge_mastered to counts.mastered)
+    val options = listOf(
+        CategoryOption(null, stringResource(R.string.filter_all), counts.total),
+        CategoryOption(
+            SrsCardCategory.NEW,
+            stringResource(R.string.srs_badge_new),
+            counts.newCount
+        ),
+        CategoryOption(
+            SrsCardCategory.LEARNING,
+            stringResource(R.string.srs_badge_learning),
+            counts.learning
+        ),
+        CategoryOption(
+            SrsCardCategory.REVIEW,
+            stringResource(R.string.srs_badge_review),
+            counts.review
+        ),
+        CategoryOption(
+            SrsCardCategory.MASTERED,
+            stringResource(R.string.srs_badge_mastered),
+            counts.mastered
+        )
     )
-    FlowRow(
-        Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.s),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
-    ) {
-        chips.forEach { (category, label) ->
-            val (labelRes, count) = label
-            ChoiceChip(
-                selected = state.category == category,
-                onClick = { onCategory(category) },
-                label = { Text(stringResource(R.string.filter_chip_count, stringResource(labelRes), count)) }
-            )
+    val labelStyle = MaterialTheme.typography.labelLarge
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.s)) {
+        val labelWidths = options.map { option ->
+            with(density) {
+                measurer.measure("${option.name} ${option.count}", labelStyle, maxLines = 1).size.width.toDp()
+            }
+        }
+        val needed = labelWidths.sumOf { (it + CategoryLabelPadding * 2).value.toDouble() } +
+            ButtonGroupDefaults.ConnectedSpaceBetween.value * (options.size - 1)
+        val iconsOnly = needed > maxWidth.value
+        val byCategory = options.associateBy { it.category }
+        SingleChoiceButtonGroup(
+            options = options.map { it.category to it.name },
+            selected = state.category,
+            onSelect = onCategory,
+            compact = true,
+            weight = { index -> if (iconsOnly) 1f else labelWidths[index].value }
+        ) { category, _ ->
+            val option = byCategory.getValue(category)
+            val description = stringResource(R.string.filter_chip_count, option.name, option.count)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                modifier = Modifier.clearAndSetSemantics { contentDescription = description }
+            ) {
+                if (iconsOnly) {
+                    Icon(
+                        painterResource(srsCategoryIcon(option.category)),
+                        contentDescription = null,
+                        modifier = Modifier.size(CategoryIconSize)
+                    )
+                } else {
+                    Text(option.name, style = labelStyle, maxLines = 1)
+                }
+                Text(option.count.toString(), style = labelStyle, maxLines = 1)
+            }
         }
     }
 }
+
+private val CategoryLabelPadding = Spacing.s
+private val CategoryIconSize = 18.dp
 
 /** Pełny tekst strony widać w edytorze po dotknięciu karty. */
 private const val MAX_PAGE_LINES = 4

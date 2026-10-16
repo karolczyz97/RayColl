@@ -3,6 +3,7 @@ package com.raycoll.app.ui.navigation
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -39,7 +40,7 @@ private fun deckBoundsTransform(): BoundsTransform {
 /** Karta talii przechodząca między ekranami. */
 @Composable
 fun Modifier.sharedDeckCard(deckId: String): Modifier {
-    val clip = MaterialTheme.shapes.large
+    val clip = CardDefaults.elevatedShape
     val boundsTransform = deckBoundsTransform()
     return withSharedScopes { modifier, visibilityScope ->
         modifier.sharedBounds(

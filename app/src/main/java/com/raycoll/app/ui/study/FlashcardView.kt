@@ -1,34 +1,22 @@
 package com.raycoll.app.ui.study
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,31 +28,40 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.ui.components.RayCollCard
+import com.raycoll.app.ui.theme.LocalRatingColors
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
 /** To, co widać na karcie w danej chwili — animacja zmiany karty pokazuje stary i nowy stan osobno. */
 internal data class CardFace(
     val card: Flashcard,
+    /** Pozycja karty w sesji — po niej poznajemy kierunek przejścia (dalej / wstecz). */
+    val index: Int = 0,
     /** Aktywne strony karty (ukryte strony talii nie są pokazywane ani odkrywane). */
     val pages: List<String>,
     val revealedPages: List<Int>,
     val peekedPage: Int?,
     val audioPage: Int?,
-    val listening: Boolean
+    val listening: Boolean,
+    /** Strona, z którą porównano odpowiedź głosową, i wynik — strona świeci na zielono albo czerwono. */
+    val answerPage: Int? = null,
+    val answerStatus: AnswerStatus = AnswerStatus.NONE
 )
 
 // próg długości tekstu (znaki) → mniejsza czcionka, żeby długie strony mieściły się na karcie
@@ -74,9 +71,6 @@ private const val LONGEST_TEXT = 260
 
 // po ustaniu dźwięku znacznik trzyma się chwilę, żeby nie migał między krokami (koniec czytania → początek następnego)
 private const val AUDIO_RELEASE_MS = 250L
-
-private val AudioLabelIcon = 16.dp
-private val AudioLabelIconCompact = 12.dp
 
 // w poziomie wysokość ekranu to ok. połowa pionowej — mniejsza czcionka i odstępy, żeby karta się mieściła
 private const val COMPACT_FONT_SCALE = 0.72f
@@ -104,8 +98,10 @@ internal fun FlashcardView(face: CardFace, actions: CardActions, modifier: Modif
             targetState = face,
             contentKey = { it.card.id },
             transitionSpec = {
-                (fadeIn(effects) + slideInHorizontally(spatialOffset) { it / 4 })
-                    .togetherWith(fadeOut(effects) + slideOutHorizontally(spatialOffset) { -it / 4 })
+                // dalej: nowa karta wjeżdża z prawej; wstecz: z lewej
+                val direction = if (targetState.index >= initialState.index) 1 else -1
+                (fadeIn(effects) + slideInHorizontally(spatialOffset) { direction * it / 4 })
+                    .togetherWith(fadeOut(effects) + slideOutHorizontally(spatialOffset) { -direction * it / 4 })
             },
             label = "card_change",
             modifier = Modifier.fillMaxWidth()
@@ -113,132 +109,94 @@ internal fun FlashcardView(face: CardFace, actions: CardActions, modifier: Modif
     }
 }
 
-/** Co robi dźwięk na danej stronie: nic, mówi (głośnik) albo słucha (mikrofon). */
-private enum class AudioMark { NONE, SPEAKING, LISTENING }
+/** Stan strony: nic, czytana, słuchana albo wynik odpowiedzi na niej (dobrze / źle). */
+private enum class AudioMark { NONE, SPEAKING, LISTENING, CORRECT, WRONG }
 
 private data class AudioPos(val page: Int?, val listening: Boolean)
 
+/**
+ * Strony karty. Miejsce na wszystkie strony jest zajęte od początku, więc karta ma od razu
+ * docelową wysokość i nic nie podskakuje przy odkrywaniu. Odkrywana strona obraca się w dół
+ * jak odwracana karteczka (sprężyna Material 3 Expressive, z lekkim odbiciem); przytrzymanie
+ * pokazuje zakrytą stronę półprzezroczyście w jej miejscu.
+ */
 @Composable
 private fun CardPages(face: CardFace) {
-    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    val spatialSize = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val compact = LocalCompactCard.current
     val gap = if (compact) Spacing.s else Spacing.l
-    // pionowy odstęp każdej strony jest w jej własnym polu (nie w arrangement kolumny): ukryte strony nie dokładają przerw
+    // pionowy odstęp każdej strony jest w jej własnym polu (nie w arrangement kolumny)
     val inset = if (compact) Spacing.xs else Spacing.s
     val audio = heldAudio(AudioPos(face.audioPage, face.listening))
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // u góry odstęp daje linia etykiety pierwszej strony
-            .padding(start = inset, end = inset, top = Spacing.xxs, bottom = gap - inset),
+            .padding(start = inset, end = inset, top = inset, bottom = gap - inset),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         face.pages.forEachIndexed { index, page ->
-            AnimatedVisibility(
-                visible = index in face.revealedPages,
-                enter = fadeIn(effects) + expandVertically(spatialSize, expandFrom = Alignment.Top),
-                exit = fadeOut(effects) + shrinkVertically(spatialSize, shrinkTowards = Alignment.Top)
-            ) {
-                val mark = when {
-                    audio.page != index -> AudioMark.NONE
-                    audio.listening -> AudioMark.LISTENING
-                    else -> AudioMark.SPEAKING
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AudioLabelLine(showDivider = index > 0, mark = mark)
-                    CardPage(page = page, isFirst = index == 0, mark = mark)
-                }
+            // dźwięk na stronie ma pierwszeństwo przed wynikiem (np. druga próba po błędzie)
+            val mark = when {
+                audio.page == index && audio.listening -> AudioMark.LISTENING
+                audio.page == index -> AudioMark.SPEAKING
+                face.answerPage != index -> AudioMark.NONE
+                face.answerStatus == AnswerStatus.CORRECT -> AudioMark.CORRECT
+                face.answerStatus == AnswerStatus.INCORRECT -> AudioMark.WRONG
+                else -> AudioMark.NONE
             }
-        }
-        val peeked = face.peekedPage?.takeIf { it !in face.revealedPages }?.let(face.pages::getOrNull)
-        AnimatedVisibility(
-            visible = peeked != null,
-            enter = fadeIn(effects) + expandVertically(spatialSize),
-            exit = fadeOut(effects) + shrinkVertically(spatialSize)
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier.padding(top = inset)
+            RevealablePage(
+                revealed = index in face.revealedPages,
+                peeked = face.peekedPage == index,
+                showDivider = index > 0
             ) {
-                Text(
-                    peeked.orEmpty(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)
-                )
+                CardPage(page = page, isFirst = index == 0, mark = mark)
             }
         }
     }
 }
 
-/**
- * Linia nad stroną: kreska oddzielająca (poza pierwszą stroną) i etykieta „Czytam” / „Słucham”,
- * gdy dźwięk dotyczy tej strony. Etykieta jest zawsze rozmieszczona i zmienia tylko przezroczystość,
- * więc linia ma stałą wysokość (także przy dużej czcionce) i tekst strony się nie przesuwa.
- */
+private const val FLIP_START_DEGREES = -90f
+private const val PEEK_ALPHA = 0.45f
+private const val FLIP_CAMERA_DISTANCE = 12f
+
+/** Strona, która zajmuje swoje miejsce zawsze, a widać ją dopiero po odkryciu (albo w podglądzie). */
 @Composable
-private fun AudioLabelLine(showDivider: Boolean, mark: AudioMark) {
-    val fadeSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    // ostatni znacznik trzyma napis, gdy etykieta już zanika
-    var lastMark by remember { mutableStateOf(AudioMark.SPEAKING) }
-    LaunchedEffect(mark) { if (mark != AudioMark.NONE) lastMark = mark }
-    val shown = if (mark != AudioMark.NONE) mark else lastMark
-    val alpha by animateFloatAsState(
-        targetValue = if (mark == AudioMark.NONE) 0f else 1f,
-        animationSpec = fadeSpec,
-        label = "audio_label"
+private fun RevealablePage(revealed: Boolean, peeked: Boolean, showDivider: Boolean, content: @Composable () -> Unit) {
+    // sprężyna przestrzenna Expressive lekko przestrzeliwuje — strona „dobija” z małym odbiciem
+    val progress by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "page_reveal"
     )
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.xxs),
-        contentAlignment = Alignment.Center
+    val peekAlpha by animateFloatAsState(
+        targetValue = if (peeked && !revealed) PEEK_ALPHA else 0f,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "page_peek"
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .graphicsLayer {
+                alpha = maxOf(progress.coerceIn(0f, 1f), peekAlpha)
+                // podgląd bez obrotu; odkrycie — obrót od krawędzi u góry
+                rotationX = if (peekAlpha > 0f && progress <= 0f) 0f else (1f - progress) * FLIP_START_DEGREES
+                transformOrigin = TransformOrigin(0.5f, 0f)
+                cameraDistance = FLIP_CAMERA_DISTANCE * density
+            }
+            // zakryta strona tylko trzyma miejsce — czytnik ekranu jej nie czyta
+            .then(if (revealed || peeked) Modifier else Modifier.clearAndSetSemantics {})
     ) {
-        if (showDivider) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        AudioLabel(
-            listening = shown == AudioMark.LISTENING,
-            // niewidoczna etykieta tylko trzyma miejsce — TalkBack jej nie czyta
-            modifier = Modifier
-                .graphicsLayer { this.alpha = alpha }
-                .then(if (mark == AudioMark.NONE) Modifier.clearAndSetSemantics {} else Modifier)
-        )
-    }
-}
-
-@Composable
-private fun AudioLabel(listening: Boolean, modifier: Modifier) {
-    val compact = LocalCompactCard.current
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        shape = CircleShape,
-        color = if (listening) colors.tertiaryContainer else colors.primaryContainer,
-        contentColor = if (listening) colors.onTertiaryContainer else colors.onPrimaryContainer,
-        modifier = modifier
-    ) {
-        Row(
-            Modifier.padding(horizontal = if (compact) Spacing.s else Spacing.m, vertical = Spacing.xxs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
-        ) {
-            Icon(
-                imageVector = if (listening) Icons.Filled.Mic else Icons.AutoMirrored.Filled.VolumeUp,
-                contentDescription = null,
-                modifier = Modifier.size(if (compact) AudioLabelIconCompact else AudioLabelIcon)
-            )
-            Text(
-                stringResource(if (listening) R.string.study_badge_listening else R.string.study_badge_speaking),
-                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
-                maxLines = 1
-            )
+        if (showDivider) {
+            HorizontalDivider(Modifier.padding(vertical = Spacing.xs), color = MaterialTheme.colorScheme.outlineVariant)
         }
+        content()
     }
 }
 
 /**
- * Strona karty. Strona, którą właśnie czytamy lub której słuchamy, dostaje tło i ramkę; geometria
- * jest zawsze ta sama — zmienia się tylko kolor, więc tekst się nie przesuwa.
+ * Strona karty. Stan strony pokazuje tylko kolor tła (bez napisów): czytana = kolor główny motywu,
+ * słuchana = drugorzędny (nie myli się z wynikiem), wynik odpowiedzi = zielony (jak „Łatwe”)
+ * albo czerwony (jak „Jeszcze raz”).
+ * Geometria jest zawsze ta sama — zmienia się tylko kolor, więc tekst się nie przesuwa.
  */
 @Composable
 private fun CardPage(page: String, isFirst: Boolean, mark: AudioMark) {
@@ -248,12 +206,24 @@ private fun CardPage(page: String, isFirst: Boolean, mark: AudioMark) {
     val inset = if (compact) Spacing.xs else Spacing.s
     val shape = if (compact) MaterialTheme.shapes.extraSmall else MaterialTheme.shapes.medium
 
+    val ratings = LocalRatingColors.current
     // ostatni znacznik trzyma kolor, gdy tło już zanika
     var lastMark by remember { mutableStateOf(AudioMark.SPEAKING) }
     LaunchedEffect(mark) { if (mark != AudioMark.NONE) lastMark = mark }
-    val listening = (if (mark != AudioMark.NONE) mark else lastMark) == AudioMark.LISTENING
-    val container = if (listening) colors.tertiaryContainer else colors.primaryContainer
-    val onContainer = if (listening) colors.onTertiaryContainer else colors.onPrimaryContainer
+    val (container, onContainer) = when (if (mark != AudioMark.NONE) mark else lastMark) {
+        AudioMark.LISTENING -> colors.secondaryContainer to colors.onSecondaryContainer
+        AudioMark.CORRECT -> ratings.easyBg to ratings.easyFg
+        AudioMark.WRONG -> ratings.againBg to ratings.againFg
+        else -> colors.primaryContainer to colors.onPrimaryContainer
+    }
+    // stan strony bez napisu na ekranie — czytnik ekranu nadal go ogłasza
+    val stateLabel = when (mark) {
+        AudioMark.SPEAKING -> stringResource(R.string.study_badge_speaking)
+        AudioMark.LISTENING -> stringResource(R.string.study_badge_listening)
+        AudioMark.CORRECT -> stringResource(R.string.study_answer_correct)
+        AudioMark.WRONG -> stringResource(R.string.study_answer_incorrect)
+        AudioMark.NONE -> null
+    }
     // nieaktywna: ten sam odcień z alfa 0 (Color.Transparent zanikałby przez czerń)
     val tint by animateColorAsState(
         targetValue = if (mark == AudioMark.NONE) container.copy(alpha = 0f) else container,
@@ -271,6 +241,7 @@ private fun CardPage(page: String, isFirst: Boolean, mark: AudioMark) {
         textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics { if (stateLabel != null) stateDescription = stateLabel }
             .background(tint, shape)
             .border(1.dp, onContainer.copy(alpha = 0.35f * tint.alpha), shape)
             .padding(horizontal = if (compact) Spacing.s else Spacing.m, vertical = inset)

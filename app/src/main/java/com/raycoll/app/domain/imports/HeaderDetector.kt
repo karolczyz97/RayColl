@@ -2,10 +2,10 @@ package com.raycoll.app.domain.imports
 
 import com.raycoll.app.domain.model.ImportConstants
 import com.raycoll.app.domain.model.PageLimits
-import java.text.Normalizer
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.apache.commons.lang3.StringUtils
 
 object HeaderDetector {
 
@@ -27,14 +27,11 @@ object HeaderDetector {
         "wloski", "hiszpanski"
     )
 
-    private val COMBINING_MARKS = "\\p{InCombiningDiacriticalMarks}+".toRegex()
     internal val WHITESPACE = Regex("\\s+")
 
-    internal fun normalizeHeaderToken(text: String): String {
-        val temp = Normalizer.normalize(text, Normalizer.Form.NFD)
-        // NFD nie rozkłada "ł" (litera z kreską, nie znak diakrytyczny)
-        return COMBINING_MARKS.replace(temp, "").replace('ł', 'l').replace('Ł', 'L').lowercase(Locale.ROOT).trim()
-    }
+    // nagłówki z plików bywają pisane bez polskich znaków ("Tlumaczenie"), więc porównujemy bez ogonków
+    internal fun normalizeHeaderToken(text: String): String =
+        StringUtils.stripAccents(text).lowercase(Locale.ROOT).trim()
 
     private fun looksLikeHeaderLabel(value: String): Boolean {
         val normalized = normalizeHeaderToken(value)

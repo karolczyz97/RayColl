@@ -3,10 +3,6 @@ package com.raycoll.app.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -15,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.StudyMode
@@ -60,7 +57,7 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
             // niezmieniony wbudowany tryb nie ma czego przywracać
             IconButton(shapes = IconButtonDefaults.shapes(), onClick = onReset, enabled = mode.isModifiedBuiltIn()) {
                 Icon(
-                    Icons.Filled.RestartAlt,
+                    painterResource(R.drawable.ic_restart_alt),
                     contentDescription = stringResource(
                         R.string.a11y_item_action,
                         stringResource(R.string.mode_list_reset),
@@ -71,7 +68,7 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
         } else {
             IconButton(shapes = IconButtonDefaults.shapes(), onClick = onDelete) {
                 Icon(
-                    Icons.Filled.Delete,
+                    painterResource(R.drawable.ic_delete),
                     contentDescription = stringResource(
                         R.string.a11y_item_action,
                         stringResource(R.string.btn_delete),
@@ -83,7 +80,7 @@ fun ModeActions(mode: StudyMode, onEdit: () -> Unit, onReset: () -> Unit, onDele
         }
         IconButton(shapes = IconButtonDefaults.shapes(), onClick = onEdit) {
             Icon(
-                Icons.Filled.Edit,
+                painterResource(R.drawable.ic_edit),
                 contentDescription = stringResource(
                     R.string.a11y_item_action,
                     stringResource(R.string.mode_list_edit),

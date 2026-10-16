@@ -64,6 +64,13 @@ class StudyModeRepository @Inject constructor(
         if (getMode(modeId) == null) return
         store.write(WriteOp.Update(paths().mode(modeId), mapOf("deletedAt" to clock.now(), "updatedAt" to clock.now())))
     }
+
+    /** Cofnięcie usunięcia trybu; talie, które go używały, wracają do niego same (wskazują ten sam id). */
+    suspend fun restoreMode(modeId: String) {
+        val path = paths().mode(modeId)
+        if (store.cachedDoc(path)?.data?.get("deletedAt") == null) return
+        store.write(WriteOp.Update(path, mapOf("deletedAt" to null, "updatedAt" to clock.now())))
+    }
     suspend fun resetMode(modeId: String) {
         val mode = getMode(modeId) ?: return
         updateMode(mode.resetToBuiltIn(clock.now()))

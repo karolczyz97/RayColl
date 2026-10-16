@@ -1,8 +1,11 @@
 package com.raycoll.app.ui.components
 
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.res.stringResource
 import com.raycoll.app.R
+import kotlinx.coroutines.launch
 
 /** Przywrócenie wbudowanego trybu do wersji fabrycznej. */
 @Composable
@@ -16,15 +19,24 @@ fun ModeResetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     )
 }
 
-/** Usunięcie własnego trybu. */
+/**
+ * Usunięcie własnego trybu bez pytania „Na pewno?” — jak fiszki i talie: od razu znika,
+ * a komunikat pozwala cofnąć.
+ */
 @Composable
-fun ModeDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    ConfirmDialog(
-        title = stringResource(R.string.mode_list_delete_title),
-        text = stringResource(R.string.mode_list_delete_desc),
-        confirmLabel = stringResource(R.string.btn_delete),
-        destructive = true,
-        onConfirm = onConfirm,
-        onDismiss = onDismiss
-    )
+fun rememberModeDelete(
+    messages: SnackbarMessages,
+    onDelete: (modeId: String) -> Unit,
+    onRestore: (modeId: String) -> Unit
+): (modeId: String) -> Unit {
+    val scope = rememberCoroutineScope()
+    val deleted = stringResource(R.string.mode_list_deleted)
+    val undo = stringResource(R.string.btn_undo)
+    return { modeId ->
+        onDelete(modeId)
+        scope.launch {
+            val result = messages.showAction(deleted, actionLabel = undo, key = "modeUndo")
+            if (result == SnackbarResult.ActionPerformed) onRestore(modeId)
+        }
+    }
 }

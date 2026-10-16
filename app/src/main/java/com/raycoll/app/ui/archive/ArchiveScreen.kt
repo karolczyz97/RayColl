@@ -2,15 +2,12 @@ package com.raycoll.app.ui.archive
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -32,6 +30,7 @@ import com.raycoll.app.ui.components.EmptyState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.animateListItem
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
 
@@ -61,13 +60,13 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
             } else {
                 LazyColumn(
                     modifier = contentModifier,
-                    contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.m)
+                    contentPadding = Spacing.screenContent(),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.item)
                 ) {
                     items(state.decks, key = { deck -> deck.id }) { deck ->
                         ArchivedDeckCard(deck, onRestore = {
                             viewModel.restore(deck.id)
-                        }, modifier = Modifier.animateItem())
+                        }, modifier = Modifier.animateListItem(this))
                     }
                 }
             }
@@ -105,7 +104,11 @@ private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit, modifier
                 shapes = ButtonDefaults.shapes(),
                 modifier = Modifier.align(Alignment.End)
             ) {
-                Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Icon(
+                    painterResource(R.drawable.ic_unarchive),
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
                 Text(
                     stringResource(R.string.btn_restore),
                     modifier = Modifier.padding(start = ButtonDefaults.IconSpacing)

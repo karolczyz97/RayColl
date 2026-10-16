@@ -3,7 +3,7 @@ package com.raycoll.app.ui
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.domain.model.DEFAULT_MODE_ID
@@ -71,7 +71,8 @@ class StudyModeConsistencyTest {
             repos.deckRepository.setActiveStudyMode(deckId, customId)
             repos.studyModeRepository.deleteMode(customId)
 
-            val dashboard = DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock)
+            val dashboard =
+                DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock, testPreferences.repository)
             val summary = dashboard.uiState.filterIsInstance<DashboardUiState.Ready>()
                 .first { state -> state.decks.any { it.id == deckId } }
                 .decks.single { it.id == deckId }

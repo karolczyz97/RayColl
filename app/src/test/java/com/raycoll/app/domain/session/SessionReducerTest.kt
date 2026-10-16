@@ -33,6 +33,19 @@ class SessionReducerTest {
     }
 
     @Test
+    fun `UpdateCardSrs changes only the rated card so the progress bar shows its new category`() {
+        val mastered = SrsState(stability = 40.0, repetitions = 5, state = 2)
+        val lapsed = SrsState(stability = 2.0, repetitions = 6, state = 3)
+        val cards = listOf(
+            Flashcard(id = "c1", pages = listOf("a"), srsState = mastered),
+            Flashcard(id = "c2", pages = listOf("b"), srsState = mastered)
+        )
+        val result = sessionReducer(SessionState(cards = cards), SessionAction.UpdateCardSrs("c1", lapsed))
+        assertEquals(lapsed, result.cards[0].srsState)
+        assertEquals(mastered, result.cards[1].srsState)
+    }
+
+    @Test
     fun `FinishSession clears audio page and error`() {
         val state = SessionState(audioPageIndex = 1, error = SessionError.TTS, status = SessionStatus.SPEAKING)
         val result = sessionReducer(state, SessionAction.FinishSession)

@@ -21,6 +21,7 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = blurredDialogProperties(),
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {

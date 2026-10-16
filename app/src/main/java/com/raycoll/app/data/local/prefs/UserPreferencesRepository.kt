@@ -46,7 +46,9 @@ data class UserPreferences(
     val backgroundPlayback: Boolean = true,
     val expertMode: Boolean = false,
     /** Ile razy jeszcze pokazać podpowiedź „przesuń, żeby usunąć”; 0 po pierwszym prawdziwym przesunięciu. */
-    val swipeHintsLeft: Int = SWIPE_HINT_SHOWS
+    val swipeHintsLeft: Int = SWIPE_HINT_SHOWS,
+    /** To samo dla talii na pulpicie (przesunięcie odsłania „Opcje” i „Archiwizuj”). */
+    val deckSwipeHintsLeft: Int = SWIPE_HINT_SHOWS
 )
 
 const val SWIPE_HINT_SHOWS = 3
@@ -64,6 +66,7 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
         val BACKGROUND_PLAYBACK = booleanPreferencesKey("background_playback")
         val EXPERT_MODE = booleanPreferencesKey("expert_mode")
         val SWIPE_HINTS_LEFT = intPreferencesKey("swipe_hints_left")
+        val DECK_SWIPE_HINTS_LEFT = intPreferencesKey("deck_swipe_hints_left")
     }
 
     private val defaults = UserPreferences()
@@ -77,7 +80,8 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
             ttsRate = TtsRate.clamp(prefs[Keys.TTS_RATE] ?: defaults.ttsRate),
             backgroundPlayback = prefs[Keys.BACKGROUND_PLAYBACK] ?: defaults.backgroundPlayback,
             expertMode = prefs[Keys.EXPERT_MODE] ?: defaults.expertMode,
-            swipeHintsLeft = prefs[Keys.SWIPE_HINTS_LEFT] ?: defaults.swipeHintsLeft
+            swipeHintsLeft = prefs[Keys.SWIPE_HINTS_LEFT] ?: defaults.swipeHintsLeft,
+            deckSwipeHintsLeft = prefs[Keys.DECK_SWIPE_HINTS_LEFT] ?: defaults.deckSwipeHintsLeft
         )
     }
 
@@ -100,6 +104,17 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
 
     /** Użytkownik sam przesunął kartę — podpowiedź nie jest już potrzebna. */
     suspend fun swipeLearned() = set(Keys.SWIPE_HINTS_LEFT, 0)
+
+    /** Podpowiedź gestu na talii została pokazana — o jedną mniej do pokazania. */
+    suspend fun deckSwipeHintShown() {
+        dataStore.edit {
+            it[Keys.DECK_SWIPE_HINTS_LEFT] =
+                ((it[Keys.DECK_SWIPE_HINTS_LEFT] ?: defaults.deckSwipeHintsLeft) - 1).coerceAtLeast(0)
+        }
+    }
+
+    /** Użytkownik sam odsłonił akcje talii — podpowiedź nie jest już potrzebna. */
+    suspend fun deckSwipeLearned() = set(Keys.DECK_SWIPE_HINTS_LEFT, 0)
 
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         dataStore.edit { it[key] = value }

@@ -15,7 +15,7 @@ import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -63,7 +63,7 @@ class ImportDraftTest {
             back = LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher
             ImportScreen(onFinished = { finished = true }, viewModel = vm)
         }
-        compose.onNodeWithContentDescription(context.getString(R.string.btn_back)).performClick()
+        compose.onNodeWithContentDescription(context.getString(R.string.btn_close)).performClick()
         compose.onNodeWithText(context.getString(R.string.import_discard_desc)).assertIsDisplayed()
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText(context.getString(R.string.import_discard_desc)).assertIsDisplayed()

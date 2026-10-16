@@ -6,6 +6,7 @@
     <string name="route_deck_settings">Ajustes del mazo</string>
     <string name="route_study_mode_detail">Editar modo de estudio</string>
     <string name="btn_cancel">Cancelar</string>
+    <string name="btn_close">Cerrar</string>
     <string name="btn_save">Guardar</string>
     <string name="btn_delete">Eliminar</string>
     <string name="btn_back">Atrás</string>
@@ -17,7 +18,6 @@
     <string name="auth_error_login_failed">Error de inicio de sesión. Inténtalo de nuevo.</string>
     <string name="sync_status_syncing">Sincronizando cambios…</string>
     <string name="sync_status_offline">Sin conexión — los cambios se enviarán al conectarte</string>
-    <string name="dialog_delete_desc">Esta acción no se puede deshacer.</string>
     <string name="dialog_delete_permanent_title">¿Eliminar permanentemente?</string>
     <string name="dialog_delete_permanent_desc">El mazo «%1$s» se eliminará permanentemente. Esta acción no se puede deshacer.</string>
     <string name="dialog_archive_title">¿Archivar este mazo?</string>
@@ -68,9 +68,9 @@
     <string name="import_page_label">Página %1$d</string>
     <string name="stats_title">Estadísticas de estudio</string>
     <plurals name="stats_heatmap_title">
-        <item quantity="one">Actividad en el último %1$d día</item>
-        <item quantity="many">Actividad en los últimos %1$d días</item>
-        <item quantity="other">Actividad en los últimos %1$d días</item>
+        <item quantity="one">Actividad en la última %1$d semana</item>
+        <item quantity="many">Actividad en las últimas %1$d semanas</item>
+        <item quantity="other">Actividad en las últimas %1$d semanas</item>
     </plurals>
     <string name="stats_heatmap_cd">Repasos: %1$d; días activos: %2$d; duración de la racha: %3$d</string>
     <string name="stats_streak">Racha de días</string>
@@ -78,7 +78,6 @@
     <string name="settings_archive_btn">Archivar mazo</string>
     <string name="settings_rename_label">Nombre del mazo</string>
     <string name="settings_pages_config">Configuración de páginas</string>
-    <string name="settings_study_scope">Alcance del estudio</string>
     <string name="settings_card_order">Orden de tarjetas</string>
     <string name="settings_card_order_sequential">En orden</string>
     <string name="settings_card_order_random">Aleatorio</string>
@@ -220,8 +219,7 @@
     <string name="mode_list_edit">Editar modo</string>
     <string name="mode_list_new">Nuevo modo de estudio</string>
     <string name="mode_list_reset">Restaurar predeterminados</string>
-    <string name="mode_list_delete_title">¿Eliminar modo?</string>
-    <string name="mode_list_delete_desc">Este modo de estudio personalizado se eliminará permanentemente. Los mazos que lo usan pasarán al modo predeterminado.</string>
+    <string name="mode_list_deleted">Modo eliminado.</string>
     <string name="mode_list_reset_title">¿Restaurar predeterminados?</string>
     <string name="mode_list_reset_desc">Los pasos y el nombre de este modo integrado volverán al original.</string>
     <string name="study_missing_voice_title">Falta la voz de lectura</string>
@@ -229,14 +227,12 @@
     <string name="study_missing_voice_btn">Instalar una voz de lectura</string>
     <string name="study_answer_correct">¡Correcto!</string>
     <string name="study_answer_incorrect">Incorrecto</string>
-    <string name="study_answer_skipped">Omitido</string>
     <string name="study_answer_error">Error de reconocimiento</string>
     <string name="settings_delete_error">No se pudo eliminar el mazo. Inténtalo de nuevo.</string>
     <string name="lang_system">Sistema</string>
     <string name="app_settings_factory_reset">Restaurar datos de fábrica</string>
     <string name="app_settings_factory_reset_desc">Todos los mazos, el progreso, la actividad y los modos de estudio se sustituirán por datos de ejemplo. Si has iniciado sesión, tras sincronizar también se reemplazarán los datos de los demás dispositivos de esta cuenta. Guarda antes una copia de seguridad. Esta acción no se puede deshacer.</string>
     <string name="app_settings_version">Versión %1$s</string>
-    <string name="study_answer_retry">Inténtalo de nuevo</string>
     <string name="study_modes_manage">Gestionar modos…</string>
     <string name="study_modes_modified">Modificado</string>
     <string name="study_modes_info">Los modos de estudio determinan cómo se muestran y califican las tarjetas. Puedes personalizarlos o restaurar la configuración original en cualquier momento.</string>
@@ -270,9 +266,6 @@
     <string name="mode_editor_step_title">%1$d. %2$s</string>
     <string name="stats_cards_total">Tarjetas: %1$d</string>
     <string name="study_recognized_text">Reconocido: %1$s</string>
-    <string name="study_answer_correct_percent">¡Correcto! • %1$d%%</string>
-    <string name="study_answer_incorrect_percent">Incorrecto • %1$d%%</string>
-    <string name="study_answer_incorrect_threshold">Incorrecto • %1$d%% • se requiere %2$d%%</string>
     <string name="study_suggested_rating">Sugerencia: %1$s</string>
     <string name="study_progress">%1$d/%2$d</string>
     <string name="study_badge_listening">Escuchando</string>
@@ -290,7 +283,6 @@
     <string name="sync_now_failed">Los cambios esperan conexión a internet</string>
     <string name="study_a11y_tap_card">Continuar</string>
     <string name="browse_empty_deck">Este mazo aún no tiene tarjetas.</string>
-    <string name="a11y_deck_menu_named">Opciones de %1$s</string>
     <string name="import_hint_format">Una tarjeta por línea. Separa las páginas con tabulador, punto y coma, coma o barra vertical. La primera fila puede ser una cabecera.</string>
     <string name="mode_editor_discard_title">¿Descartar cambios?</string>
     <string name="mode_editor_discard_desc">Los cambios de este modo no se han guardado.</string>
@@ -324,7 +316,6 @@
     <string name="dashboard_deck_options">Opciones</string>
     <string name="browse_clear_search">Borrar búsqueda</string>
     <string name="browse_clear_filters">Borrar filtros</string>
-    <string name="a11y_delete_card">Eliminar tarjeta: %1$s</string>
     <string name="mode_editor_add_below">Añadir debajo</string>
     <string name="study_progress_description">Tarjeta %1$d de %2$d</string>
     <string name="study_modes_shared_hint">Los modos se comparten entre todos los mazos. Al editar un modo, cambia en todos los mazos que lo usan.</string>

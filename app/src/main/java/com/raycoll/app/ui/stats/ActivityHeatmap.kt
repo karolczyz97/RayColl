@@ -22,10 +22,12 @@ import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.core.LocalDates
 import com.raycoll.app.ui.theme.Spacing
+import com.raycoll.app.ui.theme.withMinimumContrast
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
-private const val WEEKS = 20
+/** Liczba pokazanych tygodni (kolumn); tytuł karty podaje ją wprost zamiast liczby dni. */
+internal const val HEATMAP_WEEKS = 20
+private const val WEEKS = HEATMAP_WEEKS
 private const val DAYS_PER_WEEK = 7
 private val CELL = 14.dp
 private val GAP = 3.dp
@@ -35,10 +37,10 @@ private val TODAY_BORDER = 1.5.dp
 private fun heatmapStartMonday(today: LocalDate): LocalDate =
     today.minusDays((today.dayOfWeek.value - 1).toLong()).minusWeeks((WEEKS - 1).toLong())
 
-internal fun heatmapDaysShown(today: LocalDate): Int =
-    ChronoUnit.DAYS.between(heatmapStartMonday(today), today).toInt() + 1
-
-/** Siatka aktywności: kolumny tygodni (Pn..Nd) do bieżącego tygodnia, dziś obramowane. */
+/**
+ * Siatka aktywności: kolumny tygodni (Pn..Nd) do bieżącego tygodnia, dziś obramowane.
+ * Dni po dzisiejszym w bieżącym tygodniu mają sam obrys, żeby każdy wiersz był pełny.
+ */
 @Composable
 fun ActivityHeatmap(heatmap: Map<String, Int>, streak: Int, today: LocalDate) {
     val startMonday = heatmapStartMonday(today)
@@ -47,6 +49,11 @@ fun ActivityHeatmap(heatmap: Map<String, Int>, streak: Int, today: LocalDate) {
     val active = MaterialTheme.colorScheme.primary
     val empty = MaterialTheme.colorScheme.surfaceContainerHighest
     val todayBorder = MaterialTheme.colorScheme.onSurface
+    val background = MaterialTheme.colorScheme.surfaceContainerLow
+    val upcoming = MaterialTheme.colorScheme.outline.withMinimumContrast(background)
+    val lowActivity = active.copy(alpha = 0.35f).withMinimumContrast(background)
+    val mediumActivity = active.copy(alpha = 0.65f).withMinimumContrast(background, 3.75f)
+    val highActivity = active.withMinimumContrast(background, 4.5f)
 
     val scrollState = rememberScrollState()
     // najnowszy tydzień jest po prawej — pokaż go od razu
@@ -74,15 +81,24 @@ fun ActivityHeatmap(heatmap: Map<String, Int>, streak: Int, today: LocalDate) {
             for (week in 0 until WEEKS) {
                 for (day in 0 until DAYS_PER_WEEK) {
                     val date = startMonday.plusDays((week * DAYS_PER_WEEK + day).toLong())
-                    if (date.isAfter(today)) continue
+                    val topLeft = Offset(week * step, day * step)
+                    if (date.isAfter(today)) {
+                        drawRoundRect(
+                            color = upcoming,
+                            topLeft = topLeft + Offset(stroke / 2, stroke / 2),
+                            size = Size(cell - stroke, cell - stroke),
+                            cornerRadius = corner,
+                            style = Stroke(stroke)
+                        )
+                        continue
+                    }
                     val count = heatmap[LocalDates.dayKey(date)] ?: 0
                     val color = when {
                         count <= 0 -> empty
-                        count <= 2 -> active.copy(alpha = 0.35f)
-                        count <= 5 -> active.copy(alpha = 0.65f)
-                        else -> active
+                        count <= 2 -> lowActivity
+                        count <= 5 -> mediumActivity
+                        else -> highActivity
                     }
-                    val topLeft = Offset(week * step, day * step)
                     drawRoundRect(color, topLeft, Size(cell, cell), corner)
                     if (date == today) {
                         drawRoundRect(

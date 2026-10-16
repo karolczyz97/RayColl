@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -116,7 +117,11 @@ class MainActivity : ComponentActivity() {
                                 RayCollNavHost()
                             }
                         }
-                        RejectedChangesMessage(viewModel.store, Modifier.align(Alignment.BottomCenter))
+                        // poza Scaffoldem: wcięcie od paska nawigacji systemu ręcznie
+                        RejectedChangesMessage(
+                            viewModel.store,
+                            Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                        )
                     }
                     if (migrationRequired) {
                         MigrationDialog(

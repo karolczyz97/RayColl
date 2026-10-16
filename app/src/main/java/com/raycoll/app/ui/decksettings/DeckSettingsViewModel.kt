@@ -47,6 +47,7 @@ sealed interface DeckSettingsEvent {
 
     /** Zmiana ustawienia się nie zapisała. */
     data object SaveFailed : DeckSettingsEvent
+    data object PagesSwapped : DeckSettingsEvent
 }
 
 @HiltViewModel(assistedFactory = DeckSettingsViewModel.Factory::class)
@@ -97,7 +98,10 @@ class DeckSettingsViewModel @AssistedInject constructor(
         deckRepository.setPageLanguage(deckId, pageIndex, language)
     }
 
-    fun swapPages(from: Int, to: Int) = launch { deckRepository.swapPages(deckId, from, to) }
+    fun swapPages(from: Int, to: Int) = launch {
+        deckRepository.swapPages(deckId, from, to)
+        eventSink.send(DeckSettingsEvent.PagesSwapped)
+    }
 
     fun setActivePageCount(count: Int, defaultName: (Int) -> String = ::defaultPageName) = launch {
         deckRepository.setActivePageCount(deckId, count, defaultName)
@@ -112,6 +116,8 @@ class DeckSettingsViewModel @AssistedInject constructor(
     fun resetMode(modeId: String) = launch { modeRepository.resetMode(modeId) }
 
     fun deleteMode(modeId: String) = launch { modeRepository.deleteMode(modeId) }
+
+    fun restoreMode(modeId: String) = launch { modeRepository.restoreMode(modeId) }
 
     fun archive() {
         if (closing.value) return

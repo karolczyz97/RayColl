@@ -26,9 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.NavigateBefore
-import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -46,11 +43,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
@@ -125,11 +123,14 @@ fun StudyCardContent(deckId: String, state: StudyUiState.Active, actions: CardAc
             FlashcardView(
                 face = CardFace(
                     card = card,
+                    index = session.currentCardIndex,
                     pages = pages,
                     revealedPages = session.revealedPages,
                     peekedPage = session.peekedPageIndex,
                     audioPage = session.audioPageIndex,
-                    listening = session.status == SessionStatus.LISTENING
+                    listening = session.status == SessionStatus.LISTENING,
+                    answerPage = session.lastAnswerResult.pageIndex,
+                    answerStatus = session.lastAnswerResult.status
                 ),
                 actions = actions,
                 modifier = Modifier
@@ -276,16 +277,16 @@ private fun StudyActions(state: StudyUiState.Active, pageCount: Int, actions: Ca
 
 @Composable
 private fun PreviousCardButton(actions: CardActions) {
-    CardNavButton(Icons.AutoMirrored.Filled.NavigateBefore, R.string.study_prev_card, actions.onPrevious)
+    CardNavButton(painterResource(R.drawable.ic_chevron_left), R.string.study_prev_card, actions.onPrevious)
 }
 
 @Composable
 private fun NextCardButton(actions: CardActions) {
-    CardNavButton(Icons.AutoMirrored.Filled.NavigateNext, R.string.study_next_card, actions.onNext)
+    CardNavButton(painterResource(R.drawable.ic_chevron_right), R.string.study_next_card, actions.onNext)
 }
 
 @Composable
-private fun CardNavButton(icon: ImageVector, @StringRes description: Int, onClick: () -> Unit) {
+private fun CardNavButton(icon: Painter, @StringRes description: Int, onClick: () -> Unit) {
     FilledTonalIconButton(shapes = IconButtonDefaults.shapes(), onClick = onClick) {
         Icon(icon, contentDescription = stringResource(description))
     }

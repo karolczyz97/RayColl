@@ -13,7 +13,7 @@ kopia JSON oraz dane w chmurze (Firestore + konto gościa albo logowanie Google)
 | Warstwa | Technologia |
 |---|---|
 | Język | Kotlin 2.4.21 |
-| UI | Jetpack Compose (BOM 2026.09.00), single-activity, Material 3 |
+| UI | Jetpack Compose (BOM-alpha 2026.10.00), single-activity, Material 3 1.5 Expressive, Navigation 3 |
 | DI | Hilt 2.60.1 |
 | Dane | Cloud Firestore jako jedyne źródło danych, z trwałą pamięcią podręczną na telefonie (praca offline) |
 | Konto | Firebase Auth: konto gościa (anonimowe) albo Google przez Credential Manager |
@@ -22,8 +22,8 @@ kopia JSON oraz dane w chmurze (Firestore + konto gościa albo logowanie Google)
 | Async | kotlinx.coroutines 1.11.0 (Flow, StateFlow) |
 | Audio/tło | Media3 1.11.1 (MediaSessionService), Android TTS + SpeechRecognizer |
 | Import CSV | Apache Commons CSV 1.14.1, Commons Text 1.15.0 |
-| Chmura | Firebase BOM 35.0.0 |
-| Build | AGP 9.4.1, Gradle 9.8.1 na Javie 21, `compileSdk`/`targetSdk` 37, `minSdk` 33 (Android 13) |
+| Chmura | Firebase BOM 35.0.2 |
+| Build | AGP 9.4.1, Gradle 9.8.1 na Javie 21, `compileSdk` 37.1, `targetSdk` 37, `minSdk` 33 (Android 13) |
 
 - `applicationId`: `com.raycoll.app` (release), `com.raycoll.app.debug` (debug, na telefonie jako „RayColl (debug)”)
 - `versionName`: 1.0.0

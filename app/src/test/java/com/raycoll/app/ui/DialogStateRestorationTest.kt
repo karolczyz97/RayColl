@@ -6,7 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
@@ -95,7 +95,7 @@ class DialogStateRestorationTest {
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
         compose.onNodeWithText("Empty mode").performClick()
         field("Mode name").performTextInput("Mine")
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Close").performClick()
         compose.onNodeWithText("Discard changes?").assertExists()
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("Discard changes?").assertExists()

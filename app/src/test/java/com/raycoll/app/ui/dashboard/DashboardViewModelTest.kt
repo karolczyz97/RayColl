@@ -30,6 +30,8 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class DashboardViewModelTest {
+    @get:org.junit.Rule val testPreferences = com.raycoll.app.testing.PreferencesRule()
+
     private val clock = FakeClock()
     private val viewModels = mutableListOf<DashboardViewModel>()
     private lateinit var repos: TestRepos
@@ -46,11 +48,16 @@ class DashboardViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm() =
-        DashboardViewModel(repos.deckRepository, repos.studyModeRepository, clock, UnconfinedTestDispatcher()).also {
-            viewModels +=
-                it
-        }
+    private fun vm() = DashboardViewModel(
+        repos.deckRepository,
+        repos.studyModeRepository,
+        clock,
+        testPreferences.repository,
+        UnconfinedTestDispatcher()
+    ).also {
+        viewModels +=
+            it
+    }
 
     private suspend fun DashboardViewModel.ready(predicate: (DashboardUiState.Ready) -> Boolean = { true }) =
         uiState.filterIsInstance<DashboardUiState.Ready>().first(predicate)

@@ -22,6 +22,7 @@ import com.raycoll.app.ui.components.SegmentedBar
 import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
 import com.raycoll.app.ui.theme.SrsColors
+import com.raycoll.app.ui.theme.withMinimumContrast
 
 // przezroczystość odcinków: bieżąca karta pełna, ukończone przygaszone, nadchodzące ledwo widoczne
 private const val DONE_ALPHA = 0.6f
@@ -50,16 +51,17 @@ fun SessionProgressBar(session: SessionState, modifier: Modifier = Modifier) {
 
 @Composable
 private fun SessionSegments(session: SessionState, srs: SrsColors, modifier: Modifier) {
+    val track = MaterialTheme.colorScheme.surfaceContainerHighest
     // odcinki zależą tylko od kart i pozycji — częste zmiany stanu sesji (np. tekst z mikrofonu) ich nie przeliczają
-    val segments = remember(session.cards, session.currentCardIndex, srs) {
+    val segments = remember(session.cards, session.currentCardIndex, srs, track) {
         session.cards.mapIndexed { index, card ->
             val color = categoryColor(srs, card)
             BarSegment(
                 weight = 1f,
                 color = when {
-                    index == session.currentCardIndex -> color
-                    index < session.currentCardIndex -> color.copy(alpha = DONE_ALPHA)
-                    else -> color.copy(alpha = UPCOMING_ALPHA)
+                    index == session.currentCardIndex -> color.withMinimumContrast(track, 4.5f)
+                    index < session.currentCardIndex -> color.copy(alpha = DONE_ALPHA).withMinimumContrast(track, 3.75f)
+                    else -> color.copy(alpha = UPCOMING_ALPHA).withMinimumContrast(track)
                 }
             )
         }
@@ -72,8 +74,8 @@ private fun SessionSegments(session: SessionState, srs: SrsColors, modifier: Mod
 }
 
 private fun categoryColor(srs: SrsColors, card: Flashcard) = when (getCardCategory(card.srsState)) {
-    SrsCardCategory.NEW -> srs.newFg
-    SrsCardCategory.LEARNING -> srs.learningFg
-    SrsCardCategory.REVIEW -> srs.reviewFg
-    SrsCardCategory.MASTERED -> srs.masteredFg
+    SrsCardCategory.NEW -> srs.newAccent
+    SrsCardCategory.LEARNING -> srs.learningAccent
+    SrsCardCategory.REVIEW -> srs.reviewAccent
+    SrsCardCategory.MASTERED -> srs.masteredAccent
 }

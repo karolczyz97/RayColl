@@ -2,7 +2,6 @@ package com.raycoll.app.ui.modedetail
 
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,7 +112,6 @@ internal fun <T : Comparable<T>> NumberField(
         },
         keyboardOptions = KeyboardOptions(keyboardType = numberFormat.keyboardType, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-        shape = MaterialTheme.shapes.small,
         singleLine = true,
         modifier = modifier.onFocusChanged { state ->
             if (focused && !state.isFocused) commit()

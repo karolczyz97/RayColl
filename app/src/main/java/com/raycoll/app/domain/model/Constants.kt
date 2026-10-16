@@ -19,18 +19,26 @@ object PageLimits {
 
 object SrsConstants {
     /**
-     * Wagi FSRS-4.5; używane indeksy: w[0..3] początkowa stabilność, w[4]/w[5] początkowa trudność,
-     * w[6]/w[7] aktualizacja trudności, w[8..10] stabilność po przypomnieniu, w[11..14] stabilność
-     * po zapomnieniu, w[15]/w[16] kara "trudne" i premia "łatwe".
+     * Domyślne 21 wag FSRS-6: FSRS6_DEFAULT_PARAMETERS z fsrs-rs (BSD-3),
+     * https://github.com/open-spaced-repetition/fsrs-rs/blob/0a5737406a0c5c7a5259b144738cbe4a0b649d76/src/inference_v6.rs
+     * Indeksy: w[0..3] początkowa stabilność, w[4]/w[5] początkowa trudność, w[6]/w[7] zmiana trudności,
+     * w[8..10] stabilność po przypomnieniu, w[11..14] po zapomnieniu, w[15]/w[16] kara „trudne”
+     * i premia „łatwe”, w[17]/w[18] górna granica po pomyłce, w[20] zanik krzywej zapominania.
      */
     val W: List<Double> = listOf(
-        0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01,
-        1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61
+        0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001,
+        1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014,
+        1.8729, 0.5425, 0.0912, 0.0658, 0.1542
     )
     const val DIFFICULTY_MIN = 1.0
     const val DIFFICULTY_MAX = 10.0
-    const val DECAY = -0.5
+
+    /** FSRS-6: zanik krzywej zapominania jest trenowalny (w20). */
+    val DECAY = -W[20]
+
+    /** Dobrany tak, by R(t = S) = 0,9 — to definicja stabilności, nie docelowa retencja. */
     val FACTOR = 0.9.pow(1.0 / DECAY) - 1.0
+    const val DESIRED_RETENTION = 0.9
     const val MIN_INTERVAL_DAYS = 0.1
     const val MAX_INTERVAL_DAYS = 3650.0
     const val MASTERED_MIN_REPS = 3

@@ -13,7 +13,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,14 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -47,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -79,6 +72,7 @@ import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SwipeAction
 import com.raycoll.app.ui.components.SwipeReveal
+import com.raycoll.app.ui.components.animateListItem
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.rememberSwipeRevealState
@@ -109,8 +103,12 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // talia z odsłoniętymi akcjami — odsłonięcie innej chowa poprzednią
     var revealedDeckId by remember { mutableStateOf<String?>(null) }
+    // podpowiedź gestu raz na wejście na pulpit, dopóki użytkownik sam go nie użyje (maks. kilka razy)
+    var hintPlayed by rememberSaveable { mutableStateOf(false) }
+    val deckHintsLeft by viewModel.deckSwipeHintsLeft.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val saveFailed = stringResource(R.string.errors_save_failed)
+    var failedWriteKey by remember { mutableIntStateOf(0) }
     val messages = rememberSnackbarMessages(snackbarHostState)
     val imported = stringResource(R.string.import_success)
     val archived = stringResource(R.string.archive_success)
@@ -120,7 +118,11 @@ fun DashboardScreen(
     }
     CollectEvents(viewModel.events) { event ->
         when (event) {
-            DashboardEvent.SaveFailed -> messages.showLatest(saveFailed)
+            DashboardEvent.SaveFailed -> {
+                failedWriteKey++
+                messages.showLatest(saveFailed)
+            }
+
             is DashboardEvent.Archived -> showArchived(event.deckId)
         }
     }
@@ -139,13 +141,22 @@ fun DashboardScreen(
         snackbarHostState = snackbarHostState,
         actions = {
             IconButton(shapes = IconButtonDefaults.shapes(), onClick = onStats) {
-                Icon(Icons.Filled.BarChart, contentDescription = stringResource(R.string.stats_title))
+                Icon(
+                    painterResource(R.drawable.ic_bar_chart),
+                    contentDescription = stringResource(R.string.stats_title)
+                )
             }
             IconButton(shapes = IconButtonDefaults.shapes(), onClick = onArchive) {
-                Icon(Icons.Filled.Archive, contentDescription = stringResource(R.string.archive_title))
+                Icon(
+                    painterResource(R.drawable.ic_archive),
+                    contentDescription = stringResource(R.string.archive_title)
+                )
             }
             IconButton(shapes = IconButtonDefaults.shapes(), onClick = onAppSettings) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.app_settings_title))
+                Icon(
+                    painterResource(R.drawable.ic_settings),
+                    contentDescription = stringResource(R.string.app_settings_title)
+                )
             }
         },
         floatingActionButton = {
@@ -161,7 +172,7 @@ fun DashboardScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.import_title))
+                    Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.import_title))
                 }
             }
         }
@@ -185,14 +196,10 @@ fun DashboardScreen(
                     )
                 } else {
                     LazyColumn(
-                        contentPadding = PaddingValues(
-                            start = Spacing.screen,
-                            end = Spacing.screen,
-                            top = Spacing.xs,
-                            bottom = Spacing.fabClearance
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.m)
+                        contentPadding = Spacing.screenContent(bottom = Spacing.fabClearance),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.item)
                     ) {
+                        val hintDeckId = state.decks.firstOrNull()?.id?.takeIf { deckHintsLeft > 0 && !hintPlayed }
                         items(state.decks, key = { it.id }) { deck ->
                             DeckCard(
                                 deck = deck,
@@ -202,20 +209,24 @@ fun DashboardScreen(
                                 onSettings = { onDeckSettings(deck.id) },
                                 // bez okna potwierdzenia: talia trafia do Archiwum, a komunikat pozwala cofnąć
                                 onArchive = { viewModel.archiveDeck(deck.id) },
+                                failedWriteKey = failedWriteKey,
                                 onSelectMode = { modeId -> viewModel.setActiveMode(deck.id, modeId) },
                                 onManageModes = onManageModes,
                                 revealed = revealedDeckId == deck.id,
+                                showHint = deck.id == hintDeckId,
+                                onHintShown = {
+                                    hintPlayed = true
+                                    viewModel.deckSwipeHintShown()
+                                },
                                 onRevealedChange = { open ->
                                     if (open) {
+                                        viewModel.deckSwipeLearned()
                                         revealedDeckId = deck.id
                                     } else if (revealedDeckId == deck.id) {
                                         revealedDeckId = null
                                     }
                                 },
-                                modifier = Modifier.animateItem(
-                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                    fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec()
-                                )
+                                modifier = Modifier.animateListItem(this)
                             )
                         }
                     }
@@ -228,6 +239,7 @@ fun DashboardScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DeckCard(
+    failedWriteKey: Int,
     deck: DeckSummary,
     modes: List<StudyMode>,
     onStudy: () -> Unit,
@@ -238,7 +250,9 @@ private fun DeckCard(
     onManageModes: () -> Unit,
     revealed: Boolean,
     onRevealedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showHint: Boolean = false,
+    onHintShown: () -> Unit = {}
 ) {
     val browseLabel = stringResource(R.string.a11y_item_action, stringResource(R.string.dashboard_browse), deck.name)
     val colors = MaterialTheme.colorScheme
@@ -250,17 +264,18 @@ private fun DeckCard(
         if (!revealed && reveal.isOpen) reveal.close()
     }
     SwipeReveal(
+        resetKey = failedWriteKey,
         actions = listOf(
             SwipeAction(
                 label = stringResource(R.string.dashboard_deck_options),
-                icon = Icons.Filled.Settings,
+                icon = painterResource(R.drawable.ic_settings),
                 containerColor = colors.secondaryContainer,
                 contentColor = colors.onSecondaryContainer,
                 onClick = onSettings
             ),
             SwipeAction(
                 label = stringResource(R.string.btn_archive),
-                icon = Icons.Filled.Archive,
+                icon = painterResource(R.drawable.ic_archive),
                 containerColor = colors.errorContainer,
                 contentColor = colors.onErrorContainer,
                 removesItem = true,
@@ -269,6 +284,8 @@ private fun DeckCard(
         ),
         state = reveal,
         onOpenChange = onRevealedChange,
+        showHint = showHint,
+        onHintShown = onHintShown,
         modifier = modifier
     ) {
         RayCollCard(
@@ -327,7 +344,7 @@ private fun DeckSubtitle(deck: DeckSummary) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.s)
     ) {
         Icon(
-            Icons.Filled.School,
+            painterResource(R.drawable.ic_tune),
             contentDescription = null,
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant

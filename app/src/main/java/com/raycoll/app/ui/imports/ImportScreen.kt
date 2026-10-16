@@ -3,10 +3,10 @@ package com.raycoll.app.ui.imports
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,14 +17,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,8 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -66,7 +61,10 @@ import com.raycoll.app.ui.components.DropdownChip
 import com.raycoll.app.ui.components.LanguagePicker
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SectionCard
+import com.raycoll.app.ui.components.SwitchRow
+import com.raycoll.app.ui.components.expandIn
 import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.components.shrinkOut
 import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.theme.Spacing
 
@@ -126,6 +124,7 @@ fun ImportScreen(
     ScreenScaffold(
         title = stringResource(R.string.import_title),
         onBack = requestBack,
+        closeInsteadOfBack = true,
         actions = {
             if (importInToolbar) {
                 IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
@@ -134,7 +133,10 @@ fun ImportScreen(
                     if (state.importing) {
                         CircularProgressIndicator(Modifier.size(ButtonDefaults.IconSize))
                     } else {
-                        Icon(Icons.Filled.Done, contentDescription = stringResource(R.string.import_title))
+                        Icon(
+                            painterResource(R.drawable.ic_check),
+                            contentDescription = stringResource(R.string.import_title)
+                        )
                     }
                 }
             }
@@ -147,11 +149,13 @@ fun ImportScreen(
                 .padding(padding)
                 .imePadding()
         ) {
-            if (state.loadingFile) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
+            AnimatedVisibility(state.loadingFile, enter = expandIn(), exit = shrinkOut()) {
+                LinearWavyProgressIndicator(Modifier.fillMaxWidth())
+            }
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(Spacing.screen),
-                verticalArrangement = Arrangement.spacedBy(Spacing.m)
+                contentPadding = Spacing.screenContent(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.item)
             ) {
                 item(key = "source") {
                     SourceCard(
@@ -289,7 +293,6 @@ private fun SourceCard(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             onValueChange = onDeckName,
             label = { Text(stringResource(R.string.dashboard_name_label)) },
-            shape = MaterialTheme.shapes.small,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -299,7 +302,6 @@ private fun SourceCard(
             label = { Text(stringResource(R.string.import_csv_label)) },
             supportingText = { Text(stringResource(R.string.import_hint_format)) },
             enabled = !state.inputLocked,
-            shape = MaterialTheme.shapes.small,
             minLines = 4,
             maxLines = 8,
             modifier = Modifier.fillMaxWidth()
@@ -311,7 +313,7 @@ private fun SourceCard(
             shapes = ButtonDefaults.shapes()
         ) {
             Icon(
-                Icons.Filled.FileOpen,
+                painterResource(R.drawable.ic_file_open),
                 contentDescription = null,
                 modifier = Modifier.size(ButtonDefaults.IconSize)
             )
@@ -344,22 +346,12 @@ private fun ConfigCard(
                 onSelect = onSeparator
             )
         }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .toggleable(
-                    value = state.hasHeader,
-                    enabled = !state.inputLocked,
-                    role = Role.Checkbox,
-                    onValueChange = onHasHeader
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s)
-        ) {
-            Checkbox(checked = state.hasHeader, onCheckedChange = null)
-            Text(stringResource(R.string.import_first_row_header), style = MaterialTheme.typography.bodyMedium)
-        }
+        SwitchRow(
+            title = stringResource(R.string.import_first_row_header),
+            checked = state.hasHeader,
+            enabled = !state.inputLocked,
+            onChange = onHasHeader
+        )
         if (!state.validPageCount) {
             Text(
                 stringResource(
@@ -387,7 +379,6 @@ private fun ConfigCard(
                         enabled = !state.inputLocked,
                         onValueChange = { onPageName(index, it) },
                         label = { Text(stringResource(R.string.import_page_label, index + 1)) },
-                        shape = MaterialTheme.shapes.small,
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
