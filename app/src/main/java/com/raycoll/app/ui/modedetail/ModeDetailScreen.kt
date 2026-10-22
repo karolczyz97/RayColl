@@ -2,6 +2,7 @@ package com.raycoll.app.ui.modedetail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,6 +73,7 @@ import com.raycoll.app.ui.components.rememberLazyReorderController
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.reorderItem
 import com.raycoll.app.ui.components.reorderOnLongPress
+import com.raycoll.app.ui.components.settingsBackground
 import com.raycoll.app.ui.components.shrinkVerticallyOut
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
@@ -104,6 +106,12 @@ fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel) {
     // wyjście z edytora z niezapisanymi zmianami wymaga potwierdzenia (zapis zamyka ekran bez pytania)
     val requestBack = { if (editing?.dirty == true) showDiscardConfirm = true else onBack() }
     BackHandler(enabled = editing?.dirty == true) { showDiscardConfirm = true }
+    // wybór szablonu to lista jak w ustawieniach, więc ma ich tło; edytor kroków — zwykłe tło ekranu
+    val containerColor by animateColorAsState(
+        if (uiState == ModeDetailUiState.ChoosingTemplate) settingsBackground else MaterialTheme.colorScheme.surface,
+        MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "mode_detail_background"
+    )
 
     ScreenScaffold(
         title = when {
@@ -116,6 +124,7 @@ fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel) {
         onBack = requestBack,
         closeInsteadOfBack = true,
         snackbarHostState = snackbarHostState,
+        containerColor = containerColor,
         actions = {
             if (editing != null) {
                 if (editing.builtIn != null) {
