@@ -46,7 +46,6 @@ import com.raycoll.app.ui.components.ExpressiveLoadingIndicator
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.expandVerticallyIn
 import com.raycoll.app.ui.components.rememberSnackbarMessages
-import com.raycoll.app.ui.components.settingsBackground
 import com.raycoll.app.ui.components.shrinkVerticallyOut
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
@@ -115,8 +114,7 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
     ScreenScaffold(
         title = stringResource(R.string.app_settings_title),
         onBack = onBack,
-        snackbarHostState = snackbarHostState,
-        containerColor = settingsBackground
+        snackbarHostState = snackbarHostState
     ) { padding ->
         Column(
             Modifier

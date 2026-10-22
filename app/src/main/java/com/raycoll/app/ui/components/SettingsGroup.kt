@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
@@ -25,9 +26,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.ui.theme.Spacing
 
-/** Tło ekranu ustawień: pozycje w kolorze `surface` odcinają się od niego jak w ustawieniach Androida 16. */
-val settingsBackground: Color
+/** Pozycje ustawień leżą na zwykłym tle ekranu (`surface`), więc odcinają się od niego własnym kolorem. */
+private val settingsItemContainer: Color
     @Composable get() = MaterialTheme.colorScheme.surfaceContainer
+
+/** [base] z tłem pozycji ustawień, także wyłączonej (domyślnie Material daje jej `surface`, czyli kolor tła). */
+@Composable
+fun settingsItemColors(base: ListItemColors = ListItemDefaults.segmentedColors()): ListItemColors {
+    val container = settingsItemContainer
+    return base.copy(containerColor = container, disabledContainerColor = container)
+}
 
 /** Pozycje jednej grupy ustawień; kształt każdej zależy od jej miejsca w grupie (pierwsza, środkowa, ostatnia). */
 class SettingsGroupScope internal constructor() {
@@ -85,7 +93,7 @@ fun SettingsSwitch(
         shapes = shapes,
         enabled = enabled,
         // włączony przełącznik wystarcza; system nie podświetla całego wiersza
-        colors = ListItemDefaults.segmentedColors(selectedContainerColor = MaterialTheme.colorScheme.surface),
+        colors = settingsItemColors(ListItemDefaults.segmentedColors(selectedContainerColor = settingsItemContainer)),
         supportingContent = description?.let { { Text(it) } },
         trailingContent = { Switch(checked = checked, onCheckedChange = null, enabled = enabled) }
     ) { Text(title) }
@@ -108,12 +116,14 @@ fun SettingsAction(
     trailingContent: @Composable (() -> Unit)? = null
 ) {
     val colors = if (destructive) {
-        ListItemDefaults.segmentedColors(
-            contentColor = MaterialTheme.colorScheme.error,
-            leadingContentColor = MaterialTheme.colorScheme.error
+        settingsItemColors(
+            ListItemDefaults.segmentedColors(
+                contentColor = MaterialTheme.colorScheme.error,
+                leadingContentColor = MaterialTheme.colorScheme.error
+            )
         )
     } else {
-        ListItemDefaults.segmentedColors()
+        settingsItemColors()
     }
     SegmentedListItem(
         onClick = onClick,
@@ -150,6 +160,7 @@ fun SettingsRadio(
         selected = selected,
         onClick = onClick,
         shapes = shapes,
+        colors = settingsItemColors(),
         leadingContent = { RadioButton(selected = selected, onClick = null) },
         trailingContent = trailingContent,
         supportingContent = supportingContent,
@@ -165,7 +176,7 @@ fun SettingsBlock(
     trailingContent: @Composable (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    SegmentedListItem(shapes = shapes, trailingContent = trailingContent) {
+    SegmentedListItem(shapes = shapes, colors = settingsItemColors(), trailingContent = trailingContent) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             if (title != null) Text(title)
             content()

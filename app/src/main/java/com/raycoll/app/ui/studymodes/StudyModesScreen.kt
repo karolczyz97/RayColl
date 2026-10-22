@@ -46,7 +46,7 @@ import com.raycoll.app.ui.components.animateListItem
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.components.rememberModeDelete
 import com.raycoll.app.ui.components.rememberSnackbarMessages
-import com.raycoll.app.ui.components.settingsBackground
+import com.raycoll.app.ui.components.settingsItemColors
 import com.raycoll.app.ui.theme.Spacing
 
 @Composable
@@ -75,7 +75,6 @@ fun StudyModesScreen(
         title = stringResource(R.string.app_settings_study_modes),
         onBack = onBack,
         snackbarHostState = snackbarHostState,
-        containerColor = settingsBackground,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewMode,
@@ -176,6 +175,7 @@ private fun ModeItem(
         SegmentedListItem(
             onClick = onEdit,
             shapes = shapes,
+            colors = settingsItemColors(),
             modifier = Modifier.semantics { onClick(label = editLabel, action = null) },
             supportingContent = {
                 ModeSupportingContent(mode) { Text(stringResource(R.string.study_modes_steps_count, mode.steps.size)) }

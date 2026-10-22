@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,7 +34,6 @@ import com.raycoll.app.R
  * [collapsingTitle] — duży tytuł, który przy przewijaniu treści zwija się do zwykłego paska;
  * false dla ekranów, które potrzebują całej wysokości (nauka). [closeInsteadOfBack] — X zamiast strzałki
  * dla edytorów na cały ekran (jak w aplikacjach Google: X porzuca, „Zapisz” po prawej zatwierdza).
- * [containerColor] — tło ekranu i paska; ekrany ustawień używają [settingsBackground].
  * [animateTitleOnRelease] — dla listy Androida pasek podąża za jej ruchem, bez osobnej animacji po puszczeniu.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +47,6 @@ fun ScreenScaffold(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     collapsingTitle: Boolean = true,
     closeInsteadOfBack: Boolean = false,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
     animateTitleOnRelease: Boolean = true,
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -58,6 +55,7 @@ fun ScreenScaffold(
         animateTitleOnRelease -> TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         else -> TopAppBarDefaults.exitUntilCollapsedScrollBehavior(snapAnimationSpec = null, flingAnimationSpec = null)
     }
+    val containerColor = MaterialTheme.colorScheme.surface
     val barColors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor)
     Box(modifier.fillMaxSize().background(containerColor), contentAlignment = Alignment.TopCenter) {
         Scaffold(

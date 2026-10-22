@@ -54,7 +54,6 @@ import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.reorderActions
 import com.raycoll.app.ui.components.reorderItem
 import com.raycoll.app.ui.components.reorderOnLongPress
-import com.raycoll.app.ui.components.settingsBackground
 import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.theme.Spacing
 
@@ -100,8 +99,7 @@ fun DeckSettingsScreen(
     ScreenScaffold(
         title = ready?.deck?.name ?: stringResource(R.string.route_deck_settings),
         onBack = onBack,
-        snackbarHostState = snackbarHostState,
-        containerColor = settingsBackground
+        snackbarHostState = snackbarHostState
     ) { padding ->
         val contentModifier = Modifier
             .fillMaxSize()
