@@ -65,7 +65,7 @@
     <string name="import_sep_pipe">Pipe (|)</string>
     <string name="import_first_row_header">First row is header</string>
     <string name="import_pages_count">Pages:</string>
-    <string name="import_page_label">Page %1$d</string>
+    <string name="page_default_name">Page %1$d</string>
     <string name="stats_title">Study statistics</string>
     <plurals name="stats_heatmap_title">
         <item quantity="one">Activity in the last %1$d week</item>
@@ -112,6 +112,16 @@
     <string name="archive_auto_delete_tomorrow">Deletes tomorrow</string>
     <string name="archive_auto_delete_today">Deletes today</string>
     <string name="mode_classic_name">Classic</string>
+    <string name="mode_listen_only_name">Listen</string>
+    <string name="mode_browse_name">Browse</string>
+    <string name="mode_auto_reveal_name">Auto-reveal</string>
+    <string name="mode_classic_desc">Reads page 1, a tap reveals the rest, you rate the card.</string>
+    <string name="mode_listen_speak_desc">Reads page 1, you say the answer, the app checks and rates it.</string>
+    <string name="mode_listen_only_desc">Reads page 1, waits twice as long, reads page 2 and waits again. No tapping, no ratings.</string>
+    <string name="mode_browse_desc">Reads page 1, a tap reveals and reads page 2, the next tap moves on. No ratings.</string>
+    <string name="mode_auto_reveal_desc">Reads page 1, waits on its own, reveals and reads page 2, then you rate.</string>
+    <string name="study_modes_section_builtin">Built-in</string>
+    <string name="study_modes_section_own">Your modes</string>
     <string name="mode_listen_speak_name">Audio</string>
     <string name="step_show_page">Show page %1$d</string>
     <string name="step_show_all_pages">Show all pages</string>
@@ -202,8 +212,6 @@
     <string name="mode_editor_move_up">Move up</string>
     <string name="mode_editor_move_down">Move down</string>
     <string name="mode_editor_template_title">Choose a starting template</string>
-    <string name="mode_editor_template_classic">Classic (flip &amp; rate)</string>
-    <string name="mode_editor_template_audio">Audio (listen &amp; speak)</string>
     <string name="mode_editor_template_blank">Empty mode</string>
     <string name="mode_issue_name_required">Mode name is required</string>
     <string name="mode_issue_no_steps">Add at least one step</string>
@@ -310,6 +318,9 @@
     <string name="browse_card_deleted">Flashcard deleted.</string>
     <string name="browse_delete_card">Delete flashcard</string>
     <string name="dashboard_deck_options">Options</string>
+    <string name="dashboard_reorder_decks">Change deck order</string>
+    <string name="dashboard_move_deck_up">Move deck up</string>
+    <string name="dashboard_move_deck_down">Move deck down</string>
     <string name="browse_clear_search">Clear search</string>
     <string name="browse_clear_filters">Clear filters</string>
     <string name="mode_editor_add_below">Add below</string>
@@ -330,5 +341,6 @@
     <string name="auth_loading_data">Loading account data…</string>
     <string name="auth_data_when_online">Account data will appear when connected</string>
     <string name="auth_sign_out_offline">Connect to the internet to sign out</string>
+    <string name="study_summary_title">Session summary</string>
 </resources>
 

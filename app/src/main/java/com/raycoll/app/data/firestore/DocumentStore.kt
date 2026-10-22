@@ -3,6 +3,7 @@ package com.raycoll.app.data.firestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 
 data class Doc(val id: String, val data: Map<String, Any?>)
 data class Docs(val docs: List<Doc>, val fromCache: Boolean)
@@ -29,6 +30,10 @@ interface DocumentStore {
     val offline: StateFlow<Boolean>
     suspend fun awaitPendingWrites(timeoutMs: Long): Boolean
 }
+
+/** false, dopóki serwer nie odpowiedział na listę talii konta [uid] (jest tylko pusta pamięć podręczna). */
+fun DocumentStore.decksArrived(uid: String): Flow<Boolean> =
+    observe(UserPaths(uid).decks()).map { !(it.fromCache && it.docs.isEmpty()) }
 
 data class UserPaths(val uid: String) {
     fun decks() = "users/$uid/decks"

@@ -11,7 +11,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.MemoryCacheSettings
@@ -138,9 +137,7 @@ class FirestoreEmulatorTest {
         }
         suspend fun google(token: String) {
             check(
-                authRepository.signInWithCredential(
-                    GoogleAuthProvider.getCredential(token, null)
-                ) is SignInResult.Success
+                authRepository.signInWithCredential(authRepository.googleCredential(token)) is SignInResult.Success
             )
             manager.retryStart()
             check(manager.state.value is AccountState.Ready)
@@ -561,7 +558,7 @@ class FirestoreEmulatorTest {
             if (googleAlreadySignedIn) {
                 assertTrue(
                     phone.authRepository.signInWithCredential(
-                        GoogleAuthProvider.getCredential(googleToken(), null)
+                        phone.authRepository.googleCredential(googleToken())
                     ) is SignInResult.Success
                 )
             }

@@ -1,48 +1,61 @@
 package com.raycoll.app.ui.archive
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.ui.components.CollectEvents
-import com.raycoll.app.ui.components.EmptyState
 import com.raycoll.app.ui.components.LoadingState
-import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.animateListItem
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.theme.Spacing
 
-private const val URGENT_DAYS_LEFT = 3
-
 @Composable
-fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewModel()) {
+fun ArchiveScreen(
+    onBack: () -> Unit,
+    onBrowse: (deckId: String) -> Unit,
+    viewModel: ArchiveViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var revealedDeckId by remember { mutableStateOf<String?>(null) }
+    var failedWriteKey by remember { mutableIntStateOf(0) }
     val snackbarHostState = remember { SnackbarHostState() }
     val messages = rememberSnackbarMessages(snackbarHostState)
     val saveFailed = stringResource(R.string.errors_save_failed)
-    CollectEvents(viewModel.events) { messages.showLatest(saveFailed) }
+    CollectEvents(viewModel.events) {
+        failedWriteKey++
+        revealedDeckId = null
+        messages.showLatest(saveFailed)
+    }
 
     ScreenScaffold(
         title = stringResource(R.string.archive_title),
@@ -56,17 +69,38 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
             ArchiveUiState.Loading -> LoadingState(contentModifier)
 
             is ArchiveUiState.Ready -> if (state.decks.isEmpty()) {
-                EmptyState(stringResource(R.string.archive_empty), contentModifier)
+                ArchiveEmptyState(contentModifier)
             } else {
                 LazyColumn(
                     modifier = contentModifier,
                     contentPadding = Spacing.screenContent(),
                     verticalArrangement = Arrangement.spacedBy(Spacing.item)
                 ) {
+                    item(key = "retention_info") {
+                        Text(
+                            stringResource(R.string.archive_restore_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.s)
+                        )
+                    }
                     items(state.decks, key = { deck -> deck.id }) { deck ->
-                        ArchivedDeckCard(deck, onRestore = {
-                            viewModel.restore(deck.id)
-                        }, modifier = Modifier.animateListItem(this))
+                        ArchivedDeckItem(
+                            deck = deck,
+                            onRestore = { viewModel.restore(deck.id) },
+                            onDelete = { viewModel.delete(deck.id) },
+                            onBrowse = { onBrowse(deck.id) },
+                            revealed = revealedDeckId == deck.id,
+                            onRevealedChange = { open ->
+                                if (open) {
+                                    revealedDeckId = deck.id
+                                } else if (revealedDeckId == deck.id) {
+                                    revealedDeckId = null
+                                }
+                            },
+                            failedWriteKey = failedWriteKey,
+                            modifier = Modifier.animateListItem(this)
+                        )
                     }
                 }
             }
@@ -75,45 +109,39 @@ fun ArchiveScreen(onBack: () -> Unit, viewModel: ArchiveViewModel = hiltViewMode
 }
 
 @Composable
-private fun ArchivedDeckCard(deck: ArchivedDeck, onRestore: () -> Unit, modifier: Modifier = Modifier) {
-    RayCollCard(modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            Text(deck.name, style = MaterialTheme.typography.titleLarge)
-            Text(
-                pluralStringResource(R.plurals.cards_count, deck.cardCount, deck.cardCount),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                when (deck.daysLeft) {
-                    0 -> stringResource(R.string.archive_auto_delete_today)
-                    1 -> stringResource(R.string.archive_auto_delete_tomorrow)
-                    else -> pluralStringResource(R.plurals.archive_auto_delete_in, deck.daysLeft, deck.daysLeft)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                // czerwień dopiero tuż przed usunięciem
-                color = if (deck.daysLeft <= URGENT_DAYS_LEFT) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-            OutlinedButton(
-                onClick = onRestore,
-                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.align(Alignment.End)
+private fun ArchiveEmptyState(modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ) {
                 Icon(
-                    painterResource(R.drawable.ic_unarchive),
+                    painterResource(R.drawable.ic_archive),
                     contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize)
-                )
-                Text(
-                    stringResource(R.string.btn_restore),
-                    modifier = Modifier.padding(start = ButtonDefaults.IconSpacing)
+                    modifier = Modifier.padding(Spacing.xl).size(Spacing.xxl)
                 )
             }
+            Text(
+                stringResource(R.string.archive_empty),
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                stringResource(R.string.archive_restore_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

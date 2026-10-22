@@ -37,6 +37,9 @@ object FirestoreSchema {
     fun readDeck(doc: com.raycoll.app.data.firestore.Doc) = read(doc) { deckFromMap(doc.id, doc.data) }
     fun readCard(doc: com.raycoll.app.data.firestore.Doc) = read(doc) { cardFromMap(doc.id, doc.data) }
     fun readMode(doc: com.raycoll.app.data.firestore.Doc) = read(doc) { modeFromMap(doc.id, doc.data) }
+    fun readActivity(doc: com.raycoll.app.data.firestore.Doc) = read(doc) {
+        doc.id to activityCountFromMap(doc.id, doc.data)
+    }
     private fun <T> read(doc: com.raycoll.app.data.firestore.Doc, decode: () -> T): T? = try {
         decode()
     } catch (error: Exception) {
@@ -44,13 +47,9 @@ object FirestoreSchema {
         null
     }
 
-    const val PATH_USERS = "users"
-    const val PATH_DECKS = "decks"
-    const val PATH_CARDS = "cards"
-    const val PATH_MODES = "studyModes"
-    const val PATH_ACTIVITY = "activity"
-
     const val FIELD_UPDATED_AT = "updatedAt"
+    const val FIELD_DELETED_AT = "deletedAt"
+    const val FIELD_ARCHIVED_AT = "archivedAt"
     private const val FIELD_POSITION = "position"
 
     private val json = Json {
@@ -71,8 +70,8 @@ object FirestoreSchema {
         put("studyFilter", deck.studyFilter.key)
         put("cardOrder", deck.cardOrder.key)
         put(FIELD_UPDATED_AT, deck.updatedAt)
-        deck.deletedAt?.let { put("deletedAt", it) }
-        deck.archivedAt?.let { put("archivedAt", it) }
+        deck.deletedAt?.let { put(FIELD_DELETED_AT, it) }
+        deck.archivedAt?.let { put(FIELD_ARCHIVED_AT, it) }
         position?.let { put(FIELD_POSITION, it) }
     }
 
@@ -92,7 +91,7 @@ object FirestoreSchema {
         )
         put("contentUpdatedAt", card.contentUpdatedAt)
         put("srsUpdatedAt", card.srsUpdatedAt)
-        card.deletedAt?.let { put("deletedAt", it) }
+        card.deletedAt?.let { put(FIELD_DELETED_AT, it) }
         position?.let { put(FIELD_POSITION, it) }
     }
 
@@ -104,7 +103,7 @@ object FirestoreSchema {
         // pusty identyfikator źródła traktowany jak brak w zapisanych dokumentach
         mode.builtInSourceId?.takeIf { it.isNotEmpty() }?.let { put("builtInSourceId", it) }
         put(FIELD_UPDATED_AT, mode.updatedAt)
-        mode.deletedAt?.let { put("deletedAt", it) }
+        mode.deletedAt?.let { put(FIELD_DELETED_AT, it) }
     }
 
     fun activityToMap(count: Int): Map<String, Any> = mapOf("count" to count)
@@ -127,9 +126,9 @@ object FirestoreSchema {
             activePageCount = requireFiniteNumber(data["activePageCount"], "activePageCount for deck $docId").toInt(),
             studyFilter = studyFilter,
             cardOrder = cardOrder,
-            updatedAt = requireFiniteNumber(data["updatedAt"], "updatedAt for deck $docId").toLong(),
-            deletedAt = optionalLong(data["deletedAt"]),
-            archivedAt = optionalLong(data["archivedAt"])
+            updatedAt = requireFiniteNumber(data[FIELD_UPDATED_AT], "updatedAt for deck $docId").toLong(),
+            deletedAt = optionalLong(data[FIELD_DELETED_AT]),
+            archivedAt = optionalLong(data[FIELD_ARCHIVED_AT])
         )
     }
 
@@ -159,7 +158,7 @@ object FirestoreSchema {
                 "contentUpdatedAt for card $docId"
             ).toLong(),
             srsUpdatedAt = requireFiniteNumber(data["srsUpdatedAt"], "srsUpdatedAt for card $docId").toLong(),
-            deletedAt = optionalLong(data["deletedAt"])
+            deletedAt = optionalLong(data[FIELD_DELETED_AT])
         )
     }
 
@@ -182,8 +181,8 @@ object FirestoreSchema {
             steps = json.decodeFromJsonElement(stepsSerializer, plainToJsonElement(rawSteps)),
             isBuiltIn = isBuiltIn,
             builtInSourceId = builtInSourceId as? String,
-            updatedAt = requireFiniteNumber(data["updatedAt"], "updatedAt for study mode $id").toLong(),
-            deletedAt = optionalLong(data["deletedAt"])
+            updatedAt = requireFiniteNumber(data[FIELD_UPDATED_AT], "updatedAt for study mode $id").toLong(),
+            deletedAt = optionalLong(data[FIELD_DELETED_AT])
         )
     }
 

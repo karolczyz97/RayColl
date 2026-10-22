@@ -55,13 +55,8 @@ fun ExpressiveLoadingIndicator(modifier: Modifier = Modifier) {
 
 /** Pusta lista z opcjonalną akcją (np. "Importuj"). */
 @Composable
-fun EmptyState(
-    message: String,
-    modifier: Modifier = Modifier,
-    icon: Painter = painterResource(R.drawable.ic_inbox),
-    action: (@Composable () -> Unit)? = null
-) {
-    MessageState(message, icon, MaterialTheme.colorScheme.primary, modifier, action)
+fun EmptyState(message: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
+    MessageState(message, painterResource(R.drawable.ic_inbox), MaterialTheme.colorScheme.primary, modifier, action)
 }
 
 /** Treści nie da się pokazać (np. talię usunięto na innym urządzeniu). */

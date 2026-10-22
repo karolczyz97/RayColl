@@ -133,7 +133,7 @@ class SessionEngineBackgroundTest {
             )
         eng.start(listOf(card("c1")))
         advanceUntilIdle()
-        // bez tapnięcia sesja stoi na gate (karta 0, brak REVEALED)
+        // bez tapnięcia sesja stoi na gate (karta 0, brak AWAITING_RATING)
         assertEquals(0, eng.state.value.currentCardIndex)
         assertTrue(eng.state.value.interactionGate.kind != InteractionGateKind.NONE)
     }
@@ -184,7 +184,7 @@ class SessionEngineBackgroundTest {
             eng.handleCardPress()
             advanceUntilIdle()
             assertEquals(listOf(0, 1), eng.state.value.revealedPages.sorted())
-            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+            assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
             clock.current += 5_000 // poza oknem 3 s
             eng.goToPreviousCard()
             advanceUntilIdle()
@@ -234,7 +234,7 @@ class SessionEngineBackgroundTest {
             advanceUntilIdle()
             assertTrue(deps.reviews.isEmpty())
             assertEquals(0, eng.state.value.currentCardIndex)
-            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+            assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
             eng.setBackground(false)
             eng.rate(3)
             advanceUntilIdle()

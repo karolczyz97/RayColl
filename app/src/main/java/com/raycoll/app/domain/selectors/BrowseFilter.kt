@@ -1,6 +1,7 @@
 package com.raycoll.app.domain.selectors
 
 import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.activePages
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.domain.srs.getCardCategory
 
@@ -14,6 +15,6 @@ fun browseFilter(
     val query = search.trim()
     return cards.live().filter { card ->
         (category == null || getCardCategory(card.srsState) == category) &&
-            (query.isEmpty() || card.pages.take(activePageCount).any { it.contains(query, ignoreCase = true) })
+            (query.isEmpty() || card.activePages(activePageCount).any { it.contains(query, ignoreCase = true) })
     }
 }

@@ -23,12 +23,8 @@ class SnackbarMessages(private val host: SnackbarHostState, private val scope: C
         transient = scope.launch(start = CoroutineStart.UNDISPATCHED) { host.showSnackbar(message) }
     }
 
-    suspend fun showAction(
-        message: String,
-        actionLabel: String,
-        duration: SnackbarDuration = SnackbarDuration.Long,
-        key: String? = null
-    ): SnackbarResult {
+    suspend fun showAction(message: String, actionLabel: String, key: String? = null): SnackbarResult {
+        val duration = SnackbarDuration.Long
         transient?.cancel()
         transient = null
         if (key == null) return host.showSnackbar(message, actionLabel, duration = duration)

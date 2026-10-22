@@ -1,7 +1,6 @@
 package com.raycoll.app.ui.imports
 
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,15 +11,18 @@ import com.raycoll.app.domain.imports.CsvSeparator
 import com.raycoll.app.domain.imports.ImportPayload
 import com.raycoll.app.domain.imports.ImportProblem
 import com.raycoll.app.domain.imports.LanguageDetector
+import com.raycoll.app.domain.imports.ParseInput
+import com.raycoll.app.domain.imports.ParsedSource
+import com.raycoll.app.domain.imports.parseSource
 import com.raycoll.app.domain.imports.validateImportPayload
 import com.raycoll.app.domain.model.DEFAULT_PAGE_LANGUAGE
 import com.raycoll.app.domain.model.PageLimits
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -31,11 +33,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 /** Ile czekać po ostatnim wpisanym znaku, zanim tekst zostanie przetworzony. */
 private const val PARSE_DEBOUNCE_MS = 150L
@@ -45,12 +43,6 @@ private const val REBUILD_DEBOUNCE_MS = 300L
 
 /** Ile czekać po ostatniej zmianie, zanim szkic trafi do pliku. */
 private const val DRAFT_SAVE_DEBOUNCE_MS = 500L
-
-/** Plik szkicu w prywatnych plikach aplikacji (tekst CSV bywa za duży na zapisany stan ekranu). */
-internal const val IMPORT_DRAFT_FILE = "import-draft.json"
-
-/** W zapisanym stanie ekranu: szkic jest w [IMPORT_DRAFT_FILE]. */
-internal const val DRAFT_SAVED_KEY = "importDraftSaved"
 
 data class ImportUiState(
     val sourceText: String = "",
@@ -72,8 +64,15 @@ data class ImportUiState(
         separator != CsvSeparator.DEFAULT || hasHeader
     val inputLocked: Boolean get() = importing || loadingFile
 
-    val canImport: Boolean get() = !inputLocked && validPageCount && deckName.isNotBlank() &&
-        rows.any { row -> row.any { it.isNotBlank() } }
+    /** Pierwsza przeszkoda w kolejności, w jakiej podpowiada ją ekran; null = nic nie blokuje importu. */
+    val blockingProblem: ImportProblem? get() = when {
+        !validPageCount -> ImportProblem.InvalidPageCount
+        deckName.isBlank() -> ImportProblem.DeckNameRequired
+        rows.none { row -> row.any { it.isNotBlank() } } -> ImportProblem.NoCards
+        else -> null
+    }
+
+    val canImport: Boolean get() = !inputLocked && blockingProblem == null
 }
 
 sealed interface ImportEvent {
@@ -88,29 +87,6 @@ sealed interface ImportEvent {
     /** Kolumny się zmieniły: ręczne nazwy/języki niepasujących kolumn wróciły do wykrytych. */
     data object ColumnSettingsReset : ImportEvent
 }
-
-/**
- * Ręczna nazwa albo język kolumny. [headerCell] — nagłówek kolumny w chwili zmiany: gdy
- * ta kolumna ma potem inny nagłówek, kolumny zostały przestawione i ustawienie nie
- * przechodzi na cudzą kolumnę.
- */
-@Serializable
-private data class ColumnOverride(val value: String, val headerCell: String?)
-
-/** Wszystko, co wpisał i wybrał użytkownik; po śmierci procesu z tego odtwarza się ekran. */
-@Serializable
-private data class ImportDraft(
-    val sourceText: String,
-    val deckName: String,
-    /** null: wykrywany automatycznie. */
-    val separator: CsvSeparator?,
-    /** null: wykrywany automatycznie. */
-    val hasHeader: Boolean?,
-    val pageNames: List<String>,
-    val pageLanguages: List<String>,
-    val nameOverrides: Map<Int, ColumnOverride>,
-    val languageOverrides: Map<Int, ColumnOverride>
-)
 
 @HiltViewModel
 class ImportViewModel @Inject constructor(
@@ -144,23 +120,19 @@ class ImportViewModel @Inject constructor(
      */
     private var rowsEdited = false
 
-    /** Zapis i usuwanie pliku szkicu po kolei — usunięcie nie wyprzedza trwającego zapisu. */
-    private val draftFile = Mutex()
-
-    /** Import zakończony albo porzucony: szkic nie jest już zapisywany. */
-    private var draftClosed = false
+    private val drafts = ImportDraftStore(documentFiles, savedState)
 
     init {
         viewModelScope.launch {
             // szkic wraca tylko do ekranu odtwarzanego po śmierci procesu; nowy import zaczyna od zera
-            if (savedState.get<Boolean>(DRAFT_SAVED_KEY) == true) restoreDraft() else deleteDraft()
+            if (drafts.shouldRestore) restoreDraft() else drafts.delete()
             _uiState.collectLatest { state ->
                 when {
                     // nieudany import wraca z „importing = false” i szkic znów się zapisuje
-                    state.importing || draftClosed -> Unit
+                    state.importing || drafts.closed -> Unit
 
                     // od razu: wyjście bez szkicu zamyka ekran bez pytania, zanim minęłoby opóźnienie
-                    !state.hasDraft -> deleteDraft()
+                    !state.hasDraft -> drafts.delete()
 
                     else -> {
                         delay(DRAFT_SAVE_DEBOUNCE_MS)
@@ -193,8 +165,10 @@ class ImportViewModel @Inject constructor(
                 if (text == null) {
                     eventSink.send(ImportEvent.FileUnreadable)
                 } else {
+                    val fileName = documentFiles.displayName(uri)
+                    val suggestedName = fileName?.substringBeforeLast('.')?.trim()?.ifBlank { fileName }.orEmpty()
                     discardRowEdits()
-                    _uiState.update { it.copy(sourceText = text) }
+                    _uiState.update { it.copy(sourceText = text, deckName = it.deckName.ifBlank { suggestedName }) }
                     reparse(debounce = false)
                 }
             } finally {
@@ -290,8 +264,8 @@ class ImportViewModel @Inject constructor(
                     payload.cards
                 )
                 imported = true
-                draftClosed = true
-                deleteDraft()
+                drafts.close()
+                drafts.delete()
                 eventSink.send(ImportEvent.Imported)
             } finally {
                 if (!imported) _uiState.update { it.copy(importing = false) }
@@ -393,14 +367,13 @@ class ImportViewModel @Inject constructor(
 
     /** Użytkownik porzuca import; ekran zaraz się zamknie, a usunięcie szkicu musi się dokończyć. */
     fun discardDraft() {
-        draftClosed = true
-        viewModelScope.launch(NonCancellable) { deleteDraft() }
+        drafts.close()
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) { withContext(NonCancellable) { drafts.delete() } }
     }
 
-    private suspend fun saveDraft(): Unit = draftFile.withLock {
-        if (draftClosed) return@withLock
+    private suspend fun saveDraft() = drafts.save {
         val state = _uiState.value
-        val draft = ImportDraft(
+        ImportDraft(
             sourceText = state.sourceText,
             deckName = state.deckName,
             separator = state.separator.takeIf { separatorChosen },
@@ -410,17 +383,10 @@ class ImportViewModel @Inject constructor(
             nameOverrides = nameOverrides.toMap(),
             languageOverrides = languageOverrides.toMap()
         )
-        try {
-            documentFiles.writePrivate(IMPORT_DRAFT_FILE, Json.encodeToString(draft))
-            savedState[DRAFT_SAVED_KEY] = true
-        } catch (error: IOException) {
-            // bez szkicu import działa dalej; przepadnie tylko po śmierci procesu
-            Log.w("ImportViewModel", "Import draft not saved", error)
-        }
     }
 
     private suspend fun restoreDraft() {
-        val draft = documentFiles.readPrivate(IMPORT_DRAFT_FILE)?.let(::decodeDraft) ?: return
+        val draft = drafts.read() ?: return
         separatorChosen = draft.separator != null
         headerChosen = draft.hasHeader != null
         nameOverrides += draft.nameOverrides
@@ -438,22 +404,9 @@ class ImportViewModel @Inject constructor(
         reparse(debounce = false)
     }
 
-    private suspend fun deleteDraft() = draftFile.withLock {
-        savedState[DRAFT_SAVED_KEY] = false
-        documentFiles.deletePrivate(IMPORT_DRAFT_FILE)
-    }
-
     /** Użytkownik zmienia sam tekst źródłowy: wygrywa nowy tekst. */
     private fun discardRowEdits() {
         rebuildJob?.cancel()
         rowsEdited = false
     }
-}
-
-/** Szkic w innym formacie (np. ze starszej wersji aplikacji) przepada — import zaczyna od zera. */
-private fun decodeDraft(json: String): ImportDraft? = try {
-    Json.decodeFromString<ImportDraft>(json)
-} catch (_: IllegalArgumentException) {
-    // także SerializationException
-    null
 }

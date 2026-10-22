@@ -3,6 +3,7 @@ package com.raycoll.app.playback
 import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.Log
 import com.raycoll.app.domain.model.TtsRate
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
@@ -63,11 +64,16 @@ class TtsPlayer @Inject constructor(@ApplicationContext private val context: Con
 
     private suspend fun readyEngine(): TextToSpeech? = engineLock.withLock {
         engine?.let { return@withLock it }
-        val initialized = CompletableDeferred<Boolean>()
-        val created = TextToSpeech(context) { status -> initialized.complete(status == TextToSpeech.SUCCESS) }
+        val initialized = CompletableDeferred<Int>()
+        val created = TextToSpeech(context) { status -> initialized.complete(status) }
         try {
-            val ok = withTimeoutOrNull(INIT_TIMEOUT_MS) { initialized.await() } ?: false
-            if (ok) {
+            val status = withTimeoutOrNull(INIT_TIMEOUT_MS) { initialized.await() }
+            when (status) {
+                TextToSpeech.SUCCESS -> Unit
+                null -> Log.w("TtsPlayer", "TTS init timeout")
+                else -> Log.w("TtsPlayer", "TTS init error")
+            }
+            if (status == TextToSpeech.SUCCESS) {
                 engine = created
                 created
             } else {
@@ -91,7 +97,7 @@ class TtsPlayer @Inject constructor(@ApplicationContext private val context: Con
 
                 override fun onDone(id: String?) = finish(id, TtsResult.Success)
 
-                @Deprecated("Wymagane przez starsze wersje Androida")
+                @Deprecated("Abstrakcyjna w UtteranceProgressListener, więc musi być nadpisana")
                 override fun onError(id: String?) = finish(id, TtsResult.Error("TTS error"))
 
                 override fun onError(id: String?, errorCode: Int) = finish(id, TtsResult.Error("TTS error $errorCode"))

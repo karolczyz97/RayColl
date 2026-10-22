@@ -44,10 +44,10 @@ import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.ExpressiveLoadingIndicator
 import com.raycoll.app.ui.components.ScreenScaffold
-import com.raycoll.app.ui.components.expandIn
+import com.raycoll.app.ui.components.expandVerticallyIn
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.settingsBackground
-import com.raycoll.app.ui.components.shrinkOut
+import com.raycoll.app.ui.components.shrinkVerticallyOut
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -160,7 +160,11 @@ fun AppSettingsScreen(onBack: () -> Unit, onStudyModes: () -> Unit, viewModel: A
             }
             StudyModesLink(onStudyModes)
             val backupsEnabled = uiState.backupOperation == null && !uiState.signingIn && !uiState.signingOut
-            AnimatedVisibility(uiState.backupOperation != null, enter = expandIn(), exit = shrinkOut()) {
+            AnimatedVisibility(
+                uiState.backupOperation != null,
+                enter = expandVerticallyIn(),
+                exit = shrinkVerticallyOut()
+            ) {
                 LinearWavyProgressIndicator(Modifier.fillMaxWidth())
             }
             BackupSection(

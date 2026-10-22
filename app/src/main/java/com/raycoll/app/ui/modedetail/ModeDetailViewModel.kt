@@ -1,5 +1,6 @@
 package com.raycoll.app.ui.modedetail
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -9,6 +10,7 @@ import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.model.isLive
 import com.raycoll.app.domain.seed.BuiltInMode
 import com.raycoll.app.domain.seed.seedModeFor
 import com.raycoll.app.domain.steps.ModeIssue
@@ -116,7 +118,7 @@ class ModeDetailViewModel @AssistedInject constructor(
 
     init {
         viewModelScope.launch {
-            val mode = modeId?.let { modeRepository.getMode(it) }?.takeIf { it.deletedAt == null }
+            val mode = modeId?.let { modeRepository.getMode(it) }?.takeIf { it.isLive }
             existingMode = mode
             // szkic zmian w trybie, który w międzyczasie usunięto, nie ma czego edytować
             val draft = restoredDraft?.takeIf { it.isNew || mode != null }
@@ -142,7 +144,7 @@ class ModeDetailViewModel @AssistedInject constructor(
         _uiState.value = editing(isNew = true, name = "", steps = template.steps.map(::EditableStep), builtIn = null)
     }
 
-    fun setName(name: String) = edit { it.copy(name = name) }
+    fun setName(name: String) = updateEditing { it.copy(name = name) }
 
     fun setExpertMode(value: Boolean) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(ModeDetailEvent.SaveFailed) }) {
@@ -150,11 +152,11 @@ class ModeDetailViewModel @AssistedInject constructor(
         }
     }
 
-    fun updateStep(index: Int, step: ModeStep) = editSteps { steps ->
+    fun updateStep(index: Int, step: ModeStep) = updateStepList { steps ->
         if (index in steps.indices) steps[index] = steps[index].copy(step = step)
     }
 
-    fun addStep(step: ModeStep, afterKey: String? = null) = editSteps { steps ->
+    fun addStep(step: ModeStep, afterKey: String? = null) = updateStepList { steps ->
         val after = steps.indexOfFirst { it.key == afterKey }
         steps.add(if (after >= 0) after + 1 else steps.size, EditableStep(step))
     }
@@ -163,17 +165,19 @@ class ModeDetailViewModel @AssistedInject constructor(
         val state = _uiState.value as? ModeDetailUiState.Editing ?: return
         val removed = state.steps.getOrNull(index) ?: return
         lastRemoved = index to removed
-        editSteps { if (index in it.indices) it.removeAt(index) }
+        updateStepList { if (index in it.indices) it.removeAt(index) }
     }
 
     /** Przywraca ostatnio usunięty krok na to samo miejsce (z tym samym kluczem, więc z animacją). */
     fun undoRemove() {
         val (index, step) = lastRemoved ?: return
         lastRemoved = null
-        editSteps { steps -> if (steps.none { it.key == step.key }) steps.add(index.coerceIn(0, steps.size), step) }
+        updateStepList { steps ->
+            if (steps.none { it.key == step.key }) steps.add(index.coerceIn(0, steps.size), step)
+        }
     }
 
-    fun moveStep(from: Int, to: Int) = editSteps { steps ->
+    fun moveStep(from: Int, to: Int) = updateStepList { steps ->
         if (from in steps.indices && to in steps.indices) steps.add(to, steps.removeAt(from))
     }
 
@@ -215,7 +219,7 @@ class ModeDetailViewModel @AssistedInject constructor(
                 write()
                 eventSink.send(ModeDetailEvent.Closed)
             } finally {
-                edit { it.copy(saving = false) }
+                updateEditing { it.copy(saving = false) }
             }
         }
     }
@@ -223,13 +227,14 @@ class ModeDetailViewModel @AssistedInject constructor(
     private fun editing(isNew: Boolean, name: String, steps: List<EditableStep>, builtIn: BuiltInMode?) =
         ModeDetailUiState.Editing(isNew, name, steps, builtIn, issues = validate(name, steps))
 
-    private fun edit(transform: (ModeDetailUiState.Editing) -> ModeDetailUiState.Editing) = _uiState.update { state ->
-        if (state !is ModeDetailUiState.Editing) return@update state
-        val edited = transform(state)
-        edited.copy(issues = validate(edited.name, edited.steps))
-    }
+    private fun updateEditing(transform: (ModeDetailUiState.Editing) -> ModeDetailUiState.Editing) =
+        _uiState.update { state ->
+            if (state !is ModeDetailUiState.Editing) return@update state
+            val edited = transform(state)
+            edited.copy(issues = validate(edited.name, edited.steps))
+        }
 
-    private fun editSteps(change: (MutableList<EditableStep>) -> Unit) = edit { state ->
+    private fun updateStepList(change: (MutableList<EditableStep>) -> Unit) = updateEditing { state ->
         state.copy(steps = state.steps.toMutableList().apply(change))
     }
 
@@ -263,7 +268,8 @@ class ModeDetailViewModel @AssistedInject constructor(
 /** Szkic w innym formacie (np. ze starszej wersji aplikacji) przepada — edytor startuje od trybu z bazy. */
 private fun decodeDraft(json: String): ModeDraft? = try {
     Json.decodeFromString<ModeDraft>(json)
-} catch (_: IllegalArgumentException) {
+} catch (e: IllegalArgumentException) {
     // także SerializationException
+    Log.w("ModeDetailViewModel", "Dropping unreadable mode draft", e)
     null
 }

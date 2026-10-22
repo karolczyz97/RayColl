@@ -6,8 +6,9 @@ import com.raycoll.app.data.firestore.Docs
 import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.data.firestore.UserPaths
 import com.raycoll.app.data.firestore.WriteOp
-import com.raycoll.app.domain.merge.getGuestHasData
+import com.raycoll.app.domain.merge.guestHasData
 import com.raycoll.app.domain.model.ArchiveConstants
+import com.raycoll.app.domain.model.SrsConstants
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.VmTestHarness
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,10 +88,34 @@ class CleanupTest {
         val snapshot = repos.snapshot()
         assertNull(repos.store.cachedDoc(paths.card(seed.id, removed.id)))
         assertEquals(clock.now(), snapshot.groups.first().updatedAt)
-        assertTrue(getGuestHasData(snapshot.groups, snapshot.activityHeatmap, snapshot.studyModes))
+        assertTrue(guestHasData(snapshot.groups, snapshot.activityHeatmap, snapshot.studyModes))
         repos.account.signIn("google")
         repos.backupRepository.joinGuest(snapshot, "google", " (from phone)")
         assertEquals(listOf(seed.id), repos.snapshot().groups.map { it.id })
         assertEquals(seed.cards.drop(1), repos.snapshot().groups.single().cards)
+    }
+
+    @Test
+    fun `deleted modes are purged only when deleted more than 30 days ago`() = runTest {
+        val modes = repos.studyModeRepository
+        val old = modes.addMode("Old", emptyList())
+        val boundary = modes.addMode("Boundary", emptyList())
+        val recent = modes.addMode("Recent", emptyList())
+        val live = modes.addMode("Live", emptyList())
+        val start = clock.now()
+        modes.deleteMode(old)
+        clock.advance(SrsConstants.DAY_MS)
+        modes.deleteMode(boundary)
+        clock.advance(SrsConstants.DAY_MS)
+        modes.deleteMode(recent)
+        // granica: usunięty dokładnie 30 dni temu jeszcze zostaje (kasowane tylko starsze)
+        clock.current = start + SrsConstants.DAY_MS + 30 * SrsConstants.DAY_MS
+
+        Cleanup(repos.store, clock).run("uid-1")
+
+        assertNull(repos.store.cachedDoc(paths.mode(old)))
+        assertNotNull(repos.store.cachedDoc(paths.mode(boundary)))
+        assertNotNull(repos.store.cachedDoc(paths.mode(recent)))
+        assertNotNull(repos.store.cachedDoc(paths.mode(live)))
     }
 }

@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,6 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.raycoll.app.R
+import com.raycoll.app.ui.components.AppTextField
+import com.raycoll.app.ui.components.AppTextFieldDefaults
 import com.raycoll.app.ui.components.blurredDialogProperties
 import com.raycoll.app.ui.theme.Spacing
 import org.apache.commons.lang3.StringUtils
@@ -42,13 +42,13 @@ fun DeleteDeckDialog(deckName: String, onConfirm: () -> Unit, onDismiss: () -> U
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 Text(stringResource(R.string.dialog_delete_permanent_desc, deckName))
-                OutlinedTextField(
+                AppTextField(
                     value = typed,
                     onValueChange = { typed = it },
                     label = { Text(token) },
                     supportingText = { Text(stringResource(R.string.delete_confirm_hint, token)) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = AppTextFieldDefaults.verbatimKeyboardOptions.copy(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { confirmIfValid() }),
                     modifier = Modifier.fillMaxWidth()
                 )

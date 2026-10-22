@@ -12,7 +12,9 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.raycoll.app.data.remote.FirebaseConfig
@@ -29,9 +31,25 @@ import kotlinx.coroutines.withContext
 
 data class Account(val uid: String, val email: String?)
 
+/** Bieżący użytkownik Firebase widziany poza warstwą logowania. */
+data class AuthUser(val uid: String, val email: String?, val isAnonymous: Boolean)
+
+/** Dane logowania Google gotowe do użycia; ich zawartość zna tylko [AuthRepository]. */
+class GoogleCredential internal constructor(internal val firebase: AuthCredential)
+
+/** Wynik dołączenia konta Google do gościa. */
+sealed interface LinkResult {
+    data object Linked : LinkResult
+
+    /** To konto Google już istnieje — trzeba się na nie zalogować tymi danymi. */
+    data class Collision(val credential: GoogleCredential) : LinkResult
+}
+
 private const val TAG = "AuthRepository"
 
 private fun FirebaseUser.toAccount() = Account(uid, email)
+
+private fun FirebaseUser.toAuthUser() = AuthUser(uid, email, isAnonymous)
 
 enum class SignInError { PLAY_SERVICES, NO_TOKEN, INVALID_TOKEN, LOGIN_FAILED, LOCAL_DATA }
 
@@ -83,16 +101,27 @@ class AuthRepository internal constructor(
         }
     }
 
-    val currentUser: FirebaseUser? get() = auth.currentUser
-    suspend fun signInAnonymously() = auth.signInAnonymously().await().also { awaitUserSwitch() }
+    val currentUser: AuthUser? get() = auth.currentUser?.toAuthUser()
+    suspend fun signInAnonymously(): AuthUser {
+        val result = auth.signInAnonymously().await()
+        awaitUserSwitch()
+        return checkNotNull(result.user).toAuthUser()
+    }
 
     /**
      * Firebase Auth zgłasza zmianę użytkownika do Firestore przez wątek główny. Zapis wysłany przed tym
      * zgłoszeniem trafiłby do kolejki poprzedniego użytkownika i nie dotarłby na nowe konto.
      */
     private suspend fun awaitUserSwitch() = withContext(Dispatchers.Main) { }
-    suspend fun linkWithGoogle(idToken: String) = checkNotNull(auth.currentUser)
-        .linkWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+    fun googleCredential(idToken: String) = GoogleCredential(GoogleAuthProvider.getCredential(idToken, null))
+    suspend fun linkWithGoogle(idToken: String): LinkResult = try {
+        checkNotNull(auth.currentUser).linkWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+        LinkResult.Linked
+    } catch (collision: FirebaseAuthUserCollisionException) {
+        LinkResult.Collision(
+            GoogleCredential(collision.updatedCredential ?: GoogleAuthProvider.getCredential(idToken, null))
+        )
+    }
     suspend fun deleteCurrentUser() {
         try {
             auth.currentUser?.delete()?.await()
@@ -102,8 +131,8 @@ class AuthRepository internal constructor(
             Log.w(TAG, "Could not delete empty guest account", e)
         }
     }
-    suspend fun signInWithCredential(credential: com.google.firebase.auth.AuthCredential): SignInResult = try {
-        val result = auth.signInWithCredential(credential).await()
+    suspend fun signInWithCredential(credential: GoogleCredential): SignInResult = try {
+        val result = auth.signInWithCredential(credential.firebase).await()
         awaitUserSwitch()
         val user = result.user
         if (user == null) {
@@ -149,7 +178,7 @@ class AuthRepository internal constructor(
     }
 
     override suspend fun signInWithIdToken(idToken: String): SignInResult =
-        signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))
+        signInWithCredential(googleCredential(idToken))
 
     override suspend fun signOut() {
         auth.signOut()

@@ -9,6 +9,7 @@ import com.raycoll.app.domain.session.SessionDeps
 import com.raycoll.app.domain.session.SpeakResult
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
@@ -31,8 +32,9 @@ class SessionDepsAdapter @Inject constructor(
 
     override fun acquireAudioFocus(): Boolean = sessionHolder.acquireAudioFocus()
 
-    override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult =
+    override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult = logUnexpected("speak") {
         audioTurn.withTurn { ttsPlayer.speak(text, lang, rate).toSpeakResult() }
+    }
 
     private fun TtsResult.toSpeakResult(): SpeakResult = when (this) {
         TtsResult.Success -> SpeakResult.SUCCESS
@@ -49,9 +51,20 @@ class SessionDepsAdapter @Inject constructor(
     }
 
     override suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult =
-        audioTurn.withTurn {
-            sessionHolder.withRecognitionFocus { sttRecognizer.listen(lang, timeoutMs, onPartial) }
+        logUnexpected("listen") {
+            audioTurn.withTurn {
+                sessionHolder.withRecognitionFocus { sttRecognizer.listen(lang, timeoutMs, onPartial) }
+            }
         }
+
+    private suspend fun <T> logUnexpected(operation: String, block: suspend () -> T): T = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Unexpected $operation failure", e)
+        throw e
+    }
 
     override fun feedbackSuccess() = hapticPlayer.playSuccess()
 

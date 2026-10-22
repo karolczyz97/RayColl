@@ -2,6 +2,7 @@ package com.raycoll.app.ui.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import com.raycoll.app.domain.srs.SrsCardCategory
 
 @Immutable
 data class SrsColors(
@@ -49,3 +50,24 @@ val DarkSrsColors = SrsColors(
     reviewAccent = SrsReviewFgDark,
     masteredAccent = SrsMasteredFgDark
 )
+
+fun SrsColors.accent(category: SrsCardCategory): Color = when (category) {
+    SrsCardCategory.NEW -> newAccent
+    SrsCardCategory.LEARNING -> learningAccent
+    SrsCardCategory.REVIEW -> reviewAccent
+    SrsCardCategory.MASTERED -> masteredAccent
+}
+
+fun SrsColors.foreground(category: SrsCardCategory): Color = when (category) {
+    SrsCardCategory.NEW -> newFg
+    SrsCardCategory.LEARNING -> learningFg
+    SrsCardCategory.REVIEW -> reviewFg
+    SrsCardCategory.MASTERED -> masteredFg
+}
+
+fun SrsColors.background(category: SrsCardCategory): Color = when (category) {
+    SrsCardCategory.NEW -> newBg
+    SrsCardCategory.LEARNING -> learningBg
+    SrsCardCategory.REVIEW -> reviewBg
+    SrsCardCategory.MASTERED -> masteredBg
+}

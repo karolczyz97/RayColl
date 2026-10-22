@@ -1,7 +1,7 @@
 package com.raycoll.app.domain.session
 
 fun sessionReducer(state: SessionState, action: SessionAction): SessionState = when (action) {
-    is SessionAction.StartSession -> SessionState(cards = action.cards)
+    is SessionAction.StartSession -> SessionState(cards = action.cards, sessionId = action.sessionId)
 
     is SessionAction.StartSpeaking -> state.copy(
         status = SessionStatus.SPEAKING,
@@ -38,7 +38,7 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
         state
     } else {
         state.copy(
-            status = SessionStatus.REVEALED,
+            status = SessionStatus.AWAITING_RATING,
             peekedPageIndex = null
         )
     }
@@ -51,7 +51,8 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
         lastAnswerResult = LastAnswerResult(),
         previousAnswerResult = LastAnswerResult(),
         audioPageIndex = null,
-        error = null
+        error = null,
+        navigation = null
     )
 
     // nowa karta zaczyna bez wyniku; stary zostaje tylko do animacji znikania panelu
@@ -66,8 +67,24 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
         interactionGate = InteractionGate(),
         pendingStepIndexToRun = null,
         error = null,
-        cardReviewed = false
+        cardReviewed = false,
+        revisiting = false,
+        stepIndex = 0,
+        navigation = null,
+        cardHistory = state.cardHistory - listOfNotNull(state.cards.getOrNull(action.nextCardIndex)?.id).toSet()
     )
+
+    is SessionAction.VisitCard -> state.visitCard(action.index)
+
+    is SessionAction.SetStepIndex -> state.copy(stepIndex = action.index)
+
+    is SessionAction.BeginNavigation -> state.copy(navigation = action.navigation)
+
+    is SessionAction.EndNavigation -> if (state.navigation == action.navigation) {
+        state.copy(navigation = null)
+    } else {
+        state
+    }
 
     is SessionAction.SetError -> state.copy(status = SessionStatus.ERROR, error = action.error)
 
@@ -102,7 +119,7 @@ fun sessionReducer(state: SessionState, action: SessionAction): SessionState = w
 
     is SessionAction.RemoveFailedCard -> state.copy(failedCardIds = state.failedCardIds - action.cardId)
 
-    is SessionAction.SetCardReviewed -> state.copy(cardReviewed = true)
+    is SessionAction.SetCardReviewed -> state.copy(cardReviewed = true, revisiting = false)
 
     is SessionAction.UpdateCardSrs -> state.copy(
         cards = state.cards.map { if (it.id == action.cardId) it.copy(srsState = action.srsState) else it }

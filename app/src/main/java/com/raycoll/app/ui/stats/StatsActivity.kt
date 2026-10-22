@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import com.raycoll.app.ui.browse.BrowseActivity
 import com.raycoll.app.ui.main.AppActivity
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +16,11 @@ class StatsActivity : AppActivity() {
 
     @Composable
     override fun Screen() {
-        StatsScreen(onBack = ::finish, viewModel = stats)
+        StatsScreen(
+            onBack = ::finish,
+            onBrowse = { openScreen(BrowseActivity.intent(this, it)) },
+            viewModel = stats
+        )
     }
 
     companion object {

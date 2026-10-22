@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.decksettings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,18 +40,25 @@ import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.ErrorState
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.ModeResetDialog
-import com.raycoll.app.ui.components.PersistedTextField
+import com.raycoll.app.ui.components.NameEditorDialog
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SettingsAction
 import com.raycoll.app.ui.components.SettingsBlock
 import com.raycoll.app.ui.components.SettingsGroup
 import com.raycoll.app.ui.components.SettingsRadio
 import com.raycoll.app.ui.components.SnackbarMessages
+import com.raycoll.app.ui.components.moveActions
+import com.raycoll.app.ui.components.rememberColumnReorder
 import com.raycoll.app.ui.components.rememberModeDelete
 import com.raycoll.app.ui.components.rememberSnackbarMessages
+import com.raycoll.app.ui.components.reorderActions
+import com.raycoll.app.ui.components.reorderItem
+import com.raycoll.app.ui.components.reorderOnLongPress
 import com.raycoll.app.ui.components.settingsBackground
 import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.theme.Spacing
+
+private const val DECK_NAME = -1
 
 @Composable
 fun DeckSettingsScreen(
@@ -60,11 +68,13 @@ fun DeckSettingsScreen(
     onClosed: (ScreenResult?) -> Unit = { onBack() }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val savingName by viewModel.savingName.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val messages = rememberSnackbarMessages(snackbarHostState)
     val deleteFailed = stringResource(R.string.settings_delete_error)
     val saveFailed = stringResource(R.string.errors_save_failed)
-    var fieldResetKey by rememberSaveable { mutableIntStateOf(0) }
+    var nameSaveAttempt by rememberSaveable { mutableIntStateOf(0) }
+    var nameToEdit by rememberSaveable { mutableStateOf<Int?>(null) }
 
     CollectEvents(viewModel.events) { event ->
         when (event) {
@@ -75,11 +85,14 @@ fun DeckSettingsScreen(
             DeckSettingsEvent.DeleteFailed -> messages.showLatest(deleteFailed)
 
             DeckSettingsEvent.SaveFailed -> {
-                fieldResetKey++
+                messages.cancelAction("modeUndo")
+                nameSaveAttempt++
                 messages.showLatest(saveFailed)
             }
 
-            DeckSettingsEvent.PagesSwapped -> fieldResetKey++
+            is DeckSettingsEvent.NameSaved -> {
+                if (nameToEdit == (event.pageIndex ?: DECK_NAME)) nameToEdit = null
+            }
         }
     }
 
@@ -103,10 +116,30 @@ fun DeckSettingsScreen(
                 viewModel,
                 messages,
                 onEditMode,
-                fieldResetKey,
+                { nameToEdit = it },
+                nameSaveAttempt,
                 contentModifier
             )
         }
+    }
+    val target = nameToEdit
+    if (ready != null && target != null && (target == DECK_NAME || target in 0 until ready.deck.activePageCount)) {
+        NameEditorDialog(
+            title = if (target == DECK_NAME) {
+                stringResource(R.string.settings_rename_label)
+            } else {
+                stringResource(R.string.page_default_name, target + 1)
+            },
+            draftKey = "${ready.deck.id}:$target",
+            initialValue = if (target == DECK_NAME) ready.deck.name else ready.deck.pageNames.getOrElse(target) { "" },
+            saveAttempt = nameSaveAttempt,
+            saving = savingName,
+            allowBlank = target != DECK_NAME,
+            onSave = { name ->
+                if (target == DECK_NAME) viewModel.rename(name) else viewModel.setPageName(target, name)
+            },
+            onDismiss = { nameToEdit = null }
+        )
     }
 }
 
@@ -116,7 +149,8 @@ private fun DeckSettingsContent(
     viewModel: DeckSettingsViewModel,
     messages: SnackbarMessages,
     onEditMode: (String?) -> Unit,
-    fieldResetKey: Int,
+    onEditName: (Int) -> Unit,
+    failedSaves: Int,
     modifier: Modifier
 ) {
     val deck = state.deck
@@ -126,6 +160,14 @@ private fun DeckSettingsContent(
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     val deleteMode = rememberModeDelete(messages, viewModel::deleteMode, viewModel::restoreMode)
     var modeToReset by rememberSaveable { mutableStateOf<String?>(null) }
+    val pageOrder = rememberColumnReorder(
+        keys = List(deck.activePageCount) { it },
+        // nieudany zapis cofa pokazaną kolejność do danych
+        version = listOf(deck.updatedAt, deck.pageNames, deck.pageLanguages, failedSaves),
+        onCommit = viewModel::movePage
+    )
+    val moveUpLabel = stringResource(R.string.a11y_move_page_up)
+    val moveDownLabel = stringResource(R.string.a11y_move_page_down)
 
     Column(
         modifier
@@ -136,43 +178,51 @@ private fun DeckSettingsContent(
     ) {
         SettingsGroup(stringResource(R.string.settings_section_general)) {
             item { shapes ->
-                SettingsBlock(shapes) {
-                    PersistedTextField(
-                        storedValue = deck.name,
-                        onValueChange = viewModel::rename,
-                        label = stringResource(R.string.settings_rename_label),
-                        isError = { it.isBlank() },
-                        errorText = stringResource(R.string.import_error_name_required),
-                        resetKey = fieldResetKey,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                SettingsAction(
+                    shapes = shapes,
+                    title = stringResource(R.string.settings_rename_label),
+                    description = deck.name,
+                    icon = painterResource(R.drawable.ic_edit),
+                    onClick = { onEditName(DECK_NAME) }
+                )
             }
         }
         SettingsGroup(stringResource(R.string.settings_pages_config)) {
-            for (pageIndex in 0 until deck.activePageCount) {
-                item { shapes ->
-                    SettingsBlock(shapes) {
-                        PageRow(
-                            pageIndex = pageIndex,
-                            name = deck.pageNames.getOrElse(pageIndex) { "" },
-                            language = deck.pageLanguages.getOrElse(pageIndex) { "" },
-                            canMoveUp = pageIndex > 0,
-                            canMoveDown = pageIndex < deck.activePageCount - 1,
-                            onNameChange = { viewModel.setPageName(pageIndex, it) },
-                            onLanguageChange = { viewModel.setPageLanguage(pageIndex, it) },
-                            onMoveUp = { viewModel.swapPages(pageIndex, pageIndex - 1) },
-                            onMoveDown = { viewModel.swapPages(pageIndex, pageIndex + 1) },
-                            resetKey = fieldResetKey
-                        )
-                    }
-                }
-            }
             item { shapes ->
                 SettingsBlock(shapes) {
                     PageCountStepper(deck.activePageCount, onChange = { count ->
-                        viewModel.setActivePageCount(count) { resources.getString(R.string.import_page_label, it + 1) }
+                        viewModel.setActivePageCount(count) { resources.getString(R.string.page_default_name, it + 1) }
                     })
+                }
+            }
+            // wiersz zachowuje swój numer strony z danych (key), choć w trakcie przeciągania zmienia miejsce
+            pageOrder.order.forEachIndexed { position, page ->
+                val pageIndex = page as Int
+                item(key = "page-$pageIndex") { shapes ->
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .reorderItem(pageOrder.controller, pageIndex, shapes.shape)
+                            .reorderOnLongPress(pageOrder.controller, pageIndex)
+                            .reorderActions(
+                                moveActions(
+                                    position,
+                                    deck.activePageCount,
+                                    moveUpLabel,
+                                    moveDownLabel,
+                                    viewModel::movePage
+                                )
+                            )
+                    ) {
+                        PageRow(
+                            shapes = shapes,
+                            pageIndex = position,
+                            name = deck.pageNames.getOrElse(pageIndex) { "" },
+                            language = deck.pageLanguages.getOrElse(pageIndex) { "" },
+                            onEditName = { onEditName(pageIndex) },
+                            onLanguageChange = { viewModel.setPageLanguage(pageIndex, it) }
+                        )
+                    }
                 }
             }
         }

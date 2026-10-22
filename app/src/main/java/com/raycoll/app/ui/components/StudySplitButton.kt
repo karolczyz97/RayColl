@@ -1,4 +1,4 @@
-package com.raycoll.app.ui.dashboard
+package com.raycoll.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.padding
@@ -29,7 +29,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.theme.Spacing
 
 private const val ARROW_OPEN_DEGREES = 180f
@@ -45,9 +44,9 @@ fun StudySplitButton(
     onStudy: () -> Unit,
     onSelectMode: (modeId: String) -> Unit,
     onManageModes: () -> Unit,
-    modifier: Modifier = Modifier,
-    hasDue: Boolean = true,
-    deckName: String? = null
+    hasDue: Boolean,
+    deckName: String,
+    modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
@@ -111,8 +110,8 @@ fun StudySplitButton(
 }
 
 @Composable
-private fun actionLabel(action: String, deckName: String?): String =
-    if (deckName == null) action else stringResource(R.string.a11y_item_action, action, deckName)
+private fun actionLabel(action: String, deckName: String): String =
+    stringResource(R.string.a11y_item_action, action, deckName)
 
 @Composable
 private fun ModeMenu(

@@ -69,6 +69,7 @@ class StudySessionService : MediaSessionService() {
         player = SessionPlayer(Looper.getMainLooper(), controls)
         mediaSession = MediaSession.Builder(this, player.withCardNavigation())
             .setSessionActivity(openAppIntent())
+            .setCallback(RemoteControlCallback())
             .build()
             .also(::addSession)
         scope.launch {

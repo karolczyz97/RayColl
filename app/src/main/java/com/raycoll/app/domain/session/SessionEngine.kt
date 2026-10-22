@@ -10,11 +10,12 @@ import com.raycoll.app.domain.model.Ratings
 import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SpeakAllPagesStep
 import com.raycoll.app.domain.model.SpeakPageStep
-import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
+import com.raycoll.app.domain.model.activePageRange
+import com.raycoll.app.domain.model.activePages
 import com.raycoll.app.domain.model.referencedPage
 import com.raycoll.app.domain.operations.reviewed
 import com.raycoll.app.domain.steps.CompoundExpander
@@ -65,10 +66,8 @@ class SessionEngine(
     }
     val canRunHandsFree: Boolean = BackgroundSubstitution.isModeHandsFreeCapable(expandedSteps)
 
-    // stan SRS sprzed pierwszej oceny w tej próbie — baza dla ponownej (nadpisującej) oceny;
-    // klucze = karty ocenione w tej sesji
-    private val baseSrsStates = mutableMapOf<String, SrsState>()
-    val reviewedCardCount: Int get() = baseSrsStates.size
+    private val reviews = ReviewLedger()
+    val reviewedCardCount: Int get() = reviews.reviewedCount
     private val cardJobs = mutableMapOf<Int, Job>()
     private var lastExecutedCardIndex = -1
     private val holding = MutableStateFlow(false)
@@ -76,6 +75,13 @@ class SessionEngine(
     private var holdStartedAt = 0L
     private var peekTimerJob: Job? = null
     private var skippableJob: Job? = null
+    private var sessionSequence = 0L
+    private var visitSequence = 0L
+
+    /** Numer przebiegu karty; wznowienie po pauzie go nie zmienia, ponowne wejście na kartę tak. */
+    internal val visit: Long get() = visitSequence
+    private var navigationSequence = 0L
+    private var navigationGestures = 0
 
     internal fun dispatch(action: SessionAction) = _state.update { sessionReducer(it, action) }
 
@@ -83,8 +89,10 @@ class SessionEngine(
         cancelCardJobs()
         _isPaused.value = false
         holding.value = false
-        baseSrsStates.clear()
-        dispatch(SessionAction.StartSession(cards))
+        reviews.clear()
+        executor.reset()
+        visitSequence++
+        dispatch(SessionAction.StartSession(cards, ++sessionSequence))
         if (cards.isEmpty()) {
             dispatch(SessionAction.FinishSession)
             return
@@ -108,16 +116,18 @@ class SessionEngine(
         // LAZY: job musi trafić do mapy, zanim ruszy — przy natychmiastowym dispatcherze
         // ciało wykonałoby się przed przypisaniem i anulowanie trafiałoby w stary job
         val card = s.cards[cardIndex]
-        val job = scope.launch(start = CoroutineStart.LAZY) { runSteps(card) }
+        val visit = visitSequence
+        val job = scope.launch(start = CoroutineStart.LAZY) { runSteps(card, visit) }
         cardJobs[cardIndex] = job
         job.start()
     }
 
-    private suspend fun runSteps(card: Flashcard) {
-        var stepIndex = 0
+    private suspend fun runSteps(card: Flashcard, visit: Long) {
+        var stepIndex = _state.value.stepIndex
         while (stepIndex < expandedSteps.size) {
+            _state.first { it.navigation == null }
             currentCoroutineContext().ensureActive()
-            if (_state.value.status == SessionStatus.FINISHED) return
+            if (visit != visitSequence || _state.value.status == SessionStatus.FINISHED) return
             _state.value.pendingStepIndexToRun?.let { pending ->
                 dispatch(SessionAction.ConsumePendingStepIndex)
                 stepIndex = pending
@@ -127,18 +137,22 @@ class SessionEngine(
             // niespełniony warunek = krok pominięty, także "następna karta" z drugiej gałęzi
             if (!executor.isConditionMet(step)) {
                 stepIndex++
+                dispatch(SessionAction.SetStepIndex(stepIndex))
                 continue
             }
             if (_inBackground.value && substituteInBackground(step, card)) {
-                if (_state.value.status == SessionStatus.REVEALED) return
+                dispatch(SessionAction.SetStepIndex(stepIndex + 1))
+                if (_state.value.status == SessionStatus.AWAITING_RATING) return
                 stepIndex++
                 continue
             }
             executor.execute(step, card, stepIndex)
-            if (_state.value.status == SessionStatus.REVEALED) return
+            currentCoroutineContext().ensureActive()
+            dispatch(SessionAction.SetStepIndex(stepIndex + 1))
+            if (_state.value.status == SessionStatus.AWAITING_RATING) return
             if (_state.value.interactionGate.kind != InteractionGateKind.NONE) return
             if (step is NextCardStep) {
-                advanceToNextCard()
+                advanceToNextCard(visit)
                 return
             }
             stepIndex++
@@ -146,60 +160,122 @@ class SessionEngine(
     }
 
     fun rate(rating: Int) {
-        if (_state.value.status != SessionStatus.REVEALED || _state.value.cardReviewed) return
+        val s = _state.value
+        if (s.navigation != null || s.status != SessionStatus.AWAITING_RATING ||
+            (s.cardReviewed && !s.revisiting)
+        ) {
+            return
+        }
         interruptCurrentCard()
-        submitReview(rating)
-        scope.launch { advanceToNextCard() }
+        submitReview(rating, allowReplacement = s.revisiting)
+        requestAdvance()
     }
 
     /**
      * Zapis oceny (ręcznej i automatycznej): haptyka, ocena 1 = karta na liście
      * nieudanych. Ponowna ocena tej samej karty w tej próbie nadpisuje poprzednią.
      */
-    internal fun submitReview(rating: Int) {
+    internal fun submitReview(rating: Int, allowReplacement: Boolean = false) {
         val s = _state.value
-        if (s.cardReviewed) return
+        if (s.cardReviewed && !allowReplacement) return
         val card = s.cards.getOrNull(s.currentCardIndex) ?: return
         deps.haptic(rating)
-        val base = baseSrsStates[card.id]
-        if (base != null) {
-            dispatch(SessionAction.RemoveFailedCard(card.id))
-            deps.onCardReviewed(group.id, card.id, rating, base)
-        } else {
-            baseSrsStates[card.id] = card.srsState
-            deps.onCardReviewed(group.id, card.id, rating, null)
-        }
+        val base = reviews.previousBase(card)
+        if (base != null) dispatch(SessionAction.RemoveFailedCard(card.id))
+        deps.onCardReviewed(group.id, card.id, rating, base)
         if (rating == Ratings.AGAIN) dispatch(SessionAction.AddFailedCard(card.id))
         // ten sam wynik FSRS, który zapisuje repozytorium — liczony lokalnie, bez czytania z chmury
-        val reviewed = card.reviewed(rating, clock.now(), baseSrsStates.getValue(card.id))
+        val reviewed = card.reviewed(rating, clock.now(), reviews.base(card))
         dispatch(SessionAction.UpdateCardSrs(card.id, reviewed.srsState))
         dispatch(SessionAction.SetCardReviewed)
     }
 
-    private suspend fun advanceToNextCard() {
+    private fun requestAdvance() {
+        val visit = visitSequence
+        scope.launch { advanceToNextCard(visit) }
+    }
+
+    private suspend fun advanceToNextCard(visit: Long) {
         holding.first { !it }
-        if (_state.value.status == SessionStatus.FINISHED) return
+        _state.first { it.navigation == null }
+        if (visit != visitSequence || _state.value.status == SessionStatus.FINISHED) return
         val nextIndex = _state.value.currentCardIndex + 1
         if (nextIndex >= _state.value.cards.size) {
+            visitSequence++
             dispatch(SessionAction.FinishSession)
             return
         }
-        dispatch(SessionAction.AdvanceCard(nextIndex))
-        runCurrentCard()
+        visitCard(nextIndex)
     }
 
     fun skipToNextCard() {
-        if (_state.value.status == SessionStatus.FINISHED) return
+        if (_state.value.status == SessionStatus.FINISHED || _state.value.navigation != null) return
         interruptCurrentCard()
-        scope.launch { advanceToNextCard() }
+        requestAdvance()
     }
 
-    /** Do 3 s od startu karty: powrót do poprzedniej; później: bieżąca od początku. */
+    /** Przycisk „poprzednia”: po 3 s restartuje kartę, wcześniej wraca do zapamiętanego stanu poprzedniej. */
     fun goToPreviousCard() {
         val s = _state.value
-        if (s.status == SessionStatus.FINISHED) return
+        if (s.status == SessionStatus.FINISHED || s.navigation != null) return
         val withinWindow = clock.now() - cardStartedAt <= StudyConstants.PREVIOUS_GOES_BACK_WINDOW_MS
-        replayCard(if (withinWindow && s.currentCardIndex > 0) s.currentCardIndex - 1 else s.currentCardIndex)
+        if (withinWindow && s.currentCardIndex > 0) {
+            visitCard(s.currentCardIndex - 1)
+        } else {
+            replayCard(s.currentCardIndex)
+        }
+    }
+
+    fun beginNavigation(sessionId: Long, sourceCardId: String): CardNavigation? {
+        val s = _state.value
+        if (s.sessionId != sessionId || s.cards.getOrNull(s.currentCardIndex)?.id != sourceCardId ||
+            s.status == SessionStatus.FINISHED || s.navigation != null
+        ) {
+            return null
+        }
+        val navigation = CardNavigation(sessionId, sourceCardId, ++navigationSequence)
+        navigationGestures = 1
+        dispatch(SessionAction.BeginNavigation(navigation))
+        cancelPress()
+        return navigation
+    }
+
+    /** Następny gest może zacząć się przed końcem poprzedniej animacji; podglądy pozostają bierne. */
+    fun continueNavigation(navigation: CardNavigation): Boolean {
+        if (_state.value.navigation != navigation) return false
+        navigationGestures++
+        return true
+    }
+
+    /** null = odwołany gest. Zmiana strony jest rozstrzygana raz, na podstawie stabilnych ID. */
+    fun endNavigation(navigation: CardNavigation, destination: CardDestination?) {
+        val s = _state.value
+        if (s.navigation != navigation) return
+        val index = when (destination) {
+            is CardDestination.Card -> s.cards.indexOfFirst { it.id == destination.id }
+            CardDestination.Summary -> s.cards.size
+            null -> s.currentCardIndex
+        }
+        val distance = kotlin.math.abs(index - s.currentCardIndex)
+        if (index < 0 || distance > navigationGestures || index == s.currentCardIndex) {
+            dispatch(SessionAction.EndNavigation(navigation))
+        } else if (index == s.cards.size) {
+            stop()
+        } else {
+            visitCard(index)
+        }
+    }
+
+    private fun visitCard(index: Int) {
+        interruptCurrentCard()
+        visitSequence++
+        dispatch(SessionAction.VisitCard(index))
+        lastExecutedCardIndex = -1
+        cardStartedAt = clock.now()
+        val s = _state.value
+        if (s.status != SessionStatus.AWAITING_RATING && s.interactionGate.kind == InteractionGateKind.NONE) {
+            runCurrentCard()
+        }
     }
 
     fun restartCurrentCard() {
@@ -210,6 +286,7 @@ class SessionEngine(
 
     private fun replayCard(index: Int) {
         interruptCurrentCard()
+        visitSequence++
         dispatch(SessionAction.AdvanceCard(index))
         lastExecutedCardIndex = -1
         runCurrentCard()
@@ -226,7 +303,7 @@ class SessionEngine(
      */
     private suspend fun substituteInBackground(step: ModeStep, card: Flashcard): Boolean {
         suspend fun waitForReading() =
-            runSkippable { delay(BackgroundSubstitution.calculateBgWaitMs(card.pages.take(group.activePageCount))) }
+            runSkippable { delay(BackgroundSubstitution.calculateBgWaitMs(card.activePages(group.activePageCount))) }
         return when (step) {
             is WaitForTapStep -> {
                 waitForReading()
@@ -257,10 +334,11 @@ class SessionEngine(
         }
     }
 
-    internal fun hiddenPages(): List<Int> = (0 until group.activePageCount).filter { it !in _state.value.revealedPages }
+    internal fun hiddenPages(): List<Int> = group.activePageRange.filter { it !in _state.value.revealedPages }
 
     fun setBackground(value: Boolean) {
         _inBackground.value = value
+        if (value) cancelNavigation()
         if (value && !_isPaused.value && _state.value.interactionGate.kind != InteractionGateKind.NONE) {
             resume()
         }
@@ -298,10 +376,10 @@ class SessionEngine(
 
     /** Tapnięcie w kartę. */
     fun handleCardPress() {
-        if (_isPaused.value) return
+        if (_isPaused.value || _state.value.navigation != null) return
         val s = _state.value
         when (s.status) {
-            SessionStatus.REVEALED, SessionStatus.FINISHED -> Unit
+            SessionStatus.AWAITING_RATING, SessionStatus.FINISHED -> Unit
 
             // koniec nasłuchu = odpowiedź pominięta
             SessionStatus.LISTENING -> skippableJob?.cancel()
@@ -337,7 +415,11 @@ class SessionEngine(
      */
     fun pressDown() {
         val s = _state.value
-        if (s.status == SessionStatus.REVEALED || s.status == SessionStatus.FINISHED) return
+        if (s.navigation != null || s.status == SessionStatus.AWAITING_RATING ||
+            s.status == SessionStatus.FINISHED
+        ) {
+            return
+        }
         holding.value = true
         holdStartedAt = clock.now()
         peekTimerJob?.cancel()
@@ -374,32 +456,48 @@ class SessionEngine(
         if (_state.value.peekedPageIndex != null) dispatch(SessionAction.PeekClear)
     }
 
+    private fun cancelNavigation() {
+        _state.value.navigation?.let { dispatch(SessionAction.EndNavigation(it)) }
+    }
+
     fun pause() {
         _isPaused.value = true
         // zawsze puszcza trzymanie — inaczej po powrocie karta czekałaby na puszczenie palca
         releaseHold()
         val s = _state.value
-        // oceny/bramka czekają na użytkownika — nie ma czego pauzować
-        if (s.status == SessionStatus.FINISHED || s.status == SessionStatus.REVEALED) return
-        if (s.interactionGate.kind != InteractionGateKind.NONE) return
-        cardJobs[s.currentCardIndex]?.cancel()
+        // oceny/bramka czekają na użytkownika — pozostałe kroki trzeba zatrzymać przed zdjęciem blokady gestu
+        if (s.status != SessionStatus.AWAITING_RATING && s.interactionGate.kind == InteractionGateKind.NONE) {
+            cardJobs[s.currentCardIndex]?.cancel()
+        }
         if (s.status == SessionStatus.SPEAKING || s.status == SessionStatus.LISTENING) {
             dispatch(SessionAction.EndSpeaking)
         }
+        cancelNavigation()
     }
 
-    /** Wznawia przerwaną kartę od kroku 0 (mowy ani nasłuchu nie da się podjąć w połowie). */
+    /**
+     * Wznawia przerwaną kartę od przerwanego kroku, z zachowanym stanem karty (odsłonięte strony, wynik odpowiedzi,
+     * ocena). Mowy ani nasłuchu nie da się podjąć w połowie, więc ten jeden krok rusza od początku;
+     * czekanie wraca z czasem, który mu został.
+     */
     fun resume() {
         _isPaused.value = false
         val s = _state.value
         if (cardJobs[s.currentCardIndex]?.isActive == true) return
-        if (s.status == SessionStatus.FINISHED || s.status == SessionStatus.REVEALED) return
+        if (s.status == SessionStatus.FINISHED || s.status == SessionStatus.AWAITING_RATING) return
         if (s.interactionGate.kind != InteractionGateKind.NONE && !_inBackground.value) return
-        replayCard(s.currentCardIndex)
+        // bramka czekająca na tapnięcie (sesja zeszła w tło) dostaje zastępstwa od początku karty
+        if (s.interactionGate.kind == InteractionGateKind.NONE && s.stepIndex in expandedSteps.indices) {
+            lastExecutedCardIndex = -1
+            runCurrentCard()
+        } else {
+            replayCard(s.currentCardIndex)
+        }
     }
 
     fun stop() {
         cancelCardJobs()
+        visitSequence++
         _isPaused.value = false
         dispatch(SessionAction.FinishSession)
     }

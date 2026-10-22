@@ -65,7 +65,7 @@
     <string name="import_sep_pipe">Barra (|)</string>
     <string name="import_first_row_header">La primera fila es un encabezado</string>
     <string name="import_pages_count">Páginas:</string>
-    <string name="import_page_label">Página %1$d</string>
+    <string name="page_default_name">Página %1$d</string>
     <string name="stats_title">Estadísticas de estudio</string>
     <plurals name="stats_heatmap_title">
         <item quantity="one">Actividad en la última %1$d semana</item>
@@ -114,6 +114,16 @@
     <string name="archive_auto_delete_tomorrow">Se elimina mañana</string>
     <string name="archive_auto_delete_today">Se elimina hoy</string>
     <string name="mode_classic_name">Clásico</string>
+    <string name="mode_listen_only_name">Escuchar</string>
+    <string name="mode_browse_name">Explorar</string>
+    <string name="mode_auto_reveal_name">Autorrevelar</string>
+    <string name="mode_classic_desc">Lee la página 1, un toque revela el resto y tú calificas la tarjeta.</string>
+    <string name="mode_listen_speak_desc">Lee la página 1, dices la respuesta y la app la comprueba y la califica.</string>
+    <string name="mode_listen_only_desc">Lee la página 1, espera el doble, lee la página 2 y vuelve a esperar. Sin tocar y sin calificar.</string>
+    <string name="mode_browse_desc">Lee la página 1, un toque revela y lee la página 2 y el siguiente toque continúa. Sin calificar.</string>
+    <string name="mode_auto_reveal_desc">Lee la página 1, espera solo, revela y lee la página 2 y luego calificas.</string>
+    <string name="study_modes_section_builtin">Integrados</string>
+    <string name="study_modes_section_own">Propios</string>
     <string name="mode_listen_speak_name">Audio</string>
     <string name="step_show_page">Mostrar página %1$d</string>
     <string name="step_show_all_pages">Mostrar todas las páginas</string>
@@ -206,8 +216,6 @@
     <string name="mode_editor_move_up">Mover arriba</string>
     <string name="mode_editor_move_down">Mover abajo</string>
     <string name="mode_editor_template_title">Elige una plantilla inicial</string>
-    <string name="mode_editor_template_classic">Clásico (voltear y calificar)</string>
-    <string name="mode_editor_template_audio">Audio (escuchar y hablar)</string>
     <string name="mode_editor_template_blank">Modo vacío</string>
     <string name="mode_issue_name_required">El nombre del modo es obligatorio</string>
     <string name="mode_issue_no_steps">Añade al menos un paso</string>
@@ -314,6 +322,9 @@
     <string name="browse_card_deleted">Tarjeta eliminada.</string>
     <string name="browse_delete_card">Eliminar tarjeta</string>
     <string name="dashboard_deck_options">Opciones</string>
+    <string name="dashboard_reorder_decks">Cambiar el orden de los mazos</string>
+    <string name="dashboard_move_deck_up">Subir mazo</string>
+    <string name="dashboard_move_deck_down">Bajar mazo</string>
     <string name="browse_clear_search">Borrar búsqueda</string>
     <string name="browse_clear_filters">Borrar filtros</string>
     <string name="mode_editor_add_below">Añadir debajo</string>
@@ -335,5 +346,6 @@
     <string name="auth_loading_data">Descargando datos de la cuenta…</string>
     <string name="auth_data_when_online">Los datos aparecerán al conectarte</string>
     <string name="auth_sign_out_offline">Conéctate a internet para cerrar sesión</string>
+    <string name="study_summary_title">Resumen de la sesión</string>
 </resources>
 

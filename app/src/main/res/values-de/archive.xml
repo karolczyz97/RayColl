@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="archive_restore_hint">Du kannst archivierte Stapel wiederherstellen, bevor sie automatisch gelöscht werden.</string>
+    <string name="archive_delete_permanently">Endgültig löschen</string>
+</resources>

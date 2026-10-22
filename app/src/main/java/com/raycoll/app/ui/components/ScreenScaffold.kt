@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +36,7 @@ import com.raycoll.app.R
  * false dla ekranów, które potrzebują całej wysokości (nauka). [closeInsteadOfBack] — X zamiast strzałki
  * dla edytorów na cały ekran (jak w aplikacjach Google: X porzuca, „Zapisz” po prawej zatwierdza).
  * [containerColor] — tło ekranu i paska; ekrany ustawień używają [settingsBackground].
+ * [animateTitleOnRelease] — dla listy Androida pasek podąża za jej ruchem, bez osobnej animacji po puszczeniu.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,9 +50,14 @@ fun ScreenScaffold(
     collapsingTitle: Boolean = true,
     closeInsteadOfBack: Boolean = false,
     containerColor: Color = MaterialTheme.colorScheme.surface,
+    animateTitleOnRelease: Boolean = true,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val scrollBehavior = if (collapsingTitle) TopAppBarDefaults.exitUntilCollapsedScrollBehavior() else null
+    val scrollBehavior = when {
+        !collapsingTitle -> null
+        animateTitleOnRelease -> TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+        else -> TopAppBarDefaults.exitUntilCollapsedScrollBehavior(snapAnimationSpec = null, flingAnimationSpec = null)
+    }
     val barColors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor)
     Box(modifier.fillMaxSize().background(containerColor), contentAlignment = Alignment.TopCenter) {
         Scaffold(

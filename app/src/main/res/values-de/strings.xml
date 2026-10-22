@@ -64,7 +64,7 @@
     <string name="import_sep_pipe">Senkrechter Strich (|)</string>
     <string name="import_first_row_header">Erste Zeile ist eine Kopfzeile</string>
     <string name="import_pages_count">Seiten:</string>
-    <string name="import_page_label">Seite %1$d</string>
+    <string name="page_default_name">Seite %1$d</string>
     <string name="stats_title">Lernstatistiken</string>
     <plurals name="stats_heatmap_title">
         <item quantity="one">Aktivität in der letzten %1$d Woche</item>
@@ -111,6 +111,16 @@
     <string name="archive_auto_delete_tomorrow">Wird morgen gelöscht</string>
     <string name="archive_auto_delete_today">Wird heute gelöscht</string>
     <string name="mode_classic_name">Klassisch</string>
+    <string name="mode_listen_only_name">Anhören</string>
+    <string name="mode_browse_name">Durchsehen</string>
+    <string name="mode_auto_reveal_name">Automatisch aufdecken</string>
+    <string name="mode_classic_desc">Liest Seite 1, Tippen deckt den Rest auf, du bewertest die Karte.</string>
+    <string name="mode_listen_speak_desc">Liest Seite 1, du sprichst die Antwort, die App prüft und bewertet sie.</string>
+    <string name="mode_listen_only_desc">Liest Seite 1, wartet doppelt so lange, liest Seite 2 und wartet erneut. Ohne Tippen, ohne Bewertung.</string>
+    <string name="mode_browse_desc">Liest Seite 1, Tippen deckt Seite 2 auf und liest sie, das nächste Tippen geht weiter. Ohne Bewertung.</string>
+    <string name="mode_auto_reveal_desc">Liest Seite 1, wartet selbst, deckt Seite 2 mit Vorlesen auf, dann bewertest du.</string>
+    <string name="study_modes_section_builtin">Integriert</string>
+    <string name="study_modes_section_own">Eigene</string>
     <string name="mode_listen_speak_name">Audio</string>
     <string name="step_show_page">Zeige Seite %1$d</string>
     <string name="step_show_all_pages">Alle Seiten zeigen</string>
@@ -201,8 +211,6 @@
     <string name="mode_editor_move_up">Nach oben</string>
     <string name="mode_editor_move_down">Nach unten</string>
     <string name="mode_editor_template_title">Startvorlage wählen</string>
-    <string name="mode_editor_template_classic">Klassisch (aufdecken &amp; bewerten)</string>
-    <string name="mode_editor_template_audio">Audio (hören &amp; sprechen)</string>
     <string name="mode_editor_template_blank">Leerer Modus</string>
     <string name="mode_issue_name_required">Modusname ist erforderlich</string>
     <string name="mode_issue_no_steps">Mindestens einen Schritt hinzufügen</string>
@@ -309,6 +317,9 @@
     <string name="browse_card_deleted">Karte gelöscht.</string>
     <string name="browse_delete_card">Karte löschen</string>
     <string name="dashboard_deck_options">Optionen</string>
+    <string name="dashboard_reorder_decks">Stapelreihenfolge ändern</string>
+    <string name="dashboard_move_deck_up">Stapel nach oben</string>
+    <string name="dashboard_move_deck_down">Stapel nach unten</string>
     <string name="browse_clear_search">Suche löschen</string>
     <string name="browse_clear_filters">Filter zurücksetzen</string>
     <string name="mode_editor_add_below">Darunter hinzufügen</string>
@@ -329,5 +340,6 @@
     <string name="auth_loading_data">Kontodaten werden geladen…</string>
     <string name="auth_data_when_online">Kontodaten erscheinen nach dem Verbinden</string>
     <string name="auth_sign_out_offline">Zum Abmelden mit dem Internet verbinden</string>
+    <string name="study_summary_title">Zusammenfassung der Sitzung</string>
 </resources>
 

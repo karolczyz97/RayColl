@@ -8,10 +8,12 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
+import com.raycoll.app.ui.archive.ArchiveEvent
 import com.raycoll.app.ui.archive.ArchiveViewModel
 import com.raycoll.app.ui.browse.BrowseEvent
 import com.raycoll.app.ui.browse.BrowseViewModel
 import com.raycoll.app.ui.components.launchSaving
+import com.raycoll.app.ui.dashboard.DashboardEvent
 import com.raycoll.app.ui.dashboard.DashboardViewModel
 import com.raycoll.app.ui.decksettings.DeckSettingsEvent
 import com.raycoll.app.ui.decksettings.DeckSettingsViewModel
@@ -19,6 +21,7 @@ import com.raycoll.app.ui.imports.ImportEvent
 import com.raycoll.app.ui.imports.ImportViewModel
 import com.raycoll.app.ui.modedetail.ModeDetailEvent
 import com.raycoll.app.ui.modedetail.ModeDetailViewModel
+import com.raycoll.app.ui.studymodes.StudyModesEvent
 import com.raycoll.app.ui.studymodes.StudyModesViewModel
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +60,7 @@ class SaveFailureTest {
         )
         imports.setDeckName("Import")
         imports.onSourceTextChanged("q;a")
-        breakDatabase()
+        failAllWrites()
         browse.addCard(listOf("q", "a"))
         assertEquals(BrowseEvent.SaveFailed, browse.events.first())
         mode.save()
@@ -89,8 +92,8 @@ class SaveFailureTest {
         Dispatchers.resetMain()
     }
 
-    /** Uszkodzona baza — każdy zapis kończy się wyjątkiem SQLite. */
-    private fun breakDatabase() {
+    /** Magazyn odrzuca zapisy — każdy zapis kończy się wyjątkiem. */
+    private fun failAllWrites() {
         repos.store.failWhen = { true }
     }
 
@@ -106,7 +109,7 @@ class SaveFailureTest {
     @Test
     fun `deck settings report a failed write`() = runTest {
         val vm = DeckSettingsViewModel("d1", repos.deckRepository, repos.studyModeRepository)
-        breakDatabase()
+        failAllWrites()
         vm.rename("New")
         assertEquals(DeckSettingsEvent.SaveFailed, vm.events.first())
     }
@@ -117,13 +120,13 @@ class SaveFailureTest {
             DashboardViewModel(repos.deckRepository, repos.studyModeRepository, FakeClock(), testPreferences.repository)
         val archive = ArchiveViewModel(repos.deckRepository, FakeClock(), Dispatchers.Unconfined)
         val modes = StudyModesViewModel(repos.studyModeRepository)
-        breakDatabase()
+        failAllWrites()
 
         dashboard.archiveDeck("d1")
-        dashboard.events.first()
+        assertEquals(DashboardEvent.SaveFailed, dashboard.events.first())
         archive.restore("d1")
-        archive.events.first()
+        assertEquals(ArchiveEvent.SaveFailed, archive.events.first())
         modes.deleteMode("m1")
-        modes.events.first()
+        assertEquals(StudyModesEvent.SaveFailed, modes.events.first())
     }
 }

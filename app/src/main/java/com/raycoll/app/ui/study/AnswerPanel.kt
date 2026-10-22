@@ -28,6 +28,7 @@ import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.domain.session.LastAnswerResult
 import com.raycoll.app.ui.theme.LocalRatingColors
 import com.raycoll.app.ui.theme.Spacing
+import com.raycoll.app.ui.theme.answerColors
 
 /**
  * Wynik odpowiedzi głosowej w jednej linii: co usłyszano, na tle w kolorze wyniku (zielony / czerwony),
@@ -41,8 +42,8 @@ fun AnswerPanel(answer: LastAnswerResult, listening: Boolean, onTap: () -> Unit,
     val ratings = LocalRatingColors.current
     val (container, content) = when {
         listening -> colors.surfaceContainerHighest to colors.onSurfaceVariant
-        answer.status == AnswerStatus.CORRECT -> ratings.easyBg to ratings.easyFg
-        answer.status == AnswerStatus.INCORRECT -> ratings.againBg to ratings.againFg
+        answer.status == AnswerStatus.CORRECT -> ratings.answerColors(correct = true)
+        answer.status == AnswerStatus.INCORRECT -> ratings.answerColors(correct = false)
         else -> colors.surfaceContainerHighest to colors.onSurfaceVariant
     }
     val tintSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()

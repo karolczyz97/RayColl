@@ -32,7 +32,8 @@ fun orderCards(cards: List<Flashcard>, order: CardOrder, random: Random = Random
     )
 }
 
-fun getDueCards(
+/** Karty do sesji według filtru talii (filtr „wszystkie” bierze też karty przed terminem). */
+fun sessionCards(
     cards: List<Flashcard>,
     filter: StudyFilter,
     order: CardOrder,
@@ -40,5 +41,5 @@ fun getDueCards(
     random: Random = Random
 ): List<Flashcard> = orderCards(cards.live().filter { it.matches(filter, now) }, order, random)
 
-fun countDueCards(cards: List<Flashcard>, filter: StudyFilter, now: Long): Int =
+fun countSessionCards(cards: List<Flashcard>, filter: StudyFilter, now: Long): Int =
     cards.count { it.isLive && it.matches(filter, now) }

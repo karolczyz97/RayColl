@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.imports
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.data.files.DocumentFiles
@@ -8,27 +9,26 @@ import com.raycoll.app.domain.imports.CsvSeparator
 import com.raycoll.app.domain.imports.ImportProblem
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.MainDispatcherRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import kotlinx.coroutines.Dispatchers
+import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -81,50 +81,48 @@ class ImportViewModelTest {
         assertTrue(repos.snapshot().groups.isEmpty())
     }
     private val dispatcher = StandardTestDispatcher()
+
+    @get:Rule
+    val mainDispatcher = MainDispatcherRule(dispatcher)
+
+    @get:Rule
+    val folder = TemporaryFolder()
     private lateinit var repos: TestRepos
     private lateinit var files: DocumentFiles
     private val pageNames = List(20) { "Page ${it + 1}" }
 
     @Before
     fun setup() {
-        Dispatchers.setMain(dispatcher)
         val context = ApplicationProvider.getApplicationContext<Context>()
         repos = VmTestHarness.create(context, FakeClock())
-        files = DocumentFiles(context)
-    }
-
-    @After
-    fun teardown() {
-        Dispatchers.resetMain()
+        // plik szkicu zapisuje się na dispatcherze testu, więc advanceUntilIdle obejmuje też IO
+        files = DocumentFiles(context, dispatcher)
     }
 
     private fun vm(savedState: SavedStateHandle = SavedStateHandle()) =
-        ImportViewModel(repos.deckRepository, files, dispatcher, savedState)
-
-    /** Plik szkicu zapisuje się na prawdziwym wątku IO — czas testu przesuwany, aż [done]. */
-    private fun TestScope.advanceUntil(done: () -> Boolean) {
-        repeat(300) {
-            advanceUntilIdle()
-            if (done()) return
-            Thread.sleep(10)
-        }
-        fail("timed out")
-    }
+        mainDispatcher.track(ImportViewModel(repos.deckRepository, files, dispatcher, savedState))
 
     @Test
     fun `draft survives process death`() = runTest(dispatcher) {
         // po śmierci procesu nowy ViewModel dostaje ten sam zapisany stan ekranu
         val savedState = SavedStateHandle()
         val before = vm(savedState)
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == false }
+        advanceUntilIdle()
+        assertEquals(false, savedState.get<Boolean>(DRAFT_SAVED_KEY))
         before.setDeckName("Animals")
         before.onSourceTextChanged("Word;Translation\ncat;kot")
-        advanceUntilIdle()
+        // tekst już przetworzony, szkic jeszcze nie zapisany: jeden zapis z całym stanem. Robolectric na
+        // Windows nie nadpisuje istniejącego pliku przy AtomicFile.finishWrite, więc drugi zapis by przepadł.
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(listOf("Word", "Translation"), before.uiState.value.pageNames)
+        assertEquals(false, savedState.get<Boolean>(DRAFT_SAVED_KEY))
         before.setPageName(1, "Polish")
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+        advanceUntilIdle()
+        assertEquals(true, savedState.get<Boolean>(DRAFT_SAVED_KEY))
 
         val restored = vm(savedState)
-        advanceUntil { restored.uiState.value.rows.isNotEmpty() }
+        advanceUntilIdle()
         val state = restored.uiState.value
         assertEquals("Animals", state.deckName)
         assertEquals("Word;Translation\ncat;kot", state.sourceText)
@@ -137,11 +135,14 @@ class ImportViewModelTest {
         val savedState = SavedStateHandle()
         val before = vm(savedState)
         before.onSourceTextChanged("cat;kot")
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+        advanceUntilIdle()
+        assertEquals(true, savedState.get<Boolean>(DRAFT_SAVED_KEY))
+        assertNotNull(files.readPrivate(IMPORT_DRAFT_FILE))
 
         before.discardDraft()
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == false }
-        assertEquals(null, runBlocking { files.readPrivate(IMPORT_DRAFT_FILE) })
+        advanceUntilIdle()
+        assertEquals(false, savedState.get<Boolean>(DRAFT_SAVED_KEY))
+        assertEquals(null, files.readPrivate(IMPORT_DRAFT_FILE))
     }
 
     @Test
@@ -149,11 +150,14 @@ class ImportViewModelTest {
         val savedState = SavedStateHandle()
         val vm = vm(savedState)
         vm.onSourceTextChanged("cat;kot")
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+        advanceUntilIdle()
+        assertEquals(true, savedState.get<Boolean>(DRAFT_SAVED_KEY))
+        assertNotNull(files.readPrivate(IMPORT_DRAFT_FILE))
 
         vm.onSourceTextChanged("")
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == false }
-        assertEquals(null, runBlocking { files.readPrivate(IMPORT_DRAFT_FILE) })
+        advanceUntilIdle()
+        assertEquals(false, savedState.get<Boolean>(DRAFT_SAVED_KEY))
+        assertEquals(null, files.readPrivate(IMPORT_DRAFT_FILE))
     }
 
     @Test
@@ -161,11 +165,61 @@ class ImportViewModelTest {
         val savedState = SavedStateHandle()
         val before = vm(savedState)
         before.onSourceTextChanged("cat;kot")
-        advanceUntil { savedState.get<Boolean>(DRAFT_SAVED_KEY) == true }
+        advanceUntilIdle()
+        assertEquals(true, savedState.get<Boolean>(DRAFT_SAVED_KEY))
+        assertNotNull(files.readPrivate(IMPORT_DRAFT_FILE))
 
         val fresh = vm()
-        advanceUntil { runBlocking { files.readPrivate(IMPORT_DRAFT_FILE) } == null }
+        advanceUntilIdle()
+        assertEquals(null, files.readPrivate(IMPORT_DRAFT_FILE))
         assertEquals("", fresh.uiState.value.sourceText)
+    }
+
+    @Test
+    fun `unreadable file emits FileUnreadable and unlocks the input`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.onSourceTextChanged("old;text")
+        vm.loadFile(Uri.fromFile(File(folder.root, "missing.csv")))
+        assertTrue(vm.uiState.value.loadingFile)
+        advanceUntilIdle()
+        assertEquals(ImportEvent.FileUnreadable, vm.events.first())
+        assertFalse(vm.uiState.value.loadingFile)
+        assertEquals("old;text", vm.uiState.value.sourceText)
+        assertEquals("", vm.uiState.value.deckName)
+    }
+
+    @Test
+    fun `readable file replaces the source text and is parsed`() = runTest(dispatcher) {
+        val file = File(folder.root, "Biologia.2026.csv").apply { writeText("hello;world\nfoo;bar") }
+        val vm = vm()
+        vm.onSourceTextChanged("old;text")
+        vm.loadFile(Uri.fromFile(file))
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.loadingFile)
+        assertEquals("hello;world\nfoo;bar", vm.uiState.value.sourceText)
+        assertEquals("Biologia.2026", vm.uiState.value.deckName)
+        assertEquals(listOf(listOf("hello", "world"), listOf("foo", "bar")), vm.uiState.value.rows)
+        assertEquals("Biologia.2026", importedDeck(vm).name)
+    }
+
+    @Test
+    fun `loading a file preserves a manually entered deck name`() = runTest(dispatcher) {
+        val file = File(folder.root, "words.csv").apply { writeText("hello;world") }
+        val vm = vm()
+        vm.setDeckName("moja nazwa")
+        vm.loadFile(Uri.fromFile(file))
+        advanceUntilIdle()
+        assertEquals("moja nazwa", vm.uiState.value.deckName)
+        assertEquals(listOf(listOf("hello", "world")), vm.uiState.value.rows)
+    }
+
+    @Test
+    fun `a file without an extension supplies its full name`() = runTest(dispatcher) {
+        val file = File(folder.root, "Środowisko i klimat").apply { writeText("hello;world") }
+        val vm = vm()
+        vm.loadFile(Uri.fromFile(file))
+        advanceUntilIdle()
+        assertEquals("Środowisko i klimat", vm.uiState.value.deckName)
     }
 
     @Test
@@ -511,7 +565,7 @@ class ImportViewModelTest {
     @Test
     fun `final parse runs on the parse dispatcher and a second click does not import twice`() = runTest(dispatcher) {
         val parseDispatcher = StandardTestDispatcher(testScheduler, name = "parse")
-        val vm = ImportViewModel(repos.deckRepository, files, parseDispatcher, SavedStateHandle())
+        val vm = mainDispatcher.track(ImportViewModel(repos.deckRepository, files, parseDispatcher, SavedStateHandle()))
         vm.setDeckName("Deck")
         vm.onSourceTextChanged("Word;Translation\ncat;kot")
         vm.runImport(pageNames)

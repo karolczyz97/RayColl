@@ -1,6 +1,5 @@
 package com.raycoll.app.domain.model
 
-import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -186,25 +185,25 @@ data class CompoundBranch(
 
 /** Sposób oceny karty w gałęzi kroku z nasłuchem. */
 @Serializable
-enum class BranchRating(val key: String) {
+enum class BranchRating {
     @SerialName("fromAnswer")
-    FROM_ANSWER("fromAnswer"),
+    FROM_ANSWER,
 
     @SerialName("fixed")
-    FIXED("fixed"),
+    FIXED,
 
     @SerialName("none")
-    NONE("none")
+    NONE
 }
 
 /** Odsłanianie stron w kroku "odwróć kartę": jedna następna albo wszystkie naraz. */
 @Serializable
-enum class RevealStyle(val key: String) {
+enum class RevealStyle {
     @SerialName("all")
-    ALL("all"),
+    ALL,
 
     @SerialName("next")
-    NEXT("next")
+    NEXT
 }
 
 @OptIn(ExperimentalSerializationApi::class)

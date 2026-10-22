@@ -76,13 +76,13 @@ val DarkInversePrimary = Color(0xFF5446C7)
 
 // SRS Category semantic colors
 val SrsNewFgLight = Color(0xFF00388A)
-val SrsNewBgLight = Color(0xFFD4E3FF)
+val SrsNewBgLight = Color(0xFFDEE9FF)
 val SrsLearningFgLight = Color(0xFF665000)
-val SrsLearningBgLight = Color(0xFFFFE088)
+val SrsLearningBgLight = Color(0xFFFFF0BF)
 val SrsReviewFgLight = Color(0xFF8A3600)
-val SrsReviewBgLight = Color(0xFFFFDBCA)
+val SrsReviewBgLight = Color(0xFFFFE2D3)
 val SrsMasteredFgLight = Color(0xFF005234)
-val SrsMasteredBgLight = Color(0xFFB8F5D0)
+val SrsMasteredBgLight = Color(0xFFCDF2DD)
 
 val SrsNewFgDark = Color(0xFFA5C8FF)
 val SrsNewBgDark = Color(0xFF002E74)
@@ -93,9 +93,8 @@ val SrsReviewBgDark = Color(0xFF6E2800)
 val SrsMasteredFgDark = Color(0xFF82DCAB)
 val SrsMasteredBgDark = Color(0xFF003E26)
 
-// akcenty kategorii do pasków i wykresów (bez tekstu na nich): żywe średnie tony w jasnym motywie,
-// jasne w ciemnym — kontrast z tłem min. 3:1 w obu
-val SrsNewAccentLight = Color(0xFF2B6FDB)
-val SrsLearningAccentLight = Color(0xFF997300)
-val SrsReviewAccentLight = Color(0xFFD0561C)
-val SrsMasteredAccentLight = Color(0xFF16875A)
+// Paski i wykresy mają te same pastelowe akcenty w obu motywach; tekst ma osobne, kontrastowe kolory.
+val SrsNewAccentLight = SrsNewFgDark
+val SrsLearningAccentLight = SrsLearningFgDark
+val SrsReviewAccentLight = SrsReviewFgDark
+val SrsMasteredAccentLight = SrsMasteredFgDark

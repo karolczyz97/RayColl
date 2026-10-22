@@ -7,8 +7,9 @@ import com.raycoll.app.core.Clock
 import com.raycoll.app.core.minuteTicks
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.di.DefaultDispatcher
+import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.domain.selectors.archiveDaysLeft
-import com.raycoll.app.domain.selectors.live
+import com.raycoll.app.domain.selectors.computeCardStats
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +23,9 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
 @Immutable
-data class ArchivedDeck(val id: String, val name: String, val cardCount: Int, val daysLeft: Int)
+data class ArchivedDeck(val id: String, val name: String, val stats: CardStats, val daysLeft: Int) {
+    val cardCount: Int get() = stats.total
+}
 
 sealed interface ArchiveUiState {
     data object Loading : ArchiveUiState
@@ -49,7 +52,7 @@ class ArchiveViewModel @Inject constructor(
                 ArchivedDeck(
                     id = deck.id,
                     name = deck.name,
-                    cardCount = deck.cards.live().size,
+                    stats = computeCardStats(deck.cards),
                     daysLeft = archiveDaysLeft(deck, now) ?: 0
                 )
             }
@@ -60,12 +63,18 @@ class ArchiveViewModel @Inject constructor(
 
     private val eventSink = UiEvents<ArchiveEvent>()
 
-    /** Przywrócenie talii się nie zapisało. */
+    /** Nie udało się zapisać przywrócenia lub usunięcia talii. */
     val events: Flow<ArchiveEvent> = eventSink.flow
 
     fun restore(deckId: String) {
         viewModelScope.launchSaving(onFailure = {
             eventSink.send(ArchiveEvent.SaveFailed)
         }) { deckRepository.restoreDeck(deckId) }
+    }
+
+    fun delete(deckId: String) {
+        viewModelScope.launchSaving(onFailure = {
+            eventSink.send(ArchiveEvent.SaveFailed)
+        }) { deckRepository.deleteDeck(deckId) }
     }
 }

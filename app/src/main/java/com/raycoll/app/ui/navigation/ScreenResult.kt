@@ -18,6 +18,7 @@ sealed interface ScreenResult {
 internal fun encodeScreenResult(value: ScreenResult?): String? =
     value?.let { Json.encodeToString(ScreenResult.serializer(), it) }
 
+// czyta tylko to, co zapisał encodeScreenResult; nieczytelny wynik (np. po aktualizacji aplikacji) przepada
 internal fun decodeScreenResult(value: String?): ScreenResult? = value?.let {
     runCatching { Json.decodeFromString(ScreenResult.serializer(), it) }.getOrNull()
 }

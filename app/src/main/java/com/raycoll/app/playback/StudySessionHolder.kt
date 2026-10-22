@@ -28,11 +28,9 @@ private const val TAG = "StudySessionHolder"
 /** Aktywna sesja nauki widziana przez cały proces. */
 data class ActiveSession(val engine: SessionEngine, val deckName: String)
 
-internal data class SessionBoundary(val attempt: Long = 0, val ended: Boolean = false)
-
 /**
  * Jedyny właściciel aktywnej sesji: ekran nauki ją rejestruje, serwis w tle
- * i synchronizacja ją obserwują. Rejestracja sesji, która może iść w tle,
+ * ją obserwuje. Rejestracja sesji, która może iść w tle,
  * uruchamia serwis; zwolnienie sesji zatrzymuje go (serwis kończy się sam).
  * Wszystko poza serwisem dzieje się na wątku głównym.
  */
@@ -41,7 +39,7 @@ class StudySessionHolder internal constructor(
     private val context: Context,
     private val startService: (Context, Intent) -> Unit,
     private val isAppVisible: () -> Boolean,
-    private val focusRequester: AudioFocusRequester = AudioFocusManager(context),
+    private val focusRequester: AudioFocusRequester,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 ) {
     @Inject
@@ -57,12 +55,6 @@ class StudySessionHolder internal constructor(
         scope
     )
 
-    internal constructor(context: Context) : this(
-        context,
-        { ctx, intent -> ContextCompat.startForegroundService(ctx, intent) },
-        { ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) }
-    )
-
     private val _session = MutableStateFlow<ActiveSession?>(null)
     val session: StateFlow<ActiveSession?> = _session.asStateFlow()
     private var focus: SessionAudioFocus? = null
@@ -70,8 +62,6 @@ class StudySessionHolder internal constructor(
     private var backgroundPlaybackReady = false
     private val _focusDenied = MutableStateFlow(false)
     val focusDenied: StateFlow<Boolean> = _focusDenied.asStateFlow()
-    private val _boundary = MutableStateFlow(SessionBoundary())
-    internal val boundary: StateFlow<SessionBoundary> = _boundary.asStateFlow()
 
     val controls: SessionControls = object : SessionControls {
         override fun play(): Boolean {
@@ -127,7 +117,6 @@ class StudySessionHolder internal constructor(
         focus?.release()
         audioRoute.stop()
         _session.value?.engine?.takeIf { it !== engine }?.stop()
-        _boundary.value = SessionBoundary(_boundary.value.attempt + 1)
         _session.value = ActiveSession(engine, deckName)
         _focusDenied.value = false
         backgroundPlaybackReady = false
@@ -167,7 +156,6 @@ class StudySessionHolder internal constructor(
                     state to sessionAudioIdle(state, background, paused)
                 }.collect { (state, idle) ->
                     if (state.status == SessionStatus.FINISHED) {
-                        _boundary.value = _boundary.value.copy(ended = true)
                         focus?.release()
                         audioRoute.stop()
                     } else if (engine.needsAudio) {
@@ -201,7 +189,6 @@ class StudySessionHolder internal constructor(
         backgroundPlaybackReady = false
         audioRoute.stop()
         engine.stop()
-        _boundary.value = _boundary.value.copy(ended = true)
         _session.value = null
     }
 }

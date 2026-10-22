@@ -2,7 +2,6 @@ package com.raycoll.app.ui.modedetail
 
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -18,6 +17,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import com.raycoll.app.ui.components.AppTextField
 import java.math.BigDecimal
 
 /** Jak czytać i pokazywać liczbę danego typu w [NumberField]. */
@@ -95,7 +95,7 @@ internal fun <T : Comparable<T>> NumberField(
         text = numberFormat.format(coerced)
     }
 
-    OutlinedTextField(
+    AppTextField(
         value = text,
         onValueChange = { input ->
             text = input

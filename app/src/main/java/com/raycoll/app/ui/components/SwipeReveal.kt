@@ -36,8 +36,10 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -70,9 +72,7 @@ class SwipeRevealState(private val animationSpec: AnimationSpec<Float>) {
 
     suspend fun close() = draggable.animateTo(SwipeRevealValue.Closed, animationSpec)
 }
-
 private val ActionWidth = 84.dp
-private const val ICON_MIN_SCALE = 0.5f
 private const val HINT_DELAY_MS = 600L
 private const val HINT_FRACTION = 0.5f
 
@@ -116,6 +116,8 @@ fun SwipeReveal(
             peek.animateTo(-revealPx * HINT_FRACTION, hintSpec)
             peek.animateTo(0f, hintSpec)
             onHintShown()
+        } else {
+            peek.snapTo(0f)
         }
     }
 
@@ -157,7 +159,8 @@ fun SwipeReveal(
         Row(
             Modifier
                 .matchParentSize()
-                .padding(Spacing.s),
+                .padding(Spacing.s)
+                .then(if (state.isOpen) Modifier else Modifier.clearAndSetSemantics {}),
             horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.End)
         ) {
             actions.forEach { action ->
@@ -168,14 +171,9 @@ fun SwipeReveal(
                     contentColor = action.contentColor,
                     modifier = Modifier
                         .width(ActionWidth)
+                        // Przyciski odsłania sama karta. Osobna przezroczysta warstwa potrafiła
+                        // pozostać niewidoczna w ComposeView ponownie użytym przez RecyclerView.
                         .fillMaxHeight()
-                        .graphicsLayer {
-                            val progress = revealProgress(draggable, peek.value, revealPx)
-                            alpha = progress
-                            val scale = ICON_MIN_SCALE + (1f - ICON_MIN_SCALE) * progress
-                            scaleX = scale
-                            scaleY = scale
-                        }
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -185,7 +183,8 @@ fun SwipeReveal(
                         Text(
                             action.label,
                             style = MaterialTheme.typography.labelMedium,
-                            maxLines = 1,
+                            maxLines = 2,
+                            textAlign = TextAlign.Center,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs)
                         )
@@ -208,10 +207,4 @@ fun SwipeReveal(
                 )
         ) { content() }
     }
-}
-
-private fun revealProgress(state: AnchoredDraggableState<SwipeRevealValue>, peek: Float, revealPx: Float): Float {
-    val offset = (state.offset.takeIf { !it.isNaN() } ?: 0f) + peek
-    if (revealPx <= 0f) return 0f
-    return (-offset / revealPx).coerceIn(0f, 1f)
 }

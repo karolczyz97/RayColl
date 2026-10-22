@@ -3,7 +3,6 @@ package com.raycoll.app.domain.session
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.SrsState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -94,7 +93,7 @@ class SessionReducerTest {
     fun `ShowRatings sets revealed when not reviewed`() {
         val state = SessionState(cardReviewed = false)
         val result = sessionReducer(state, SessionAction.ShowRatings)
-        assertEquals(SessionStatus.REVEALED, result.status)
+        assertEquals(SessionStatus.AWAITING_RATING, result.status)
     }
 
     @Test

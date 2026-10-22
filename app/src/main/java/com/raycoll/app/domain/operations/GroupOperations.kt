@@ -1,12 +1,14 @@
 package com.raycoll.app.domain.operations
 
 import com.raycoll.app.core.Ids
+import com.raycoll.app.core.moved
 import com.raycoll.app.domain.model.ArchiveConstants
 import com.raycoll.app.domain.model.DEFAULT_PAGE_LANGUAGE
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.PageLimits
 import com.raycoll.app.domain.model.defaultPageName
+import com.raycoll.app.domain.model.isLive
 import com.raycoll.app.domain.normalize.padPageMetadata
 
 fun newGroup(
@@ -36,28 +38,34 @@ fun FlashcardGroup.withActivePageCount(
     return copy(activePageCount = clamped, pageNames = names, pageLanguages = languages, updatedAt = now)
 }
 
-/** Zamienia miejscami dwie strony: nazwę, język i treść w każdej karcie. */
-fun FlashcardGroup.withPagesSwapped(from: Int, to: Int, now: Long): FlashcardGroup {
+/** Przenosi stronę [from] na miejsce [to] (nazwę, język i treść w każdej karcie); strony pomiędzy przesuwają się o jedno. */
+fun FlashcardGroup.withPageMoved(from: Int, to: Int, now: Long): FlashcardGroup {
     if (from == to || from !in pageNames.indices || to !in pageNames.indices) return this
     val languages =
         pageLanguages + List((pageNames.size - pageLanguages.size).coerceAtLeast(0)) { DEFAULT_PAGE_LANGUAGE }
     return copy(
-        pageNames = pageNames.swapped(from, to),
-        pageLanguages = languages.swapped(from, to),
+        pageNames = pageNames.moved(from, to),
+        pageLanguages = languages.moved(from, to),
         cards = cards.map { card ->
             val pages = card.pages + List((maxOf(from, to) + 1 - card.pages.size).coerceAtLeast(0)) { "" }
-            card.copy(pages = pages.swapped(from, to))
+            card.copy(pages = pages.moved(from, to))
         },
         updatedAt = now
     )
 }
 
+/** Nowa nazwa strony [index]; talia bez zmian, gdy takiej strony nie ma. */
+fun FlashcardGroup.withPageName(index: Int, name: String): FlashcardGroup =
+    copy(pageNames = pageNames.replacedAt(index, name.trim()))
+
+/** Nowy język strony [index]; talia bez zmian, gdy takiej strony nie ma. */
+fun FlashcardGroup.withPageLanguage(index: Int, language: String): FlashcardGroup =
+    copy(pageLanguages = pageLanguages.replacedAt(index, language))
+
 fun FlashcardGroup.isArchiveExpired(now: Long): Boolean {
     val archivedAt = archivedAt ?: return false
-    return deletedAt == null && now - archivedAt >= ArchiveConstants.RETENTION_MS
+    return isLive && now - archivedAt >= ArchiveConstants.RETENTION_MS
 }
 
-private fun <T> List<T>.swapped(a: Int, b: Int): List<T> = toMutableList().also {
-    it[a] = this[b]
-    it[b] = this[a]
-}
+private fun <T> List<T>.replacedAt(index: Int, value: T): List<T> =
+    if (index in indices) toMutableList().also { it[index] = value } else this

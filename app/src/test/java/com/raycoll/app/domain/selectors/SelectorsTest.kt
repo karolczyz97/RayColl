@@ -61,22 +61,22 @@ class SelectorsTest {
     )
 
     @Test
-    fun `getDueCards all returns live cards`() {
+    fun `sessionCards all returns live cards`() {
         val cards = listOf(makeCard("c1"), makeCard("c2").copy(deletedAt = now))
-        val result = getDueCards(cards, StudyFilter.ALL, CardOrder.DEFAULT, now)
+        val result = sessionCards(cards, StudyFilter.ALL, CardOrder.DEFAULT, now)
         assertEquals(1, result.size)
     }
 
     @Test
-    fun `getDueCards new returns state 0`() {
+    fun `sessionCards new returns state 0`() {
         val cards = listOf(makeCard("c1", state = 0), makeCard("c2", state = 2))
-        val result = getDueCards(cards, StudyFilter.NEW, CardOrder.DEFAULT, now)
+        val result = sessionCards(cards, StudyFilter.NEW, CardOrder.DEFAULT, now)
         assertEquals(1, result.size)
         assertEquals("c1", result[0].id)
     }
 
     @Test
-    fun `getDueCards review returns due cards`() {
+    fun `sessionCards review returns due cards`() {
         val cards = listOf(
             makeCard("c1", state = 2, nextReview = now - 1),
             makeCard(
@@ -86,7 +86,7 @@ class SelectorsTest {
                     now + 10000
             )
         )
-        val result = getDueCards(cards, StudyFilter.REVIEW, CardOrder.DEFAULT, now)
+        val result = sessionCards(cards, StudyFilter.REVIEW, CardOrder.DEFAULT, now)
         assertEquals(1, result.size)
     }
 
@@ -239,7 +239,7 @@ class SelectorsTest {
             makeCard("future", state = SrsStates.REVIEW, reps = 2, nextReview = now + 1),
             makeCard("deleted", state = SrsStates.NEW).copy(deletedAt = now - 10)
         )
-        val due = getDueCards(cards, StudyFilter.NEW_AND_REVIEW, CardOrder.SEQUENTIAL, now)
+        val due = sessionCards(cards, StudyFilter.NEW_AND_REVIEW, CardOrder.SEQUENTIAL, now)
         assertEquals(listOf("new", "due", "dueNow"), due.map { it.id })
     }
 
@@ -269,8 +269,8 @@ class SelectorsTest {
         StudyFilter.entries.forEach { filter ->
             assertEquals(
                 filter.name,
-                getDueCards(cards, filter, CardOrder.SEQUENTIAL, now).size,
-                countDueCards(cards, filter, now)
+                sessionCards(cards, filter, CardOrder.SEQUENTIAL, now).size,
+                countSessionCards(cards, filter, now)
             )
         }
     }

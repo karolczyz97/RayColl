@@ -8,7 +8,7 @@ import org.junit.Test
 
 class ContrastTest {
     @Test
-    fun `chart colors retain sufficient contrast on light dark and wallpaper surfaces`() {
+    fun `minimum contrast adjustment meets the requested ratio on varied surfaces`() {
         val backgrounds =
             listOf(LightSurfaceContainerHighest, DarkSurfaceContainerHighest, Color(0xFFD9E5DA), Color(0xFF303A31))
         val colors = listOf(LightSrsColors, DarkSrsColors).flatMap {
@@ -29,12 +29,12 @@ class ContrastTest {
 
     @Test
     fun `contrasting colors are preserved`() {
-        assertEquals(SrsNewAccentLight, SrsNewAccentLight.withMinimumContrast(LightSurfaceContainerHighest))
+        assertEquals(SrsNewFgLight, SrsNewFgLight.withMinimumContrast(LightSurfaceContainerHighest))
         assertEquals(Color.White, Color.White.withMinimumContrast(Color.Black))
     }
 
     @Test
-    fun `progress shades stay distinct and readable`() {
+    fun `requested contrast levels stay ordered`() {
         for (background in listOf(LightSurfaceContainerHighest, DarkSurfaceContainerHighest)) {
             val color = SrsLearningAccentLight
             val ratios = listOf(3f, 3.75f, 4.5f).map { minimum ->

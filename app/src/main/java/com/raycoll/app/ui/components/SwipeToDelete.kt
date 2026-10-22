@@ -55,7 +55,7 @@ private val IconEndPadding = 24.dp
 /**
  * Element listy usuwany przesunięciem w lewo. [showHint] — karta raz lekko odjeżdża i wraca
  * (podpowiedź gestu), potem [onHintShown]. [enterFromStart] — karta przywrócona po „Cofnij”
- * wjeżdża z lewej z odbiciem, potem [onEntered].
+ * wjeżdża z lewej z odbiciem, potem [onEntered]. [extraActions] — dalsze akcje dla czytnika ekranu obok usuwania.
  */
 @Composable
 fun SwipeToDeleteItem(
@@ -67,6 +67,7 @@ fun SwipeToDeleteItem(
     onHintShown: () -> Unit = {},
     enterFromStart: Boolean = false,
     onEntered: () -> Unit = {},
+    extraActions: List<CustomAccessibilityAction> = emptyList(),
     content: @Composable () -> Unit
 ) {
     // zwykłe remember, nie rememberSaveable: karta przywrócona po „Cofnij” nie może wrócić w stanie
@@ -118,6 +119,9 @@ fun SwipeToDeleteItem(
             shift.animateTo(-HINT_DISTANCE, hintSpec)
             shift.animateTo(0f, bouncy)
             onHintShown()
+        } else if (!enterFromStart) {
+            // Nie przerywaj osobnej animacji przywrócenia po „Cofnij”.
+            shift.snapTo(0f)
         }
     }
     LaunchedEffect(state.settledValue) {
@@ -135,12 +139,13 @@ fun SwipeToDeleteItem(
         modifier = modifier
             .onSizeChanged { width = it.width }
             .semantics {
+                // dwa osobne wpisy customActions się nie łączą (wygrywa zewnętrzny), więc dodatkowe akcje idą tędy
                 customActions = listOf(
                     CustomAccessibilityAction(deleteLabel) {
                         currentOnDelete()
                         true
                     }
-                )
+                ) + extraActions
             },
         backgroundContent = { DeleteBackground(armed, state, shift, shape) }
     ) {

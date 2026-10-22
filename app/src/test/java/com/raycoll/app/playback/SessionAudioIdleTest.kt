@@ -36,7 +36,7 @@ class SessionAudioIdleTest {
 
     @Test
     fun `revealed ratings and errors wait for the user even in background`() {
-        assertTrue(sessionAudioIdle(SessionState(status = SessionStatus.REVEALED), true, false))
+        assertTrue(sessionAudioIdle(SessionState(status = SessionStatus.AWAITING_RATING), true, false))
         assertTrue(sessionAudioIdle(SessionState(status = SessionStatus.ERROR), true, false))
     }
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="archive_restore_hint">Zarchiwizowane talie możesz przywrócić przed ich automatycznym usunięciem.</string>
+    <string name="archive_delete_permanently">Usuń na zawsze</string>
+</resources>

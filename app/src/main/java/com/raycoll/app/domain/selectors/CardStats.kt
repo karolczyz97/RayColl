@@ -13,6 +13,13 @@ data class CardStats(
     val mastered: Int = 0
 )
 
+fun CardStats.countOf(category: SrsCardCategory): Int = when (category) {
+    SrsCardCategory.NEW -> newCount
+    SrsCardCategory.LEARNING -> learning
+    SrsCardCategory.REVIEW -> review
+    SrsCardCategory.MASTERED -> mastered
+}
+
 fun computeCardStats(cards: List<Flashcard>): CardStats {
     val byCategory = cards.live().groupingBy { getCardCategory(it.srsState) }.eachCount()
     return CardStats(

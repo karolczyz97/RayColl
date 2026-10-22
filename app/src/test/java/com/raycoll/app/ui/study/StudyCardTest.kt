@@ -1,8 +1,10 @@
 package com.raycoll.app.ui.study
 
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsActions
@@ -19,6 +21,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.SrsState
@@ -29,7 +32,6 @@ import com.raycoll.app.domain.session.SessionState
 import com.raycoll.app.domain.session.SessionStatus
 import com.raycoll.app.domain.session.sessionReducer
 import com.raycoll.app.ui.theme.LocalSrsColors
-import com.raycoll.app.ui.theme.withMinimumContrast
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -85,10 +87,7 @@ class StudyCardTest {
             SessionState(currentCardIndex = 75, cards = List(150) { Flashcard("c$it", listOf("q", "a"), SrsState()) })
         var currentColor = Color.Unspecified
         compose.setContent {
-            currentColor = LocalSrsColors.current.newAccent.withMinimumContrast(
-                androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest,
-                4.5f
-            )
+            currentColor = LocalSrsColors.current.newAccent
             SessionProgressBar(session)
         }
         val pixels = compose.onRoot().captureToImage().toPixelMap()
@@ -97,6 +96,56 @@ class StudyCardTest {
                 (0 until pixels.width / 2).any { x -> pixels[x, y] == currentColor }
             }
         )
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `progress bar has no added gaps in a long session`() {
+        val cardCount = 48
+        val session = SessionState(cards = List(cardCount) { Flashcard("c$it", listOf("q", "a"), SrsState()) })
+        var track = Color.Unspecified
+        compose.setContent {
+            track = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest
+            SessionProgressBar(session)
+        }
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val row = (2 until pixels.width / 2).map { x -> pixels[x, pixels.height / 2] }
+        assertTrue("no track-colored gaps between card segments", row.none { it == track })
+    }
+
+    @Test
+    fun `progress bar width stays fixed when counter gains a second digit`() {
+        assertProgressWidthStable(50, listOf(9, 10, 49, 50, 10, 9, 1))
+    }
+
+    @Test
+    fun `progress bar width stays fixed when counter gains a third digit`() {
+        assertProgressWidthStable(150, listOf(9, 10, 99, 100, 150, 99, 1))
+    }
+
+    @Test
+    @Config(fontScale = 2.0f)
+    fun `progress bar width stays fixed with enlarged text`() {
+        assertProgressWidthStable(50, listOf(9, 10, 50, 9))
+    }
+
+    private fun assertProgressWidthStable(cardCount: Int, positions: List<Int>) {
+        var session by mutableStateOf(
+            SessionState(
+                currentCardIndex = positions.first() - 1,
+                cards = List(cardCount) { Flashcard("c$it", listOf("q", "a"), SrsState()) }
+            )
+        )
+        compose.setContent { SessionProgressBar(session, Modifier.width(320.dp)) }
+        fun counterBounds(position: Int) = compose
+            .onNodeWithContentDescription("Flashcard $position of $cardCount")
+            .getUnclippedBoundsInRoot()
+        val initialBounds = counterBounds(positions.first())
+        positions.drop(1).forEach { position ->
+            session = session.copy(currentCardIndex = position - 1)
+            compose.waitForIdle()
+            assertEquals("Counter moved at $position/$cardCount", initialBounds, counterBounds(position))
+        }
     }
 
     @get:Rule

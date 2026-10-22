@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.core.LocalDates
+import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
 import com.raycoll.app.ui.theme.withMinimumContrast
 import java.time.LocalDate
@@ -46,14 +47,14 @@ fun ActivityHeatmap(heatmap: Map<String, Int>, streak: Int, today: LocalDate) {
     val startMonday = heatmapStartMonday(today)
     val description =
         stringResource(R.string.stats_heatmap_cd, heatmap.values.sum(), heatmap.count { it.value > 0 }, streak)
-    val active = MaterialTheme.colorScheme.primary
+    val active = LocalSrsColors.current.masteredAccent
     val empty = MaterialTheme.colorScheme.surfaceContainerHighest
     val todayBorder = MaterialTheme.colorScheme.onSurface
     val background = MaterialTheme.colorScheme.surfaceContainerLow
     val upcoming = MaterialTheme.colorScheme.outline.withMinimumContrast(background)
-    val lowActivity = active.copy(alpha = 0.35f).withMinimumContrast(background)
-    val mediumActivity = active.copy(alpha = 0.65f).withMinimumContrast(background, 3.75f)
-    val highActivity = active.withMinimumContrast(background, 4.5f)
+    val lowActivity = active.copy(alpha = 0.35f)
+    val mediumActivity = active.copy(alpha = 0.65f)
+    val highActivity = active
 
     val scrollState = rememberScrollState()
     // najnowszy tydzień jest po prawej — pokaż go od razu

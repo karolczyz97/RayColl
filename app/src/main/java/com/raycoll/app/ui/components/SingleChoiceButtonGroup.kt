@@ -8,6 +8,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonColors
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,11 +31,11 @@ fun <T> SingleChoiceButtonGroup(
     selected: T,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
     /** Wąskie wnętrze przycisku — gdy opcji jest dużo (np. pięć filtrów na szerokość telefonu). */
     compact: Boolean = false,
     /** Względna szerokość przycisku [index] (domyślnie wszystkie równe). */
     weight: (index: Int) -> Float = { 1f },
+    colors: @Composable (value: T) -> ToggleButtonColors = { ToggleButtonDefaults.colors() },
     label: @Composable (value: T, text: String) -> Unit = { _, text -> Text(text, textAlign = TextAlign.Center) }
 ) {
     Row(
@@ -45,7 +46,7 @@ fun <T> SingleChoiceButtonGroup(
             ToggleButton(
                 checked = value == selected,
                 onCheckedChange = { onSelect(value) },
-                enabled = enabled,
+                colors = colors(value),
                 contentPadding = if (compact) {
                     CompactPadding
                 } else {

@@ -1,13 +1,15 @@
 package com.raycoll.app.ui.appsettings
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -15,7 +17,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.raycoll.app.R
-import com.raycoll.app.data.firestore.SyncStatus
 import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.domain.model.TtsRate
@@ -25,6 +26,7 @@ import com.raycoll.app.ui.components.SettingsBlock
 import com.raycoll.app.ui.components.SettingsGroup
 import com.raycoll.app.ui.components.SettingsSwitch
 import com.raycoll.app.ui.components.SingleChoiceButtonGroup
+import com.raycoll.app.ui.components.SyncStatus
 import com.raycoll.app.ui.components.SyncStatusBanner
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -60,13 +62,13 @@ fun AccountSection(state: AppSettingsUiState, onSignIn: () -> Unit, onSignOut: (
                     shapes = shapes,
                     title = stringResource(R.string.auth_sign_out),
                     icon = painterResource(R.drawable.ic_logout),
-                    description = if (state.syncStatus == SyncStatus.ERROR) {
+                    description = if (state.syncStatus == SyncStatus.OFFLINE) {
                         stringResource(R.string.auth_sign_out_offline)
                     } else {
                         null
                     },
                     enabled = !state.signingOut && state.backupOperation == null &&
-                        state.syncStatus != SyncStatus.ERROR,
+                        state.syncStatus != SyncStatus.OFFLINE,
                     busy = state.signingOut,
                     onClick = onSignOut
                 )
@@ -141,31 +143,35 @@ fun LanguageSpeechSection(
             ) {}
         }
         item { shapes ->
-            var rate by remember(preferences.ttsRate) { mutableFloatStateOf(preferences.ttsRate) }
-            val rateName = stringResource(R.string.app_settings_tts_rate)
-            val rateValue = stringResource(R.string.app_settings_tts_rate_value, rate)
-            SettingsBlock(
-                shapes,
-                title = rateName,
-                trailingContent = {
-                    Text(
-                        rateValue,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
+            // klucz: suwak wraca do zapisanej wartości, gdy ta zmieni się poza nim
+            key(preferences.ttsRate) {
+                val rate = rememberSliderState(
+                    preferences.ttsRate,
+                    ((TtsRate.MAX - TtsRate.MIN) / TTS_RATE_STEP).roundToInt() - 1,
+                    TtsRate.MIN..TtsRate.MAX
+                )
+                val rateName = stringResource(R.string.app_settings_tts_rate)
+                val rateValue = stringResource(R.string.app_settings_tts_rate_value, rate.value)
+                // wartość w linii tytułu, nie w kolumnie końcowej — ta zabrałaby suwakowi prawą część wiersza
+                SettingsBlock(shapes) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(rateName, Modifier.weight(1f))
+                        Text(
+                            rateValue,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        state = rate,
+                        onValueChange = { rate.value = it },
+                        modifier = Modifier.fillMaxWidth().semantics {
+                            contentDescription = rateName
+                            stateDescription = rateValue
+                        },
+                        onValueChangeFinished = { onTtsRate(rate.value) }
                     )
                 }
-            ) {
-                Slider(
-                    modifier = Modifier.semantics {
-                        contentDescription = rateName
-                        stateDescription = rateValue
-                    },
-                    value = rate,
-                    onValueChange = { rate = it },
-                    onValueChangeFinished = { onTtsRate(rate) },
-                    valueRange = TtsRate.MIN..TtsRate.MAX,
-                    steps = ((TtsRate.MAX - TtsRate.MIN) / TTS_RATE_STEP).roundToInt() - 1
-                )
             }
         }
         item { shapes ->

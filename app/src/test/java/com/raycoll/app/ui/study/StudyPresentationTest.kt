@@ -17,10 +17,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -130,7 +128,6 @@ class StudyPresentationTest {
             status = com.raycoll.app.domain.session.AnswerStatus.INCORRECT,
             text = "eine ziemlich lange gesprochene Antwort",
             percent = 45,
-            threshold = 80,
             suggestedRating = Ratings.AGAIN
         )
         compose.setContent {

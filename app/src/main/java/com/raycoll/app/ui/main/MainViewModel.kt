@@ -7,7 +7,7 @@ import com.raycoll.app.data.account.AccountManager
 import com.raycoll.app.data.account.AccountState
 import com.raycoll.app.data.account.GuestDataChoice
 import com.raycoll.app.data.firestore.DocumentStore
-import com.raycoll.app.data.firestore.UserPaths
+import com.raycoll.app.data.firestore.decksArrived
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,8 +44,8 @@ sealed interface AccountGate {
 }
 
 /**
- * Stan całej aplikacji, wspólny dla każdego okna (Activity): wygląd z ustawień, konto
- * i decyzja o danych gościa po zalogowaniu.
+ * Stan aplikacji widziany przez okno (Activity; każde ma własną instancję): wygląd z ustawień,
+ * konto i decyzja o danych gościa po zalogowaniu.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -74,8 +74,8 @@ class MainViewModel @Inject constructor(
 
     val accountGate: StateFlow<AccountGate> = accountState.flatMapLatest { state ->
         if (state is AccountState.Ready && !state.isGuest) {
-            combine(store.observe(UserPaths(state.uid).decks()), store.offline) { decks, offline ->
-                if (decks.fromCache && decks.docs.isEmpty()) AccountGate.WaitingForData(offline) else AccountGate.Open
+            combine(store.decksArrived(state.uid), store.offline) { arrived, offline ->
+                if (arrived) AccountGate.Open else AccountGate.WaitingForData(offline)
             }
         } else {
             flowOf(accountGateBeforeData(state))

@@ -2,23 +2,23 @@ package com.raycoll.app.ui.study
 
 import android.app.Application
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Looper
+import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
-import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.domain.model.ListenAndCheckStep
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.NextCardStep
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
 import com.raycoll.app.domain.model.SpeakPageStep
-import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.WaitStep
-import com.raycoll.app.domain.session.ListenResult
 import com.raycoll.app.domain.session.ListenStatus
-import com.raycoll.app.domain.session.SessionDeps
+import com.raycoll.app.domain.session.SessionError
 import com.raycoll.app.domain.session.SessionStatus
-import com.raycoll.app.domain.session.SpeakResult
 import com.raycoll.app.playback.AudioFocusRequester
 import com.raycoll.app.playback.FocusChange
 import com.raycoll.app.playback.StudySessionHolder
@@ -29,9 +29,6 @@ import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import java.time.Duration
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -44,6 +41,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
@@ -88,7 +86,7 @@ class StudyRestartTest {
         if (ms > 0) looper.idleFor(Duration.ofMillis(ms)) else looper.idle()
     }
 
-    /** Czeka na pracę na innych wątkach (DataStore, Room), pompując główny wątek. */
+    /** Czeka na pracę na innych wątkach (DataStore), pompując główny wątek. */
     private fun waitFor(condition: () -> Boolean) {
         val deadline = System.nanoTime() + 5_000_000_000L
         while (!condition()) {
@@ -100,7 +98,10 @@ class StudyRestartTest {
 
     private fun startedServices(): List<Intent> = generateSequence { shadowOf(app).nextStartedService }.toList()
 
-    private fun studyVm(steps: List<ModeStep>): StudyViewModel {
+    private fun studyVm(
+        steps: List<ModeStep>,
+        deps: FakeSessionDeps = FakeSessionDeps(deckRepository = repos.deckRepository)
+    ): StudyViewModel {
         val prefs = testPreferences.repository
         val deckId = runBlocking {
             // ustawienie urządzenia współdzielone między testami — jawnie: nauka w tle włączona
@@ -115,18 +116,53 @@ class StudyRestartTest {
             repos.deckRepository.setActiveStudyMode(id, modeId)
             id
         }
-        return StudyViewModel(
+        return vm(deckId, deps)
+    }
+
+    private fun vm(deckId: String, deps: FakeSessionDeps = FakeSessionDeps(deckRepository = repos.deckRepository)) =
+        StudyViewModel(
             deckId,
             repos.deckRepository,
             repos.studyModeRepository,
-            prefs,
+            testPreferences.repository,
             holder,
-            FakeSessionDeps(deckRepository = repos.deckRepository),
+            deps,
             clock
         )
-    }
 
     private fun StudyViewModel.session() = (uiState.value as StudyUiState.Active).session
+
+    @Test
+    fun `night mode recreation keeps the session revealed answers and one saved review`() {
+        val deps = FakeSessionDeps(deckRepository = repos.deckRepository)
+        val vm = studyVm(listOf(ShowPageStep(pageIndex = 0), ShowPageStep(pageIndex = 1), ShowRatingsStep()), deps)
+        waitFor { vm.uiState.value is StudyUiState.Active && vm.session().status == SessionStatus.AWAITING_RATING }
+        vm.rate(3)
+        waitFor { vm.session().currentCardIndex == 1 && vm.session().status == SessionStatus.AWAITING_RATING }
+        val before = vm.uiState.value
+        val engine = holder.current()
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
+        val factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = requireNotNull(modelClass.cast(vm))
+        }
+        try {
+            assertSame(vm, ViewModelProvider(activity.get(), factory)[StudyViewModel::class.java])
+            val oldActivity = activity.get()
+            val configuration = Configuration(oldActivity.resources.configuration).apply {
+                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
+            }
+            activity.configurationChange(configuration)
+            idle()
+            assertNotEquals(oldActivity, activity.get())
+            assertSame(vm, ViewModelProvider(activity.get(), factory)[StudyViewModel::class.java])
+            assertSame(engine, holder.current())
+            assertEquals(before, vm.uiState.value)
+            assertEquals(listOf(0, 1), vm.session().revealedPages)
+            assertEquals(1, deps.reviews.size)
+        } finally {
+            activity.pause().stop().destroy()
+        }
+    }
 
     @Test
     fun `summary reads cards after both reviews have been saved`() {
@@ -301,5 +337,62 @@ class StudyRestartTest {
         waitFor { vm.session().status != SessionStatus.FINISHED }
         idle()
         assertNull(shadowOf(app).peekNextStartedService())
+    }
+
+    @Test
+    fun `unknown deck shows the missing deck state`() {
+        val vm = vm("missing-deck")
+        waitFor { vm.uiState.value != StudyUiState.Loading }
+        assertEquals(StudyUiState.DeckMissing, vm.uiState.value)
+        assertNull(holder.current())
+    }
+
+    @Test
+    fun `deck without due cards shows the nothing due state`() {
+        val deckId = runBlocking {
+            val id = repos.deckRepository.addDeckWithCards(
+                "Done",
+                listOf("en-US", "pl-PL"),
+                listOf("A", "B"),
+                listOf(listOf("a1", "b1"))
+            )
+            val card = repos.deckRepository.getDeck(id)!!.cards.single()
+            repos.deckRepository.reviewCard(id, card.id, 3)
+            id
+        }
+        val vm = vm(deckId)
+        waitFor { vm.uiState.value != StudyUiState.Loading }
+        assertEquals(StudyUiState.NoDueCards("Done"), vm.uiState.value)
+        assertNull(holder.current())
+    }
+
+    @Test
+    fun `microphone permission after a successful listen does not restart the card`() {
+        val deps = FakeSessionDeps(deckRepository = repos.deckRepository)
+        val vm = studyVm(listOf(ListenAndCheckStep(pageIndex = 1), ShowRatingsStep()), deps)
+        waitFor { vm.uiState.value is StudyUiState.Active && deps.listenTimeouts.size == 1 }
+        vm.onMicrophoneGranted()
+        idle()
+        assertEquals(1, deps.listenTimeouts.size)
+        vm.endSessionEarly()
+    }
+
+    @Test
+    fun `microphone permission restarts the card once after a failed listen`() {
+        val deps = FakeSessionDeps(deckRepository = repos.deckRepository, listenStatus = ListenStatus.ERROR)
+        val vm = studyVm(listOf(ListenAndCheckStep(pageIndex = 1), ShowRatingsStep()), deps)
+        waitFor { vm.uiState.value is StudyUiState.Active && deps.listenTimeouts.size == 1 }
+        idle()
+        assertEquals(StudyEvent.SpeechError(SessionError.STT), runBlocking { vm.events.first() })
+        deps.listenStatus = ListenStatus.COMPLETED
+
+        vm.onMicrophoneGranted()
+        waitFor { deps.listenTimeouts.size == 2 }
+        assertEquals(0, vm.session().currentCardIndex)
+
+        vm.onMicrophoneGranted()
+        idle()
+        assertEquals("zgoda bez nowego błędu nie restartuje karty", 2, deps.listenTimeouts.size)
+        vm.endSessionEarly()
     }
 }

@@ -1,19 +1,24 @@
 package com.raycoll.app.data.account
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.AuthResult
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseUser
 import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.data.remote.auth.Account
 import com.raycoll.app.data.remote.auth.AuthRepository
+import com.raycoll.app.data.remote.auth.AuthUser
+import com.raycoll.app.data.remote.auth.GoogleCredential
+import com.raycoll.app.data.remote.auth.LinkResult
 import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
+import com.raycoll.app.data.repository.Cleanup
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.VmTestHarness
 import javax.inject.Provider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,33 +35,31 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowNetworkCapabilities
 
 @RunWith(RobolectricTestRunner::class)
 class AccountManagerTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val repos = VmTestHarness.create(context, FakeClock())
     private val auth = mock(AuthRepository::class.java)
-    private var current: FirebaseUser? = user("uid-1", true)
+    private var current: AuthUser? = user("uid-1", true)
+    private val credential = GoogleCredential(mock(AuthCredential::class.java))
 
-    private fun user(id: String, guest: Boolean) = mock(FirebaseUser::class.java).also {
-        `when`(it.uid).thenReturn(id)
-        `when`(it.isAnonymous).thenReturn(guest)
-    }
+    private fun user(id: String, guest: Boolean) = AuthUser(id, null, guest)
+
+    private fun TestScope.manager(store: DocumentStore = repos.store, scope: CoroutineScope = backgroundScope) =
+        AccountManager(auth, store, Provider { repos.backupRepository }, Cleanup(store, FakeClock()), context, scope)
 
     private suspend fun configure(existing: Boolean) {
         `when`(auth.currentUser).thenAnswer { current }
+        `when`(auth.googleCredential("token")).thenReturn(credential)
         `when`(auth.linkWithGoogle("token")).thenAnswer {
-            if (existing) throw FirebaseAuthUserCollisionException("ERROR_CREDENTIAL_ALREADY_IN_USE", "used")
+            if (existing) return@thenAnswer LinkResult.Collision(credential)
             current = user("uid-1", false)
-            mock(AuthResult::class.java)
+            LinkResult.Linked
         }
-        `when`(
-            auth.signInWithCredential(
-                any(
-                    AuthCredential::class.java
-                ) ?: com.google.firebase.auth.GoogleAuthProvider.getCredential("token", null)
-            )
-        ).thenAnswer {
+        `when`(auth.signInWithCredential(any(GoogleCredential::class.java) ?: credential)).thenAnswer {
             current = user("google", false)
             SignInResult.Success(Account("google", "test@example.com"), !existing)
         }
@@ -74,17 +77,7 @@ class AccountManagerTest {
         configure(true)
         repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
         val before = repos.snapshot()
-        val manager =
-            AccountManager(
-                auth,
-                repos.store,
-                Provider {
-                    repos.backupRepository
-                },
-                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
-                context,
-                backgroundScope
-            )
+        val manager = manager()
         manager.retryStart()
         assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
         assertTrue(manager.resolveChoice(GuestDataChoice.CANCEL))
@@ -97,18 +90,10 @@ class AccountManagerTest {
         configure(true)
         repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
         doReturn(SignInResult.Failure(SignInError.LOGIN_FAILED)).`when`(auth).signInWithCredential(
-            any(AuthCredential::class.java)
-                ?: com.google.firebase.auth.GoogleAuthProvider.getCredential("token", null)
+            any(GoogleCredential::class.java) ?: credential
         )
         `when`(auth.signInAnonymously()).thenThrow(IllegalStateException("offline"))
-        val manager = AccountManager(
-            auth,
-            repos.store,
-            Provider { repos.backupRepository },
-            com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
-            context,
-            backgroundScope
-        )
+        val manager = manager()
         manager.retryStart()
         assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
 
@@ -120,7 +105,7 @@ class AccountManagerTest {
         assertNotNull(pending)
         doAnswer {
             current = user("recovered-guest", true)
-            mock(AuthResult::class.java).also { `when`(it.user).thenReturn(current) }
+            current
         }.`when`(auth).signInAnonymously()
         manager.retryStart()
         assertTrue(manager.state.value is AccountState.Ready)
@@ -140,17 +125,7 @@ class AccountManagerTest {
         val card = repos.deckRepository.getDeck(id)!!.cards.single()
         repos.deckRepository.reviewCard(id, card.id, 3)
         val before = repos.snapshot()
-        val manager =
-            AccountManager(
-                auth,
-                repos.store,
-                Provider {
-                    repos.backupRepository
-                },
-                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
-                context,
-                backgroundScope
-            )
+        val manager = manager()
         manager.retryStart()
         assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
         assertTrue(manager.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT))
@@ -167,17 +142,7 @@ class AccountManagerTest {
         val waiting = object : DocumentStore by repos.store {
             override suspend fun awaitPendingWrites(timeoutMs: Long) = false
         }
-        val manager =
-            AccountManager(
-                auth,
-                waiting,
-                Provider {
-                    repos.backupRepository
-                },
-                com.raycoll.app.data.repository.Cleanup(waiting, FakeClock()),
-                context,
-                backgroundScope
-            )
+        val manager = manager(waiting)
         manager.retryStart()
         assertEquals(SignInResult.ChoiceRequired, manager.signInWithGoogle("token"))
         assertTrue(manager.resolveChoice(GuestDataChoice.MOVE_TO_ACCOUNT))
@@ -195,22 +160,12 @@ class AccountManagerTest {
         current = null
         `when`(auth.signInAnonymously()).thenAnswer {
             current = user("new-guest", true)
-            mock(AuthResult::class.java).also { `when`(it.user).thenReturn(current) }
+            current
         }
         val waiting = object : DocumentStore by repos.store {
             override suspend fun awaitPendingWrites(timeoutMs: Long) = false
         }
-        val manager =
-            AccountManager(
-                auth,
-                waiting,
-                Provider {
-                    repos.backupRepository
-                },
-                com.raycoll.app.data.repository.Cleanup(waiting, FakeClock()),
-                context,
-                backgroundScope
-            )
+        val manager = manager(waiting)
         manager.retryStart()
         assertTrue(manager.state.value is AccountState.Ready)
         assertNull(repos.backupRepository.loadPrivate(AccountManager.STASH))
@@ -221,17 +176,7 @@ class AccountManagerTest {
         configure(false)
         repos.deckRepository.addDeckWithCards("Own", listOf("en", "pl"), listOf("A", "B"), listOf(listOf("q", "a")))
         val before = repos.snapshot()
-        val manager =
-            AccountManager(
-                auth,
-                repos.store,
-                Provider {
-                    repos.backupRepository
-                },
-                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
-                context,
-                backgroundScope
-            )
+        val manager = manager()
         manager.retryStart()
         manager.signInWithGoogle("token")
         assertTrue(manager.resolveChoice(GuestDataChoice.KEEP_ON_DEVICE))
@@ -246,21 +191,66 @@ class AccountManagerTest {
         configure(false)
         repos.seed()
         val before = repos.snapshot()
-        val manager =
-            AccountManager(
-                auth,
-                repos.store,
-                Provider {
-                    repos.backupRepository
-                },
-                com.raycoll.app.data.repository.Cleanup(repos.store, FakeClock()),
-                context,
-                backgroundScope
-            )
+        val manager = manager()
         manager.retryStart()
         assertTrue(manager.signInWithGoogle("token") is SignInResult.Success)
         assertFalse(manager.choiceRequired.value)
         assertEquals(before, repos.snapshot())
         assertEquals("uid-1", manager.uid.value)
+    }
+
+    private fun network(validated: Boolean) {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val capabilities = ShadowNetworkCapabilities.newInstance()
+        if (validated) shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        shadowOf(connectivity).setNetworkCapabilities(connectivity.activeNetwork, capabilities)
+    }
+
+    @Test fun `sign out without a validated network returns false and keeps the account`() = runTest {
+        configure(false)
+        current = user("google", false)
+        val manager = manager()
+        manager.retryStart()
+        val before = manager.state.value
+        network(validated = false)
+
+        assertFalse(manager.signOut())
+
+        assertEquals(AccountState.Ready("google", false, null), before)
+        assertEquals(before, manager.state.value)
+        assertEquals("google", manager.uid.value)
+        verify(auth, never()).signOut()
+    }
+
+    @Test fun `sign out with a validated network starts a fresh guest`() = runTest {
+        configure(false)
+        current = user("google", false)
+        `when`(auth.signInAnonymously()).thenAnswer {
+            current = user("new-guest", true)
+            current
+        }
+        val manager = manager()
+        manager.retryStart()
+        network(validated = true)
+
+        assertTrue(manager.signOut())
+
+        assertEquals(AccountState.Ready("new-guest", true, null), manager.state.value)
+        assertEquals("new-guest", manager.uid.value)
+    }
+
+    @Test fun `sign out whose guest start fails ends in NeedsInternet`() = runTest {
+        configure(false)
+        current = user("google", false)
+        `when`(auth.signInAnonymously()).thenThrow(IllegalStateException("offline"))
+        val manager = manager()
+        manager.retryStart()
+        network(validated = true)
+
+        assertFalse(manager.signOut())
+
+        verify(auth).signOut()
+        assertEquals(AccountState.NeedsInternet, manager.state.value)
+        assertNull(manager.uid.value)
     }
 }

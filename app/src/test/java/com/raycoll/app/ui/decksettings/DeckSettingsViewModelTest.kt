@@ -1,26 +1,20 @@
 package com.raycoll.app.ui.decksettings
 
-import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.MainDispatcherRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,19 +22,13 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class DeckSettingsViewModelTest {
-    private val viewModels = mutableListOf<DeckSettingsViewModel>()
+    @get:Rule
+    val mainDispatcher = MainDispatcherRule(UnconfinedTestDispatcher())
     private lateinit var repos: TestRepos
 
     @Before
     fun setup() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), FakeClock())
-    }
-
-    @After
-    fun teardown() {
-        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
-        Dispatchers.resetMain()
     }
 
     private suspend fun seedDeck() = repos.deckRepository.addDeckWithCards(
@@ -50,10 +38,7 @@ class DeckSettingsViewModelTest {
         listOf(listOf("hello", "cześć"))
     )
     private fun vm(deckId: String) =
-        DeckSettingsViewModel(deckId, repos.deckRepository, repos.studyModeRepository).also {
-            viewModels +=
-                it
-        }
+        mainDispatcher.track(DeckSettingsViewModel(deckId, repos.deckRepository, repos.studyModeRepository))
     private suspend fun DeckSettingsViewModel.ready(predicate: (DeckSettingsUiState.Ready) -> Boolean = { true }) =
         uiState.filterIsInstance<DeckSettingsUiState.Ready>().first(predicate)
 
@@ -89,10 +74,10 @@ class DeckSettingsViewModelTest {
     }
 
     @Test
-    fun `swapping pages updates metadata and card contents`() = runTest {
+    fun `moving a page updates metadata and card contents`() = runTest {
         val vm = vm(seedDeck())
         vm.ready()
-        vm.swapPages(0, 1)
+        vm.movePage(0, 1)
         val deck = vm.ready {
             it.deck.pageNames == listOf("Back", "Front") &&
                 it.deck.cards.single().pages == listOf("cześć", "hello")
@@ -128,7 +113,7 @@ class DeckSettingsViewModelTest {
         val vm = vm(id)
         vm.archive()
         assertEquals(DeckSettingsEvent.Archived(id), vm.events.first())
-        assertTrue(repos.deckRepository.getDeck(id)!!.archivedAt != null)
+        assertNotNull(repos.deckRepository.getDeck(id)!!.archivedAt)
     }
 
     @Test
@@ -137,7 +122,7 @@ class DeckSettingsViewModelTest {
         val vm = vm(id)
         vm.delete()
         assertEquals(DeckSettingsEvent.Closed, vm.events.first())
-        assertTrue(repos.snapshot().groups.single().deletedAt != null)
+        assertNotNull(repos.snapshot().groups.single().deletedAt)
         org.junit.Assert.assertNull(repos.deckRepository.getDeck(id))
     }
 

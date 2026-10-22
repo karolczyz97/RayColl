@@ -2,21 +2,15 @@ package com.raycoll.app.ui.study
 
 import android.content.Context
 import android.content.Intent
-import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import com.raycoll.app.ui.main.AppActivity
 import dagger.hilt.android.AndroidEntryPoint
-import dagger.hilt.android.lifecycle.withCreationCallback
 
 @AndroidEntryPoint
 class StudyActivity : AppActivity() {
-    private val study: StudyViewModel by viewModels(
-        extrasProducer = {
-            defaultViewModelCreationExtras.withCreationCallback<StudyViewModel.Factory> {
-                it.create(requireNotNull(intent.getStringExtra(EXTRA_DECK_ID)))
-            }
-        }
-    )
+    private val study: StudyViewModel by assistedViewModel<StudyViewModel, StudyViewModel.Factory> {
+        it.create(requireNotNull(intent.getStringExtra(EXTRA_DECK_ID)))
+    }
 
     override fun isContentLoading() = study.uiState.value is StudyUiState.Loading
 

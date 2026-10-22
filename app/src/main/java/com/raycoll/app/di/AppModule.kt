@@ -25,6 +25,11 @@ annotation class ApplicationScope
 @Retention(AnnotationRetention.BINARY)
 annotation class DefaultDispatcher
 
+/** Dispatcher do blokującego wejścia-wyjścia (pliki) — w testach podmieniany na testowy. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class IoDispatcher
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -40,6 +45,10 @@ object AppModule {
     @Provides
     @DefaultDispatcher
     fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
+
+    @Provides
+    @IoDispatcher
+    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
 
     @Provides
     fun provideClock(): Clock = WallClock

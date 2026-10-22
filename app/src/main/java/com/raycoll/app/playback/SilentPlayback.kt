@@ -46,12 +46,12 @@ class SilentPlayback(private val createTrack: () -> SilentTrack = ::AudioTrackSi
     fun stop() {
         if (!playing) return
         playing = false
-        runCatching { track?.pause() }
+        runCatching { track?.pause() }.onFailure { Log.w(TAG, "Cannot pause silent track", it) }
     }
 
     fun release() {
         playing = false
-        runCatching { track?.release() }
+        runCatching { track?.release() }.onFailure { Log.w(TAG, "Cannot release silent track", it) }
         track = null
     }
 }
@@ -77,7 +77,7 @@ private class AudioTrackSilence : SilentTrack {
         .also { track ->
             val silence = ByteArray(LOOP_FRAMES * BYTES_PER_FRAME)
             track.write(silence, 0, silence.size)
-            track.setLoopPoints(0, LOOP_FRAMES, -1)
+            if (track.setLoopPoints(0, LOOP_FRAMES, -1) != AudioTrack.SUCCESS) Log.w(TAG, "Cannot loop silent track")
         }
 
     override fun play() = track.play()

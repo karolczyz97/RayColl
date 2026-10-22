@@ -2,12 +2,17 @@ package com.raycoll.app.data.files
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
+import android.util.Log
+import androidx.core.net.toFile
+import com.raycoll.app.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -18,7 +23,10 @@ private const val READ_BUFFER_BYTES = 8 * 1024
 
 /** Pliki wskazane przez użytkownika w systemowym oknie wyboru (tekst UTF-8). */
 @Singleton
-class DocumentFiles @Inject constructor(@ApplicationContext private val context: Context) {
+class DocumentFiles @Inject constructor(
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
     suspend fun readPrivate(name: String): String? = io {
         val file = android.util.AtomicFile(java.io.File(context.filesDir, name))
         if (file.baseFile.exists() ||
@@ -29,7 +37,7 @@ class DocumentFiles @Inject constructor(@ApplicationContext private val context:
             null
         }
     }
-    suspend fun writePrivate(name: String, text: String) = withContext(Dispatchers.IO) {
+    suspend fun writePrivate(name: String, text: String) = withContext(ioDispatcher) {
         val file = android.util.AtomicFile(java.io.File(context.filesDir, name))
         val stream = file.startWrite()
         try {
@@ -40,7 +48,7 @@ class DocumentFiles @Inject constructor(@ApplicationContext private val context:
             throw error
         }
     }
-    suspend fun deletePrivate(name: String) = withContext(Dispatchers.IO) {
+    suspend fun deletePrivate(name: String) = withContext(ioDispatcher) {
         android.util.AtomicFile(java.io.File(context.filesDir, name)).delete()
     }
 
@@ -52,6 +60,24 @@ class DocumentFiles @Inject constructor(@ApplicationContext private val context:
         context.contentResolver.openInputStream(uri)?.use { stream ->
             stream.readAtMost(MAX_TEXT_BYTES)?.decodeToString()?.removePrefix("\uFEFF")
         }
+    }
+
+    /** Nazwa z selektora plików; brak metadanych nie blokuje odczytu treści. */
+    suspend fun displayName(uri: Uri): String? = io {
+        val name = if (uri.scheme == "file") {
+            uri.toFile().name
+        } else {
+            try {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                    val column = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (column >= 0 && it.moveToFirst()) it.getString(column) else null
+                }
+            } catch (error: RuntimeException) {
+                Log.w("DocumentFiles", "File name unavailable", error)
+                null
+            }
+        }
+        name?.trim()?.takeIf { it.isNotBlank() }
     }
 
     /** Zapisuje [text] w miejsce dotychczasowej treści; false, gdy pliku nie da się otworzyć ani zapisać. */
@@ -71,12 +97,14 @@ class DocumentFiles @Inject constructor(@ApplicationContext private val context:
         }
     }
 
-    private suspend fun <T> io(block: () -> T?): T? = withContext(Dispatchers.IO) {
+    private suspend fun <T> io(block: () -> T?): T? = withContext(ioDispatcher) {
         try {
             block()
-        } catch (_: IOException) {
+        } catch (e: IOException) {
+            Log.w("DocumentFiles", "File access failed", e)
             null
-        } catch (_: SecurityException) {
+        } catch (e: SecurityException) {
+            Log.w("DocumentFiles", "File access denied", e)
             null
         }
     }

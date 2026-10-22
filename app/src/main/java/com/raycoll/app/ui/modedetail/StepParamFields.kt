@@ -30,6 +30,7 @@ import com.raycoll.app.domain.model.StudyConstants
 import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.ui.components.SingleChoiceButtonGroup
 import com.raycoll.app.ui.components.SwitchRow
+import com.raycoll.app.ui.study.ratingLabel
 import com.raycoll.app.ui.theme.Spacing
 
 private const val MAX_WAIT_MS = 600_000
@@ -159,19 +160,14 @@ private fun PageField(labelRes: Int, pageIndex: Int, onChange: (Int) -> Unit) =
 private fun ThresholdField(value: Int, onChange: (Int) -> Unit) = IntField(
     R.string.compound_field_threshold,
     value,
-    0..100,
+    0..StudyConstants.MAX_THRESHOLD_PERCENT,
     onChange = onChange
 )
 
 @Composable
 private fun RatingField(value: Int, onChange: (Int) -> Unit) {
     // nazwa oceny pod polem: „3 – Dobrze” mówi więcej niż sama liczba
-    val names = listOf(
-        R.string.study_rating_1,
-        R.string.study_rating_2,
-        R.string.study_rating_3,
-        R.string.study_rating_4
-    ).map { stringResource(it) }
+    val names = (Ratings.MIN..Ratings.MAX).map { stringResource(ratingLabel(it)) }
     IntField(
         R.string.compound_field_rating,
         value,

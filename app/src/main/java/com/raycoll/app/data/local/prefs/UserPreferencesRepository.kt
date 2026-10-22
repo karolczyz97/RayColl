@@ -1,6 +1,7 @@
 package com.raycoll.app.data.local.prefs
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
@@ -72,7 +73,9 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
     private val defaults = UserPreferences()
 
     val preferences: Flow<UserPreferences> = dataStore.data.catch {
-        if (it is IOException) emit(emptyPreferences()) else throw it
+        if (it !is IOException) throw it
+        Log.w("UserPreferences", "Cannot read preferences, using defaults", it)
+        emit(emptyPreferences())
     }.map { prefs ->
         UserPreferences(
             theme = ThemePref.fromKey(prefs[Keys.THEME]),
@@ -96,25 +99,20 @@ class UserPreferencesRepository internal constructor(private val dataStore: Data
     suspend fun setExpertMode(value: Boolean) = set(Keys.EXPERT_MODE, value)
 
     /** Podpowiedź gestu została pokazana — o jedną mniej do pokazania. */
-    suspend fun swipeHintShown() {
-        dataStore.edit {
-            it[Keys.SWIPE_HINTS_LEFT] = ((it[Keys.SWIPE_HINTS_LEFT] ?: defaults.swipeHintsLeft) - 1).coerceAtLeast(0)
-        }
-    }
+    suspend fun swipeHintShown() = hintShown(Keys.SWIPE_HINTS_LEFT, defaults.swipeHintsLeft)
 
     /** Użytkownik sam przesunął kartę — podpowiedź nie jest już potrzebna. */
     suspend fun swipeLearned() = set(Keys.SWIPE_HINTS_LEFT, 0)
 
     /** Podpowiedź gestu na talii została pokazana — o jedną mniej do pokazania. */
-    suspend fun deckSwipeHintShown() {
-        dataStore.edit {
-            it[Keys.DECK_SWIPE_HINTS_LEFT] =
-                ((it[Keys.DECK_SWIPE_HINTS_LEFT] ?: defaults.deckSwipeHintsLeft) - 1).coerceAtLeast(0)
-        }
-    }
+    suspend fun deckSwipeHintShown() = hintShown(Keys.DECK_SWIPE_HINTS_LEFT, defaults.deckSwipeHintsLeft)
 
     /** Użytkownik sam odsłonił akcje talii — podpowiedź nie jest już potrzebna. */
     suspend fun deckSwipeLearned() = set(Keys.DECK_SWIPE_HINTS_LEFT, 0)
+
+    private suspend fun hintShown(key: Preferences.Key<Int>, default: Int) {
+        dataStore.edit { it[key] = ((it[key] ?: default) - 1).coerceAtLeast(0) }
+    }
 
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         dataStore.edit { it[key] = value }

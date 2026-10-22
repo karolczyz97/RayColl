@@ -12,3 +12,5 @@ indent_size = 4
 max_line_length = 120
 ktlint_code_style = android_studio
 ktlint_function_naming_ignore_when_annotated_with = Composable
+# w ktlint 1.8 reguła jest domyślnie wyłączona
+ktlint_standard_no-unused-imports = enabled

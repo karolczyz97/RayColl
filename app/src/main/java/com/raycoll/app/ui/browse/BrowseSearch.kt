@@ -11,25 +11,29 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.raycoll.app.R
+import com.raycoll.app.ui.components.AppTextFieldDefaults
 
 /**
  * Pole wyszukiwania fiszek, które filtruje listę pod sobą. To pole z Material 3 SearchBar
  * (ten sam wygląd), ale bez rozwijania wyników na osobny ekran — sam SearchBar zawsze je rozwija.
  */
 @Composable
-internal fun BrowseSearchField(query: String, onSearch: (String) -> Unit, modifier: Modifier = Modifier) {
+internal fun BrowseSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState(query)
     val keyboard = LocalSoftwareKeyboardController.current
     // pole jest źródłem tekstu; filtr w ViewModelu liczy się w tle i nie blokuje pisania
+    val currentOnQueryChange by rememberUpdatedState(onQueryChange)
     LaunchedEffect(textFieldState) {
-        snapshotFlow { textFieldState.text.toString() }.collect(onSearch)
+        snapshotFlow { textFieldState.text.toString() }.collect { currentOnQueryChange(it) }
     }
     // „Wyczyść filtry” z pustej listy czyści też pole
     LaunchedEffect(query) {
@@ -44,6 +48,7 @@ internal fun BrowseSearchField(query: String, onSearch: (String) -> Unit, modifi
             textFieldState = textFieldState,
             searchBarState = searchBarState,
             onSearch = { keyboard?.hide() },
+            keyboardOptions = AppTextFieldDefaults.searchKeyboardOptions,
             placeholder = { Text(stringResource(R.string.browse_search_placeholder)) },
             leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null) },
             trailingIcon = if (textFieldState.text.isNotEmpty()) {

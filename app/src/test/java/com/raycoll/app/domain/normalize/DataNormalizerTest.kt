@@ -1,20 +1,13 @@
 package com.raycoll.app.domain.normalize
 
 import com.raycoll.app.domain.model.BranchRating
-import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.CompoundBranch
 import com.raycoll.app.domain.model.CompoundParams
 import com.raycoll.app.domain.model.CompoundPause
 import com.raycoll.app.domain.model.CompoundStep
-import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.model.FlashcardGroup
-import com.raycoll.app.domain.model.SrsState
-import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitStep
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

@@ -14,7 +14,6 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsToggleable
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
@@ -26,6 +25,8 @@ import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.RevealStyle
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.StepCondition
+import com.raycoll.app.testing.hasCustomAction
+import com.raycoll.app.testing.performCustomAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -46,10 +47,6 @@ class StepCardTest {
             StepCard(
                 number = 1,
                 step = step,
-                canMoveUp = false,
-                canMoveDown = false,
-                onMoveUp = {},
-                onMoveDown = {},
                 onDelete = {},
                 onUpdate = { step = it }
             )
@@ -88,7 +85,7 @@ class StepCardTest {
     }
 
     @Test
-    fun `buttons of different cards have different descriptions`() {
+    fun `delete actions of different cards have different labels`() {
         compose.setContent {
             Column {
                 TestCard(1, ShowPageStep(pageIndex = 0))
@@ -96,8 +93,21 @@ class StepCardTest {
             }
         }
 
-        compose.onNodeWithContentDescription("Delete: 1. Show page 1").assertExists()
-        compose.onNodeWithContentDescription("Delete: 2. Show page 2").assertExists()
+        compose.onNode(hasCustomAction("Delete: 1. Show page 1"), useUnmergedTree = true).assertExists()
+        compose.onNode(hasCustomAction("Delete: 2. Show page 2"), useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `the delete action removes the step`() {
+        var deleted = false
+        compose.setContent { StepCard(number = 1, step = ShowPageStep(), onDelete = { deleted = true }, onUpdate = {}) }
+
+        compose.performCustomAction(
+            compose.onNode(hasCustomAction("Delete: 1. Show page 1"), useUnmergedTree = true),
+            "Delete: 1. Show page 1"
+        )
+
+        assertTrue(deleted)
     }
 
     @Test
@@ -124,10 +134,6 @@ private fun TestCard(number: Int, step: ModeStep, onUpdate: (ModeStep) -> Unit =
     StepCard(
         number = number,
         step = step,
-        canMoveUp = false,
-        canMoveDown = false,
-        onMoveUp = {},
-        onMoveDown = {},
         onDelete = {},
         onUpdate = onUpdate
     )

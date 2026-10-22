@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="archive_restore_hint">Restore archived decks before they are automatically deleted.</string>
+    <string name="archive_delete_permanently">Delete forever</string>
+</resources>

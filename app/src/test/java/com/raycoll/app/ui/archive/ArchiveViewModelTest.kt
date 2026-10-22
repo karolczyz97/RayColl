@@ -1,31 +1,30 @@
 package com.raycoll.app.ui.archive
 
-import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.domain.model.ArchiveConstants
+import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsConstants
+import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.SrsStates
+import com.raycoll.app.domain.model.StoreData
+import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.MainDispatcherRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -48,25 +47,20 @@ class ArchiveViewModelTest {
         collector.cancel()
     }
 
-    private val viewModels = mutableListOf<ArchiveViewModel>()
     private val dispatcher = UnconfinedTestDispatcher()
+
+    @get:Rule
+    val mainDispatcher = MainDispatcherRule(dispatcher)
     private lateinit var clock: FakeClock
     private lateinit var repos: TestRepos
 
     @Before
     fun setup() {
-        Dispatchers.setMain(dispatcher)
         clock = FakeClock()
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), clock)
     }
 
-    @After
-    fun teardown() {
-        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
-        Dispatchers.resetMain()
-    }
-
-    private fun vm() = ArchiveViewModel(repos.deckRepository, clock, dispatcher).also { viewModels += it }
+    private fun vm() = mainDispatcher.track(ArchiveViewModel(repos.deckRepository, clock, dispatcher))
 
     private suspend fun ArchiveViewModel.decks(predicate: (List<ArchivedDeck>) -> Boolean) =
         uiState.filterIsInstance<ArchiveUiState.Ready>().first { predicate(it.decks) }.decks
@@ -160,5 +154,25 @@ class ArchiveViewModelTest {
 
         val item = vm.decks { it.isNotEmpty() }.first()
         assertEquals(1, item.cardCount)
+    }
+
+    @Test
+    fun `archive preserves all progress categories and excludes deleted cards from stats`() = runTest(dispatcher) {
+        val states = listOf(
+            SrsState(state = SrsStates.NEW),
+            SrsState(state = SrsStates.LEARNING),
+            SrsState(state = SrsStates.REVIEW, repetitions = 1),
+            SrsState(state = SrsStates.REVIEW, repetitions = SrsConstants.MASTERED_MIN_REPS)
+        )
+        val cards = states.mapIndexed { index, state -> Flashcard("c$index", listOf("Q", "A"), state) } +
+            Flashcard("deleted", listOf("Q", "A"), SrsState(), deletedAt = clock.now())
+        repos.put(
+            StoreData(groups = listOf(FlashcardGroup("stats", "Stats", cards, archivedAt = clock.now())))
+        )
+
+        val deck = vm().decks { it.isNotEmpty() }.single()
+
+        assertEquals(CardStats(total = 4, newCount = 1, learning = 1, review = 1, mastered = 1), deck.stats)
+        assertEquals(4, deck.cardCount)
     }
 }

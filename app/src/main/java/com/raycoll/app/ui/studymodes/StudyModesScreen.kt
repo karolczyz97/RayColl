@@ -1,11 +1,13 @@
 package com.raycoll.app.ui.studymodes
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -30,13 +32,16 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.operations.isModifiedBuiltIn
 import com.raycoll.app.ui.components.Banner
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.LoadingState
-import com.raycoll.app.ui.components.ModeActions
-import com.raycoll.app.ui.components.ModeBadges
+import com.raycoll.app.ui.components.ModeResetAction
 import com.raycoll.app.ui.components.ModeResetDialog
+import com.raycoll.app.ui.components.ModeSupportingContent
 import com.raycoll.app.ui.components.ScreenScaffold
+import com.raycoll.app.ui.components.SettingsGroupTitle
+import com.raycoll.app.ui.components.SwipeToDeleteItem
 import com.raycoll.app.ui.components.animateListItem
 import com.raycoll.app.ui.components.displayName
 import com.raycoll.app.ui.components.rememberModeDelete
@@ -53,11 +58,18 @@ fun StudyModesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var resetTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var restoredModeId by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val messages = rememberSnackbarMessages(snackbarHostState)
     val saveFailed = stringResource(R.string.errors_save_failed)
-    CollectEvents(viewModel.events) { messages.showLatest(saveFailed) }
-    val deleteMode = rememberModeDelete(messages, viewModel::deleteMode, viewModel::restoreMode)
+    CollectEvents(viewModel.events) {
+        messages.cancelAction("modeUndo")
+        messages.showLatest(saveFailed)
+    }
+    val deleteMode = rememberModeDelete(messages, viewModel::deleteMode) { modeId ->
+        restoredModeId = modeId
+        viewModel.restoreMode(modeId)
+    }
 
     ScreenScaffold(
         title = stringResource(R.string.app_settings_study_modes),
@@ -80,21 +92,28 @@ fun StudyModesScreen(
         when (val state = uiState) {
             StudyModesUiState.Loading -> LoadingState(contentModifier)
 
-            is StudyModesUiState.Ready -> LazyColumn(
-                modifier = contentModifier,
-                contentPadding = Spacing.screenContent(bottom = Spacing.fabClearance),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
-            ) {
-                item(key = "info") { InfoBanner(Modifier.padding(bottom = Spacing.item)) }
-                itemsIndexed(state.modes, key = { _, mode -> mode.id }) { index, mode ->
+            is StudyModesUiState.Ready -> {
+                val (builtIn, own) = state.modes.partition { it.isBuiltIn }
+                val modeItem: @Composable LazyItemScope.(ListItemShapes, StudyMode) -> Unit = { shapes, mode ->
                     ModeItem(
                         mode = mode,
-                        shapes = ListItemDefaults.segmentedShapes(index, state.modes.size),
+                        shapes = shapes,
                         onEdit = { onEditMode(mode.id) },
                         onReset = { resetTarget = mode.id },
                         onDelete = { deleteMode(mode.id) },
+                        enterFromStart = restoredModeId == mode.id,
+                        onEntered = { if (restoredModeId == mode.id) restoredModeId = null },
                         modifier = Modifier.animateListItem(this)
                     )
+                }
+                LazyColumn(
+                    modifier = contentModifier,
+                    contentPadding = Spacing.screenContent(bottom = Spacing.fabClearance),
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+                ) {
+                    item(key = "info") { InfoBanner() }
+                    modeGroup(R.string.study_modes_section_builtin, builtIn, modeItem)
+                    modeGroup(R.string.study_modes_section_own, own, modeItem)
                 }
             }
         }
@@ -111,6 +130,22 @@ fun StudyModesScreen(
     }
 }
 
+/** Grupa trybów pod własnym nagłówkiem; pusta grupa nie pokazuje nic. */
+private fun LazyListScope.modeGroup(
+    @StringRes title: Int,
+    modes: List<StudyMode>,
+    modeItem: @Composable LazyItemScope.(ListItemShapes, StudyMode) -> Unit
+) {
+    if (modes.isEmpty()) return
+    item(key = "title-$title") {
+        // przerwa nad nagłówkiem jak między grupami ustawień, mimo wąskiej przerwy między pozycjami listy
+        SettingsGroupTitle(stringResource(title), Modifier.padding(top = Spacing.item - ListItemDefaults.SegmentedGap))
+    }
+    itemsIndexed(modes, key = { _, mode -> mode.id }) { index, mode ->
+        modeItem(ListItemDefaults.segmentedShapes(index, modes.size), mode)
+    }
+}
+
 @Composable
 private fun InfoBanner(modifier: Modifier = Modifier) {
     Banner(
@@ -123,7 +158,7 @@ private fun InfoBanner(modifier: Modifier = Modifier) {
     }
 }
 
-/** Tryb jako pozycja listy w stylu ustawień: klik otwiera edytor, akcje po prawej. */
+/** Klik otwiera edytor; własny tryb usuwa się tym samym gestem co fiszki. */
 @Composable
 private fun ModeItem(
     mode: StudyMode,
@@ -131,20 +166,42 @@ private fun ModeItem(
     onEdit: () -> Unit,
     onReset: () -> Unit,
     onDelete: () -> Unit,
+    enterFromStart: Boolean,
+    onEntered: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val editLabel =
         stringResource(R.string.a11y_item_action, stringResource(R.string.mode_list_edit), mode.displayName())
-    SegmentedListItem(
-        onClick = onEdit,
-        shapes = shapes,
-        modifier = modifier.semantics { onClick(label = editLabel, action = null) },
-        supportingContent = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                ModeBadges(mode)
-                Text(stringResource(R.string.study_modes_steps_count, mode.steps.size))
+    val content: @Composable () -> Unit = {
+        SegmentedListItem(
+            onClick = onEdit,
+            shapes = shapes,
+            modifier = Modifier.semantics { onClick(label = editLabel, action = null) },
+            supportingContent = {
+                ModeSupportingContent(mode) { Text(stringResource(R.string.study_modes_steps_count, mode.steps.size)) }
+            },
+            trailingContent = if (mode.isModifiedBuiltIn()) {
+                { ModeResetAction(mode, onReset) }
+            } else {
+                null
             }
-        },
-        trailingContent = { ModeActions(mode, onEdit = onEdit, onReset = onReset, onDelete = onDelete) }
-    ) { Text(mode.displayName()) }
+        ) { Text(mode.displayName()) }
+    }
+    if (mode.isBuiltIn) {
+        Box(modifier) { content() }
+    } else {
+        SwipeToDeleteItem(
+            onDelete = onDelete,
+            deleteLabel = stringResource(
+                R.string.a11y_item_action,
+                stringResource(R.string.btn_delete),
+                mode.displayName()
+            ),
+            shape = shapes.shape,
+            modifier = modifier,
+            enterFromStart = enterFromStart,
+            onEntered = onEntered,
+            content = content
+        )
+    }
 }

@@ -200,7 +200,10 @@ fun StudyScreen(onExit: () -> Unit, viewModel: StudyViewModel) {
                                         onCancelPress = viewModel::cancelPress,
                                         onRate = viewModel::rate,
                                         onPrevious = viewModel::goToPreviousCard,
-                                        onNext = viewModel::skipToNextCard
+                                        onNext = viewModel::skipToNextCard,
+                                        onNavigationStart = viewModel::beginCardNavigation,
+                                        onNavigationContinue = viewModel::continueCardNavigation,
+                                        onNavigationEnd = viewModel::endCardNavigation
                                     )
                                 }
                             )

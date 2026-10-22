@@ -1,33 +1,26 @@
 package com.raycoll.app.ui.stats
 
-import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.core.LocalDates
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.MainDispatcherRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -48,25 +41,20 @@ class StatsViewModelTest {
         collector.cancel()
     }
 
-    private val viewModels = mutableListOf<StatsViewModel>()
     private val dispatcher = UnconfinedTestDispatcher()
+
+    @get:Rule
+    val mainDispatcher = MainDispatcherRule(dispatcher)
     private lateinit var repos: TestRepos
 
     private val clock = FakeClock()
 
     @Before
     fun setup() {
-        Dispatchers.setMain(dispatcher)
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), clock)
     }
 
-    @After
-    fun teardown() {
-        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
-        Dispatchers.resetMain()
-    }
-
-    private fun vm() = StatsViewModel(repos.deckRepository, clock).also { viewModels += it }
+    private fun vm() = mainDispatcher.track(StatsViewModel(repos.deckRepository, clock))
 
     private suspend fun StatsViewModel.ready(predicate: (StatsUiState.Ready) -> Boolean = { true }) =
         uiState.filterIsInstance<StatsUiState.Ready>().first(predicate)

@@ -65,7 +65,7 @@
     <string name="import_sep_pipe">Barra verticale (|)</string>
     <string name="import_first_row_header">La prima riga è un\'intestazione</string>
     <string name="import_pages_count">Pagine:</string>
-    <string name="import_page_label">Pagina %1$d</string>
+    <string name="page_default_name">Pagina %1$d</string>
     <string name="stats_title">Statistiche di studio</string>
     <plurals name="stats_heatmap_title">
         <item quantity="one">Attività nell’ultima %1$d settimana</item>
@@ -114,6 +114,16 @@
     <string name="archive_auto_delete_tomorrow">Eliminato domani</string>
     <string name="archive_auto_delete_today">Eliminato oggi</string>
     <string name="mode_classic_name">Classico</string>
+    <string name="mode_listen_only_name">Ascolto</string>
+    <string name="mode_browse_name">Sfoglia</string>
+    <string name="mode_auto_reveal_name">Svela da solo</string>
+    <string name="mode_classic_desc">Legge la pagina 1, un tocco svela il resto e valuti la carta.</string>
+    <string name="mode_listen_speak_desc">Legge la pagina 1, dici la risposta e l\'app la controlla e la valuta.</string>
+    <string name="mode_listen_only_desc">Legge la pagina 1, attende il doppio, legge la pagina 2 e attende di nuovo. Senza toccare e senza valutare.</string>
+    <string name="mode_browse_desc">Legge la pagina 1, un tocco svela e legge la pagina 2, il successivo passa oltre. Senza valutare.</string>
+    <string name="mode_auto_reveal_desc">Legge la pagina 1, attende da solo, svela e legge la pagina 2, poi valuti.</string>
+    <string name="study_modes_section_builtin">Integrate</string>
+    <string name="study_modes_section_own">Personali</string>
     <string name="mode_listen_speak_name">Audio</string>
     <string name="step_show_page">Mostra pagina %1$d</string>
     <string name="step_show_all_pages">Mostra tutte le pagine</string>
@@ -206,8 +216,6 @@
     <string name="mode_editor_move_up">Sposta su</string>
     <string name="mode_editor_move_down">Sposta giù</string>
     <string name="mode_editor_template_title">Scegli un modello iniziale</string>
-    <string name="mode_editor_template_classic">Classica (gira e valuta)</string>
-    <string name="mode_editor_template_audio">Audio (ascolta e parla)</string>
     <string name="mode_editor_template_blank">Modalità vuota</string>
     <string name="mode_issue_name_required">Il nome della modalità è obbligatorio</string>
     <string name="mode_issue_no_steps">Aggiungi almeno un passaggio</string>
@@ -314,6 +322,9 @@
     <string name="browse_card_deleted">Scheda eliminata.</string>
     <string name="browse_delete_card">Elimina scheda</string>
     <string name="dashboard_deck_options">Opzioni</string>
+    <string name="dashboard_reorder_decks">Cambia ordine dei mazzi</string>
+    <string name="dashboard_move_deck_up">Sposta mazzo su</string>
+    <string name="dashboard_move_deck_down">Sposta mazzo giù</string>
     <string name="browse_clear_search">Cancella ricerca</string>
     <string name="browse_clear_filters">Cancella filtri</string>
     <string name="mode_editor_add_below">Aggiungi sotto</string>
@@ -335,5 +346,6 @@
     <string name="auth_loading_data">Caricamento dei dati del tuo account…</string>
     <string name="auth_data_when_online">I dati appariranno dopo la connessione</string>
     <string name="auth_sign_out_offline">Connettiti a internet per disconnetterti</string>
+    <string name="study_summary_title">Riepilogo della sessione</string>
 </resources>
 

@@ -12,3 +12,6 @@ data class StudyMode(
     val updatedAt: Long = 0,
     val deletedAt: Long? = null
 )
+
+/** Tryb bez tombstone'a. */
+val StudyMode.isLive: Boolean get() = deletedAt == null

@@ -18,6 +18,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
@@ -26,6 +28,10 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
+import com.raycoll.app.testing.customActionLabels
+import com.raycoll.app.testing.hasCustomAction
+import com.raycoll.app.testing.longPressAndDrag
+import com.raycoll.app.testing.performCustomAction
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -39,8 +45,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
-/** Edytor trybu: komunikaty o błędach, wskazówki i wyjście z niezapisanymi zmianami. */
+// Przeciągnięcie palcem o 12 × 20 px przechodzi przez sąsiedni krok niezależnie od jego wysokości.
+private const val DRAG_STEPS = 12
+private const val DRAG_STEP_PX = 20f
+
+/** Edytor trybu: komunikaty o błędach, wskazówki, przestawianie kroków i wyjście z niezapisanymi zmianami. */
 @RunWith(RobolectricTestRunner::class)
 class ModeDetailScreenTest {
     @get:org.junit.Rule val testPreferences = PreferencesRule()
@@ -73,7 +84,8 @@ class ModeDetailScreenTest {
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), FakeClock())
         vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository, SavedStateHandle())
         compose.setContent { ModeDetailScreen(onBack = { backCount++ }, viewModel = vm) }
-        compose.onNodeWithText("Empty mode").performClick()
+        // szablonów jest tyle, że na małym oknie testowym ostatni wymaga przewinięcia
+        compose.onNodeWithText("Empty mode").performScrollTo().performClick()
     }
 
     @After
@@ -105,6 +117,63 @@ class ModeDetailScreenTest {
         compose.onNodeWithText("Tips:").assertExists()
         compose.onNodeWithText("Issues in mode configuration:").assertDoesNotExist()
         compose.onNodeWithText("Save").assertIsEnabled()
+    }
+
+    @Test
+    @Config(qualifiers = "w400dp-h1200dp")
+    fun `holding a step and dragging it moves it after the step it was dragged over`() {
+        vm.addStep(ShowPageStep(pageIndex = 0))
+        vm.addStep(ShowPageStep(pageIndex = 1))
+        vm.addStep(ShowPageStep(pageIndex = 2))
+        compose.waitForIdle()
+
+        compose.longPressAndDrag(firstStepCard(), steps = DRAG_STEPS, stepPx = DRAG_STEP_PX) {
+            // przeciągany krok jest już na nowym miejscu, zanim palec się oderwie
+            assertTrue(pageOrder().first() != 0)
+        }
+
+        val order = pageOrder()
+        assertTrue(order.indexOf(0) >= 1)
+        assertEquals(listOf(1, 2), order.filter { it != 0 })
+    }
+
+    @Test
+    @Config(qualifiers = "w400dp-h1200dp")
+    fun `a step offers move actions only in the directions it can go`() {
+        vm.addStep(ShowPageStep(pageIndex = 0))
+        vm.addStep(ShowPageStep(pageIndex = 1))
+        compose.waitForIdle()
+
+        assertEquals(listOf("Delete: 1. Show page 1", "Move down"), firstStepCard().customActionLabels())
+        assertEquals(
+            listOf("Delete: 2. Show page 2", "Move up"),
+            compose.onNode(hasCustomAction("Move up"), useUnmergedTree = true).customActionLabels()
+        )
+
+        compose.performCustomAction(firstStepCard(), "Move down")
+        assertEquals(listOf(1, 0), pageOrder())
+    }
+
+    @Test
+    @Config(qualifiers = "w400dp-h1200dp")
+    fun `swiping a step to the left removes it and undo brings it back`() {
+        vm.addStep(ShowPageStep(pageIndex = 0))
+        vm.addStep(ShowPageStep(pageIndex = 1))
+        compose.waitForIdle()
+
+        firstStepCard().performTouchInput { swipeLeft() }
+        compose.waitUntil(5_000) { pageOrder() == listOf(1) }
+
+        compose.onNodeWithText("Undo").performClick()
+        compose.waitUntil(5_000) { pageOrder() == listOf(0, 1) }
+    }
+
+    // pierwszy krok może się przesunąć tylko w dół (środkowe mają obie akcje)
+    private fun firstStepCard() =
+        compose.onNode(hasCustomAction("Move down") and !hasCustomAction("Move up"), useUnmergedTree = true)
+
+    private fun pageOrder() = (vm.uiState.value as ModeDetailUiState.Editing).steps.map {
+        (it.step as ShowPageStep).pageIndex
     }
 
     @Test

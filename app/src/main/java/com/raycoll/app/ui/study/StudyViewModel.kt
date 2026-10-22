@@ -10,7 +10,9 @@ import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.repository.DeckRepository
 import com.raycoll.app.data.repository.StudyModeRepository
 import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.selectors.getDueCards
+import com.raycoll.app.domain.selectors.sessionCards
+import com.raycoll.app.domain.session.CardDestination
+import com.raycoll.app.domain.session.CardNavigation
 import com.raycoll.app.domain.session.SessionDeps
 import com.raycoll.app.domain.session.SessionEngine
 import com.raycoll.app.domain.session.SessionError
@@ -29,7 +31,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -130,7 +131,7 @@ class StudyViewModel @AssistedInject constructor(
             _uiState.value = StudyUiState.DeckMissing
             return
         }
-        val cards = getDueCards(deck.cards, deck.studyFilter, deck.cardOrder, clock.now())
+        val cards = sessionCards(deck.cards, deck.studyFilter, deck.cardOrder, clock.now())
         if (cards.isEmpty()) {
             _uiState.value = StudyUiState.NoDueCards(deck.name)
             return
@@ -147,7 +148,7 @@ class StudyViewModel @AssistedInject constructor(
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
 
         viewModelScope.launch {
-            // zmiana stanu kolejki zapisów (np. ponowienie po błędzie) przelicza też podsumowanie końca sesji
+            // pauza zmienia stan ekranu tak samo jak postęp sesji
             combine(engine.state, engine.isPaused) { session, paused ->
                 session to paused
             }.collectLatest { (session, paused) ->
@@ -221,6 +222,19 @@ class StudyViewModel @AssistedInject constructor(
 
     fun goToPreviousCard() {
         engine?.goToPreviousCard()
+    }
+
+    fun beginCardNavigation(sessionId: Long, sourceCardId: String): CardNavigation? =
+        engine?.beginNavigation(sessionId, sourceCardId)
+
+    fun continueCardNavigation(navigation: CardNavigation): Boolean = engine?.continueNavigation(navigation) == true
+
+    fun endCardNavigation(navigation: CardNavigation, destination: CardDestination?): Int? {
+        val engine = engine ?: return null
+        engine.endNavigation(navigation, destination)
+        val s = engine.state.value
+        if (s.sessionId != navigation.sessionId) return null
+        return if (s.status == SessionStatus.FINISHED) s.cards.size else s.currentCardIndex
     }
 
     fun tapCard() {

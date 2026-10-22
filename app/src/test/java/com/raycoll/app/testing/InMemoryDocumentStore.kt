@@ -12,6 +12,7 @@ import java.util.Date
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 class FakeAccount(initialUid: String = "uid-1") : CurrentAccount {
     override val uid = MutableStateFlow<String?>(initialUid)
@@ -39,22 +40,26 @@ class InMemoryDocumentStore(private val clock: Clock) : DocumentStore {
     override fun writeAll(ops: List<WriteOp>) {
         ops.chunked(400).forEach { chunk ->
             check(chunk.none(failWhen)) { "simulated write failure" }
-            val next = documents.value.toMutableMap()
-            chunk.forEach { op ->
-                when (op) {
-                    is WriteOp.Delete -> next.remove(op.path)
+            documents.update { current -> apply(current, chunk) }
+        }
+    }
 
-                    is WriteOp.Set -> next[op.path] =
-                        resolve(op.data, if (op.merge) next[op.path].orEmpty() else emptyMap())
+    private fun apply(current: Map<String, Map<String, Any?>>, chunk: List<WriteOp>): Map<String, Map<String, Any?>> {
+        val next = current.toMutableMap()
+        chunk.forEach { op ->
+            when (op) {
+                is WriteOp.Delete -> next.remove(op.path)
 
-                    is WriteOp.Update -> {
-                        check(op.path in next) { "Missing document: ${op.path}" }
-                        next[op.path] = resolve(op.fields, next.getValue(op.path))
-                    }
+                is WriteOp.Set -> next[op.path] =
+                    resolve(op.data, if (op.merge) next[op.path].orEmpty() else emptyMap())
+
+                is WriteOp.Update -> {
+                    check(op.path in next) { "Missing document: ${op.path}" }
+                    next[op.path] = resolve(op.fields, next.getValue(op.path))
                 }
             }
-            documents.value = next
         }
+        return next
     }
 
     private fun resolve(fields: Map<String, Any?>, old: Map<String, Any?>) = old + fields.mapValues { (key, value) ->
@@ -65,5 +70,8 @@ class InMemoryDocumentStore(private val clock: Clock) : DocumentStore {
         }
     }
 
-    override suspend fun awaitPendingWrites(timeoutMs: Long) = true
+    /** Wynik oczekiwania na wysłanie zapisów; false udaje brak połączenia z serwerem. */
+    var pendingWritesConfirmed = true
+
+    override suspend fun awaitPendingWrites(timeoutMs: Long) = pendingWritesConfirmed
 }

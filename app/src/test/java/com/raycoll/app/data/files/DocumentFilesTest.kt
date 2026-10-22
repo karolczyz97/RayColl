@@ -1,7 +1,10 @@
 package com.raycoll.app.data.files
 
+import android.content.ContentResolver
 import android.content.Context
+import android.database.MatrixCursor
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -12,6 +15,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 
 /** Pliki wskazane przez użytkownika: pełne nadpisanie przy zapisie, BOM i limit rozmiaru przy odczycie. */
@@ -50,5 +55,35 @@ class DocumentFilesTest {
     @Test
     fun `readText of a missing file is null`() = runBlocking {
         assertNull(files.readText(Uri.fromFile(File(folder.root, "missing.json"))))
+    }
+
+    @Test
+    fun `displayName uses the provider metadata instead of a document id`() = runBlocking {
+        val uri = Uri.parse("content://documents/document/6742")
+        val resolver = mock(ContentResolver::class.java)
+        val context = mock(Context::class.java)
+        `when`(context.contentResolver).thenReturn(resolver)
+        val cursor = MatrixCursor(arrayOf(OpenableColumns.DISPLAY_NAME)).apply {
+            addRow(arrayOf("Środowisko i klimat.tsv"))
+        }
+        `when`(resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)).thenReturn(cursor)
+
+        assertEquals("Środowisko i klimat.tsv", DocumentFiles(context).displayName(uri))
+        assertTrue(cursor.isClosed)
+    }
+
+    @Test
+    fun `unsupported name metadata does not prevent reading the document`() = runBlocking {
+        val uri = Uri.parse("content://documents/document/6742")
+        val resolver = mock(ContentResolver::class.java)
+        val context = mock(Context::class.java)
+        `when`(context.contentResolver).thenReturn(resolver)
+        `when`(resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null))
+            .thenThrow(UnsupportedOperationException("No metadata"))
+        `when`(resolver.openInputStream(uri)).thenReturn("hello;world".byteInputStream())
+        val document = DocumentFiles(context)
+
+        assertNull(document.displayName(uri))
+        assertEquals("hello;world", document.readText(uri))
     }
 }

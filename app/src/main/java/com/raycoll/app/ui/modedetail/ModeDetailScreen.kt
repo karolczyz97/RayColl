@@ -2,7 +2,6 @@ package com.raycoll.app.ui.modedetail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,9 +21,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -53,6 +52,7 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.steps.ModeIssue
 import com.raycoll.app.domain.steps.ModeTemplate
+import com.raycoll.app.ui.components.AppTextField
 import com.raycoll.app.ui.components.Banner
 import com.raycoll.app.ui.components.BuiltInBadge
 import com.raycoll.app.ui.components.CollectEvents
@@ -62,15 +62,22 @@ import com.raycoll.app.ui.components.ModeResetDialog
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SwitchRow
 import com.raycoll.app.ui.components.animateListItem
-import com.raycoll.app.ui.components.expandIn
+import com.raycoll.app.ui.components.canonicalModeName
+import com.raycoll.app.ui.components.descriptionRes
+import com.raycoll.app.ui.components.expandVerticallyIn
 import com.raycoll.app.ui.components.modeDisplayName
+import com.raycoll.app.ui.components.moveActions
+import com.raycoll.app.ui.components.nameRes
+import com.raycoll.app.ui.components.rememberLazyReorderController
 import com.raycoll.app.ui.components.rememberSnackbarMessages
-import com.raycoll.app.ui.components.shrinkOut
+import com.raycoll.app.ui.components.reorderItem
+import com.raycoll.app.ui.components.reorderOnLongPress
+import com.raycoll.app.ui.components.shrinkVerticallyOut
 import com.raycoll.app.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
-fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel, onClosed: () -> Unit = onBack) {
+fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expertMode by viewModel.expertMode.collectAsStateWithLifecycle()
     var showAddStep by rememberSaveable { mutableStateOf(false) }
@@ -88,7 +95,7 @@ fun ModeDetailScreen(onBack: () -> Unit, viewModel: ModeDetailViewModel, onClose
 
     CollectEvents(viewModel.events) { event ->
         when (event) {
-            ModeDetailEvent.Closed -> onClosed()
+            ModeDetailEvent.Closed -> onBack()
             ModeDetailEvent.SaveFailed -> messages.showLatest(saveFailed)
         }
     }
@@ -230,24 +237,18 @@ private fun ModeEditor(
     val shownTips = rememberLastIssues(tips)
 
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
     ScrollToAddedStep(state, listState)
-    val spacingPx = with(LocalDensity.current) { Spacing.item.toPx() }
-
-    // Przesunięty krok zostaje pod palcem: lista przewija się o wysokość kroku, z którym się zamienił.
-    fun moveStep(from: Int, to: Int) {
-        val neighbourKey = state.steps[to].key
-        val neighbourHeight = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == neighbourKey }?.size
-        onMoveStep(from, to)
-        if (neighbourHeight != null) {
-            val delta = (neighbourHeight + spacingPx) * if (to < from) -1 else 1
-            scope.launch { listState.animateScrollBy(delta) }
-        }
-    }
+    val reorder = rememberLazyReorderController(listState, state.steps.map { it.key }, onMoveStep)
+    val moveUpLabel = stringResource(R.string.mode_editor_move_up)
+    val moveDownLabel = stringResource(R.string.mode_editor_move_down)
 
     Column(modifier) {
         // powody zablokowanego zapisu są przypięte nad listą, żeby było je widać przy każdym kroku
-        AnimatedVisibility(visible = blockingIssues.isNotEmpty(), enter = expandIn(), exit = shrinkOut()) {
+        AnimatedVisibility(
+            visible = blockingIssues.isNotEmpty(),
+            enter = expandVerticallyIn(),
+            exit = shrinkVerticallyOut()
+        ) {
             NoticeBanner(
                 title = stringResource(R.string.mode_editor_issues_title),
                 issues = shownBlocking,
@@ -268,19 +269,11 @@ private fun ModeEditor(
                     // pole pokazuje tłumaczenie nazwy wbudowanej, a zapisuje nazwę kanoniczną
                     val translatedName = modeDisplayName(state.builtIn?.defaultName.orEmpty(), state.builtIn)
                     var hadFocus by remember { mutableStateOf(false) }
-                    OutlinedTextField(
+                    AppTextField(
                         value = modeDisplayName(state.name, state.builtIn),
                         onValueChange = { input ->
                             nameTouched = true
-                            onNameChange(
-                                if (state.builtIn != null &&
-                                    input == translatedName
-                                ) {
-                                    state.builtIn.defaultName
-                                } else {
-                                    input
-                                }
-                            )
+                            onNameChange(canonicalModeName(input, state.builtIn, translatedName))
                         },
                         label = { Text(stringResource(R.string.mode_editor_name_label)) },
                         isError = nameError,
@@ -298,7 +291,11 @@ private fun ModeEditor(
                             }
                     )
                     if (state.builtIn != null) BuiltInBadge()
-                    AnimatedVisibility(visible = tips.isNotEmpty(), enter = expandIn(), exit = shrinkOut()) {
+                    AnimatedVisibility(
+                        visible = tips.isNotEmpty(),
+                        enter = expandVerticallyIn(),
+                        exit = shrinkVerticallyOut()
+                    ) {
                         NoticeBanner(
                             title = stringResource(R.string.mode_editor_tips_title),
                             issues = shownTips,
@@ -324,15 +321,16 @@ private fun ModeEditor(
                 StepCard(
                     number = index + 1,
                     step = item.step,
-                    canMoveUp = index > 0,
-                    canMoveDown = index < state.steps.lastIndex,
-                    onMoveUp = { moveStep(index, index - 1) },
-                    onMoveDown = { moveStep(index, index + 1) },
                     onDelete = { onRemoveStep(index) },
                     onAddBelow = { onAddBelow(item.key) },
                     onUpdate = { onUpdateStep(index, it) },
                     onFieldValidityChange = { field, valid -> onFieldValidityChange("${item.key}/$field", valid) },
-                    modifier = Modifier.animateListItem(this)
+                    reorderActions = moveActions(index, state.steps.size, moveUpLabel, moveDownLabel, onMoveStep),
+                    modifier = Modifier
+                        .reorderItem(reorder, item.key)
+                        .reorderOnLongPress(reorder, item.key)
+                        // przeciągany krok porusza się pod palcem, więc nie może mieć animacji pozycji listy
+                        .then(if (reorder.isActive(item.key)) Modifier else Modifier.animateListItem(this))
                 )
             }
             item(key = "add_step") {
@@ -374,26 +372,20 @@ private fun ScrollToAddedStep(state: ModeDetailUiState.Editing, listState: LazyL
 private fun TemplatePicker(modifier: Modifier, onChoose: (ModeTemplate) -> Unit) {
     Column(
         modifier.verticalScroll(rememberScrollState()).padding(Spacing.screenContent()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.item)
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
     ) {
-        Text(stringResource(R.string.mode_editor_template_title), style = MaterialTheme.typography.titleMedium)
-        val buttonModifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-        Button(onClick = {
-            onChoose(ModeTemplate.CLASSIC)
-        }, shapes = ButtonDefaults.shapes(), modifier = buttonModifier) {
-            Text(stringResource(R.string.mode_editor_template_classic))
-        }
-        Button(onClick = {
-            onChoose(ModeTemplate.AUDIO)
-        }, shapes = ButtonDefaults.shapes(), modifier = buttonModifier) {
-            Text(stringResource(R.string.mode_editor_template_audio))
-        }
-        OutlinedButton(onClick = {
-            onChoose(ModeTemplate.BLANK)
-        }, shapes = ButtonDefaults.shapes(), modifier = buttonModifier) {
-            Text(stringResource(R.string.mode_editor_template_blank))
+        Text(
+            stringResource(R.string.mode_editor_template_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = Spacing.s)
+        )
+        ModeTemplate.entries.forEachIndexed { index, template ->
+            val builtIn = template.builtIn
+            SegmentedListItem(
+                onClick = { onChoose(template) },
+                shapes = ListItemDefaults.segmentedShapes(index, ModeTemplate.entries.size),
+                supportingContent = builtIn?.let { { Text(stringResource(it.descriptionRes())) } }
+            ) { Text(stringResource(builtIn?.nameRes() ?: R.string.mode_editor_template_blank)) }
         }
     }
 }

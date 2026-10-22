@@ -16,6 +16,7 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
@@ -30,10 +31,13 @@ val settingsBackground: Color
 
 /** Pozycje jednej grupy ustawień; kształt każdej zależy od jej miejsca w grupie (pierwsza, środkowa, ostatnia). */
 class SettingsGroupScope internal constructor() {
-    internal val items = mutableListOf<@Composable (ListItemShapes) -> Unit>()
+    internal class Entry(val key: Any?, val content: @Composable (ListItemShapes) -> Unit)
 
-    fun item(content: @Composable (shapes: ListItemShapes) -> Unit) {
-        items += content
+    internal val items = mutableListOf<Entry>()
+
+    /** [key] zachowuje stan pozycji, gdy zmienia się jej miejsce w grupie (np. przestawiane strony); bez niego liczy się miejsce. */
+    fun item(key: Any? = null, content: @Composable (shapes: ListItemShapes) -> Unit) {
+        items += Entry(key, content)
     }
 }
 
@@ -45,18 +49,24 @@ class SettingsGroupScope internal constructor() {
 fun SettingsGroup(title: String?, modifier: Modifier = Modifier, content: SettingsGroupScope.() -> Unit) {
     val items = SettingsGroupScope().apply(content).items
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-        if (title != null) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(start = Spacing.l, top = Spacing.s, bottom = Spacing.s)
-                    .semantics { heading() }
-            )
+        if (title != null) SettingsGroupTitle(title)
+        items.forEachIndexed { index, item ->
+            key(item.key ?: index) { item.content(ListItemDefaults.segmentedShapes(index, items.size)) }
         }
-        items.forEachIndexed { index, item -> item(ListItemDefaults.segmentedShapes(index, items.size)) }
     }
+}
+
+/** Nagłówek grupy pozycji; grupy ułożone w jednej leniwej liście używają go bez [SettingsGroup]. */
+@Composable
+fun SettingsGroupTitle(title: String, modifier: Modifier = Modifier) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+            .padding(start = Spacing.l, top = Spacing.s, bottom = Spacing.s)
+            .semantics { heading() }
+    )
 }
 
 /** Pozycja z przełącznikiem — klikalna w całości, jak w ustawieniach systemu. */
@@ -94,7 +104,8 @@ fun SettingsAction(
     description: String? = null,
     enabled: Boolean = true,
     destructive: Boolean = false,
-    busy: Boolean = false
+    busy: Boolean = false,
+    trailingContent: @Composable (() -> Unit)? = null
 ) {
     val colors = if (destructive) {
         ListItemDefaults.segmentedColors(
@@ -109,6 +120,7 @@ fun SettingsAction(
         shapes = shapes,
         enabled = enabled,
         colors = colors,
+        trailingContent = trailingContent,
         leadingContent = when {
             busy -> {
                 { CircularProgressIndicator(Modifier.size(BusyIndicatorSize), strokeWidth = BusyStrokeWidth) }

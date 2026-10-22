@@ -3,10 +3,13 @@ package com.raycoll.app.domain.merge
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
+import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.model.WaitStep
 import com.raycoll.app.domain.seed.SEED_MODES
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -14,35 +17,67 @@ import org.junit.Test
 class MigrationRulesTest {
 
     @Test
-    fun `deleted custom and modified built in modes do not trigger guest migration`() {
-        val custom = StudyMode("custom", "Custom", deletedAt = 100)
-        val edited = SEED_MODES.first().copy(name = "Edited", updatedAt = 50, deletedAt = 100)
-        assertFalse(getGuestHasData(emptyList(), emptyMap(), listOf(custom, edited)))
+    fun `joining guest copies modified built-in modes, drops untouched ones and repoints decks`() {
+        val untouched = SEED_MODES[1]
+        val edited = SEED_MODES[0].copy(name = "Edited", updatedAt = 50)
+        val custom = StudyMode("custom", "Custom")
+        val deck = FlashcardGroup(id = "d", name = "Deck", cards = emptyList(), activeModeId = edited.id)
+        val other = deck.copy(id = "d2", activeModeId = untouched.id)
+
+        val joined = StoreData(
+            listOf(deck, other),
+            listOf(untouched, edited, custom)
+        ).withBuiltInModesCopied(" (phone)")
+
+        val copy = joined.studyModes.single { it.name == "Edited (phone)" }
+        assertFalse(copy.isBuiltIn)
+        assertEquals(null, copy.builtInSourceId)
+        assertNotEquals(edited.id, copy.id)
+        assertEquals(listOf(copy, custom), joined.studyModes)
+        assertEquals(copy.id, joined.groups.single { it.id == "d" }.activeModeId)
+        // konto ma własny niezmieniony tryb wbudowany o tym samym id
+        assertEquals(untouched.id, joined.groups.single { it.id == "d2" }.activeModeId)
+        // ponowienie daje tę samą kopię, inna chwila zmiany — inną
+        assertEquals(copy.id, StoreData(listOf(deck), listOf(edited)).withBuiltInModesCopied("").studyModes.single().id)
+        assertNotEquals(
+            copy.id,
+            StoreData(
+                listOf(deck),
+                listOf(edited.copy(updatedAt = 51))
+            ).withBuiltInModesCopied("").studyModes.single().id
+        )
     }
 
     @Test
-    fun `getGuestHasData detects groups heatmap and user-authored modes`() {
+    fun `deleted custom and modified built in modes do not trigger guest migration`() {
+        val custom = StudyMode("custom", "Custom", deletedAt = 100)
+        val edited = SEED_MODES.first().copy(name = "Edited", updatedAt = 50, deletedAt = 100)
+        assertFalse(guestHasData(emptyList(), emptyMap(), listOf(custom, edited)))
+    }
+
+    @Test
+    fun `guestHasData detects groups heatmap and user-authored modes`() {
         // pusto → brak danych
-        assertFalse(getGuestHasData(emptyList(), emptyMap(), emptyList()))
+        assertFalse(guestHasData(emptyList(), emptyMap(), emptyList()))
 
         // żywa talia → dane
         val deck = FlashcardGroup(id = "g1", name = "Deck", cards = emptyList(), updatedAt = 1L)
-        assertTrue(getGuestHasData(listOf(deck), emptyMap(), emptyList()))
+        assertTrue(guestHasData(listOf(deck), emptyMap(), emptyList()))
 
         // usunięta talia → brak danych
-        assertFalse(getGuestHasData(listOf(deck.copy(deletedAt = 1L)), emptyMap(), emptyList()))
+        assertFalse(guestHasData(listOf(deck.copy(deletedAt = 1L)), emptyMap(), emptyList()))
 
         // heatmapa z aktywnością → dane
-        assertTrue(getGuestHasData(emptyList(), mapOf("2026-05-27" to 1), emptyList()))
-        assertFalse(getGuestHasData(emptyList(), mapOf("2026-05-27" to 0), emptyList()))
+        assertTrue(guestHasData(emptyList(), mapOf("2026-05-27" to 1), emptyList()))
+        assertFalse(guestHasData(emptyList(), mapOf("2026-05-27" to 0), emptyList()))
 
         // nietknięte tryby wbudowane (seed) → brak danych
         val seedModes = SEED_MODES
-        assertFalse(getGuestHasData(emptyList(), emptyMap(), seedModes))
+        assertFalse(guestHasData(emptyList(), emptyMap(), seedModes))
 
         // własny tryb → dane
         val customMode = StudyMode("custom-1", name = "My Mode", steps = emptyList(), isBuiltIn = false)
-        assertTrue(getGuestHasData(emptyList(), emptyMap(), listOf(customMode)))
+        assertTrue(guestHasData(emptyList(), emptyMap(), listOf(customMode)))
     }
 
     @Test
@@ -77,25 +112,25 @@ class MigrationRulesTest {
 
     @Test
     fun `untouched seed decks do not count as guest data`() {
-        assertFalse(getGuestHasData(listOf(seedShapedDeck()), emptyMap(), SEED_MODES))
+        assertFalse(guestHasData(listOf(seedShapedDeck()), emptyMap(), SEED_MODES))
     }
 
     @Test
     fun `edited or reviewed seed decks count as guest data`() {
         val seed = seedShapedDeck()
-        assertTrue(getGuestHasData(listOf(seed.copy(updatedAt = 5L)), emptyMap(), emptyList()))
+        assertTrue(guestHasData(listOf(seed.copy(updatedAt = 5L)), emptyMap(), emptyList()))
 
         val reviewed = seed.copy(cards = listOf(seed.cards[0].copy(srsUpdatedAt = 9L), seed.cards[1]))
-        assertTrue(getGuestHasData(listOf(reviewed), emptyMap(), emptyList()))
+        assertTrue(guestHasData(listOf(reviewed), emptyMap(), emptyList()))
 
         val edited = seed.copy(cards = listOf(seed.cards[0].copy(contentUpdatedAt = 9L), seed.cards[1]))
-        assertTrue(getGuestHasData(listOf(edited), emptyMap(), emptyList()))
+        assertTrue(guestHasData(listOf(edited), emptyMap(), emptyList()))
     }
 
     @Test
     fun `seed deck with a deleted card counts as guest data`() {
         val seed = seedShapedDeck()
         val changed = seed.copy(cards = listOf(seed.cards[0].copy(deletedAt = 10L), seed.cards[1]))
-        assertTrue(getGuestHasData(listOf(changed), emptyMap(), SEED_MODES))
+        assertTrue(guestHasData(listOf(changed), emptyMap(), SEED_MODES))
     }
 }

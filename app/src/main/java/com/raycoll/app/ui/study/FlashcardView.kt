@@ -1,20 +1,13 @@
 package com.raycoll.app.ui.study
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,7 +29,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,13 +38,12 @@ import com.raycoll.app.domain.session.AnswerStatus
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.theme.LocalRatingColors
 import com.raycoll.app.ui.theme.Spacing
+import com.raycoll.app.ui.theme.answerColors
 import kotlinx.coroutines.delay
 
-/** To, co widać na karcie w danej chwili — animacja zmiany karty pokazuje stary i nowy stan osobno. */
+/** Obraz aktywnej karty albo biernego podglądu sąsiada w pagerze. */
 internal data class CardFace(
     val card: Flashcard,
-    /** Pozycja karty w sesji — po niej poznajemy kierunek przejścia (dalej / wstecz). */
-    val index: Int = 0,
     /** Aktywne strony karty (ukryte strony talii nie są pokazywane ani odkrywane). */
     val pages: List<String>,
     val revealedPages: List<Int>,
@@ -79,33 +70,28 @@ private const val COMPACT_FONT_SCALE = 0.72f
 internal val LocalCompactCard = staticCompositionLocalOf { false }
 
 @Composable
-internal fun FlashcardView(face: CardFace, actions: CardActions, modifier: Modifier) {
-    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    val spatialOffset = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+internal fun FlashcardView(face: CardFace, actions: CardActions, modifier: Modifier, interactive: Boolean = true) {
     RayCollCard(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.pointerInput(actions) {
-            // przytrzymanie = podgląd następnej strony; krótkie dotknięcie = zwykłe tapnięcie
-            detectTapGestures(
-                onPress = {
-                    actions.onPressDown()
-                    if (tryAwaitRelease()) actions.onPressUp() else actions.onCancelPress()
-                }
-            )
-        }
+        modifier = modifier
+            .pointerInput(face.card.id, actions, interactive) {
+                if (!interactive) return@pointerInput
+                // przytrzymanie = podgląd następnej strony; krótkie dotknięcie = zwykłe tapnięcie
+                detectTapGestures(
+                    onPress = {
+                        actions.onPressDown()
+                        var released = false
+                        try {
+                            released = tryAwaitRelease()
+                            if (released) actions.onPressUp()
+                        } finally {
+                            if (!released) actions.onCancelPress()
+                        }
+                    }
+                )
+            }
     ) {
-        AnimatedContent(
-            targetState = face,
-            contentKey = { it.card.id },
-            transitionSpec = {
-                // dalej: nowa karta wjeżdża z prawej; wstecz: z lewej
-                val direction = if (targetState.index >= initialState.index) 1 else -1
-                (fadeIn(effects) + slideInHorizontally(spatialOffset) { direction * it / 4 })
-                    .togetherWith(fadeOut(effects) + slideOutHorizontally(spatialOffset) { -direction * it / 4 })
-            },
-            label = "card_change",
-            modifier = Modifier.fillMaxWidth()
-        ) { shown -> CardPages(shown) }
+        CardPages(face)
     }
 }
 
@@ -143,10 +129,15 @@ private fun CardPages(face: CardFace) {
                 face.answerStatus == AnswerStatus.INCORRECT -> AudioMark.WRONG
                 else -> AudioMark.NONE
             }
+            if (index > 0) {
+                HorizontalDivider(
+                    Modifier.padding(vertical = Spacing.xs),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
             RevealablePage(
                 revealed = index in face.revealedPages,
-                peeked = face.peekedPage == index,
-                showDivider = index > 0
+                peeked = face.peekedPage == index
             ) {
                 CardPage(page = page, isFirst = index == 0, mark = mark)
             }
@@ -160,7 +151,7 @@ private const val FLIP_CAMERA_DISTANCE = 12f
 
 /** Strona, która zajmuje swoje miejsce zawsze, a widać ją dopiero po odkryciu (albo w podglądzie). */
 @Composable
-private fun RevealablePage(revealed: Boolean, peeked: Boolean, showDivider: Boolean, content: @Composable () -> Unit) {
+private fun RevealablePage(revealed: Boolean, peeked: Boolean, content: @Composable () -> Unit) {
     // sprężyna przestrzenna Expressive lekko przestrzeliwuje — strona „dobija” z małym odbiciem
     val progress by animateFloatAsState(
         targetValue = if (revealed) 1f else 0f,
@@ -185,9 +176,6 @@ private fun RevealablePage(revealed: Boolean, peeked: Boolean, showDivider: Bool
             // zakryta strona tylko trzyma miejsce — czytnik ekranu jej nie czyta
             .then(if (revealed || peeked) Modifier else Modifier.clearAndSetSemantics {})
     ) {
-        if (showDivider) {
-            HorizontalDivider(Modifier.padding(vertical = Spacing.xs), color = MaterialTheme.colorScheme.outlineVariant)
-        }
         content()
     }
 }
@@ -212,8 +200,8 @@ private fun CardPage(page: String, isFirst: Boolean, mark: AudioMark) {
     LaunchedEffect(mark) { if (mark != AudioMark.NONE) lastMark = mark }
     val (container, onContainer) = when (if (mark != AudioMark.NONE) mark else lastMark) {
         AudioMark.LISTENING -> colors.secondaryContainer to colors.onSecondaryContainer
-        AudioMark.CORRECT -> ratings.easyBg to ratings.easyFg
-        AudioMark.WRONG -> ratings.againBg to ratings.againFg
+        AudioMark.CORRECT -> ratings.answerColors(correct = true)
+        AudioMark.WRONG -> ratings.answerColors(correct = false)
         else -> colors.primaryContainer to colors.onPrimaryContainer
     }
     // stan strony bez napisu na ekranie — czytnik ekranu nadal go ogłasza

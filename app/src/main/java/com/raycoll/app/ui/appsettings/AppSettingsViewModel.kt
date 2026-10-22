@@ -2,13 +2,13 @@ package com.raycoll.app.ui.appsettings
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raycoll.app.BuildConfig
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.account.AccountManager
 import com.raycoll.app.data.firestore.DocumentStore
-import com.raycoll.app.data.firestore.SyncStatus
 import com.raycoll.app.data.local.prefs.ThemePref
 import com.raycoll.app.data.local.prefs.UserPreferences
 import com.raycoll.app.data.local.prefs.UserPreferencesRepository
@@ -19,6 +19,7 @@ import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
 import com.raycoll.app.data.repository.BackupRepository
 import com.raycoll.app.data.repository.BackupResult
+import com.raycoll.app.ui.components.SyncStatus
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,7 +33,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -57,8 +57,9 @@ sealed interface AppSettingsEvent {
 
     data class BackupImported(val result: BackupResult) : AppSettingsEvent
 
-    /** Ustawienie albo reset danych się nie zapisały. */
     data object SignOutFailed : AppSettingsEvent
+
+    /** Ustawienie albo reset danych się nie zapisały. */
     data object SaveFailed : AppSettingsEvent
 
     /** Wynik ręcznej synchronizacji. */
@@ -80,7 +81,7 @@ class AppSettingsViewModel @Inject constructor(
     private val syncing = MutableStateFlow(false)
     private val syncStatus = combine(store.offline, syncing) { offline, syncing ->
         when {
-            offline -> SyncStatus.ERROR
+            offline -> SyncStatus.OFFLINE
             syncing -> SyncStatus.SYNCING
             else -> SyncStatus.IDLE
         }
@@ -126,7 +127,9 @@ class AppSettingsViewModel @Inject constructor(
         } catch (e: CancellationException) {
             signingIn.value = false
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // oczekiwane błędy mapuje AuthRepository; tu trafia tylko nieprzewidziany
+            Log.w("AppSettingsViewModel", "Account choice failed", e)
             signingIn.value = false
             eventSink.send(AppSettingsEvent.SignInFailed(SignInError.PLAY_SERVICES))
             return

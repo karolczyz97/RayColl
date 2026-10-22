@@ -19,7 +19,6 @@ import com.raycoll.app.domain.model.RevealStyle
 import com.raycoll.app.domain.model.ShowAllPagesStep
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
-import com.raycoll.app.domain.model.SpeakAllPagesStep
 import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.StepCondition
 import com.raycoll.app.domain.model.WaitForTapStep

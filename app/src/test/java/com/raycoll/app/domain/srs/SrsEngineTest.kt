@@ -10,6 +10,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SrsEngineTest {
+    /** Stała chwila oceny — wynik nie zależy od zegara maszyny. */
+    private val reviewTime = 1_700_000_000_000L
 
     @Test
     fun `existing cards match FSRS-6 reference vectors`() {
@@ -182,7 +184,7 @@ class SrsEngineTest {
     @Test
     fun `calculateFsrs increments repetitions and changes state`() {
         val state = SrsState()
-        val result = calculateFsrs(state, 3, System.currentTimeMillis())
+        val result = calculateFsrs(state, 3, reviewTime)
         assertEquals(1, result.repetitions)
         assertTrue(result.stability > 0)
         assertTrue(result.difficulty < 5)
@@ -192,7 +194,7 @@ class SrsEngineTest {
     @Test
     fun `calculateFsrs handles extreme values without infinity`() {
         val dayMs = 86_400_000L
-        val now = System.currentTimeMillis()
+        val now = reviewTime
         val extremeState = SrsState(
             difficulty = 100.0,
             stability = 1_000_000.0,
@@ -210,7 +212,7 @@ class SrsEngineTest {
 
     @Test
     fun `calculateFsrs rating 1 on new card gives state 1`() {
-        val result = calculateFsrs(SrsState(), 1, System.currentTimeMillis())
+        val result = calculateFsrs(SrsState(), 1, reviewTime)
         assertEquals(1, result.state)
     }
 
@@ -221,10 +223,10 @@ class SrsEngineTest {
             stability = 10.0,
             repetitions = 5,
             state = 2,
-            lastReviewTimestamp = System.currentTimeMillis() - 86_400_000L,
-            nextReviewTimestamp = System.currentTimeMillis()
+            lastReviewTimestamp = reviewTime - 86_400_000L,
+            nextReviewTimestamp = reviewTime
         )
-        val result = calculateFsrs(existing, 1, System.currentTimeMillis())
+        val result = calculateFsrs(existing, 1, reviewTime)
         assertEquals(3, result.state)
     }
 

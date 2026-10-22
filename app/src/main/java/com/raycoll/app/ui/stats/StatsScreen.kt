@@ -33,18 +33,22 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.selectors.CardStats
+import com.raycoll.app.domain.selectors.countOf
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.ui.components.CardStatsBar
 import com.raycoll.app.ui.components.LoadingState
 import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SectionCard
+import com.raycoll.app.ui.components.labelRes
 import com.raycoll.app.ui.components.srsCategoryIcon
 import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
+import com.raycoll.app.ui.theme.background
+import com.raycoll.app.ui.theme.foreground
 
 @Composable
-fun StatsScreen(onBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel()) {
+fun StatsScreen(onBack: () -> Unit, onBrowse: (deckId: String) -> Unit, viewModel: StatsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     ScreenScaffold(title = stringResource(R.string.stats_title), onBack = onBack) { padding ->
@@ -79,7 +83,16 @@ fun StatsScreen(onBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel())
                     }
                 }
                 items(state.decks, key = { it.id }) { deck ->
-                    SectionCard(title = deck.name, spacing = Spacing.s) {
+                    SectionCard(
+                        title = deck.name,
+                        spacing = Spacing.s,
+                        onClick = { onBrowse(deck.id) },
+                        onClickLabel = stringResource(
+                            R.string.a11y_item_action,
+                            stringResource(R.string.dashboard_browse),
+                            deck.name
+                        )
+                    ) {
                         CardStatsBar(deck.stats)
                         SrsDistribution(deck.stats)
                     }
@@ -137,27 +150,19 @@ private fun SrsDistribution(stats: CardStats) {
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalArrangement = Arrangement.spacedBy(Spacing.s),
-        maxItemsInEachRow = SRS_CATEGORY_COUNT
+        maxItemsInEachRow = SrsCardCategory.entries.size
     ) {
         val tile = Modifier.weight(1f)
-        SrsStatItem(tile, SrsCardCategory.NEW, R.string.srs_badge_new, stats.newCount, srs.newFg, srs.newBg)
-        SrsStatItem(
-            tile,
-            SrsCardCategory.LEARNING,
-            R.string.srs_badge_learning,
-            stats.learning,
-            srs.learningFg,
-            srs.learningBg
-        )
-        SrsStatItem(tile, SrsCardCategory.REVIEW, R.string.srs_badge_review, stats.review, srs.reviewFg, srs.reviewBg)
-        SrsStatItem(
-            tile,
-            SrsCardCategory.MASTERED,
-            R.string.srs_badge_mastered,
-            stats.mastered,
-            srs.masteredFg,
-            srs.masteredBg
-        )
+        SrsCardCategory.entries.forEach { category ->
+            SrsStatItem(
+                tile,
+                category,
+                category.labelRes(),
+                stats.countOf(category),
+                srs.foreground(category),
+                srs.background(category)
+            )
+        }
     }
 }
 
@@ -202,5 +207,4 @@ private fun SrsStatItem(
 }
 
 private val StatIconSize = 16.dp
-private const val SRS_CATEGORY_COUNT = 4
 private val StatLabelMinSize = 8.sp

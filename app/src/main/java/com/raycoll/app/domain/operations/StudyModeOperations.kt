@@ -5,8 +5,10 @@ import com.raycoll.app.domain.model.DEFAULT_MODE_ID
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.normalize.normalizeStudyMode
+import com.raycoll.app.domain.seed.BuiltInMode
 import com.raycoll.app.domain.seed.SEED_MODES
 import com.raycoll.app.domain.seed.seedModeFor
+import java.text.Collator
 
 fun newStudyMode(name: String, steps: List<ModeStep>, now: Long): StudyMode =
     normalizeStudyMode(StudyMode(id = Ids.newId(), name = name.trim(), steps = steps, updatedAt = now))
@@ -22,6 +24,17 @@ fun resolveStudyMode(liveModes: List<StudyMode>, modeId: String): StudyMode = li
     ?: liveModes.firstOrNull { it.id == DEFAULT_MODE_ID }
     ?: liveModes.firstOrNull()
     ?: SEED_MODES.first { it.id == DEFAULT_MODE_ID }
+
+/** Kolejność na listach: tryby wbudowane w ustalonej kolejności, potem własne alfabetycznie. */
+fun List<StudyMode>.inDisplayOrder(): List<StudyMode> {
+    val collator = Collator.getInstance()
+    return sortedWith(compareBy(::builtInPosition).thenComparator { a, b -> collator.compare(a.name, b.name) })
+}
+
+private fun builtInPosition(mode: StudyMode): Int {
+    val builtIn = BuiltInMode.fromId(mode.builtInSourceId)?.takeIf { mode.isBuiltIn }
+    return builtIn?.ordinal ?: BuiltInMode.entries.size
+}
 
 /** Wbudowany tryb zmieniony względem wersji fabrycznej (nazwa albo kroki). */
 fun StudyMode.isModifiedBuiltIn(): Boolean {

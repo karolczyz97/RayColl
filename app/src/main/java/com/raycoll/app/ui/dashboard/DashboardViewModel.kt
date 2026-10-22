@@ -13,7 +13,7 @@ import com.raycoll.app.domain.model.StudyMode
 import com.raycoll.app.domain.operations.resolveStudyMode
 import com.raycoll.app.domain.selectors.CardStats
 import com.raycoll.app.domain.selectors.computeCardStats
-import com.raycoll.app.domain.selectors.countDueCards
+import com.raycoll.app.domain.selectors.countSessionCards
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,7 +70,7 @@ class DashboardViewModel @Inject constructor(
                 name = deck.name,
                 activeMode = resolveStudyMode(modes, deck.activeModeId),
                 stats = computeCardStats(deck.cards),
-                dueCount = countDueCards(deck.cards, deck.studyFilter, now)
+                dueCount = countSessionCards(deck.cards, deck.studyFilter, now)
             )
         }
         DashboardUiState.Ready(summaries, modes)
@@ -84,6 +84,8 @@ class DashboardViewModel @Inject constructor(
     val events: Flow<DashboardEvent> = eventSink.flow
 
     fun setActiveMode(deckId: String, modeId: String) = save { deckRepository.setActiveStudyMode(deckId, modeId) }
+
+    fun reorderDecks(deckIds: List<String>) = save { deckRepository.reorderDecks(deckIds) }
 
     fun archiveDeck(deckId: String) = save {
         deckRepository.archiveDeck(deckId)

@@ -72,8 +72,8 @@ class OperationsTest {
     }
 
     @Test
-    fun `swapping pages swaps metadata and card contents`() {
-        val deck = group().withPagesSwapped(0, 1, now)
+    fun `moving a page by one place swaps metadata and card contents`() {
+        val deck = group().withPageMoved(0, 1, now)
         assertEquals(listOf("world", "hello"), deck.cards.single().pages)
         assertEquals(listOf("Back", "Front"), deck.pageNames)
         assertEquals(listOf("pl-PL", "en-US"), deck.pageLanguages)
@@ -81,23 +81,36 @@ class OperationsTest {
     }
 
     @Test
-    fun `invalid page indices do not change the deck`() {
-        val deck = group()
-        assertEquals(deck, deck.withPagesSwapped(-1, 1, now))
-        assertEquals(deck, deck.withPagesSwapped(0, 5, now))
+    fun `moving a page shifts the pages in between`() {
+        val deck = group().withActivePageCount(3, now).withPageMoved(0, 2, now)
+        assertEquals(listOf("Back", "Page 3", "Front"), deck.pageNames)
+        assertEquals(listOf("world", "", "hello"), deck.cards.single().pages)
+        assertEquals(
+            listOf("Page 3", "Front", "Back"),
+            group().withActivePageCount(3, now).withPageMoved(2, 0, now).pageNames
+        )
+        assertSame(deck, deck.withPageMoved(1, 1, now))
+        assertEquals(deck, deck.withPageMoved(0, 3, now))
     }
 
     @Test
-    fun `swapping a newly added page pads short cards before moving their contents`() {
-        val deck = group().withActivePageCount(3, now).withPagesSwapped(1, 2, now)
+    fun `invalid page indices do not change the deck`() {
+        val deck = group()
+        assertEquals(deck, deck.withPageMoved(-1, 1, now))
+        assertEquals(deck, deck.withPageMoved(0, 5, now))
+    }
+
+    @Test
+    fun `moving a newly added page pads short cards before moving their contents`() {
+        val deck = group().withActivePageCount(3, now).withPageMoved(1, 2, now)
         assertEquals(listOf("hello", "", "world"), deck.cards.single().pages)
         assertEquals(listOf("Front", "Page 3", "Back"), deck.pageNames)
         assertEquals(listOf("en-US", "en-US", "pl-PL"), deck.pageLanguages)
     }
 
     @Test
-    fun `swapping pages pads missing page languages instead of crashing`() {
-        val deck = group().copy(pageLanguages = emptyList()).withPagesSwapped(0, 1, now)
+    fun `moving pages pads missing page languages instead of crashing`() {
+        val deck = group().copy(pageLanguages = emptyList()).withPageMoved(0, 1, now)
         assertEquals(listOf("Back", "Front"), deck.pageNames)
         assertEquals(2, deck.pageLanguages.size)
     }
@@ -125,15 +138,15 @@ class OperationsTest {
     }
 
     @Test
-    fun `swapping a page with itself returns the same deck`() {
+    fun `moving a page onto itself returns the same deck`() {
         val deck = group()
-        assertSame(deck, deck.withPagesSwapped(1, 1, now))
+        assertSame(deck, deck.withPageMoved(1, 1, now))
     }
 
     @Test
-    fun `swapping pages tolerates languages shorter than names`() {
+    fun `moving pages tolerates languages shorter than names`() {
         val deck = group().copy(pageLanguages = listOf("pl-PL"))
-        val swapped = deck.withPagesSwapped(0, 1, now)
+        val swapped = deck.withPageMoved(0, 1, now)
         assertEquals(listOf("Back", "Front"), swapped.pageNames)
         assertEquals(listOf("en-US", "pl-PL"), swapped.pageLanguages)
     }

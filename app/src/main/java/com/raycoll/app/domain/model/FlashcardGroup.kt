@@ -19,6 +19,12 @@ data class FlashcardGroup(
     val archivedAt: Long? = null
 )
 
+/** Indeksy aktywnych stron talii. */
+val FlashcardGroup.activePageRange: IntRange get() = 0 until activePageCount
+
+/** Talia bez tombstone'a. */
+val FlashcardGroup.isLive: Boolean get() = deletedAt == null
+
 /** Które karty trafiają do sesji nauki. */
 @Serializable
 enum class StudyFilter(val key: String) {
@@ -36,7 +42,6 @@ enum class StudyFilter(val key: String) {
 
     companion object {
         val DEFAULT = NEW_AND_REVIEW
-        fun fromKey(key: String?): StudyFilter = entries.firstOrNull { it.key == key } ?: DEFAULT
     }
 }
 
@@ -54,6 +59,5 @@ enum class CardOrder(val key: String) {
 
     companion object {
         val DEFAULT = SEQUENTIAL
-        fun fromKey(key: String?): CardOrder = entries.firstOrNull { it.key == key } ?: DEFAULT
     }
 }

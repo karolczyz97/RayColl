@@ -20,9 +20,11 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     title: String? = null,
     spacing: Dp = Spacing.m,
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    RayCollCard(modifier.fillMaxWidth()) {
+    val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(spacing)) {
             if (title != null) {
                 Text(
@@ -33,5 +35,15 @@ fun SectionCard(
             }
             content()
         }
+    }
+    if (onClick != null) {
+        RayCollCard(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth(),
+            onClickLabel = onClickLabel,
+            content = cardContent
+        )
+    } else {
+        RayCollCard(modifier.fillMaxWidth(), content = cardContent)
     }
 }

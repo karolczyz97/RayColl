@@ -8,7 +8,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
@@ -111,12 +110,15 @@ class BrowseScreenTest {
     }
 
     @Test
-    fun `card editor offers deleting the card as a second way`() {
-        val vm = BrowseViewModel(deck(listOf(listOf("cat", "kot"))), repos.deckRepository, testPreferences.repository)
+    fun `card editor offers save and cancel without a delete action`() {
+        val deckId = deck(listOf(listOf("cat", "kot")))
+        val vm = BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository)
         compose.setContent { BrowseScreen(onBack = {}, viewModel = vm) }
         compose.waitUntil(5_000) { compose.onAllNodesWithText("cat").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("cat").performClick()
-        compose.onNodeWithText("Delete flashcard").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Flashcard deleted.").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Delete flashcard").assertDoesNotExist()
+        compose.onNodeWithText("Save").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        org.junit.Assert.assertEquals(1, runBlocking { repos.deckRepository.getDeck(deckId) }!!.cards.size)
     }
 }

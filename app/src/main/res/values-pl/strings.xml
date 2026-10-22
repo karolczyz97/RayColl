@@ -66,7 +66,7 @@
     <string name="import_sep_pipe">Kreska pionowa (|)</string>
     <string name="import_first_row_header">Pierwszy wiersz zawiera nagłówki</string>
     <string name="import_pages_count">Strony:</string>
-    <string name="import_page_label">Strona %1$d</string>
+    <string name="page_default_name">Strona %1$d</string>
     <string name="stats_title">Statystyki nauki</string>
     <plurals name="stats_heatmap_title">
         <item quantity="one">Aktywność w ostatnim %1$d tygodniu</item>
@@ -117,6 +117,16 @@
     <string name="archive_auto_delete_tomorrow">Usuwa się jutro</string>
     <string name="archive_auto_delete_today">Usuwa się dzisiaj</string>
     <string name="mode_classic_name">Klasyczny</string>
+    <string name="mode_listen_only_name">Odsłuch</string>
+    <string name="mode_browse_name">Przegląd</string>
+    <string name="mode_auto_reveal_name">Samo odkrywa</string>
+    <string name="mode_classic_desc">Czyta stronę 1, dotyk odkrywa resztę, oceniasz kartę.</string>
+    <string name="mode_listen_speak_desc">Czyta stronę 1, mówisz odpowiedź, aplikacja ją sprawdza i ocenia.</string>
+    <string name="mode_listen_only_desc">Czyta stronę 1, czeka dwa razy tyle, czyta stronę 2 i znów czeka. Bez dotykania i bez ocen.</string>
+    <string name="mode_browse_desc">Czyta stronę 1, dotyk odkrywa i czyta stronę 2, kolejny dotyk przechodzi dalej. Bez ocen.</string>
+    <string name="mode_auto_reveal_desc">Czyta stronę 1, sam czeka i odkrywa stronę 2 z odczytem, potem oceniasz.</string>
+    <string name="study_modes_section_builtin">Wbudowane</string>
+    <string name="study_modes_section_own">Własne</string>
     <string name="mode_listen_speak_name">Audio</string>
     <string name="step_show_page">Pokaż stronę %1$d</string>
     <string name="step_show_all_pages">Pokaż wszystkie strony</string>
@@ -211,8 +221,6 @@
     <string name="mode_editor_move_up">Przenieś wyżej</string>
     <string name="mode_editor_move_down">Przenieś niżej</string>
     <string name="mode_editor_template_title">Wybierz szablon startowy</string>
-    <string name="mode_editor_template_classic">Klasyczny (odkryj i oceń)</string>
-    <string name="mode_editor_template_audio">Audio (słuchaj i mów)</string>
     <string name="mode_editor_template_blank">Pusty tryb</string>
     <string name="mode_issue_name_required">Nazwa trybu jest wymagana</string>
     <string name="mode_issue_no_steps">Dodaj przynajmniej jeden krok</string>
@@ -319,6 +327,9 @@
     <string name="browse_card_deleted">Usunięto fiszkę.</string>
     <string name="browse_delete_card">Usuń fiszkę</string>
     <string name="dashboard_deck_options">Opcje</string>
+    <string name="dashboard_reorder_decks">Zmień kolejność zestawów</string>
+    <string name="dashboard_move_deck_up">Przenieś zestaw wyżej</string>
+    <string name="dashboard_move_deck_down">Przenieś zestaw niżej</string>
     <string name="browse_clear_search">Wyczyść wyszukiwanie</string>
     <string name="browse_clear_filters">Wyczyść filtry</string>
     <string name="mode_editor_add_below">Dodaj poniżej</string>
@@ -341,5 +352,6 @@
     <string name="auth_loading_data">Pobieranie danych konta…</string>
     <string name="auth_data_when_online">Dane konta pojawią się po połączeniu</string>
     <string name="auth_sign_out_offline">Połącz się z internetem, żeby się wylogować</string>
+    <string name="study_summary_title">Podsumowanie sesji</string>
 </resources>
 

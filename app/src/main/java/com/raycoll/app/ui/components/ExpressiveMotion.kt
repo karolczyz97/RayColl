@@ -26,10 +26,10 @@ fun Modifier.animateListItem(scope: LazyItemScope): Modifier = with(scope) {
 
 /** Pojawienie się elementu, który rozsuwa treść pod sobą (ramki z uwagami, paski postępu). */
 @Composable
-fun expandIn(): EnterTransition = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+fun expandVerticallyIn(): EnterTransition = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
     fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec())
 
 /** Zniknięcie elementu, po którym treść pod nim się zsuwa. */
 @Composable
-fun shrinkOut(): ExitTransition = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec()) +
+fun shrinkVerticallyOut(): ExitTransition = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec()) +
     fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())

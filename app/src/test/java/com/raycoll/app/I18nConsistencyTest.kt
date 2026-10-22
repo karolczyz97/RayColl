@@ -15,14 +15,15 @@ class I18nConsistencyTest {
 
     @Test
     fun `language picker includes exactly the available translations`() {
-        val translated = resDir().listFiles().orEmpty()
-            .filter { it.isDirectory && File(it, "strings.xml").isFile }
+        val translated = translationDirs()
             .map { if (it.name == "values") "en" else it.name.removePrefix("values-") }
             .toSet()
         assertEquals(translated, APP_LANGUAGES.filter(String::isNotBlank).toSet())
     }
 
-    private val locales = listOf("values", "values-pl", "values-de", "values-es", "values-it")
+    /** Katalogi z tłumaczeniami jak w res, bazowy "values" pierwszy. */
+    private val locales = translationDirs().map { it.name }.sorted()
+        .also { check(it.firstOrNull() == "values") { "brak bazowego values/strings.xml w $it" } }
     private val foreignLocales = locales.drop(1)
 
     /**
@@ -39,6 +40,9 @@ class I18nConsistencyTest {
         val candidates = listOf(File("src/main/res"), File("app/src/main/res"))
         return candidates.first { it.isDirectory }
     }
+
+    private fun translationDirs(): List<File> = resDir().listFiles().orEmpty()
+        .filter { it.isDirectory && File(it, "strings.xml").isFile }
 
     private fun keysOf(file: File): Set<String> {
         // teksty `translatable="false"` są tylko w bazowym pliku — nie liczą się do parytetu

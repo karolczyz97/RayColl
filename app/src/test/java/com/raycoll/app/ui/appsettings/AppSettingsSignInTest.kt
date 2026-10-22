@@ -4,28 +4,19 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
-import com.raycoll.app.data.files.DocumentFiles
-import com.raycoll.app.data.firestore.SyncStatus
-import com.raycoll.app.data.local.prefs.UserPreferencesRepository
 import com.raycoll.app.data.remote.auth.Account
 import com.raycoll.app.data.remote.auth.GoogleSignIn
 import com.raycoll.app.data.remote.auth.IdTokenResult
-import com.raycoll.app.data.remote.auth.SignInError
 import com.raycoll.app.data.remote.auth.SignInResult
-import com.raycoll.app.data.repository.BackupRepository
-import com.raycoll.app.domain.model.StoreData
+import com.raycoll.app.data.repository.BackupResult
 import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -57,22 +49,12 @@ class AppSettingsSignInTest {
 
     private class FakeGoogle : GoogleSignIn {
         val tokenRequest = CompletableDeferred<IdTokenResult>()
-        val signedInTokens = mutableListOf<String>()
-        var signedIn = false
-        var signOutCalls = 0
-        var signInGate: CompletableDeferred<Unit>? = null
         override val account: StateFlow<Account?> = MutableStateFlow(null)
         override suspend fun requestGoogleIdToken(activityContext: Context) = tokenRequest.await()
-        override suspend fun signInWithIdToken(idToken: String): SignInResult {
-            signedInTokens += idToken
-            signInGate?.await()
-            signedIn = true
-            return SignInResult.Success(Account("uid-1", null))
-        }
-        override suspend fun signOut() {
-            signOutCalls++
-            signedIn = false
-        }
+
+        // ustawienia logują tokenem przez AccountManager, nie przez ten interfejs
+        override suspend fun signInWithIdToken(idToken: String): SignInResult = error("not used by settings")
+        override suspend fun signOut() = Unit
     }
 
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -80,7 +62,6 @@ class AppSettingsSignInTest {
     private lateinit var repos: TestRepos
     private lateinit var vm: AppSettingsViewModel
     private lateinit var sync: com.raycoll.app.data.account.AccountManager
-    private lateinit var appScope: CoroutineScope
 
     private val main = StandardTestDispatcher()
 
@@ -88,7 +69,6 @@ class AppSettingsSignInTest {
     fun setup() {
         Dispatchers.setMain(main)
         repos = VmTestHarness.create(context, FakeClock())
-        appScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         sync = org.mockito.Mockito.mock(com.raycoll.app.data.account.AccountManager::class.java)
         kotlinx.coroutines.runBlocking {
             org.mockito.Mockito.`when`(sync.signInWithGoogle("token-1"))
@@ -107,7 +87,6 @@ class AppSettingsSignInTest {
     @After
     fun teardown() {
         vm.viewModelScope.cancel()
-        appScope.cancel()
         Dispatchers.resetMain()
     }
 
@@ -156,7 +135,8 @@ class AppSettingsSignInTest {
         screen.cancel() // obrót: zakres korutyn ekranu znika razem z Activity
         vm.uiState.first { !it.signingIn }
         advanceUntilIdle()
-        assertTrue(google.signedInTokens.isEmpty())
+        org.mockito.Mockito.verify(sync, org.mockito.Mockito.never())
+            .signInWithGoogle(org.mockito.ArgumentMatchers.anyString())
         collector.cancel()
     }
 
@@ -173,5 +153,54 @@ class AppSettingsSignInTest {
         advanceUntilIdle()
         org.mockito.Mockito.verify(sync).signInWithGoogle("token-1")
         collector.cancel()
+    }
+
+    @Test
+    fun `successful sign out emits no failure and unlocks the screen`() = runTest(main) {
+        org.mockito.Mockito.`when`(sync.signOut()).thenReturn(true)
+        vm.signOut()
+        advanceUntilIdle()
+        org.mockito.Mockito.verify(sync).signOut()
+        assertFalse(vm.uiState.value.signingOut)
+        // pierwsze zdarzenie po wylogowaniu pochodzi już z synchronizacji — SignOutFailed nie czekało w kolejce
+        vm.syncNow()
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.SyncFinished(true), vm.events.first())
+    }
+
+    @Test
+    fun `refused sign out emits SignOutFailed`() = runTest(main) {
+        org.mockito.Mockito.`when`(sync.signOut()).thenReturn(false)
+        vm.signOut()
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.SignOutFailed, vm.events.first())
+        assertFalse(vm.uiState.value.signingOut)
+    }
+
+    @Test
+    fun `manual sync reports whether pending writes reached the server`() = runTest(main) {
+        vm.syncNow()
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.SyncFinished(true), vm.events.first())
+        repos.store.pendingWritesConfirmed = false
+        vm.syncNow()
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.SyncFinished(false), vm.events.first())
+    }
+
+    @Test
+    fun `import reports the backup result`() = runTest(main) {
+        val invalid = File(folder.root, "invalid.json").apply { writeText("{}") }
+        vm.importBackup(Uri.fromFile(invalid))
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.BackupImported(BackupResult.INVALID_BACKUP), vm.events.first())
+
+        val exported = File(folder.root, "backup.json")
+        vm.exportBackup(Uri.fromFile(exported))
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.BackupExported(BackupResult.SUCCESS), vm.events.first())
+        vm.importBackup(Uri.fromFile(exported))
+        advanceUntilIdle()
+        assertEquals(AppSettingsEvent.BackupImported(BackupResult.SUCCESS), vm.events.first())
     }
 }

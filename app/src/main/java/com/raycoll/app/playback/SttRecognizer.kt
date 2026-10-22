@@ -50,11 +50,13 @@ class SttRecognizer @Inject constructor(@ApplicationContext private val context:
      */
     suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult {
         if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "No microphone permission")
             return ListenResult("", ListenStatus.ERROR)
         }
         // SpeechRecognizer działa tylko na wątku głównym
         return withContext(Dispatchers.Main) {
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+                Log.w(TAG, "Speech recognition unavailable")
                 return@withContext ListenResult("", ListenStatus.ERROR)
             }
             val accumulator = SttTranscriptAccumulator()
@@ -72,6 +74,7 @@ class SttRecognizer @Inject constructor(@ApplicationContext private val context:
                     val isCleanedUp = AtomicBoolean(false)
                     val safeCleanup: () -> Unit = {
                         if (isCleanedUp.compareAndSet(false, true)) {
+                            // rozpoznawanie mogło już się samo zamknąć — sprzątanie nie ma czego zgłosić
                             val destroy = {
                                 try {
                                     recognizer.cancel()
@@ -98,7 +101,9 @@ class SttRecognizer @Inject constructor(@ApplicationContext private val context:
                             safeCleanup()
                             if (!cont.isActive) return
                             // razem z niedokończonym fragmentem — recognizer mógł nie zdążyć go zamknąć
-                            cont.resume(listenResultForError(error, accumulator.combined()))
+                            val result = listenResultForError(error, accumulator.combined())
+                            if (result.status == ListenStatus.ERROR) Log.w(TAG, "Recognition error $error")
+                            cont.resume(result)
                         }
                         override fun onResults(results: Bundle?) {
                             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)

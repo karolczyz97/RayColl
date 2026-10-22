@@ -8,7 +8,9 @@ import com.raycoll.app.data.firestore.WriteOp
 import com.raycoll.app.data.remote.firestore.FirestoreSchema as Schema
 import com.raycoll.app.domain.model.ModeStep
 import com.raycoll.app.domain.model.StudyMode
+import com.raycoll.app.domain.model.isLive
 import com.raycoll.app.domain.operations.edited
+import com.raycoll.app.domain.operations.inDisplayOrder
 import com.raycoll.app.domain.operations.newStudyMode
 import com.raycoll.app.domain.operations.resetToBuiltIn
 import com.raycoll.app.domain.operations.resolveStudyMode
@@ -29,7 +31,7 @@ class StudyModeRepository @Inject constructor(
     private fun paths() = UserPaths(checkNotNull(account.uid.value))
     fun liveModes() = account.uid.filterNotNull().flatMapLatest { uid ->
         store.observe(UserPaths(uid).modes()).map {
-            it.docs.mapNotNull(Schema::readMode).filter { it.deletedAt == null }
+            it.docs.mapNotNull(Schema::readMode).filter { it.isLive }.inDisplayOrder()
         }
     }
     suspend fun getMode(modeId: String) = store.cachedDoc(paths().mode(modeId))?.let(Schema::readMode)?.takeIf {
@@ -55,21 +57,31 @@ class StudyModeRepository @Inject constructor(
                 paths().mode(mode.id),
                 Schema.modeToMap(mode.edited(clock.now())).filterKeys {
                     it !=
-                        "deletedAt"
+                        Schema.FIELD_DELETED_AT
                 }
             )
         )
     }
     suspend fun deleteMode(modeId: String) {
         if (getMode(modeId) == null) return
-        store.write(WriteOp.Update(paths().mode(modeId), mapOf("deletedAt" to clock.now(), "updatedAt" to clock.now())))
+        store.write(
+            WriteOp.Update(
+                paths().mode(modeId),
+                mapOf(
+                    Schema.FIELD_DELETED_AT to clock.now(),
+                    Schema.FIELD_UPDATED_AT to clock.now()
+                )
+            )
+        )
     }
 
     /** Cofnięcie usunięcia trybu; talie, które go używały, wracają do niego same (wskazują ten sam id). */
     suspend fun restoreMode(modeId: String) {
         val path = paths().mode(modeId)
-        if (store.cachedDoc(path)?.data?.get("deletedAt") == null) return
-        store.write(WriteOp.Update(path, mapOf("deletedAt" to null, "updatedAt" to clock.now())))
+        if (store.cachedDoc(path)?.data?.get(Schema.FIELD_DELETED_AT) == null) return
+        store.write(
+            WriteOp.Update(path, mapOf(Schema.FIELD_DELETED_AT to null, Schema.FIELD_UPDATED_AT to clock.now()))
+        )
     }
     suspend fun resetMode(modeId: String) {
         val mode = getMode(modeId) ?: return

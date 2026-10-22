@@ -1,7 +1,7 @@
 package com.raycoll.app.domain.seed
 
 import com.raycoll.app.domain.model.AutoRateFixedStep
-import com.raycoll.app.domain.model.AutoRateFromAnswerStep
+import com.raycoll.app.domain.model.DynamicPauseStep
 import com.raycoll.app.domain.model.FeedbackErrorStep
 import com.raycoll.app.domain.model.FeedbackSuccessStep
 import com.raycoll.app.domain.model.ListenAndCheckStep
@@ -15,19 +15,52 @@ import com.raycoll.app.domain.model.StepCondition
 import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.seed.SEED_MODES
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SeedDataTest {
 
     @Test
-    fun `seed modes have classic and listen-speak`() {
-        val modes = SEED_MODES
-        assertEquals(2, modes.size)
-        val classic = modes.find { it.id == "classic" }
-        val listenSpeak = modes.find { it.id == "listen-speak" }
-        assertTrue(classic != null)
-        assertTrue(listenSpeak != null)
+    fun `seed modes are the five built-in modes in their display order`() {
+        assertEquals(BuiltInMode.entries.map { it.id }, SEED_MODES.map { it.id })
+        assertEquals(5, SEED_MODES.size)
+        assertNotNull(SEED_MODES.find { it.id == "classic" })
+        assertNotNull(SEED_MODES.find { it.id == "listen-speak" })
+    }
+
+    @Test
+    fun `listen mode reads each page and waits twice its length without rating`() {
+        val steps = SEED_MODES.single { it.id == "listen-only" }.steps
+        assertEquals(
+            listOf(
+                ShowPageStep(pageIndex = 0),
+                SpeakPageStep(pageIndex = 0),
+                DynamicPauseStep(nextPageIndex = 0, pauseMultiplier = 2.0),
+                ShowPageStep(pageIndex = 1),
+                SpeakPageStep(pageIndex = 1),
+                DynamicPauseStep(nextPageIndex = 1, pauseMultiplier = 2.0),
+                NextCardStep()
+            ),
+            steps
+        )
+        assertTrue(steps.none { it is ShowRatingsStep || it is AutoRateFixedStep })
+    }
+
+    @Test
+    fun `browse mode moves on by tapping and never rates`() {
+        val steps = SEED_MODES.single { it.id == "browse" }.steps
+        assertEquals(2, steps.count { it is WaitForTapStep })
+        assertTrue(steps.last() is NextCardStep)
+        assertTrue(steps.none { it is ShowRatingsStep || it is AutoRateFixedStep })
+    }
+
+    @Test
+    fun `auto-reveal mode waits, reveals the answer and asks for a rating`() {
+        val steps = SEED_MODES.single { it.id == "auto-reveal" }.steps
+        assertTrue(steps.any { it is DynamicPauseStep })
+        assertTrue(steps.last() is ShowRatingsStep)
+        assertTrue(steps.none { it is WaitForTapStep })
     }
 
     @Test
@@ -72,8 +105,8 @@ class SeedDataTest {
         assertEquals(2, groups.size)
         val english = groups.find { it.name == "Angielski – podstawy" }
         val spanish = groups.find { it.name == "Hiszpański – podstawy" }
-        assertTrue(english != null)
-        assertTrue(spanish != null)
+        assertNotNull(english)
+        assertNotNull(spanish)
         assertEquals(listOf("en-US", "pl-PL"), english?.pageLanguages)
         assertEquals(listOf("es-ES", "pl-PL"), spanish?.pageLanguages)
     }
@@ -89,7 +122,7 @@ class SeedDataTest {
     fun `seed data creates complete store data`() {
         val data = SeedData.createSeedData("pl")
         assertEquals(2, data.groups.size)
-        assertEquals(2, data.studyModes.size)
+        assertEquals(SEED_MODES, data.studyModes)
         assertTrue(data.activityHeatmap.isEmpty())
     }
 

@@ -37,3 +37,7 @@ val DarkRatingColors = RatingColors(
     SrsMasteredFgDark
 )
 val LocalRatingColors = staticCompositionLocalOf { LightRatingColors }
+
+/** Tło i treść wyniku odpowiedzi głosowej: dobrze = kolory „łatwo”, źle = kolory „od nowa”. */
+fun RatingColors.answerColors(correct: Boolean): Pair<Color, Color> =
+    if (correct) easyBg to easyFg else againBg to againFg

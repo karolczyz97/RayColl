@@ -120,16 +120,14 @@ kotlin {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.splashscreen)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
-    implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
-    debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 
     implementation(libs.hilt.android)
@@ -176,7 +174,7 @@ dependencies {
 }
 
 // ścieżki względem katalogu głównego repo: kod aplikacji i wszystkie skrypty Gradle
-val ktlintSources = listOf("app/src/**/*.kt", "*.kts", "app/*.kts", "!**/build/**")
+val ktlintSources = listOf("app/src/**/*.kt", "*.kts", "app/*.kts", "!**/build/**", "!.claude/**")
 
 tasks.register<JavaExec>("ktlintCheck") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP

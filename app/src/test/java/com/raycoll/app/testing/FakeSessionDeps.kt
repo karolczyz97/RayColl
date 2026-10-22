@@ -21,11 +21,17 @@ class FakeSessionDeps(
 ) : SessionDeps {
     val reviews = mutableListOf<ReviewRecord>()
     val spoken = mutableListOf<String>()
+    val listenTimeouts = mutableListOf<Long>()
+
+    /** Wołane w trakcie wypowiedzi, np. by przesunąć zegar o czas mówienia. */
+    var onSpeak: () -> Unit = {}
     override suspend fun speak(text: String, lang: String, rate: Float): SpeakResult {
         spoken += text
+        onSpeak()
         return speakResult
     }
     override suspend fun listen(lang: String, timeoutMs: Long, onPartial: (String) -> Unit): ListenResult {
+        listenTimeouts += timeoutMs
         if (listenHangs) awaitCancellation()
         if (listenThrows) throw IllegalStateException("stt crashed")
         return ListenResult(transcript, listenStatus)

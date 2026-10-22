@@ -25,5 +25,5 @@ internal fun sessionPlayback(
 internal fun sessionAudioIdle(state: SessionState, inBackground: Boolean, manuallyPaused: Boolean): Boolean =
     manuallyPaused ||
         state.status == SessionStatus.ERROR ||
-        state.status == SessionStatus.REVEALED ||
+        state.status == SessionStatus.AWAITING_RATING ||
         (!inBackground && state.interactionGate.kind != InteractionGateKind.NONE)

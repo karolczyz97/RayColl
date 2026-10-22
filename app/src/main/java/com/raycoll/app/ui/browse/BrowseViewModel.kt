@@ -84,6 +84,9 @@ class BrowseViewModel internal constructor(
     private val eventSink = UiEvents<BrowseEvent>()
     val events: Flow<BrowseEvent> = eventSink.flow
 
+    private val _savingCard = MutableStateFlow(false)
+    val savingCard: StateFlow<Boolean> = _savingCard.asStateFlow()
+
     private val _search = MutableStateFlow("")
     val search: StateFlow<String> = _search.asStateFlow()
     private val category = MutableStateFlow<SrsCardCategory?>(null)
@@ -115,13 +118,13 @@ class BrowseViewModel internal constructor(
         category.value = value
     }
 
-    fun addCard(pages: List<String>) = write {
+    fun addCard(pages: List<String>) = writeCard {
         deckRepository.addCard(deckId, pages)
         eventSink.send(BrowseEvent.CardAdded)
     }
 
     /** [visiblePages] — nowe widoczne strony; ukryte strony i postęp nauki karty zostają. */
-    fun updateCard(cardId: String, visiblePages: List<String>) = write {
+    fun updateCard(cardId: String, visiblePages: List<String>) = writeCard {
         if (deckRepository.updateCardPages(cardId, visiblePages)) {
             eventSink.send(BrowseEvent.Saved)
         } else {
@@ -146,6 +149,18 @@ class BrowseViewModel internal constructor(
     }
 
     fun restoreCard(cardId: String) = write { deckRepository.restoreCard(cardId) }
+
+    private fun writeCard(block: suspend () -> Unit) {
+        if (_savingCard.value) return
+        _savingCard.value = true
+        write {
+            try {
+                block()
+            } finally {
+                _savingCard.value = false
+            }
+        }
+    }
 
     private fun write(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(BrowseEvent.SaveFailed) }, block = block)

@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
+import com.raycoll.app.domain.model.activePages
+import com.raycoll.app.domain.selectors.countOf
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.ui.components.CardStatsBar
 import com.raycoll.app.ui.components.CollectEvents
@@ -56,9 +59,14 @@ import com.raycoll.app.ui.components.RayCollCard
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SingleChoiceButtonGroup
 import com.raycoll.app.ui.components.SwipeToDeleteItem
+import com.raycoll.app.ui.components.labelRes
 import com.raycoll.app.ui.components.rememberSnackbarMessages
 import com.raycoll.app.ui.components.srsCategoryIcon
+import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
+import com.raycoll.app.ui.theme.accent
+import com.raycoll.app.ui.theme.foreground
+import com.raycoll.app.ui.theme.withMinimumContrast
 import kotlinx.coroutines.launch
 
 /** Co edytuje okno karty: nową kartę albo istniejącą (po id — przeżywa obrót ekranu). */
@@ -82,6 +90,7 @@ private val CardEditTargetSaver = Saver<CardEditTarget?, String>(
 @Composable
 fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val savingCard by viewModel.savingCard.collectAsStateWithLifecycle()
     val query by viewModel.search.collectAsStateWithLifecycle()
     var editTarget by rememberSaveable(stateSaver = CardEditTargetSaver) { mutableStateOf(null) }
     // karta przywrócona po „Cofnij” — wjeżdża z powrotem na listę
@@ -108,7 +117,10 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
                 messages.showLatest(cardAdded)
             }
 
-            BrowseEvent.CardMissing -> messages.showLatest(cardMissing)
+            BrowseEvent.CardMissing -> {
+                saveAttempt++
+                messages.showLatest(cardMissing)
+            }
 
             BrowseEvent.SaveFailed -> {
                 saveAttempt++
@@ -181,6 +193,7 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
                 draftKey = target.draftKey,
                 autoFocusFirst = true,
                 saveAttempt = saveAttempt,
+                saving = savingCard,
                 initialPages = List(ready.activePageCount) { "" },
                 pageNames = ready.pageNames,
                 onDismiss = { editTarget = null },
@@ -199,16 +212,13 @@ fun BrowseScreen(onBack: () -> Unit, viewModel: BrowseViewModel) {
                         title = stringResource(R.string.browse_edit_card),
                         draftKey = target.draftKey,
                         saveAttempt = saveAttempt,
+                        saving = savingCard,
                         initialPages = List(ready.activePageCount) { card.pages.getOrElse(it) { "" } },
                         pageNames = ready.pageNames,
                         onDismiss = { editTarget = null },
                         onSave = { visiblePages ->
                             // edytujemy tylko widoczne strony; ukryte zostają bez zmian
                             viewModel.updateCard(card.id, visiblePages)
-                        },
-                        onDelete = {
-                            editTarget = null
-                            viewModel.deleteCard(card.id)
                         }
                     )
                 }
@@ -244,7 +254,7 @@ private fun BrowseContent(
                 CardStatsBar(state.counts, Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.s))
                 BrowseSearchField(
                     query = query,
-                    onSearch = onSearch,
+                    onQueryChange = onSearch,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.screen)
@@ -308,30 +318,10 @@ private class CategoryOption(val category: SrsCardCategory?, val name: String, v
  */
 @Composable
 private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCategory?) -> Unit) {
+    val srs = LocalSrsColors.current
     val counts = state.counts
-    val options = listOf(
-        CategoryOption(null, stringResource(R.string.filter_all), counts.total),
-        CategoryOption(
-            SrsCardCategory.NEW,
-            stringResource(R.string.srs_badge_new),
-            counts.newCount
-        ),
-        CategoryOption(
-            SrsCardCategory.LEARNING,
-            stringResource(R.string.srs_badge_learning),
-            counts.learning
-        ),
-        CategoryOption(
-            SrsCardCategory.REVIEW,
-            stringResource(R.string.srs_badge_review),
-            counts.review
-        ),
-        CategoryOption(
-            SrsCardCategory.MASTERED,
-            stringResource(R.string.srs_badge_mastered),
-            counts.mastered
-        )
-    )
+    val options = listOf(CategoryOption(null, stringResource(R.string.filter_all), counts.total)) +
+        SrsCardCategory.entries.map { CategoryOption(it, stringResource(it.labelRes()), counts.countOf(it)) }
     val labelStyle = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -350,7 +340,18 @@ private fun CategoryChips(state: BrowseUiState.Ready, onCategory: (SrsCardCatego
             selected = state.category,
             onSelect = onCategory,
             compact = true,
-            weight = { index -> if (iconsOnly) 1f else labelWidths[index].value }
+            weight = { index -> if (iconsOnly) 1f else labelWidths[index].value },
+            colors = { category ->
+                if (category == null) {
+                    ToggleButtonDefaults.colors()
+                } else {
+                    val background = srs.accent(category)
+                    ToggleButtonDefaults.colors(
+                        checkedContainerColor = background,
+                        checkedContentColor = srs.foreground(category).withMinimumContrast(background, minimum = 4.5f)
+                    )
+                }
+            }
         ) { category, _ ->
             val option = byCategory.getValue(category)
             val description = stringResource(R.string.filter_chip_count, option.name, option.count)
@@ -391,7 +392,7 @@ private fun CardItem(card: Flashcard, activePageCount: Int, onEdit: () -> Unit, 
                     .weight(1f)
                     .padding(Spacing.l)
             ) {
-                card.pages.take(activePageCount).forEachIndexed { index, page ->
+                card.activePages(activePageCount).forEachIndexed { index, page ->
                     val isFirst = index == 0
                     if (!isFirst) {
                         HorizontalDivider(

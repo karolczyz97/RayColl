@@ -1,6 +1,7 @@
 package com.raycoll.app.data.repository
 
 import android.net.Uri
+import android.util.Log
 import com.raycoll.app.core.Clock
 import com.raycoll.app.data.account.CurrentAccount
 import com.raycoll.app.data.files.DocumentFiles
@@ -12,8 +13,9 @@ import com.raycoll.app.data.remote.firestore.FirestoreSchema as Schema
 import com.raycoll.app.di.DefaultDispatcher
 import com.raycoll.app.domain.backup.BackupCheck
 import com.raycoll.app.domain.merge.isUntouchedSeed
+import com.raycoll.app.domain.merge.withBuiltInModesCopied
 import com.raycoll.app.domain.model.StoreData
-import com.raycoll.app.domain.operations.isModifiedBuiltIn
+import com.raycoll.app.domain.model.isLive
 import com.raycoll.app.domain.seed.SeedData
 import java.util.Locale
 import javax.inject.Inject
@@ -22,7 +24,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 enum class BackupResult { SUCCESS, FILE_ERROR, INVALID_BACKUP }
@@ -49,13 +50,11 @@ class BackupRepository @Inject constructor(
                 deck.copy(cards = Schema.sorted(store.cached(paths.cards(deck.id))).mapNotNull(Schema::readCard))
             },
             studyModes = store.cached(paths.modes()).mapNotNull(Schema::readMode),
-            activityHeatmap = store.cached(paths.activity()).mapNotNull { doc ->
-                runCatching { doc.id to Schema.activityCountFromMap(doc.id, doc.data) }.getOrNull()
-            }.toMap()
+            activityHeatmap = store.cached(paths.activity()).mapNotNull(Schema::readActivity).toMap()
         )
     }
     private fun live(data: StoreData) = data.copy(
-        groups = data.groups.filter { it.deletedAt == null }.map {
+        groups = data.groups.filter { it.isLive }.map {
             it.copy(
                 cards = it.cards.filter { card ->
                     card.deletedAt ==
@@ -63,7 +62,7 @@ class BackupRepository @Inject constructor(
                 }
             )
         },
-        studyModes = data.studyModes.filter { it.deletedAt == null }
+        studyModes = data.studyModes.filter { it.isLive }
     )
     suspend fun exportTo(uri: Uri): BackupResult {
         val text = encode(live(snapshot()))
@@ -73,9 +72,9 @@ class BackupRepository @Inject constructor(
         val text = documentFiles.readText(uri) ?: return BackupResult.FILE_ERROR
         val data = try {
             decode(text)
-        } catch (_: SerializationException) {
-            return BackupResult.INVALID_BACKUP
-        } catch (_: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
+            // także SerializationException; komunikat mówi, które pole odrzuciło kopię
+            Log.w("BackupRepository", "Backup rejected", e)
             return BackupResult.INVALID_BACKUP
         }
         replace(live(data))
@@ -97,25 +96,46 @@ class BackupRepository @Inject constructor(
             studyModes = live(data).studyModes.map { it.copy(updatedAt = now) }
         )
         val missing = buildList {
-            current.groups.filter { old -> stamped.groups.none { it.id == old.id } && old.deletedAt == null }.forEach {
-                add(WriteOp.Update(paths.deck(it.id), mapOf("deletedAt" to now, "updatedAt" to now)))
+            current.groups.filter { old -> stamped.groups.none { it.id == old.id } && old.isLive }.forEach {
+                add(
+                    WriteOp.Update(
+                        paths.deck(it.id),
+                        mapOf(
+                            Schema.FIELD_DELETED_AT to now,
+                            Schema.FIELD_UPDATED_AT to now
+                        )
+                    )
+                )
             }
             current.studyModes.filter { old ->
                 !old.isBuiltIn && stamped.studyModes.none { it.id == old.id } &&
-                    old.deletedAt == null
+                    old.isLive
             }.forEach {
-                add(WriteOp.Update(paths.mode(it.id), mapOf("deletedAt" to now, "updatedAt" to now)))
+                add(
+                    WriteOp.Update(
+                        paths.mode(it.id),
+                        mapOf(
+                            Schema.FIELD_DELETED_AT to now,
+                            Schema.FIELD_UPDATED_AT to now
+                        )
+                    )
+                )
             }
             current.groups.forEach { old ->
                 val replacement = stamped.groups.find { it.id == old.id } ?: return@forEach
                 old.cards.filter { card ->
-                    card.deletedAt == null && replacement.cards.none { it.id == card.id }
+                    card.isLive && replacement.cards.none { it.id == card.id }
                 }.forEach {
-                    add(WriteOp.Update(paths.card(old.id, it.id), mapOf("deletedAt" to now)))
+                    add(WriteOp.Update(paths.card(old.id, it.id), mapOf(Schema.FIELD_DELETED_AT to now)))
                 }
             }
             (current.activityHeatmap.keys - stamped.activityHeatmap.keys).forEach {
-                add(WriteOp.Set(paths.activityDay(it), Schema.activityToMap(0) + ("updatedAt" to FieldOp.ServerTime)))
+                add(
+                    WriteOp.Set(
+                        paths.activityDay(it),
+                        Schema.activityToMap(0) + (Schema.FIELD_UPDATED_AT to FieldOp.ServerTime)
+                    )
+                )
             }
         }
         store.writeAll(operations(stamped, uid) + missing)
@@ -134,7 +154,7 @@ class BackupRepository @Inject constructor(
                 add(
                     WriteOp.Set(
                         paths.activityDay(day),
-                        Schema.activityToMap(count) + ("updatedAt" to FieldOp.ServerTime)
+                        Schema.activityToMap(count) + (Schema.FIELD_UPDATED_AT to FieldOp.ServerTime)
                     )
                 )
             }
@@ -154,28 +174,7 @@ class BackupRepository @Inject constructor(
         // Rozpoznaj zmienione talie przed odfiltrowaniem usuniętych kart: samo usunięcie
         // przykładowej fiszki też jest zmianą użytkownika.
         val own = live(data.copy(groups = data.groups.filter { !it.isUntouchedSeed() }))
-        // Id kopii zależy też od chwili zmiany trybu: ponowienie z pending_join trafia w tę samą kopię,
-        // a przeniesienie innego gościa na to samo konto nie nadpisuje poprzedniej.
-        val remap = own.studyModes.filter { it.isBuiltIn && it.isModifiedBuiltIn() }.associate {
-            it.id to java.util.UUID.nameUUIDFromBytes(
-                "guest-mode:${it.id}:${it.updatedAt}".toByteArray(Charsets.UTF_8)
-            ).toString()
-        }
-        val modes = own.studyModes.mapNotNull { mode ->
-            if (!mode.isBuiltIn) {
-                mode
-            } else {
-                remap[mode.id]?.let {
-                    mode.copy(id = it, name = mode.name + modeSuffix, isBuiltIn = false, builtInSourceId = null)
-                }
-            }
-        }
-        val groups = own.groups.map {
-            it.copy(
-                activeModeId =
-                    remap[it.activeModeId] ?: it.activeModeId
-            )
-        }
+        val joined = own.withBuiltInModesCopied(modeSuffix)
         val paths = UserPaths(uid)
         // Talie gościa trafiają za talie konta. Konta może jeszcze nie być w pamięci telefonu,
         // więc pozycje bierzemy z odpowiedzi serwera (bez sieci: z tego, co jest na telefonie).
@@ -185,16 +184,17 @@ class BackupRepository @Inject constructor(
         val firstPosition = (accountDecks.mapNotNull { Schema.positionFromMap(it.data) }.maxOrNull() ?: -1L) + 1
         // Aktywność jest dodawana osobno; pozostałe dokumenty zachowują swoje daty.
         store.writeAll(
-            operations(StoreData(groups, modes), uid, firstPosition.toInt()) + own.activityHeatmap.map { (day, count) ->
-                WriteOp.Set(
-                    paths.activityDay(day),
-                    mapOf(
-                        "count" to FieldOp.Increment(count.toLong()),
-                        "updatedAt" to FieldOp.ServerTime
-                    ),
-                    merge = true
-                )
-            }
+            operations(joined.copy(activityHeatmap = emptyMap()), uid, firstPosition.toInt()) +
+                own.activityHeatmap.map { (day, count) ->
+                    WriteOp.Set(
+                        paths.activityDay(day),
+                        mapOf(
+                            "count" to FieldOp.Increment(count.toLong()),
+                            Schema.FIELD_UPDATED_AT to FieldOp.ServerTime
+                        ),
+                        merge = true
+                    )
+                }
         )
     }
     suspend fun deleteGuest(uid: String) {

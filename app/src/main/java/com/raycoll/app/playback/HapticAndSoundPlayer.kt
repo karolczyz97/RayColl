@@ -6,6 +6,7 @@ import android.media.SoundPool
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Ratings
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -50,7 +51,11 @@ class HapticAndSoundPlayer @Inject constructor(@ApplicationContext context: Cont
     init {
         // słuchacz przed load(): inaczej szybkie załadowanie mogłoby przejść niezauważone
         soundPool.setOnLoadCompleteListener { _, soundId, status ->
-            if (status != 0) return@setOnLoadCompleteListener
+            if (status != 0) {
+                Log.w("HapticAndSoundPlayer", "Cannot load sound $soundId (status $status)")
+                synchronized(this) { pending.remove(soundId) }
+                return@setOnLoadCompleteListener
+            }
             val playNow = synchronized(this) {
                 loaded += soundId
                 pending.remove(soundId)

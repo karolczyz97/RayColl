@@ -12,5 +12,8 @@ data class Flashcard(
     val deletedAt: Long? = null
 )
 
+/** Strony karty widoczne przy [activePageCount] stronach talii (karta może mieć ich mniej). */
+fun Flashcard.activePages(activePageCount: Int): List<String> = pages.take(activePageCount)
+
 /** Karta bez tombstone'a. */
 val Flashcard.isLive: Boolean get() = deletedAt == null

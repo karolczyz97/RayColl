@@ -1,29 +1,23 @@
 package com.raycoll.app.ui.browse
 
-import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.testing.FakeClock
+import com.raycoll.app.testing.MainDispatcherRule
 import com.raycoll.app.testing.PreferencesRule
 import com.raycoll.app.testing.TestRepos
 import com.raycoll.app.testing.VmTestHarness
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -31,7 +25,11 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class BrowseViewModelTest {
-    @get:org.junit.Rule val testPreferences = PreferencesRule()
+    @get:Rule(order = 1)
+    val mainDispatcher = MainDispatcherRule(UnconfinedTestDispatcher())
+
+    @get:Rule(order = 0)
+    val testPreferences = PreferencesRule()
 
     @Test
     fun `adding a hidden card confirms the addition without clearing filters`() = runTest {
@@ -49,19 +47,11 @@ class BrowseViewModelTest {
         assertFalse(state.allCards.isEmpty())
     }
     private val clock = FakeClock()
-    private val viewModels = mutableListOf<BrowseViewModel>()
     private lateinit var repos: TestRepos
 
     @Before
     fun setup() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
         repos = VmTestHarness.create(ApplicationProvider.getApplicationContext(), clock)
-    }
-
-    @After
-    fun teardown() {
-        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
-        Dispatchers.resetMain()
     }
 
     private suspend fun seedDeck(cards: Int): String = repos.deckRepository.addDeckWithCards(
@@ -71,10 +61,8 @@ class BrowseViewModelTest {
         (1..cards).map { listOf("front$it", "back$it") }
     )
 
-    private fun vm(deckId: String) = BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository).also {
-        viewModels +=
-            it
-    }
+    private fun vm(deckId: String) =
+        mainDispatcher.track(BrowseViewModel(deckId, repos.deckRepository, testPreferences.repository))
 
     private suspend fun BrowseViewModel.ready(predicate: (BrowseUiState.Ready) -> Boolean = { true }) =
         uiState.filterIsInstance<BrowseUiState.Ready>().first(predicate)
@@ -103,7 +91,7 @@ class BrowseViewModelTest {
         repos.deckRepository.deleteDeck(id)
         assertEquals(BrowseUiState.DeckMissing, vm.uiState.first { it == BrowseUiState.DeckMissing })
         // synchronizacja nadal zna usunięcie
-        assertTrue(repos.snapshot().groups.single().deletedAt != null)
+        assertNotNull(repos.snapshot().groups.single().deletedAt)
     }
 
     @Test

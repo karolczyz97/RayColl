@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.res.stringResource
 import com.raycoll.app.R
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
 /** Przywrócenie wbudowanego trybu do wersji fabrycznej. */
@@ -33,10 +34,11 @@ fun rememberModeDelete(
     val deleted = stringResource(R.string.mode_list_deleted)
     val undo = stringResource(R.string.btn_undo)
     return { modeId ->
-        onDelete(modeId)
-        scope.launch {
+        // Zarejestruj „Cofnij” przed zapisem, żeby szybki błąd mógł od razu zastąpić ten komunikat.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
             val result = messages.showAction(deleted, actionLabel = undo, key = "modeUndo")
             if (result == SnackbarResult.ActionPerformed) onRestore(modeId)
         }
+        onDelete(modeId)
     }
 }

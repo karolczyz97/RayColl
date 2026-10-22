@@ -5,9 +5,6 @@ import com.raycoll.app.core.LocalDates
 import com.raycoll.app.data.firestore.Doc
 import com.raycoll.app.data.firestore.DocumentStore
 import com.raycoll.app.domain.model.CardOrder
-import com.raycoll.app.domain.model.Flashcard
-import com.raycoll.app.domain.model.SrsState
-import com.raycoll.app.domain.model.StoreData
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.srs.calculateFsrs
 import com.raycoll.app.testing.FakeClock
@@ -18,20 +15,13 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -89,14 +79,25 @@ class DeckRepositoryTest {
     }
 
     @Test
-    fun `swapping a new page also moves existing two page cards`() = runTest {
+    fun `moving a new page also moves existing two page cards`() = runTest {
         val id = seedDeckWithCard()
         val before = repos.deckRepository.getDeck(id)!!.cards.single()
         repos.deckRepository.setActivePageCount(id, 3)
-        repos.deckRepository.swapPages(id, 1, 2)
+        repos.deckRepository.movePage(id, 1, 2)
         val after = repos.deckRepository.getDeck(id)!!.cards.single()
         assertEquals(listOf(before.pages[0], "", before.pages[1]), after.pages)
         assertEquals(clock.now(), after.contentUpdatedAt)
+    }
+
+    @Test
+    fun `moving a page across several places writes the new order once`() = runTest {
+        val id = seedDeckWithCard()
+        val before = repos.deckRepository.getDeck(id)!!.cards.single()
+        repos.deckRepository.setActivePageCount(id, 3)
+        repos.deckRepository.movePage(id, 0, 2)
+        val deck = repos.deckRepository.getDeck(id)!!
+        assertEquals(listOf(before.pages[1], "", before.pages[0]), deck.cards.single().pages)
+        assertEquals(deck.pageNames.size, deck.pageLanguages.size)
     }
 
     private val dispatcher = StandardTestDispatcher()
@@ -147,11 +148,15 @@ class DeckRepositoryTest {
     @Test
     fun `activeDecks emituje po dodaniu karty`() = runTest(dispatcher) {
         val deckId = seedDeckWithCard()
-        awaitEmissions(repos.deckRepository.activeDecks()) { emissions ->
-            awaitValue(emissions) { decks -> decks.single().cards.size == 1 }
-            repos.deckRepository.addCard(deckId, listOf("bye", "pa"))
-            awaitValue(emissions) { decks -> decks.single().cards.size == 2 }
-        }
+        // magazyn w pamięci emituje synchronicznie — wystarczy dispatcher testu
+        val cardCounts = mutableListOf<Int>()
+        val collector = launch { repos.deckRepository.activeDecks().collect { cardCounts += it.single().cards.size } }
+        runCurrent()
+        assertEquals(listOf(1), cardCounts)
+        repos.deckRepository.addCard(deckId, listOf("bye", "pa"))
+        runCurrent()
+        assertEquals(2, cardCounts.last())
+        collector.cancel()
     }
 
     @Test
@@ -335,22 +340,5 @@ class DeckRepositoryTest {
         val restored = repos.deckRepository.getDeck(id)!!
         assertEquals(3, restored.activePageCount)
         assertEquals(listOf("A", "B", "C"), restored.pageNames)
-    }
-
-    // Room emituje z własnych wątków — czekamy na wartości w realnym czasie (z limitem)
-    private suspend fun <T> TestScope.awaitEmissions(flow: Flow<T>, block: suspend (Channel<T>) -> Unit) {
-        val emissions = Channel<T>(Channel.UNLIMITED)
-        val job = launch(Dispatchers.Default) { flow.collect { emissions.send(it) } }
-        try {
-            withContext(Dispatchers.Default) { withTimeout(5_000) { block(emissions) } }
-        } finally {
-            job.cancel()
-        }
-    }
-
-    private suspend fun <T> awaitValue(emissions: Channel<T>, predicate: (T) -> Boolean) {
-        while (!predicate(emissions.receive())) {
-            // Pomiń wcześniejsze emisje i zaczekaj na zmianę sprawdzaną przez test.
-        }
     }
 }

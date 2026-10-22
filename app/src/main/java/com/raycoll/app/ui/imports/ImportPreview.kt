@@ -10,7 +10,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,7 +21,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
+import com.raycoll.app.ui.components.AppTextField
 import com.raycoll.app.ui.components.SectionCard
+import com.raycoll.app.ui.components.pageDisplayName
 import com.raycoll.app.ui.theme.Spacing
 
 @Composable
@@ -34,7 +35,7 @@ internal fun ColumnHeaders(pageNames: List<String>, modifier: Modifier = Modifie
     ) {
         pageNames.forEachIndexed { index, name ->
             Text(
-                name.ifBlank { stringResource(R.string.import_page_label, index + 1) },
+                pageDisplayName(name, index),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -57,10 +58,8 @@ internal fun PreviewRow(
 ) {
     val vertical = cells.size > 2
     val field: @Composable (Int, Modifier) -> Unit = { column, modifier ->
-        val name = pageNames.getOrNull(column).orEmpty().ifBlank {
-            stringResource(R.string.import_page_label, column + 1)
-        }
-        OutlinedTextField(
+        val name = pageDisplayName(pageNames.getOrNull(column), column)
+        AppTextField(
             value = cells[column],
             onValueChange = { onCellChange(column, it) },
             label = { Text(stringResource(R.string.import_cell_label, rowNumber, name)) },

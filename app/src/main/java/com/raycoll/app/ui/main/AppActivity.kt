@@ -11,9 +11,11 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.navigation.screenResultIntent
+import dagger.hilt.android.lifecycle.withCreationCallback
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -28,6 +30,11 @@ private const val MAX_CONTENT_WAIT_MS = 400L
  * tak jak w aplikacjach Androida. Wspólna oprawa okna: [AppFrame].
  */
 abstract class AppActivity : ComponentActivity() {
+    /** ViewModel z fabryką Hilt (assisted), tworzony z danych intencji ekranu. */
+    protected inline fun <reified VM : ViewModel, reified F : Any> assistedViewModel(
+        noinline create: (F) -> VM
+    ): Lazy<VM> = viewModels(extrasProducer = { defaultViewModelCreationExtras.withCreationCallback<F>(create) })
+
     protected val app: MainViewModel by viewModels()
 
     /** Ekran pokazuje dane konta, z którym go otwarto — po zalogowaniu na inne konto zamyka się. */

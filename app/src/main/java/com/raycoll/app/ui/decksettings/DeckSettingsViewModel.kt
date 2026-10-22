@@ -9,7 +9,6 @@ import com.raycoll.app.domain.model.CardOrder
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.StudyMode
-import com.raycoll.app.domain.model.defaultPageName
 import com.raycoll.app.domain.operations.resolveStudyMode
 import com.raycoll.app.ui.components.UiEvents
 import com.raycoll.app.ui.components.launchSaving
@@ -23,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -47,7 +47,9 @@ sealed interface DeckSettingsEvent {
 
     /** Zmiana ustawienia się nie zapisała. */
     data object SaveFailed : DeckSettingsEvent
-    data object PagesSwapped : DeckSettingsEvent
+
+    /** null — nazwa talii; liczba — nazwa strony. Okno zamyka się dopiero po udanym zapisie. */
+    data class NameSaved(val pageIndex: Int?) : DeckSettingsEvent
 }
 
 @HiltViewModel(assistedFactory = DeckSettingsViewModel.Factory::class)
@@ -85,25 +87,28 @@ class DeckSettingsViewModel @AssistedInject constructor(
 
     private val eventSink = UiEvents<DeckSettingsEvent>()
     val events: Flow<DeckSettingsEvent> = eventSink.flow
+    private val _savingName = MutableStateFlow(false)
+    val savingName: StateFlow<Boolean> = _savingName.asStateFlow()
 
     /** Pusta nazwa nie jest zapisywana — talia zostaje przy poprzedniej. */
     fun rename(name: String) {
         if (name.isBlank()) return
-        launch { deckRepository.renameDeck(deckId, name) }
+        saveName(null) { deckRepository.renameDeck(deckId, name) }
     }
 
-    fun setPageName(pageIndex: Int, name: String) = launch { deckRepository.setPageName(deckId, pageIndex, name) }
+    fun setPageName(pageIndex: Int, name: String) = saveName(pageIndex) {
+        deckRepository.setPageName(deckId, pageIndex, name)
+    }
 
     fun setPageLanguage(pageIndex: Int, language: String) = launch {
         deckRepository.setPageLanguage(deckId, pageIndex, language)
     }
 
-    fun swapPages(from: Int, to: Int) = launch {
-        deckRepository.swapPages(deckId, from, to)
-        eventSink.send(DeckSettingsEvent.PagesSwapped)
+    fun movePage(from: Int, to: Int) = launch {
+        deckRepository.movePage(deckId, from, to)
     }
 
-    fun setActivePageCount(count: Int, defaultName: (Int) -> String = ::defaultPageName) = launch {
+    fun setActivePageCount(count: Int, defaultName: (Int) -> String) = launch {
         deckRepository.setActivePageCount(deckId, count, defaultName)
     }
 
@@ -145,5 +150,18 @@ class DeckSettingsViewModel @AssistedInject constructor(
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launchSaving(onFailure = { eventSink.send(DeckSettingsEvent.SaveFailed) }, block = block)
+    }
+
+    private fun saveName(pageIndex: Int?, block: suspend () -> Unit) {
+        if (_savingName.value) return
+        _savingName.value = true
+        launch {
+            try {
+                block()
+                eventSink.send(DeckSettingsEvent.NameSaved(pageIndex))
+            } finally {
+                _savingName.value = false
+            }
+        }
     }
 }

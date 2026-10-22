@@ -3,7 +3,7 @@ package com.raycoll.app.domain.session
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.SrsState
 
-enum class SessionStatus { IDLE, SPEAKING, LISTENING, REVEALED, FINISHED, ERROR }
+enum class SessionStatus { IDLE, SPEAKING, LISTENING, AWAITING_RATING, FINISHED, ERROR }
 enum class AnswerStatus { NONE, CORRECT, INCORRECT, SKIPPED, ERROR }
 
 /** Błąd mowy pokazywany użytkownikowi (sesja idzie dalej). */
@@ -13,7 +13,6 @@ data class LastAnswerResult(
     val status: AnswerStatus = AnswerStatus.NONE,
     val text: String = "",
     val percent: Int? = null,
-    val threshold: Int? = null,
     val pageIndex: Int? = null,
     val suggestedRating: Int? = null
 )
@@ -45,11 +44,17 @@ data class SessionState(
     val error: SessionError? = null,
     val cards: List<Flashcard> = emptyList(),
     val failedCardIds: Set<String> = emptySet(),
-    val cardReviewed: Boolean = false
+    val cardReviewed: Boolean = false,
+    val sessionId: Long = 0,
+    val cardHistory: Map<String, CardProgress> = emptyMap(),
+    val stepIndex: Int = 0,
+    /** Powrót pozwala świadomie zmienić ocenę, ale nie uruchamia ponownie autooceny. */
+    val revisiting: Boolean = false,
+    val navigation: CardNavigation? = null
 )
 
 sealed interface SessionAction {
-    data class StartSession(val cards: List<Flashcard>) : SessionAction
+    data class StartSession(val cards: List<Flashcard>, val sessionId: Long = 0) : SessionAction
     data class StartSpeaking(val pageIndex: Int) : SessionAction
     data object EndSpeaking : SessionAction
     data class StartListening(val pageIndex: Int) : SessionAction
@@ -59,6 +64,10 @@ sealed interface SessionAction {
     data object ShowRatings : SessionAction
     data object FinishSession : SessionAction
     data class AdvanceCard(val nextCardIndex: Int) : SessionAction
+    data class VisitCard(val index: Int) : SessionAction
+    data class SetStepIndex(val index: Int) : SessionAction
+    data class BeginNavigation(val navigation: CardNavigation) : SessionAction
+    data class EndNavigation(val navigation: CardNavigation) : SessionAction
     data class SetError(val error: SessionError) : SessionAction
     data object ClearError : SessionAction
     data class PeekSet(val pageIndex: Int) : SessionAction

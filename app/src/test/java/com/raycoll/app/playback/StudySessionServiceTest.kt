@@ -3,7 +3,6 @@ package com.raycoll.app.playback
 import android.app.Application
 import android.app.NotificationManager
 import android.os.Looper
-import android.os.PowerManager
 import androidx.test.core.app.ApplicationProvider
 import com.raycoll.app.R
 import com.raycoll.app.domain.model.Flashcard
@@ -24,6 +23,7 @@ import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -85,7 +85,7 @@ class StudySessionServiceTest {
         val channel = app.getSystemService(NotificationManager::class.java)
             .getNotificationChannel("raycoll_study_playback_channel")
         assertEquals(app.getString(R.string.study_notification_channel), channel.name.toString())
-        assertTrue(shadowOf(service).lastForegroundNotification != null)
+        assertNotNull(shadowOf(service).lastForegroundNotification)
         assertEquals(1, service.sessions.size)
         engine.stop()
         shadowOf(Looper.getMainLooper()).idle()
@@ -99,7 +99,6 @@ class StudySessionServiceTest {
         val controller = Robolectric.buildService(StudySessionService::class.java).create()
         shadowOf(Looper.getMainLooper()).idle()
         val service = controller.get()
-        val power = app.getSystemService(PowerManager::class.java)
         val wakeLock = org.robolectric.shadows.ShadowPowerManager.getLatestWakeLock()
         assertTrue(wakeLock.isHeld)
         controller.destroy()

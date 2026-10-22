@@ -13,11 +13,14 @@ import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StudyFilter
 import com.raycoll.app.domain.model.defaultPageName
+import com.raycoll.app.domain.model.isLive
 import com.raycoll.app.domain.operations.newCard
 import com.raycoll.app.domain.operations.newGroup
 import com.raycoll.app.domain.operations.reviewed
 import com.raycoll.app.domain.operations.withActivePageCount
-import com.raycoll.app.domain.operations.withPagesSwapped
+import com.raycoll.app.domain.operations.withPageLanguage
+import com.raycoll.app.domain.operations.withPageMoved
+import com.raycoll.app.domain.operations.withPageName
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,7 +49,7 @@ class DeckRepository @Inject constructor(
             val paths = UserPaths(uid)
             store.observe(paths.decks()).flatMapLatest { result ->
                 val decks = Schema.sorted(result.docs).mapNotNull(Schema::readDeck)
-                    .filter { it.deletedAt == null && predicate(it) }
+                    .filter { it.isLive && predicate(it) }
                 if (decks.isEmpty()) {
                     flowOf(emptyList())
                 } else {
@@ -73,9 +76,7 @@ class DeckRepository @Inject constructor(
     fun deck(deckId: String): Flow<FlashcardGroup?> = decksWithCards { it.id == deckId }.map { it.firstOrNull() }
     fun activityHeatmap(): Flow<Map<String, Int>> = account.uid.filterNotNull().flatMapLatest { uid ->
         store.observe(UserPaths(uid).activity()).map { docs ->
-            docs.docs.mapNotNull { doc ->
-                runCatching { doc.id to Schema.activityCountFromMap(doc.id, doc.data) }.getOrNull()
-            }.toMap()
+            docs.docs.mapNotNull(Schema::readActivity).toMap()
         }
     }
 
@@ -85,7 +86,7 @@ class DeckRepository @Inject constructor(
         reviews.withLock { }
         val paths = paths()
         val deck =
-            store.cachedDoc(paths.deck(deckId))?.let(Schema::readDeck)?.takeIf { it.deletedAt == null } ?: return null
+            store.cachedDoc(paths.deck(deckId))?.let(Schema::readDeck)?.takeIf { it.isLive } ?: return null
         return deck.copy(
             cards = Schema.sorted(store.cached(paths.cards(deckId))).mapNotNull(Schema::readCard).filter {
                 it.deletedAt ==
@@ -119,8 +120,8 @@ class DeckRepository @Inject constructor(
     private suspend fun updateDeck(deckId: String, fields: Map<String, Any?>) {
         val path = paths().deck(deckId)
         val current = store.cachedDoc(path) ?: return
-        if (current.data["deletedAt"] != null || fields.all { current.data[it.key] == it.value }) return
-        store.write(WriteOp.Update(path, fields + ("updatedAt" to clock.now())))
+        if (current.data[Schema.FIELD_DELETED_AT] != null || fields.all { current.data[it.key] == it.value }) return
+        store.write(WriteOp.Update(path, fields + (Schema.FIELD_UPDATED_AT to clock.now())))
     }
 
     suspend fun renameDeck(deckId: String, name: String) = updateDeck(deckId, mapOf("name" to name.trim()))
@@ -128,46 +129,38 @@ class DeckRepository @Inject constructor(
         updateDeck(deckId, mapOf("studyFilter" to filter.key))
     suspend fun setCardOrder(deckId: String, order: CardOrder) = updateDeck(deckId, mapOf("cardOrder" to order.key))
     suspend fun setActiveStudyMode(deckId: String, modeId: String) = updateDeck(deckId, mapOf("activeModeId" to modeId))
-    suspend fun markStudied(deckId: String) = updateDeck(deckId, mapOf("updatedAt" to clock.now()))
+    suspend fun markStudied(deckId: String) = updateDeck(deckId, mapOf(Schema.FIELD_UPDATED_AT to clock.now()))
 
-    suspend fun setPageName(deckId: String, pageIndex: Int, name: String) = editPages(deckId) { deck ->
-        if (pageIndex in
-            deck.pageNames.indices
-        ) {
-            deck.copy(
-                pageNames = deck.pageNames.mapIndexed { i, value ->
-                    if (i ==
-                        pageIndex
-                    ) {
-                        name.trim()
-                    } else {
-                        value
-                    }
-                }
-            )
-        } else {
-            deck
+    suspend fun reorderDecks(deckIds: List<String>) = metadata.withLock {
+        val paths = paths()
+        val active = Schema.sorted(store.cached(paths.decks())).filter { doc ->
+            Schema.readDeck(doc)?.let { it.isLive && it.archivedAt == null } == true
         }
-    }
-    suspend fun setPageLanguage(deckId: String, pageIndex: Int, language: String) = editPages(deckId) { deck ->
-        if (pageIndex in
-            deck.pageLanguages.indices
-        ) {
-            deck.copy(
-                pageLanguages = deck.pageLanguages.mapIndexed { i, value ->
-                    if (i ==
-                        pageIndex
-                    ) {
-                        language
-                    } else {
-                        value
-                    }
+        val byId = active.associateBy { it.id }
+        val requested = deckIds.distinct().mapNotNull(byId::get)
+        val requestedIds = requested.mapTo(mutableSetOf()) { it.id }
+        // Talie dodane podczas przeciągania zostają na końcu; usunięte i zarchiwizowane pomijamy.
+        val reordered = requested + active.filter { it.id !in requestedIds }
+        if (reordered == active) return@withLock
+        val now = clock.now()
+        store.writeAll(
+            reordered.mapIndexedNotNull { position, doc ->
+                if (Schema.positionFromMap(doc.data) == position.toLong()) {
+                    null
+                } else {
+                    WriteOp.Update(
+                        paths.deck(doc.id),
+                        mapOf("position" to position, Schema.FIELD_UPDATED_AT to now)
+                    )
                 }
-            )
-        } else {
-            deck
-        }
+            }
+        )
     }
+
+    suspend fun setPageName(deckId: String, pageIndex: Int, name: String) =
+        editPages(deckId) { it.withPageName(pageIndex, name) }
+    suspend fun setPageLanguage(deckId: String, pageIndex: Int, language: String) =
+        editPages(deckId) { it.withPageLanguage(pageIndex, language) }
     suspend fun setActivePageCount(deckId: String, count: Int, defaultName: (Int) -> String = ::defaultPageName) =
         editPages(deckId) { it.withActivePageCount(count, clock.now(), defaultName) }
 
@@ -180,27 +173,22 @@ class DeckRepository @Inject constructor(
         val deck = getDeck(deckId) ?: return@withLock
         updateDeck(deckId, pageFields(edit(deck)))
     }
-    suspend fun swapPages(deckId: String, from: Int, to: Int) = metadata.withLock {
+    suspend fun movePage(deckId: String, from: Int, to: Int) = metadata.withLock {
         val deck = getDeck(deckId) ?: return@withLock
         if (from == to || from !in deck.pageNames.indices || to !in deck.pageNames.indices) return@withLock
-        val swapped = deck.withPagesSwapped(from, to, clock.now())
+        val now = clock.now()
+        val moved = deck.withPageMoved(from, to, now)
         val paths = paths()
         store.writeAll(
-            listOf(WriteOp.Update(paths.deck(deckId), pageFields(swapped) + ("updatedAt" to clock.now()))) +
-                swapped.cards.map {
-                    WriteOp.Update(
-                        paths.card(deckId, it.id),
-                        mapOf(
-                            "pages" to it.pages,
-                            "contentUpdatedAt" to clock.now()
-                        )
-                    )
+            listOf(WriteOp.Update(paths.deck(deckId), pageFields(moved) + (Schema.FIELD_UPDATED_AT to now))) +
+                moved.cards.map {
+                    WriteOp.Update(paths.card(deckId, it.id), mapOf("pages" to it.pages, "contentUpdatedAt" to now))
                 }
         )
     }
-    suspend fun deleteDeck(deckId: String) = updateDeck(deckId, mapOf("deletedAt" to clock.now()))
-    suspend fun archiveDeck(deckId: String) = updateDeck(deckId, mapOf("archivedAt" to clock.now()))
-    suspend fun restoreDeck(deckId: String) = updateDeck(deckId, mapOf("archivedAt" to null))
+    suspend fun deleteDeck(deckId: String) = updateDeck(deckId, mapOf(Schema.FIELD_DELETED_AT to clock.now()))
+    suspend fun archiveDeck(deckId: String) = updateDeck(deckId, mapOf(Schema.FIELD_ARCHIVED_AT to clock.now()))
+    suspend fun restoreDeck(deckId: String) = updateDeck(deckId, mapOf(Schema.FIELD_ARCHIVED_AT to null))
 
     suspend fun addCard(deckId: String, pages: List<String>) {
         val card = newCard(pages, clock.now())
@@ -218,7 +206,7 @@ class DeckRepository @Inject constructor(
     suspend fun updateCardPages(cardId: String, visiblePages: List<String>): Boolean = metadata.withLock {
         val path = cardPath(cardId) ?: return@withLock false
         val card =
-            store.cachedDoc(path)?.let(Schema::readCard)?.takeIf { it.deletedAt == null } ?: return@withLock false
+            store.cachedDoc(path)?.let(Schema::readCard)?.takeIf { it.isLive } ?: return@withLock false
         store.write(
             WriteOp.Update(
                 path,
@@ -232,22 +220,22 @@ class DeckRepository @Inject constructor(
     }
     suspend fun deleteCard(cardId: String) {
         val path = cardPath(cardId) ?: return
-        if (store.cachedDoc(path)?.data?.get("deletedAt") != null) return
-        store.write(WriteOp.Update(path, mapOf("deletedAt" to clock.now())))
+        if (store.cachedDoc(path)?.data?.get(Schema.FIELD_DELETED_AT) != null) return
+        store.write(WriteOp.Update(path, mapOf(Schema.FIELD_DELETED_AT to clock.now())))
     }
 
     /** Cofnięcie usunięcia karty (zdjęcie znacznika usunięcia). */
     suspend fun restoreCard(cardId: String) {
         val path = cardPath(cardId) ?: return
-        if (store.cachedDoc(path)?.data?.get("deletedAt") == null) return
-        store.write(WriteOp.Update(path, mapOf("deletedAt" to null)))
+        if (store.cachedDoc(path)?.data?.get(Schema.FIELD_DELETED_AT) == null) return
+        store.write(WriteOp.Update(path, mapOf(Schema.FIELD_DELETED_AT to null)))
     }
 
     suspend fun reviewCard(deckId: String, cardId: String, rating: Int, baseState: SrsState? = null) =
         reviews.withLock {
             val paths = paths()
             val path = paths.card(deckId, cardId)
-            val card = store.cachedDoc(path)?.let(Schema::readCard)?.takeIf { it.deletedAt == null } ?: return@withLock
+            val card = store.cachedDoc(path)?.let(Schema::readCard)?.takeIf { it.isLive } ?: return@withLock
             val now = clock.now()
             val reviewed = card.reviewed(rating, now, baseState ?: card.srsState)
             store.write(
@@ -265,7 +253,7 @@ class DeckRepository @Inject constructor(
                 store.write(
                     WriteOp.Set(
                         paths.activityDay(LocalDates.dayKey(now)),
-                        mapOf("count" to FieldOp.Increment(1), "updatedAt" to FieldOp.ServerTime),
+                        mapOf("count" to FieldOp.Increment(1), Schema.FIELD_UPDATED_AT to FieldOp.ServerTime),
                         merge = true
                     )
                 )

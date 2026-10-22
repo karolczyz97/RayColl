@@ -20,9 +20,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.raycoll.app.R
 import com.raycoll.app.domain.selectors.CardStats
+import com.raycoll.app.domain.selectors.countOf
+import com.raycoll.app.domain.srs.SrsCardCategory
 import com.raycoll.app.ui.theme.LocalSrsColors
 import com.raycoll.app.ui.theme.Spacing
-import com.raycoll.app.ui.theme.withMinimumContrast
+import com.raycoll.app.ui.theme.accent
 
 /** Fragment paska: udział [weight] w kolorze [color]. */
 data class BarSegment(val weight: Float, val color: Color)
@@ -32,7 +34,6 @@ data class BarSegment(val weight: Float, val color: Color)
 fun SegmentedBar(
     segments: List<BarSegment>,
     modifier: Modifier = Modifier,
-    height: Dp = 8.dp,
     gap: Dp = Spacing.xxs,
     description: String? = null
 ) {
@@ -40,7 +41,7 @@ fun SegmentedBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(height)
+            .height(8.dp)
             .clip(CircleShape)
             .background(track)
             .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
@@ -51,31 +52,21 @@ fun SegmentedBar(
                 Modifier
                     .weight(segment.weight)
                     .fillMaxHeight()
-                    .background(segment.color.withMinimumContrast(track))
+                    .background(segment.color)
             )
         }
     }
 }
 
-/** Rozkład kart talii: nowe / w nauce / powtórki / opanowane (mocne kolory kategorii — wyraźne na tle toru). */
+/** Rozkład kart talii: nowe / w nauce / powtórki / opanowane w pastelowych kolorach kategorii. */
 @Composable
 fun CardStatsBar(stats: CardStats, modifier: Modifier = Modifier) {
     val srs = LocalSrsColors.current
-    val description = listOf(
-        R.string.srs_badge_new to stats.newCount,
-        R.string.srs_badge_learning to stats.learning,
-        R.string.srs_badge_review to stats.review,
-        R.string.srs_badge_mastered to stats.mastered
-    ).map { (label, count) ->
-        stringResource(R.string.filter_chip_count, stringResource(label), count)
+    val description = SrsCardCategory.entries.map {
+        stringResource(R.string.filter_chip_count, stringResource(it.labelRes()), stats.countOf(it))
     }.joinToString(", ")
     SegmentedBar(
-        segments = listOf(
-            BarSegment(stats.newCount.toFloat(), srs.newAccent),
-            BarSegment(stats.learning.toFloat(), srs.learningAccent),
-            BarSegment(stats.review.toFloat(), srs.reviewAccent),
-            BarSegment(stats.mastered.toFloat(), srs.masteredAccent)
-        ),
+        segments = SrsCardCategory.entries.map { BarSegment(stats.countOf(it).toFloat(), srs.accent(it)) },
         modifier = modifier,
         description = description
     )

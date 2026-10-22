@@ -94,7 +94,7 @@ class DialogStateRestorationTest {
         val vm = ModeDetailViewModel(null, repos.studyModeRepository, testPreferences.repository, SavedStateHandle())
         val restoration = StateRestorationTester(compose)
         restoration.setContent { ModeDetailScreen(onBack = {}, viewModel = vm) }
-        compose.onNodeWithText("Empty mode").performClick()
+        compose.onNodeWithText("Empty mode").performScrollTo().performClick()
         field("Mode name").performTextInput("Mine")
         compose.onNodeWithContentDescription("Close").performClick()
         compose.onNodeWithText("Discard changes?").assertExists()

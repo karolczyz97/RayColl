@@ -1,6 +1,7 @@
 package com.raycoll.app.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import com.raycoll.app.R
 import com.raycoll.app.domain.srs.SrsCardCategory
 
@@ -15,4 +16,13 @@ fun srsCategoryIcon(category: SrsCardCategory?): Int = when (category) {
     SrsCardCategory.LEARNING -> R.drawable.ic_menu_book
     SrsCardCategory.REVIEW -> R.drawable.ic_history
     SrsCardCategory.MASTERED -> R.drawable.ic_school
+}
+
+/** Nazwa kategorii karty — ta sama w filtrze, statystykach i opisie paska. */
+@StringRes
+fun SrsCardCategory.labelRes(): Int = when (this) {
+    SrsCardCategory.NEW -> R.string.srs_badge_new
+    SrsCardCategory.LEARNING -> R.string.srs_badge_learning
+    SrsCardCategory.REVIEW -> R.string.srs_badge_review
+    SrsCardCategory.MASTERED -> R.string.srs_badge_mastered
 }

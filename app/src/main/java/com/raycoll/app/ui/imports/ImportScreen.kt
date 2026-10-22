@@ -27,7 +27,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,6 +54,8 @@ import com.raycoll.app.R
 import com.raycoll.app.domain.imports.CsvSeparator
 import com.raycoll.app.domain.imports.ImportProblem
 import com.raycoll.app.domain.model.PageLimits
+import com.raycoll.app.ui.components.AppTextField
+import com.raycoll.app.ui.components.AppTextFieldDefaults
 import com.raycoll.app.ui.components.CollectEvents
 import com.raycoll.app.ui.components.ConfirmDialog
 import com.raycoll.app.ui.components.DropdownChip
@@ -62,9 +63,9 @@ import com.raycoll.app.ui.components.LanguagePicker
 import com.raycoll.app.ui.components.ScreenScaffold
 import com.raycoll.app.ui.components.SectionCard
 import com.raycoll.app.ui.components.SwitchRow
-import com.raycoll.app.ui.components.expandIn
+import com.raycoll.app.ui.components.expandVerticallyIn
 import com.raycoll.app.ui.components.rememberSnackbarMessages
-import com.raycoll.app.ui.components.shrinkOut
+import com.raycoll.app.ui.components.shrinkVerticallyOut
 import com.raycoll.app.ui.navigation.ScreenResult
 import com.raycoll.app.ui.theme.Spacing
 
@@ -117,7 +118,7 @@ fun ImportScreen(
     val defaultPageNames =
         List(PageLimits.MAX_STORED_PAGE_COUNT) {
             stringResource(
-                R.string.import_page_label,
+                R.string.page_default_name,
                 it + 1
             )
         }
@@ -150,7 +151,7 @@ fun ImportScreen(
                 .padding(padding)
                 .imePadding()
         ) {
-            AnimatedVisibility(state.loadingFile, enter = expandIn(), exit = shrinkOut()) {
+            AnimatedVisibility(state.loadingFile, enter = expandVerticallyIn(), exit = shrinkVerticallyOut()) {
                 LinearWavyProgressIndicator(Modifier.fillMaxWidth())
             }
             LazyColumn(
@@ -246,19 +247,10 @@ private fun SubmitBar(state: ImportUiState, onImport: () -> Unit) {
                 .padding(horizontal = Spacing.screen, vertical = Spacing.m),
             verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
-            val hint = when {
-                state.inputLocked || state.canImport || state.sourceText.isBlank() -> null
-                !state.validPageCount -> R.string.import_error_page_count
-                state.deckName.isBlank() -> R.string.import_error_name_required
-                else -> R.string.import_error_no_cards
-            }
-            if (hint != null) {
+            val problem = state.blockingProblem.takeUnless { state.inputLocked || state.sourceText.isBlank() }
+            if (problem != null) {
                 Text(
-                    if (hint == R.string.import_error_page_count) {
-                        stringResource(hint, PageLimits.MIN_PAGE_COUNT, PageLimits.MAX_STORED_PAGE_COUNT)
-                    } else {
-                        stringResource(hint)
-                    },
+                    stringResource(problemMessage(problem), *problemArgs(problem)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -289,7 +281,7 @@ private fun SourceCard(
     onPickFile: () -> Unit
 ) {
     SectionCard {
-        OutlinedTextField(
+        AppTextField(
             value = state.deckName,
             enabled = !state.inputLocked,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -298,11 +290,12 @@ private fun SourceCard(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        OutlinedTextField(
+        AppTextField(
             value = state.sourceText,
             onValueChange = onSourceText,
             label = { Text(stringResource(R.string.import_csv_label)) },
             supportingText = { Text(stringResource(R.string.import_hint_format)) },
+            keyboardOptions = AppTextFieldDefaults.verbatimKeyboardOptions,
             enabled = !state.inputLocked,
             minLines = 4,
             maxLines = 8,
@@ -376,11 +369,11 @@ private fun ConfigCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.s)
                 ) {
-                    OutlinedTextField(
+                    AppTextField(
                         value = state.pageNames[index],
                         enabled = !state.inputLocked,
                         onValueChange = { onPageName(index, it) },
-                        label = { Text(stringResource(R.string.import_page_label, index + 1)) },
+                        label = { Text(stringResource(R.string.page_default_name, index + 1)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )

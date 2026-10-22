@@ -30,7 +30,6 @@ import com.raycoll.app.testing.VmTestHarness
 import java.io.File
 import java.time.Duration
 import kotlinx.coroutines.Dispatchers
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before

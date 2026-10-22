@@ -5,6 +5,7 @@ import com.raycoll.app.domain.model.AutoRateFixedStep
 import com.raycoll.app.domain.model.AutoRateFromAnswerStep
 import com.raycoll.app.domain.model.CompoundParams
 import com.raycoll.app.domain.model.CompoundStep
+import com.raycoll.app.domain.model.DynamicPauseStep
 import com.raycoll.app.domain.model.Flashcard
 import com.raycoll.app.domain.model.FlashcardGroup
 import com.raycoll.app.domain.model.ListenAndCheckStep
@@ -13,6 +14,7 @@ import com.raycoll.app.domain.model.NextCardStep
 import com.raycoll.app.domain.model.RevealStyle
 import com.raycoll.app.domain.model.ShowPageStep
 import com.raycoll.app.domain.model.ShowRatingsStep
+import com.raycoll.app.domain.model.SpeakAllPagesStep
 import com.raycoll.app.domain.model.SpeakPageStep
 import com.raycoll.app.domain.model.SrsState
 import com.raycoll.app.domain.model.StepCondition
@@ -22,7 +24,6 @@ import com.raycoll.app.testing.FakeClock
 import com.raycoll.app.testing.FakeSessionDeps
 import com.raycoll.app.testing.ReviewRecord
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -41,12 +42,32 @@ import org.junit.Test
 class SessionEngineSemanticsTest {
 
     @Test
+    fun `swiping back after the restart window returns to the previous card without a review`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val deps = FakeSessionDeps()
+            val clock = FakeClock(1_000L)
+            val eng = engine(listOf(ShowPageStep(), WaitForTapToRevealStep(), ShowRatingsStep()), deps, clock)
+            eng.start(listOf(card("c1"), card("c2")))
+            eng.skipToNextCard()
+            advanceUntilIdle()
+            clock.advance(10_000)
+            val current = eng.state.value
+            val navigation = requireNotNull(eng.beginNavigation(current.sessionId, "c2"))
+            eng.endNavigation(navigation, CardDestination.Card("c1"))
+            advanceUntilIdle()
+            assertEquals(0, eng.state.value.currentCardIndex)
+            assertEquals(listOf(0), eng.state.value.revealedPages)
+            assertTrue(deps.reviews.isEmpty())
+            eng.stop()
+        }
+
+    @Test
     fun `touching a revealed card does not block rating or advancement`() = runTest(UnconfinedTestDispatcher()) {
         val deps = FakeSessionDeps()
         val eng = engine(listOf(ShowPageStep(), WaitForTapToRevealStep(), ShowRatingsStep()), deps)
         eng.start(listOf(card("c1"), card("c2")))
         eng.handleCardPress()
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
         eng.pressDown()
         eng.rate(4)
         advanceUntilIdle()
@@ -86,12 +107,12 @@ class SessionEngineSemanticsTest {
             eng.handleCardPress()
             if (style == RevealStyle.NEXT) {
                 assertEquals(listOf(0, 1), eng.state.value.revealedPages)
-                assertNotEquals(SessionStatus.REVEALED, eng.state.value.status)
+                assertNotEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
                 eng.handleCardPress()
                 assertEquals(listOf(0, 1, 2), eng.state.value.revealedPages)
                 eng.handleCardPress()
             }
-            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+            assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
             assertEquals(listOf(0, 1, 2, 3), eng.state.value.revealedPages)
             eng.stop()
         }
@@ -106,7 +127,7 @@ class SessionEngineSemanticsTest {
             eng.start(listOf(card("c1").copy(pages = listOf("q", "  "))))
             advanceUntilIdle()
             assertEquals(AnswerStatus.SKIPPED, eng.state.value.lastAnswerResult.status)
-            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+            assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
             assertTrue(deps.reviews.isEmpty())
             eng.rate(3)
             assertEquals(3, deps.reviews.single().rating)
@@ -213,7 +234,7 @@ class SessionEngineSemanticsTest {
         assertEquals(listOf("question"), deps.spoken)
         // pusta strona nadal jest odsłonięta, a sesja doszła do ocen bez czekania na mowę
         assertEquals(listOf(0, 1), eng.state.value.revealedPages)
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
         assertNull(eng.state.value.error)
     }
 
@@ -225,7 +246,7 @@ class SessionEngineSemanticsTest {
         val eng = engine(listOf(ShowPageStep(pageIndex = 0), ShowRatingsStep()), deps)
         eng.start(listOf(card("c1"), card("c2")))
         advanceUntilIdle()
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
 
         eng.rate(1)
         advanceUntilIdle()
@@ -276,7 +297,7 @@ class SessionEngineSemanticsTest {
         eng.start(cards.filter { it.id in failedIds })
         advanceUntilIdle()
         assertEquals(1, eng.state.value.cards.size)
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
 
         // nowa próba: ocena c1 znowu bez replaceFromBase
         eng.rate(3)
@@ -294,12 +315,12 @@ class SessionEngineSemanticsTest {
         eng.start(listOf(card("c1"), card("c2")))
         advanceTimeBy(100)
         assertEquals(0, eng.state.value.currentCardIndex)
-        assertFalse(eng.state.value.status == SessionStatus.REVEALED)
+        assertFalse(eng.state.value.status == SessionStatus.AWAITING_RATING)
 
         eng.handleCardPress() // skip czekania
         advanceUntilIdle()
         assertEquals(0, eng.state.value.currentCardIndex) // wciąż ta sama karta
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
     }
 
     @Test
@@ -321,7 +342,7 @@ class SessionEngineSemanticsTest {
         advanceUntilIdle()
         assertEquals(AnswerStatus.SKIPPED, eng.state.value.lastAnswerResult.status)
         assertTrue(deps.reviews.isEmpty()) // bez auto-oceny
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status) // manual fallback
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status) // manual fallback
     }
 
     // --- peek (hold) ---
@@ -359,7 +380,7 @@ class SessionEngineSemanticsTest {
         clock.current += 100 // < 500 ms
         eng.pressUp() // = tap → skip czekania
         advanceUntilIdle()
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
     }
 
     @Test
@@ -378,7 +399,7 @@ class SessionEngineSemanticsTest {
         advanceTimeBy(100)
         assertNull(eng.state.value.peekedPageIndex)
         assertFalse(eng.state.value.revealedPages.contains(1))
-        assertNotEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertNotEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
     }
 
     // --- błędy TTS ---
@@ -391,7 +412,7 @@ class SessionEngineSemanticsTest {
         advanceUntilIdle()
         assertEquals(SessionError.TTS, eng.state.value.error)
         // sesja nie crashuje — dochodzi do ocen
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
     }
 
     @Test
@@ -421,24 +442,24 @@ class SessionEngineSemanticsTest {
     fun `next card resets status and keeps the reveal gate tappable`() = runTest(UnconfinedTestDispatcher()) {
         val deps = FakeSessionDeps()
         // Tryb bez speak/listen: sam show_page + bramka + oceny. Poprzednia karta kończy
-        // się na REVEALED; po przejściu status MUSI wrócić do IDLE, inaczej tap w bramkę
-        // drugiej karty byłby połykany (REVEALED → NIC) i użytkownik utknąłby.
+        // się na AWAITING_RATING; po przejściu status MUSI wrócić do IDLE, inaczej tap w bramkę
+        // drugiej karty byłby połykany (AWAITING_RATING → NIC) i użytkownik utknąłby.
         val eng = engine(listOf(ShowPageStep(pageIndex = 0), WaitForTapToRevealStep(), ShowRatingsStep()), deps)
         eng.start(listOf(card("c1"), card("c2")))
         advanceUntilIdle()
 
         eng.handleCardPress() // c1: domknij bramkę → oceny
         advanceUntilIdle()
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
         eng.rate(3) // → c2
         advanceUntilIdle()
 
         assertEquals(1, eng.state.value.currentCardIndex)
         assertEquals(InteractionGateKind.TAP_TO_REVEAL, eng.state.value.interactionGate.kind)
-        assertFalse(eng.state.value.status == SessionStatus.REVEALED) // status nie wyciekł
+        assertFalse(eng.state.value.status == SessionStatus.AWAITING_RATING) // status nie wyciekł
         eng.handleCardPress() // tap w bramkę drugiej karty MUSI zadziałać
         advanceUntilIdle()
-        assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+        assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
     }
 
     // --- okno "poprzednia" vs restart nie resetuje się po tap-gate ---
@@ -493,7 +514,7 @@ class SessionEngineSemanticsTest {
             advanceUntilIdle()
             assertEquals(AnswerStatus.ERROR, eng.state.value.lastAnswerResult.status)
             assertEquals(SessionError.STT, eng.state.value.error)
-            assertEquals(SessionStatus.REVEALED, eng.state.value.status)
+            assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
         }
 
     @Test
@@ -529,5 +550,66 @@ class SessionEngineSemanticsTest {
         advanceTimeBy(600)
         assertNull(eng.state.value.peekedPageIndex)
         eng.stop()
+    }
+
+    // --- kroki wykonywane przez StepExecutor ---
+
+    @Test
+    fun `dynamic pause lasts 60 ms per character of the next page times the multiplier`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val eng = engine(
+                listOf(
+                    DynamicPauseStep(nextPageIndex = 1, pauseMultiplier = 1.5),
+                    ShowPageStep(pageIndex = 1),
+                    ShowRatingsStep()
+                ),
+                FakeSessionDeps()
+            )
+            // "back c1" = 7 znaków → 7 * 60 ms * 1.5 = 630 ms
+            eng.start(listOf(card("c1")))
+            advanceTimeBy(629)
+            runCurrent()
+            assertFalse(1 in eng.state.value.revealedPages)
+            advanceTimeBy(1)
+            runCurrent()
+            assertTrue(1 in eng.state.value.revealedPages)
+            assertEquals(SessionStatus.AWAITING_RATING, eng.state.value.status)
+            eng.stop()
+        }
+
+    @Test
+    fun `speak all pages reads every active page in order`() = runTest(UnconfinedTestDispatcher()) {
+        val deps = FakeSessionDeps()
+        val eng = SessionEngine(
+            group().copy(activePageCount = 3),
+            listOf(SpeakAllPagesStep(), ShowRatingsStep()),
+            deps,
+            FakeClock(),
+            1f,
+            TestScope(UnconfinedTestDispatcher(testScheduler))
+        )
+        eng.start(listOf(card("c1").copy(pages = listOf("one", "two", "three", "four"))))
+        advanceUntilIdle()
+        assertEquals(listOf("one", "two", "three"), deps.spoken)
+        eng.stop()
+    }
+
+    @Test
+    fun `listening time is 5 s or three times the last speech plus 10 s`() = runTest(UnconfinedTestDispatcher()) {
+        val steps = listOf(SpeakPageStep(pageIndex = 0), ListenAndCheckStep(pageIndex = 1), ShowRatingsStep())
+        fun timeoutAfterSpeechOf(speechMs: Long?): Long {
+            val clock = FakeClock()
+            val deps = FakeSessionDeps().apply { onSpeak = { clock.advance(speechMs ?: 0) } }
+            val eng = engine(if (speechMs == null) steps.drop(1) else steps, deps, clock)
+            eng.start(listOf(card("c1")))
+            advanceUntilIdle()
+            eng.stop()
+            return deps.listenTimeouts.single()
+        }
+        // bez wypowiedzi i po krótkiej (3 × 1 s < 5 s): minimum 5 s + 10 s zapasu
+        assertEquals(15_000L, timeoutAfterSpeechOf(null))
+        assertEquals(15_000L, timeoutAfterSpeechOf(1_000))
+        // po długiej: 3 × 4 s + 10 s
+        assertEquals(22_000L, timeoutAfterSpeechOf(4_000))
     }
 }

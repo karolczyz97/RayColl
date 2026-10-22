@@ -25,6 +25,7 @@ import com.raycoll.app.domain.model.WaitForTapStep
 import com.raycoll.app.domain.model.WaitForTapToRevealNextStep
 import com.raycoll.app.domain.model.WaitForTapToRevealStep
 import com.raycoll.app.domain.model.WaitStep
+import com.raycoll.app.domain.model.activePageRange
 import com.raycoll.app.domain.srs.mapMatchToRating
 import com.raycoll.app.domain.srs.matchSpeech
 import kotlinx.coroutines.CancellationException
@@ -38,7 +39,14 @@ internal class StepExecutor(
     private val clock: Clock,
     private val ttsRate: Float
 ) {
-    private var lastTtsDurationMs: Long = 0
+    // Powrót do nasłuchu nie może odziedziczyć czasu wypowiedzi innej karty.
+    private val speechDurations = mutableMapOf<String, Long>()
+    private var interruptedWait: InterruptedWait? = null
+
+    fun reset() {
+        speechDurations.clear()
+        interruptedWait = null
+    }
 
     private val state: SessionState get() = engine.state.value
 
@@ -57,7 +65,7 @@ internal class StepExecutor(
         when (step) {
             is ShowPageStep -> engine.dispatch(SessionAction.RevealPages(listOf(step.pageIndex)))
 
-            is ShowAllPagesStep -> engine.dispatch(SessionAction.RevealPages((0 until group.activePageCount).toList()))
+            is ShowAllPagesStep -> engine.dispatch(SessionAction.RevealPages(group.activePageRange.toList()))
 
             is WaitForTapToRevealNextStep -> startRevealGate(stepIndex, TapRevealMode.SINGLE)
 
@@ -75,7 +83,7 @@ internal class StepExecutor(
             is SpeakAllPagesStep -> {
                 // tap przerywa i pomija wszystkie pozostałe strony naraz
                 engine.runSkippable {
-                    for (pageIndex in 0 until group.activePageCount) {
+                    for (pageIndex in group.activePageRange) {
                         // koniec sesji albo pauza (np. odmowa fokusu audio) — reszty stron nie czytamy
                         if (state.status == SessionStatus.FINISHED || engine.isPaused.value) break
                         speakPage(card, pageIndex)
@@ -86,10 +94,10 @@ internal class StepExecutor(
 
             is DynamicPauseStep -> {
                 val chars = pageText(card, step.nextPageIndex).length
-                pause((chars * StudyConstants.DYNAMIC_PAUSE_MS_PER_CHAR * step.pauseMultiplier).toLong())
+                pause((chars * StudyConstants.DYNAMIC_PAUSE_MS_PER_CHAR * step.pauseMultiplier).toLong(), stepIndex)
             }
 
-            is WaitStep -> pause(step.ms)
+            is WaitStep -> pause(step.ms, stepIndex)
 
             is ListenAndCheckStep -> listenAndCheck(step, card)
 
@@ -123,10 +131,23 @@ internal class StepExecutor(
         }
     }
 
-    private suspend fun pause(ms: Long) {
+    private suspend fun pause(ms: Long, stepIndex: Int) {
+        val left = interruptedWait?.takeIf { it.visit == engine.visit && it.stepIndex == stepIndex }?.remainingMs ?: ms
+        interruptedWait = null
         engine.dispatch(SessionAction.PeekClear)
-        engine.runSkippable { delay(ms) }
+        val startedAt = clock.now()
+        try {
+            engine.runSkippable { delay(left) }
+        } catch (e: CancellationException) {
+            // pauza przerywa cały przebieg karty (tapnięcie tylko to czekanie) — po wznowieniu zostaje reszta czasu
+            interruptedWait =
+                InterruptedWait(engine.visit, stepIndex, (left - (clock.now() - startedAt)).coerceAtLeast(0))
+            throw e
+        }
     }
+
+    /** Czekanie przerwane pauzą: wznowienie w tym samym przebiegu karty dokańcza je zamiast zaczynać od nowa. */
+    private class InterruptedWait(val visit: Long, val stepIndex: Int, val remainingMs: Long)
 
     private fun startRevealGate(stepIndex: Int, mode: TapRevealMode) {
         val hasHiddenPages = engine.hiddenPages().isNotEmpty()
@@ -135,7 +156,7 @@ internal class StepExecutor(
 
     private suspend fun listenAndCheck(step: ListenAndCheckStep, card: Flashcard) {
         fun answerOf(status: AnswerStatus, text: String = "", percent: Int? = null, suggestedRating: Int? = null) =
-            LastAnswerResult(status, text, percent, step.successThreshold, step.pageIndex, suggestedRating)
+            LastAnswerResult(status, text, percent, step.pageIndex, suggestedRating)
 
         val expected = pageText(card, step.pageIndex)
         if (expected.isBlank()) {
@@ -147,7 +168,7 @@ internal class StepExecutor(
         // czas nasłuchu skalowany długością ostatniej wypowiedzi TTS (dłuższa fraza = dłuższa odpowiedź)
         val timeoutMs = maxOf(
             StudyConstants.STT_SOFT_TIMEOUT_MS_BASE,
-            lastTtsDurationMs * StudyConstants.STT_TIMEOUT_TTS_FACTOR
+            (speechDurations[card.id] ?: 0L) * StudyConstants.STT_TIMEOUT_TTS_FACTOR
         ) + StudyConstants.STT_HARD_EXTRA_MS
         val result = engine.runSkippable {
             try {
@@ -187,7 +208,7 @@ internal class StepExecutor(
         val text = pageText(card, pageIndex)
         // pusta strona: krok mowy kończy się od razu (strona nadal może być pokazana innym krokiem)
         if (text.isBlank()) {
-            lastTtsDurationMs = 0
+            speechDurations[card.id] = 0
             return
         }
         if (!deps.acquireAudioFocus()) return
@@ -200,7 +221,7 @@ internal class StepExecutor(
         } catch (_: Exception) {
             SpeakResult.ERROR
         }
-        lastTtsDurationMs = clock.now() - start
+        speechDurations[card.id] = clock.now() - start
         if (result != SpeakResult.SUCCESS) engine.onTtsFailure(result)
     }
 
